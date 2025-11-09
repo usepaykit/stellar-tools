@@ -182,7 +182,7 @@ export default function Home() {
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button size="lg" asChild>
                 <Link
-                  href="https://communityfund.stellar.org/"
+                  href="https://communityfund.stellar.org/dashboard/submissions/rec7XNe2Q6MQDXkmd"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
