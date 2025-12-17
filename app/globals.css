@@ -138,6 +138,14 @@ h6 {
   --spacing: 0.25rem;
 }
 
+.shadow-buttons-inverted {
+  box-shadow: 0 0 #0000, 0 0 #0000, 0 0 #0000, 0 0 #0000,
+
+      0px 0.75px 0px 0px rgba(255, 255, 255, 0.2) inset,
+      0px 1px 2px 0px rgba(0, 0, 0, 0.4),
+      0px 0px 0px 1px rgba(24, 24, 27, 1);
+}
+
 .dark {
   --background: oklch(0.2079 0.0399 265.7275);
   --foreground: oklch(0.9843 0.0017 247.8393);

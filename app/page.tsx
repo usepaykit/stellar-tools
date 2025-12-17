@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeBlock } from "@/components/codeblock";
 import { Header } from "@/components/ui/navbar";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Image from "next/image";
 const betterAuthCodeSample = `
 import { betterAuth } from "better-auth"
 import { stellar } from "@stellar-tools/better-auth";
@@ -17,6 +16,7 @@ export const auth = betterAuth({
 });
 
 export default auth;`;
+
 
 const medusaJSCodeSample = `
 import { loadEnv, defineConfig } from "@medusajs/framework/utils";
@@ -58,21 +58,21 @@ const providers = [
   {
     id: "betterauth",
     name: "BetterAuth",
-    logo: "/fonts/integrations/better-auth.png",
+    logo: "/images/integrations/better-auth.png",
     filename: "auth.ts",
     code: betterAuthCodeSample,
   },
   {
     id: "medusa",
     name: "Medusa",
-    logo: "/fonts/integrations/medusa.jpeg",
+    logo: "/images/integrations/medusa.jpeg",
     filename: "medusa-config.ts",
     code: medusaJSCodeSample,
   },
   {
     id: "shopify",
     name: "Shopify",
-    logo: "/fonts/integrations/shopify.png",
+    logo: "/images/integrations/shopify.png",
     filename: "app.ts",
     code: shopifyCodeSample,
   },

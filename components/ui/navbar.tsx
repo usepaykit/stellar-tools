@@ -2,7 +2,6 @@
 
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import type { ReactElement } from "react";
 import * as React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,124 +24,87 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
-import {
-  AArrowUp,
-  AppWindow,
-  Box,
-  ChartNoAxesColumnIncreasing,
-  CirclePlus,
-  Code,
-  Component,
-  Cpu,
-  Globe,
-  Layers,
-  LayoutGrid,
-  LogOut,
-  Monitor,
-  Moon,
-  Network,
-  ScreenShare,
-  Sparkle,
-  Sparkles,
-  Sun
-} from "@aliimam/icons";
+import { CirclePlus, LogOut, Monitor, Moon, Sun } from "@aliimam/icons";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { Paykit } from "../icon";
+import { Paykit, GitHub, AiApps, ShoppingCart , WebApps} from "../icon";
+import axios from "axios";
 
 const cloud: {
   title: string;
-  icon: ReactElement;
+  logoUrl: string;
   href: string;
   description: string;
 }[] = [
   {
     title: "AI SDK",
-    href: "#",
-    icon: <Box strokeWidth={2} />,
-    description: "The AI Toolkit for Typescript",
+    href: "https://ai-sdk.dev/",
+    logoUrl: "/images/integrations/aisdk.jpg",
+    description: "Unified SDK for integrating AI models in TypeScript.",
   },
   {
     title: "Better Auth",
-    href: "#",
-    icon: <Sparkle strokeWidth={2} />,
-    description: "One endpoint, all your models",
+    href: "https://www.better-auth.com/",
+    logoUrl: "/images/integrations/better-auth.png",
+    description: "Simple, secure authentication and session management.",
   },
   {
     title: "Shopify",
-    href: "#",
-    icon: <AArrowUp strokeWidth={2} />,
-    description: "An agent that knows your stack",
+    href: "https://shopify.dev/",
+    logoUrl: "/images/integrations/shopify.png",
+    description: "Connect your app with Shopify’s e-commerce platform.",
+  },
+  {
+    title: "Medus",
+    href: "https://www.medusajs.com/",
+    logoUrl: "/images/integrations/medusa.svg",
+    description: "Headless commerce backend for custom online stores.",
+  },
+  {
+    title: "UploadThing",
+    href: "https://uploadthing.com/",
+    logoUrl: "/images/integrations/uploadthing.png",
+    description: "Secure, easy file upload service for web apps.",
+  },
+  {
+    title: "PayloadCms",
+    href: "https://payloadcms.com/",
+    logoUrl: "/images/integrations/payloadcms.png",
+    description: "Developer-friendly headless CMS and API backend.",
   },
 ];
 
-
-
-
-
-
-
 const cases: {
   title: string;
-  icon: ReactElement;
   href: string;
   description: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>> | React.JSX.Element;
 }[] = [
   {
     title: "Al Apps",
     href: "#",
-    icon: <Sparkles strokeWidth={2} />,
     description: "Deploy at the speed of Al",
+    icon: AiApps,
   },
   {
     title: "Composable Commerce",
     href: "#",
-    icon: <Component strokeWidth={2} />,
     description: "Power storefronts that convert",
+    icon: ShoppingCart,
   },
-  {
-    title: "Marketing Sites",
-    href: "#",
-    icon: <ScreenShare strokeWidth={2} />,
-    description: "Jumpstart app development",
-  },
-  {
-    title: "Multi-tenant Platforms",
-    href: "#",
-    icon: <Network strokeWidth={2} />,
-    description: "Scale apps with one codebase",
-  },
+
   {
     title: "Web Apps",
     href: "#",
-    icon: <AppWindow strokeWidth={2} />,
     description: "Ship features, not infrastructure",
-  },
-];
-
-const users: {
-  title: string;
-  icon: ReactElement;
-  href: string;
-  description: string;
-}[] = [
-  {
-    title: "Platform Engineers",
-    href: "#",
-    icon: <Code strokeWidth={2} />,
-    description: "Automate away repetition",
-  },
-  {
-    title: "Design Engineers",
-    href: "#",
-    icon: <Layers strokeWidth={2} />,
-    description: "Deploy for every idea",
+    icon: WebApps,
   },
 ];
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-
+  const [starsNumber, setStarsNumber] = useState<number>(0);
+  const isAuthenticated = false;
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 0);
@@ -150,6 +112,27 @@ export function Header() {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async function fetchGithubRepoStars() {
+      try {
+        const response = await axios.get(
+          "https://api.github.com/repos/usepaykit/stellar-tools"
+        );
+        if (!mounted) return;
+        setStarsNumber(response.data.stargazers_count);
+        console.log("Stars count:", response.data.stargazers_count);
+      } catch (error) {
+        console.error("Failed to fetch GitHub stars", error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
   return (
     <div
@@ -160,7 +143,7 @@ export function Header() {
       {" "}
       <div className="flex items-center justify-between w-full  mx-auto max-w-7xl">
         <div className="flex h-14 justify-center">
-             <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-8" />
             <span className="text-muted-foreground">/</span>
             <Image
@@ -168,13 +151,13 @@ export function Header() {
               alt="Stellar Tools logo"
               width={32}
               height={32}
-              className="size-8 object-contain"
+              className="size-8 object-contain rounded-md"
             />
             <span className="text-lg font-semibold font-rosemary">
               Stellar Tools
             </span>
           </Link>
-          <NavigationMenu className="ml-8 hidden lg:flex" >
+          <NavigationMenu className="ml-8 hidden lg:flex">
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuTrigger
@@ -185,29 +168,27 @@ export function Header() {
                 >
                   Products
                 </NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-background">
+                <NavigationMenuContent className="bg-background pt-3">
                   <ul className="w-[300px]">
                     <div>
                       <span className="p-4 text-muted-foreground">
-                        AI Cloud
+                        Adapters
                       </span>
                       {cloud.map((component) => (
                         <ListItem
                           key={component.title}
                           title={component.title}
-                          icon={component.icon}
                           href={component.href}
+                          logoUrl={component.logoUrl}
                         >
                           {component.description}
                         </ListItem>
                       ))}
                     </div>
-            
-                   
                   </ul>
                 </NavigationMenuContent>
               </NavigationMenuItem>
-        
+
               <NavigationMenuItem>
                 <NavigationMenuTrigger
                   className={cn(
@@ -217,8 +198,8 @@ export function Header() {
                 >
                   Solutions
                 </NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-background">
-                  <ul className="grid w-[400px] pt-2 grid-cols-2 md:w-[550px]">
+                <NavigationMenuContent className="bg-background pt-3">
+                  <ul className="w-[300px]">
                     <div>
                       <span className="p-4 text-muted-foreground">
                         Use Cases
@@ -227,21 +208,8 @@ export function Header() {
                         <ListItem
                           key={component.title}
                           title={component.title}
-                          icon={component.icon}
                           href={component.href}
-                        >
-                          {component.description}
-                        </ListItem>
-                      ))}
-                    </div>
-                    <div>
-                      <span className="p-4 text-muted-foreground">Users</span>
-                      {users.map((component) => (
-                        <ListItem
-                          key={component.title}
-                          title={component.title}
                           icon={component.icon}
-                          href={component.href}
                         >
                           {component.description}
                         </ListItem>
@@ -249,17 +217,6 @@ export function Header() {
                     </div>
                   </ul>
                 </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground"
-                  )}
-                >
-                  <Link href="#">Enterprise</Link>
-                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink
@@ -287,53 +244,91 @@ export function Header() {
           </NavigationMenu>
         </div>
         <div className="flex gap-2">
-          <Button variant={"outline"} size={"sm"}>
-            Contact
-          </Button>
-          <Button variant={"outline"} size={"sm"}>
-            Dashboard
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Avatar className="border">
-                <AvatarImage src="https://raw.githubusercontent.com/aliimam-in/templates/refs/heads/main/apps/vercel/public/ali.jpg" alt="Ali Imam" />
-                <AvatarFallback>AI</AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-70 p-3 rounded-xl" align="end">
-              <div className="p-2">
-                <h1 className="font-semibold">Ali Imam</h1>
-                <p className="text-sm text-muted-foreground">
-                  contact@aliimam.in
-                </p>
-              </div>
-              <DropdownMenuGroup>
-                <DropdownMenuItem className="py-3">Dadhboard</DropdownMenuItem>
-                <DropdownMenuItem className="py-3">
-                  Account Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem className="py-3 justify-between">
-                  Create Taems <CirclePlus strokeWidth={2} />
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator className="-mx-3" />
-              <DropdownMenuGroup>
-                <DropdownMenuItem className="py-3 justify-between">
-                  Theme <ThemeSwitcher />
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator className="-mx-3" />
-
-              <DropdownMenuItem className="py-3 justify-between">
-                Logout <LogOut strokeWidth={2} />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="-mx-3" />
-              <DropdownMenuItem className="pt-3">
-                <Button className="w-full">Upgrade to Pro</Button>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isAuthenticated ? (
+            <>
+              <Button variant={"outline"} size={"sm"}>
+                Contact
+              </Button>
+              <Button variant={"outline"} size={"sm"}>
+                Dashboard
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                asChild
+                size={"sm"}
+                variant={"ghost"}
+                className="flex items-center gap-2  "
+              >
+                <a
+                  href="https://github.com/usepaykit/stellar-tools"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <GitHub color="black" />
+                  <span className="text-xs font-medium">
+                    {starsNumber} Stars
+                  </span>
+                </a>
+              </Button>
+              <Button
+                variant={"secondary"}
+                size={"sm"}
+                className="shadow-buttons-inverted shadow-md"
+              >
+                Docs
+              </Button>
+              <Button variant={"default"} size={"sm"}>
+                Get Started
+              </Button>
+            </>
+          )}
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Avatar className="border">
+              <AvatarImage
+                src="https://raw.githubusercontent.com/aliimam-in/templates/refs/heads/main/apps/vercel/public/ali.jpg"
+                alt="Ali Imam"
+              />
+              <AvatarFallback>AI</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-70 p-3 rounded-xl" align="end">
+            <div className="p-2">
+              <h1 className="font-semibold">Ali Imam</h1>
+              <p className="text-sm text-muted-foreground">
+                contact@aliimam.in
+              </p>
+            </div>
+            <DropdownMenuGroup>
+              <DropdownMenuItem className="py-3">Dadhboard</DropdownMenuItem>
+              <DropdownMenuItem className="py-3">
+                Account Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem className="py-3 justify-between">
+                Create Taems <CirclePlus strokeWidth={2} />
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="-mx-3" />
+            <DropdownMenuGroup>
+              <DropdownMenuItem className="py-3 justify-between">
+                Theme <ThemeSwitcher />
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="-mx-3" />
+
+            <DropdownMenuItem className="py-3 justify-between">
+              Logout <LogOut strokeWidth={2} />
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="-mx-3" />
+            <DropdownMenuItem className="pt-3">
+              <Button className="w-full">Upgrade to Pro</Button>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -342,19 +337,47 @@ export function Header() {
 function ListItem({
   title,
   icon,
+  logoUrl,
   children,
   href,
   ...props
 }: React.ComponentPropsWithoutRef<"li"> & {
   href: string;
-  icon: ReactElement;
+  icon?:
+    | React.ComponentType<React.SVGProps<SVGSVGElement>>
+    | React.ReactElement;
+  logoUrl?: string;
 }) {
+  let IconElement: React.ReactNode = null;
+  if (icon) {
+    if (React.isValidElement(icon)) {
+      IconElement = icon;
+    } else if (typeof icon === "function") {
+      IconElement = React.createElement(
+        icon as React.ComponentType<React.SVGProps<SVGSVGElement>>,
+        { className: "size-6" }
+      );
+    }
+  }
+
   return (
     <li {...props}>
       <NavigationMenuLink asChild className="hover:bg-transparent w-fit">
-        <Link href={href}>
-          <div className="flex gap-3 items-start rounded-md p-2">
-            <div className="border rounded-sm p-2 icon-container">{icon}</div>
+        <Link href={href} target="_blank" rel="noreferrer">
+          <div className="flex gap-3 items-start rounded p-2">
+            {logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt={`${title} logo`}
+                width={24}
+                height={24}
+                className="size-6 object-contain rounded-full"
+              />
+            ) : IconElement ? (
+              <div className="border rounded-sm p-2 icon-container">
+                {IconElement}
+              </div>
+            ) : null}
             <div className="text-container">
               <div className="text-sm font-medium leading-none">{title}</div>
               <p className="text-muted-foreground line-clamp-2 pt-1 text-xs leading-snug">
@@ -364,7 +387,6 @@ function ListItem({
           </div>
         </Link>
       </NavigationMenuLink>
-
       <style jsx>{`
         li:hover .icon-container {
           background-color: var(--foreground);
@@ -372,22 +394,18 @@ function ListItem({
           transform: scale(1.05);
           transition: all 0.2s ease;
         }
-
         li:hover .text-container .text-sm {
-          color: var(--foreground); /* Change title color on hover */
+          color: var(--foreground);
           transition: color 0.2s ease;
         }
-
         li:hover .text-container p {
-          color: var(--foreground); /* Change description color on hover */
+          color: var(--foreground);
           transition: color 0.2s ease;
         }
       `}</style>
     </li>
   );
 }
-
-
 
 const themes = [
   {
@@ -414,9 +432,7 @@ export type ThemeSwitcherProps = {
   className?: string;
 };
 
-const ThemeSwitcher = ({ 
-  className,
-}: ThemeSwitcherProps) => {
+const ThemeSwitcher = ({ className }: ThemeSwitcherProps) => {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
