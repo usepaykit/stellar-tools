@@ -2,7 +2,6 @@
 
 import { useTheme } from "next-themes";
 import Link from "next/link";
-import type { ReactElement } from "react";
 import * as React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -28,7 +27,8 @@ import { cn } from "@/lib/utils";
 import { CirclePlus, LogOut, Monitor, Moon, Sun } from "@aliimam/icons";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { Paykit } from "../icon";
+import { Paykit, GitHub, AiApps, ShoppingCart , WebApps} from "../icon";
+import axios from "axios";
 
 const cloud: {
   title: string;
@@ -78,43 +78,32 @@ const cases: {
   title: string;
   href: string;
   description: string;
-  logoUrl: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>> | React.JSX.Element;
 }[] = [
   {
     title: "Al Apps",
     href: "#",
     description: "Deploy at the speed of Al",
-    logoUrl: "/images/integrations/better-auth.png",
+    icon: AiApps,
   },
   {
     title: "Composable Commerce",
     href: "#",
     description: "Power storefronts that convert",
-    logoUrl: "/images/integrations/better-auth.png",
-  },
-  {
-    title: "Marketing Sites",
-    href: "#",
-    description: "Jumpstart app development",
-    logoUrl: "/images/integrations/better-auth.png",
-  },
-  {
-    title: "Multi-tenant Platforms",
-    href: "#",
-    description: "Scale apps with one codebase",
-    logoUrl: "/images/integrations/better-auth.png",
+    icon: ShoppingCart,
   },
 
   {
     title: "Web Apps",
     href: "#",
     description: "Ship features, not infrastructure",
-    logoUrl: "/images/integrations/better-auth.png",
+    icon: WebApps,
   },
 ];
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
+  const [starsNumber, setStarsNumber] = useState<number>(0);
   const isAuthenticated = false;
   useEffect(() => {
     const handleScroll = () => {
@@ -123,6 +112,27 @@ export function Header() {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async function fetchGithubRepoStars() {
+      try {
+        const response = await axios.get(
+          "https://api.github.com/repos/usepaykit/stellar-tools"
+        );
+        if (!mounted) return;
+        setStarsNumber(response.data.stargazers_count);
+        console.log("Stars count:", response.data.stargazers_count);
+      } catch (error) {
+        console.error("Failed to fetch GitHub stars", error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
   return (
     <div
@@ -199,7 +209,7 @@ export function Header() {
                           key={component.title}
                           title={component.title}
                           href={component.href}
-                          logoUrl={component.logoUrl}
+                          icon={component.icon}
                         >
                           {component.description}
                         </ListItem>
@@ -207,17 +217,6 @@ export function Header() {
                     </div>
                   </ul>
                 </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground"
-                  )}
-                >
-                  <Link href="#">Enterprise</Link>
-                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuLink
@@ -256,6 +255,24 @@ export function Header() {
             </>
           ) : (
             <>
+              <Button
+                asChild
+                size={"sm"}
+                variant={"ghost"}
+                className="flex items-center gap-2  "
+              >
+                <a
+                  href="https://github.com/usepaykit/stellar-tools"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2"
+                >
+                  <GitHub color="black" />
+                  <span className="text-xs font-medium">
+                    {starsNumber} Stars
+                  </span>
+                </a>
+              </Button>
               <Button
                 variant={"secondary"}
                 size={"sm"}
@@ -326,9 +343,23 @@ function ListItem({
   ...props
 }: React.ComponentPropsWithoutRef<"li"> & {
   href: string;
-  icon?: ReactElement;
+  icon?:
+    | React.ComponentType<React.SVGProps<SVGSVGElement>>
+    | React.ReactElement;
   logoUrl?: string;
 }) {
+  let IconElement: React.ReactNode = null;
+  if (icon) {
+    if (React.isValidElement(icon)) {
+      IconElement = icon;
+    } else if (typeof icon === "function") {
+      IconElement = React.createElement(
+        icon as React.ComponentType<React.SVGProps<SVGSVGElement>>,
+        { className: "size-6" }
+      );
+    }
+  }
+
   return (
     <li {...props}>
       <NavigationMenuLink asChild className="hover:bg-transparent w-fit">
@@ -342,8 +373,10 @@ function ListItem({
                 height={24}
                 className="size-6 object-contain rounded-full"
               />
-            ) : icon ? (
-              <div className="border rounded-sm p-2 icon-container">{icon}</div>
+            ) : IconElement ? (
+              <div className="border rounded-sm p-2 icon-container">
+                {IconElement}
+              </div>
             ) : null}
             <div className="text-container">
               <div className="text-sm font-medium leading-none">{title}</div>
