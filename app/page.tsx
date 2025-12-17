@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Paykit } from "@/components/icon";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CodeBlock } from "@/components/codeblock";
-
+import { Header } from "@/components/ui/navbar";
 const betterAuthCodeSample = `
 import { betterAuth } from "better-auth"
 import { stellar } from "@stellar-tools/better-auth";
@@ -86,13 +86,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background scroll-smooth">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+      {/* <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-8" />
             <span className="text-muted-foreground">/</span>
             <Image
-              src="/fonts/logo.png"
+              src="/images/logo-light.png"
               alt="Stellar Tools logo"
               width={32}
               height={32}
@@ -116,7 +116,8 @@ export default function Home() {
             </Button>
           </nav>
         </div>
-      </header>
+      </header> */}
+      <Header />
 
       {/* Main Content */}
       <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pt-40 lg:pb-32">
