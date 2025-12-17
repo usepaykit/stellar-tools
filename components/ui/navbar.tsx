@@ -268,9 +268,9 @@ export function Header() {
                   className="flex items-center gap-2"
                 >
                   <GitHub color="black" />
-                  <span className="text-xs font-medium">
+                  {/* <span className="text-xs font-medium">
                     {starsNumber} Stars
-                  </span>
+                  </span> */}
                 </a>
               </Button>
               <Button
