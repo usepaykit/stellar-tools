@@ -11,7 +11,7 @@ import {
   useReactTable,
   RowSelectionState,
 } from "@tanstack/react-table";
-import { Checkbox } from "./ui/checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MixinProps, splitProps } from "@/lib/mixin";
 
 export interface TableAction<TData> {
   label: string;
@@ -36,7 +37,13 @@ export interface TableAction<TData> {
   variant?: "default" | "destructive";
 }
 
-interface DataTableProps<TData, TValue> {
+interface DataTableProps<TData, TValue>
+  extends React.ComponentProps<typeof Table>,
+    MixinProps<"row", React.ComponentProps<typeof TableRow>>,
+    MixinProps<"checkbox", React.ComponentProps<typeof Checkbox>>,
+    MixinProps<"body", React.ComponentProps<typeof TableBody>>,
+    MixinProps<"head", React.ComponentProps<typeof TableHead>>,
+    MixinProps<"cell", React.ComponentProps<typeof TableCell>> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
@@ -50,9 +57,19 @@ export function DataTable<TData, TValue>({
   onRowClick,
   enableBulkSelect = false,
   actions,
+  ...mixProps
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
+  const { row, checkbox, body, head, cell, ...rest } = splitProps(
+    mixProps,
+    "row",
+    "checkbox",
+    "body",
+    "head",
+    "cell"
+  );
 
   const tableColumns = React.useMemo(() => {
     let cols = columns;
@@ -62,16 +79,18 @@ export function DataTable<TData, TValue>({
         id: "select",
         header: ({ table }) => (
           <Checkbox
+            {...checkbox}
             checked={table.getIsAllPageRowsSelected()}
             onCheckedChange={(checked) =>
               table.toggleAllPageRowsSelected(!!checked)
             }
             aria-label="Select all"
-            className="translate-y-[2px]"
+            className={cn(checkbox.className, "translate-y-[2px]")}
           />
         ),
         cell: ({ row }) => (
           <Checkbox
+            {...checkbox}
             checked={row.getIsSelected()}
             onCheckedChange={(checked) => {
               row.toggleSelected(!!checked);
@@ -80,7 +99,7 @@ export function DataTable<TData, TValue>({
               e.stopPropagation();
             }}
             aria-label="Select row"
-            className="translate-y-[2px]"
+            className={cn("translate-y-[2px]", checkbox.className)}
           />
         ),
         enableSorting: false,
@@ -106,7 +125,7 @@ export function DataTable<TData, TValue>({
                     e.stopPropagation();
                   }}
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreHorizontal className="size-4" />
                   <span className="sr-only">Open menu</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -141,7 +160,7 @@ export function DataTable<TData, TValue>({
     return cols;
   }, [columns, enableBulkSelect, actions]);
 
-  const table = useReactTable({
+  const reactTable = useReactTable({
     data,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
@@ -158,10 +177,10 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
-        <Table>
+        <Table {...rest}>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+            {reactTable.getHeaderGroups().map((headerGroup) => (
+              <TableRow {...row} key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead
@@ -185,9 +204,9 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+          <TableBody {...body}>
+            {reactTable.getRowModel().rows?.length ? (
+              reactTable.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
@@ -195,7 +214,7 @@ export function DataTable<TData, TValue>({
                   onClick={() => onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell {...cell} key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -205,10 +224,11 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))
             ) : (
-              <TableRow>
+              <TableRow {...row}>
                 <TableCell
+                  {...cell}
                   colSpan={tableColumns.length}
-                  className="h-24 text-center"
+                  className={cn("h-24 text-center", cell.className)}
                 >
                   No results.
                 </TableCell>
@@ -222,23 +242,23 @@ export function DataTable<TData, TValue>({
         <div className="flex-1 text-sm text-muted-foreground">
           {enableBulkSelect && (
             <>
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
+              {reactTable.getFilteredSelectedRowModel().rows.length} of{" "}
+              {reactTable.getFilteredRowModel().rows.length} row(s) selected.
             </>
           )}
         </div>
         <div className="space-x-2">
           <button
             className="px-3 py-2 border rounded text-sm disabled:opacity-50"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => reactTable.previousPage()}
+            disabled={!reactTable.getCanPreviousPage()}
           >
             Previous
           </button>
           <button
             className="px-3 py-2 border rounded text-sm disabled:opacity-50"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => reactTable.nextPage()}
+            disabled={!reactTable.getCanNextPage()}
           >
             Next
           </button>
