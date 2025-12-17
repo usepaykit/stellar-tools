@@ -81,38 +81,6 @@ const providers = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-background scroll-smooth">
-      {/* Header */}
-      {/* <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-sm">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
-            <Paykit className="size-8" />
-            <span className="text-muted-foreground">/</span>
-            <Image
-              src="/images/logo-light.png"
-              alt="Stellar Tools logo"
-              width={32}
-              height={32}
-              className="size-8 object-contain"
-            />
-            <span className="text-lg font-semibold font-rosemary">
-              Stellar Tools
-            </span>
-          </Link>
-          <nav className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button variant="ghost" size="icon" asChild>
-              <Link
-                href="https://github.com/usepaykit/stellar-tools"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="GitHub"
-              >
-                <Github className="size-5" />
-              </Link>
-            </Button>
-          </nav>
-        </div>
-      </header> */}
       <Header />
 
       {/* Main Content */}
@@ -174,19 +142,6 @@ export default function Home() {
                 </TabsContent>
               ))}
             </Tabs>
-
-            {/* CTA
-            <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Button size="lg" asChild>
-                <Link
-                  href="https://communityfund.stellar.org/dashboard/submissions/rec7XNe2Q6MQDXkmd"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View on Stellar Community
-                </Link>
-              </Button>
-            </div> */}
           </div>
         </div>
       </section>
