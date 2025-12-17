@@ -1,0 +1,23 @@
+{
+  "name": "@stellar-tools/better-auth",
+  "version": "0.0.1",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "peerDependencies": {
+    "@stellar/stellar-sdk": "^14.4.2",
+    "better-auth": "^1.0.0"
+  },
+  "devDependencies": {
+    "@better-auth/core": "^1.4.7",
+    "@stellar/stellar-sdk": "^14.4.2",
+    "better-auth": "^1.4.7",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "zod": "^4.2.1"
+  }
+}
