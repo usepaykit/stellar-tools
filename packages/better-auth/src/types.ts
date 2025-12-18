@@ -1,27 +1,42 @@
-import type { GenericEndpointContext, User } from "better-auth";
-import type { Horizon } from "@stellar/stellar-sdk";
+import type { GenericEndpointContext } from "better-auth";
+import type { InferOptionSchema } from "better-auth";
+import { PlanSchema, stellar$PluginSchema } from "./schema";
+import { Horizon } from "@stellar/stellar-sdk";
 
 export interface StellarOptions {
+  /**
+   * Stellar Horizon Server instance
+   */
   horizonServer: Horizon.Server;
-  networkPassphrase: string;
+
+  /**
+   * Public key where payments are sent
+   */
   merchantPublicKey: string;
-  merchantSecretKey?: string; // For server-side signing if needed
-  onPaymentComplete?: (
-    data: {
-      payment: Payment;
-      user: User;
-      transactionHash: string;
-    },
+
+  /**
+   * The network passphrase (Public or Testnet)
+   */
+  networkPassphrase: string;
+
+  /**
+   * Subscription plans configuration
+   */
+  subscription?: {
+    enabled: boolean;
+    plans: PlanSchema[] | (() => Promise<PlanSchema[]>);
+  };
+
+  /**
+   * Callback when a payment is verified on-chain
+   */
+  onPaymentVerified?: (
+    data: { payment: unknown; tx: unknown },
     ctx: GenericEndpointContext
   ) => Promise<void>;
-}
 
-export interface Payment {
-  id: string;
-  userId: string;
-  amount: string;
-  asset: string;
-  status: "pending" | "completed" | "failed";
-  transactionHash?: string;
-  createdAt: Date;
+  /**
+   * Extendable Schema for the plugin
+   */
+  schema?: InferOptionSchema<typeof stellar$PluginSchema>;
 }
