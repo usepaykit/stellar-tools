@@ -89,7 +89,7 @@ function CodeBlockContent({
             background: "#fafafa",
             margin: 0,
             borderRadius: "0 0 8px 8px",
-          },
+          }, 
           'code[class*="language-"]': {
             ...oneLight['code[class*="language-"]'],
             background: "#fafafa",

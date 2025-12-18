@@ -280,7 +280,8 @@ export function Header() {
               >
                 Docs
               </Button>
-              <Button variant={"default"} size={"sm"}>
+                <Button variant={ "default" } size={ "sm" }>
+                  
                 Get Started
               </Button>
             </>
