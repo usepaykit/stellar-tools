@@ -2,7 +2,7 @@ import React from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import { Heroproviders } from '@/constant/hero-constant';
-import { CodeBlock } from "@/components/codeblock";
+import { CodeBlock } from "@/components/code-block";
 
 export default function HeroSection() {
   return (

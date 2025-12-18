@@ -22,7 +22,7 @@ module.exports = defineConfig({
 });
 `;
 
- const shopifyCodeSample = `
+const shopifyCodeSample = `
 import { StellarApp } from "@stellar-tools/shopify";
 
 export default StellarApp({
@@ -36,13 +36,13 @@ export default StellarApp({
 
 const betterAuthCodeSample = `
 import { betterAuth } from "better-auth"
-import { stellar } from "@stellar-tools/better-auth";
+import { stellarTools } from "@stellar-tools/better-auth";
 import { Server } from "@stellar/stellar-sdk";
 
-const stellarClient = new Server("https://horizon-testnet.stellar.org");
+const client = new Server("https://horizon-testnet.stellar.org");
 
 export const auth = betterAuth({
-  plugins: [stellar({ stellarClient })]
+  plugins: [stellarTools({ client, apiKey: process.env.STELLAR_TOOLS_API_KEY })]
 });
 
 export default auth;`;
@@ -64,7 +64,7 @@ export const uploadRouter = {
       })
   )
 }
-`
+`;
 
 export const Heroproviders = [
   {
@@ -88,18 +88,11 @@ export const Heroproviders = [
     filename: "medusa-config.ts",
     code: medusaJSCodeSample,
   },
-    {
-      id: "shopify",
-      name: "Shopify",
-      logo: "/images/integrations/shopify.png",
-      filename: "app.ts",
-      code: shopifyCodeSample,
-    },
-    {
-      id: "uploadthing",
-      name: "UploadThing",
-      logo: "/images/integrations/uploadthing.png",
-      filename: "uploadthing.ts",
-      code: UploadThingCodeSample,
-    },
+  {
+    id: "shopify",
+    name: "Shopify",
+    logo: "/images/integrations/shopify.png",
+    filename: "app.ts",
+    code: shopifyCodeSample,
+  },
 ];
