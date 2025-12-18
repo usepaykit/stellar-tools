@@ -11,9 +11,6 @@ importers:
       '@aliimam/icons':
         specifier: ^0.1.9
         version: 0.1.9(react@19.2.3)
-      '@aliimam/logos':
-        specifier: ^0.2.3
-        version: 0.2.3(react@19.2.3)
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -143,11 +140,6 @@ packages:
 
   '@aliimam/icons@0.1.9':
     resolution: {integrity: sha512-swL7tQ/YtCPBDQqB5wJz2s1aEHIJ681ZgTwjToeB8fbbHGGXPapAQU1K1Ny9LIXDasOwrZR41z22CskfHcDB7g==}
-    peerDependencies:
-      react: ^16.x || ^17.x || ^18.x || ^19.x
-
-  '@aliimam/logos@0.2.3':
-    resolution: {integrity: sha512-UMyjMqrTa66vdGaynWf6ty6H6QuEgtMoh4nVij6TUKOHDNSNQNWjwVZPAsc7hOw+FTBMGx5DNMOTdBRVcMDE7g==}
     peerDependencies:
       react: ^16.x || ^17.x || ^18.x || ^19.x
 
@@ -2784,10 +2776,6 @@ packages:
 snapshots:
 
   '@aliimam/icons@0.1.9(react@19.2.3)':
-    dependencies:
-      react: 19.2.3
-
-  '@aliimam/logos@0.2.3(react@19.2.3)':
     dependencies:
       react: 19.2.3
 
