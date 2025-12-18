@@ -4,6 +4,7 @@ import { Search, LayoutGrid, Plus, HelpCircle, Bell, Settings } from "lucide-rea
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 interface NavIconButtonProps {
   icon: React.ReactNode;
@@ -49,9 +50,10 @@ function NavIconButton({
 
 export default function DashboardHeader() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
+    <header>
       <div className="container flex h-14 items-center justify-between gap-4 px-4">
         {/* Search Bar */}
+        <SidebarTrigger className="-ml-1" />
         <div className="relative flex-1 max-w-md">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
