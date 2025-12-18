@@ -123,7 +123,7 @@ const data = {
         },
         {
           title: "Webhooks",
-          url: "/dashboard/developers/webhooks",
+          url: "/dashboard/webhooks",
         },
         {
           title: "Documentation",
