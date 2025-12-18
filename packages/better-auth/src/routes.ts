@@ -1,4 +1,4 @@
-import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
+import { createAuthEndpoint } from "better-auth/api";
 import * as z from "zod";
 import type { StellarOptions } from "./types";
 
@@ -12,16 +12,17 @@ export const createPayment = (options: StellarOptions) => {
         asset: z.string().default("XLM"),
         successUrl: z.string(),
       }),
-      use: [sessionMiddleware],
+      // use: [sessionMiddleware],
     },
     async (ctx) => {
-      const { user } = ctx.context.session;
+      const session = ctx.context.session;
+      const userId = session?.user?.id || "guest";
 
       // Create pending payment record
       const payment = await ctx.context.adapter.create<{ id: string }>({
         model: "payment",
         data: {
-          userId: user.id,
+          userId: userId,
           amount: ctx.body.amount,
           asset: ctx.body.asset,
           status: "pending",
