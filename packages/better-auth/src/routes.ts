@@ -11,7 +11,6 @@ export const createPayment = (options: StellarOptions) => {
         amount: z.string(),
         asset: z.string().default("XLM"),
         successUrl: z.string(),
-        cancelUrl: z.string(),
       }),
       use: [sessionMiddleware],
     },
@@ -29,16 +28,14 @@ export const createPayment = (options: StellarOptions) => {
         },
       });
 
-      const paymentUrl = options.paymentPageUrl
-        ? new URL(options.paymentPageUrl)
-        : new URL("https://pay.example.com/checkout");
+      // Use SDK's built-in payment page or custom URL
+      const paymentUrl = new URL(`${ctx.context.baseURL}/stellar/pay`);
 
       paymentUrl.searchParams.set("paymentId", payment.id);
       paymentUrl.searchParams.set("amount", ctx.body.amount);
       paymentUrl.searchParams.set("asset", ctx.body.asset);
       paymentUrl.searchParams.set("destination", options.merchantPublicKey);
       paymentUrl.searchParams.set("successUrl", ctx.body.successUrl);
-      paymentUrl.searchParams.set("cancelUrl", ctx.body.cancelUrl);
 
       return ctx.json({
         url: paymentUrl.toString(),

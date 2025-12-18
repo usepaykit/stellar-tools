@@ -19,5 +19,12 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "zod": "^4.2.1"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   }
 }

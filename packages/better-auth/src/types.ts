@@ -6,7 +6,6 @@ export interface StellarOptions {
   networkPassphrase: string;
   merchantPublicKey: string;
   merchantSecretKey?: string; // For server-side signing if needed
-  paymentPageUrl: string;
   onPaymentComplete?: (
     data: {
       payment: Payment;
