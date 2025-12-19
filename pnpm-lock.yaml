@@ -1080,12 +1080,6 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@tailwindcss/oxide-freebsd-x64@4.1.18':
-    resolution: {integrity: sha512-Fj+RHgu5bDodmV1dM9yAxlfJwkkWvLiRjbhuO2LEtwtlYlBgiAT4x/j5wQr1tC3SANAgD+0YcmWVrj8R9trVMA==}
-    engines: {node: '>= 10'}
-    cpu: [x64]
-    os: [freebsd]
-
   '@tailwindcss/oxide-linux-arm-gnueabihf@4.1.18':
     resolution: {integrity: sha512-Fp+Wzk/Ws4dZn+LV2Nqx3IilnhH51YZoRaYHQsVq3RQvEl+71VGKFpkfHrLM/Li+kt5c0DJe/bHXK1eHgDmdiA==}
     engines: {node: '>= 10'}
@@ -3853,9 +3847,6 @@ snapshots:
   '@tailwindcss/oxide-darwin-x64@4.1.18':
     optional: true
 
-  '@tailwindcss/oxide-freebsd-x64@4.1.18':
-    optional: true
-
   '@tailwindcss/oxide-linux-arm-gnueabihf@4.1.18':
     optional: true
 
@@ -3885,7 +3876,6 @@ snapshots:
       '@tailwindcss/oxide-android-arm64': 4.1.18
       '@tailwindcss/oxide-darwin-arm64': 4.1.18
       '@tailwindcss/oxide-darwin-x64': 4.1.18
-      '@tailwindcss/oxide-freebsd-x64': 4.1.18
       '@tailwindcss/oxide-linux-arm-gnueabihf': 4.1.18
       '@tailwindcss/oxide-linux-arm64-gnu': 4.1.18
       '@tailwindcss/oxide-linux-arm64-musl': 4.1.18
