@@ -24,22 +24,15 @@ const Signup = () =>
    password: z
      .string()
      .min(8)
-     .regex(/[A-Z]/)
-     .regex(/[0-9]/)
-     .regex(/[!@#$%^&*(),.?":{}|<>]/),
-   confirmPassword: z.string(),
+     .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/)
  })
- .refine(data => data.password === data.confirmPassword, {
-   message: 'Passwords do not match',
-   path: ['confirmPassword'],
- });
   const [showPassword, setShowPassword] = useState(false);
 
   type SignUpSchema = z.infer<typeof signUpSchema>;
 
   const {
     control,
-    // handleSubmit,
+    handleSubmit,
     formState: { errors},
     watch,
   } = useForm<SignUpSchema>({
@@ -52,10 +45,10 @@ const Signup = () =>
   }
 
   
-  function handleSubmit(onSubmit: (data: { name: string; email: string; password: string; confirmPassword: string; }) => Promise<void>)
-  {
-    console.log("Function not implemented.");
-  }
+  // function handleSubmit(onSubmit: (data: { name: string; email: string; password: string; confirmPassword: string; }) => Promise<void>)
+  // {
+  //   console.log("Function not implemented.");
+  // }
 
   return (
     <div> 
@@ -160,13 +153,16 @@ const Signup = () =>
                       className="pl-10 border rounded-lg outline-none flex-1 text-foreground placeholder:text-muted-foreground"
                     /> }
                   />
-                 
+                  { errors.email && (
+                  <p className="text-destructive ">{errors.email.message }</p>
+              )}
                 </div>
  
               {/* Email */}
           {/* Email */}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-semibold">Email</Label>
+                  
                   <Input
                     // {...register('email')}
                     placeholder="name@example.com"
