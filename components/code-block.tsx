@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +38,7 @@ interface CodeBlockProps {
   logo?: string;
   showCopyButton?: boolean;
   className?: string;
+  maxHeight?: string;
 }
 
 export function CodeBlock({
@@ -46,6 +48,7 @@ export function CodeBlock({
   logo,
   showCopyButton = true,
   className,
+  maxHeight = "400px",
 }: CodeBlockProps) {
   const mounted = useMounted();
   const { resolvedTheme } = useTheme();
@@ -107,17 +110,20 @@ export function CodeBlock({
   // Shell blocks usually don't need a filename header unless explicitly provided
   const showHeader = !isShell || filename;
 
+  const hasMaxHeight = maxHeight && maxHeight !== "none";
+
   return (
     <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "group relative w-full overflow-hidden rounded-xl border bg-muted/50 text-sm",
+          "group relative w-full overflow-hidden rounded-xl border bg-muted/50 text-sm flex flex-col",
           className
         )}
+        style={hasMaxHeight ? { maxHeight } : undefined}
       >
-        {/* Header Section */}
+        {/* Header Section - Sticky */}
         {showHeader && (
-          <div className="flex items-center justify-between border-b bg-muted/50 px-3 py-2">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-muted/50 px-3 py-2 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               {logo && (
                 <Image
@@ -141,33 +147,51 @@ export function CodeBlock({
           </div>
         )}
 
-        {/* Code Content */}
-        <div className="relative w-full overflow-x-auto">
-          <SyntaxHighlighter
-            language={lang}
-            style={syntaxTheme}
-            showLineNumbers={false}
-            wrapLines={false}
-            customStyle={{
-              margin: 0,
-              borderRadius: showHeader ? "0 0 8px 8px" : "8px",
-              // If no header, round all corners
-            }}
-          >
-            {children.trim()}
-          </SyntaxHighlighter>
-
-          {/* Floating Copy Button for Shell/No-Header view */}
-          {!showHeader && showCopyButton && (
-            <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
-              <CopyButton
-                copied={copied}
-                onCopy={copyToClipboard}
-                variant="floating"
-              />
+        {/* Code Content with ScrollArea */}
+        {hasMaxHeight ? (
+          <ScrollArea className="flex-1 min-h-0">
+            <div className={`max-h-[${maxHeight}]`}>
+              <SyntaxHighlighter
+                language={lang}
+                style={syntaxTheme}
+                showLineNumbers={false}
+                wrapLines={false}
+                customStyle={{
+                  margin: 0,
+                  borderRadius: showHeader ? "0 0 8px 8px" : "8px",
+                }}
+              >
+                {children.trim()}
+              </SyntaxHighlighter>
             </div>
-          )}
-        </div>
+          </ScrollArea>
+        ) : (
+          <div className="relative w-full overflow-x-auto">
+            <SyntaxHighlighter
+              language={lang}
+              style={syntaxTheme}
+              showLineNumbers={false}
+              wrapLines={false}
+              customStyle={{
+                margin: 0,
+                borderRadius: showHeader ? "0 0 8px 8px" : "8px",
+              }}
+            >
+              {children.trim()}
+            </SyntaxHighlighter>
+
+            {/* Floating Copy Button for Shell/No-Header view */}
+            {!showHeader && showCopyButton && (
+              <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+                <CopyButton
+                  copied={copied}
+                  onCopy={copyToClipboard}
+                  variant="floating"
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );

@@ -1,22 +1,68 @@
 "use client";
 
+import React from "react";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { TextAreaField, TextField } from "@/components/input-picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CodeBlock } from "../code-block";
+import { TypeScript, Curl } from "../icon";
+import { toast } from "@/components/ui/toast";
 
 const schema = z.object({
-  destinationName: z.string().min(3),
-  endpointUrl: z.url(),
-  description: z.string().optional(),
-  events: z.array(z.string()).min(1),
+  destinationName: z
+    .string()
+    .min(1, "Destination name is required")
+    .min(3, "Destination name must be at least 3 characters")
+    .max(100, "Destination name must be less than 100 characters")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Destination name can only contain lowercase letters, numbers, and hyphens"
+    ),
+  endpointUrl: z
+    .string()
+    .min(1, "Endpoint URL is required")
+    .url("Please enter a valid URL")
+    .refine(
+      (url) => {
+        try {
+          const parsedUrl = new URL(url);
+          return parsedUrl.protocol === "https:";
+        } catch {
+          return false;
+        }
+      },
+      {
+        message: "Endpoint URL must use HTTPS protocol",
+      }
+    )
+    .refine(
+      (url) => {
+        try {
+          const parsedUrl = new URL(url);
+          return parsedUrl.hostname.length > 0;
+        } catch {
+          return false;
+        }
+      },
+      {
+        message: "Please enter a valid domain name",
+      }
+    ),
+  description: z
+    .string()
+    .max(500, "Description must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
+  events: z
+    .array(z.string())
+    .min(1, "Please select at least one event"),
 });
 
 interface WebhooksModalProps {
@@ -34,17 +80,28 @@ const WEBHOOK_EVENTS = [
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]["id"];
 
 export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const formRef = React.useRef<HTMLFormElement>(null);
+
   const form = RHF.useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       destinationName: "",
-      endpointUrl: "https://",
+      endpointUrl: "",
       description: "",
       events: [] as string[],
     },
   });
 
   const events = form.watch("events");
+
+  // Reset form when modal closes
+  React.useEffect(() => {
+    if (!open) {
+      form.reset();
+      setIsSubmitting(false);
+    }
+  }, [open, form]);
 
   const handleSelectAll = () => {
     if (events.length === WEBHOOK_EVENTS.length) {
@@ -54,6 +111,41 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
         "events",
         WEBHOOK_EVENTS.map((e) => e.id)
       );
+    }
+  };
+
+  const onSubmit = async (data: z.infer<typeof schema>) => {
+    setIsSubmitting(true);
+    
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      // Log to console
+      console.log("Webhook destination created:", {
+        destinationName: data.destinationName,
+        endpointUrl: data.endpointUrl,
+        description: data.description,
+        events: data.events,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Show success toast
+      toast.success(
+        "Webhook destination created successfully",
+        {
+          description: `${data.destinationName} is now configured to receive events.`,
+        } as Parameters<typeof toast.success>[1]
+      );
+
+      // Reset form and close modal
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to create webhook destination:", error);
+      toast.error("Failed to create webhook destination");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -77,8 +169,20 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <Button type="submit" className="gap-2">
-          Create destination
+        <Button 
+          type="button"
+          onClick={() => form.handleSubmit(onSubmit)()}
+          className="gap-2"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            "Create destination" 
+          )}
         </Button>
       </div>
     </div>
@@ -91,12 +195,17 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
       title="Configure destination"
       description="Tell StellarToo where to send events and give your destination a helpful description."
       footer={footer}
+      dialogClassName="flex" 
+     
     >
-      <form
-        onSubmit={form.handleSubmit((data) => console.log(data))}
-        className="space-y-8"
-      >
-        <div className="space-y-6 max-w-2xl">
+
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        <form
+          ref={formRef}
+          id="webhook-form"
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex-1 space-y-6 min-w-0"
+        >
           <RHF.Controller
             control={form.control}
             name="destinationName"
@@ -105,6 +214,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 {...field}
                 id="destination-name"
                 label="Destination name"
+                className="shadow-none"
                 error={error?.message}
               />
             )}
@@ -118,6 +228,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 {...field}
                 id="endpoint-url"
                 label="Endpoint URL"
+                   className="shadow-none"
                 error={error?.message}
               />
             )}
@@ -133,6 +244,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 id="description"
                 label="Description"
                 error={error?.message}
+                className="shadow-none"
               />
             )}
           />
@@ -161,7 +273,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
               name="events"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-2">
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-3">
                     {WEBHOOK_EVENTS.map((event) => (
                       <div key={event.id} className="flex items-center gap-2">
                         <Checkbox
@@ -195,10 +307,10 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
               )}
             />
           </div>
-          </div>
+        </form>
 
-          {/* Code Examples Section */}
-          <div className="flex-1 space-y-6 min-w-0 lg:max-w-2xl">
+        {/* Code Examples Section */}
+        <div className="flex-1 space-y-6 min-w-0 lg:max-w-2xl">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Code Examples</h3>
               <p className="text-sm text-muted-foreground">
@@ -212,12 +324,14 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                   value="typescript" 
                   className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
                 >
+                  <TypeScript className="w-4 h-4" />
                   TypeScript
                 </TabsTrigger>
                 <TabsTrigger 
                   value="curl" 
                   className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
                 >
+                  <Curl className="w-4 h-4" />
                   cURL
                 </TabsTrigger>
               </TabsList>
@@ -228,6 +342,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                   <CodeBlock
                     language="typescript"
                     filename="webhook-handler.ts"
+                    maxHeight="400px"
                   >
 {`import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@stellar/webhooks';
@@ -292,15 +407,16 @@ async function handlePaymentFailed(data: any) {
   // Your payment failure logic
   console.log('Payment failed:', data);
 }`}
-                </CodeBlock>
-              </div>
-            </TabsContent>
+                  </CodeBlock>
+                </div>
+              </TabsContent>
 
             <TabsContent value="curl" className="mt-4">
               <div className="space-y-2">
                 <Label>cURL Example</Label>
                 <CodeBlock
                   language="bash"
+                  maxHeight="400px"
                 >
 {`# Test webhook endpoint with cURL
 curl -X POST https://your-endpoint.com/api/webhooks/stellar \\
@@ -331,10 +447,10 @@ curl -X POST https://your-endpoint.com/api/webhooks/stellar \\
 # }`}
                 </CodeBlock>
               </div>
-              </TabsContent>
+            </TabsContent>
             </Tabs>
-          </div>
-      </form>
+        </div>
+      </div>
     </FullScreenModal>
   );
 }
