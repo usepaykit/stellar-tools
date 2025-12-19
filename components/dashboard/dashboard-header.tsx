@@ -1,6 +1,13 @@
 "use client";
 
-import { Search, LayoutGrid, Plus, HelpCircle, Bell, Settings } from "lucide-react";
+import {
+  Search,
+  LayoutGrid,
+  Plus,
+  HelpCircle,
+  Bell,
+  Settings,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -101,15 +108,6 @@ export default function DashboardHeader() {
             notificationCount={1}
             notificationColor="bg-blue-500"
             aria-label="Notifications"
-            onClick={() =>  toast.error("Notifications from stellar tools", {
-              id: "notifications",
-                cancel:{
-                label: <X  size={24}/>,
-                
-                onClick: ()=>{console.log('hello world')}
-              },
-              
-            })}
           />
 
           {/* Settings Icon */}
