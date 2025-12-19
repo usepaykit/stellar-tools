@@ -22,15 +22,68 @@ function TabsList({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
+  const listRef = React.useRef<HTMLDivElement>(null)
+  const [indicatorStyle, setIndicatorStyle] = React.useState<{
+    left: number
+    width: number
+  }>({ left: 0, width: 0 })
+
+  React.useEffect(() => {
+    const list = listRef.current
+    if (!list) return
+
+    const updateIndicator = () => {
+      const activeTrigger = list.querySelector<HTMLElement>(
+        '[data-state="active"]'
+      )
+      if (activeTrigger) {
+        const listRect = list.getBoundingClientRect()
+        const triggerRect = activeTrigger.getBoundingClientRect()
+        setIndicatorStyle({
+          left: triggerRect.left - listRect.left,
+          width: triggerRect.width,
+        })
+      }
+    }
+
+    updateIndicator()
+
+    const observer = new MutationObserver(updateIndicator)
+    observer.observe(list, {
+      attributes: true,
+      attributeFilter: ["data-state"],
+      subtree: true,
+    })
+
+    // Update on resize
+    window.addEventListener("resize", updateIndicator)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", updateIndicator)
+    }
+  }, [])
+
   return (
     <TabsPrimitive.List
+      ref={listRef}
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground inline-flex h-auto w-fit items-center justify-center rounded-lg p-[3px]",
+        "bg-muted text-muted-foreground relative inline-flex h-auto w-fit items-center justify-center rounded-lg p-[3px]",
         className
       )}
       {...props}
-    />
+    >
+      <span
+        className="absolute top-[3px] h-[calc(100%-6px)] rounded-md bg-background  transition-all duration-300 ease-out dark:bg-input/30 dark:border-input dark:border"
+        style={{
+          left: `${indicatorStyle.left}px`,
+          width: `${indicatorStyle.width}px`,
+        }}
+        aria-hidden="true"
+      />
+      {props.children}
+    </TabsPrimitive.List>
   )
 }
 
@@ -42,7 +95,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "data-[state=active]:bg-background dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring dark:data-[state=active]:border-input dark:data-[state=active]:bg-input/30 text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative z-10 dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
