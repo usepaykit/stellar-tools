@@ -5,12 +5,6 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -92,7 +86,6 @@ export default function SignIn() {
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       <div className="relative hidden lg:flex bg-black overflow-hidden">
-        {/* Sophisticated gradient mesh background */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-linear-to-br from-black via-gray-950 to-black" />
           <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-primary/5 blur-3xl" />
@@ -100,14 +93,10 @@ export default function SignIn() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.1),transparent_50%)]" />
         </div>
 
-        {/* Content Container with refined spacing */}
         <div className="relative z-10 flex flex-col justify-between w-full p-16">
-          {/* Top Section */}
           <div className="space-y-10">
-            {/* Logo Section - Premium presentation */}
             <div className="space-y-6">
               <div className="relative inline-block">
-                {/* Subtle glow - not overpowering */}
                 <div className="absolute -inset-4 rounded-2xl bg-primary/5 blur-2xl opacity-50 " />
                   <Image
                     src="/images/logo-dark.png"
@@ -120,7 +109,6 @@ export default function SignIn() {
             
               </div>
 
-              {/* Typography with refined hierarchy */}
               <div className="space-y-3">
                 <h1 className="text-6xl font-bold tracking-[-0.02em] text-white leading-[1.1]">
                   Stellar Tools
@@ -129,14 +117,12 @@ export default function SignIn() {
               </div>
             </div>
 
-            {/* Value Proposition - Concise and impactful */}
             <div className="space-y-6 max-w-lg">
               <p className="text-lg text-white/80 leading-relaxed font-light tracking-wide">
                 The cloud platform for managing Stellar payment SDKs. 
                 Centralized control with enterprise reliability.
               </p>
 
-              {/* Feature highlights - Minimal and elegant */}
               <div className="flex flex-col gap-4 pt-2">
                 <div className="flex items-start gap-4 group">
                  
@@ -160,8 +146,6 @@ export default function SignIn() {
               </div>
             </div>
           </div>
-
-          {/* Bottom Section - Refined feature showcase */}
           <div className="relative">
             {/* Subtle border accent */}
             <div className="absolute -top-px left-0 right-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
@@ -181,183 +165,174 @@ export default function SignIn() {
         </div>
       </div>
 
-      {/* Right side form */}
       <div className="relative flex flex-col justify-center bg-background">
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex items-center justify-center px-6 py-12"
+          className="flex flex-col items-center justify-center px-6 py-12 w-full max-w-md mx-auto space-y-4"
         >
-          <Card className="w-full max-w-md bg-transparent shadow-none border-none text-foreground">
-            <CardHeader className="space-y-2 text-center">
-              <h2 className="text-3xl f tracking-tighter">
-                Sign in to your account
-              </h2>
-            </CardHeader>
+          <div className="space-y-2 text-center w-full">
+            <h2 className="text-3xl f tracking-tighter">
+              Sign in to your account
+            </h2>
+          </div>
 
-            <CardContent className="space-y-4">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleGoogleSignIn}
-                className="flex items-center w-full gap-2.5 px-10 py-2.5 border rounded-lg transition-colors shadow-none hover:bg-muted"
-              >
-                <Google className="w-5 h-5" />
-                <span className="text-sm font-semibold text-foreground">
-                  Continue with Google
-                </span>
-              </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleGoogleSignIn}
+            className="flex items-center w-full gap-2.5 px-10 py-2.5 border rounded-lg transition-colors shadow-none hover:bg-muted"
+          >
+            <Google className="w-5 h-5" />
+            <span className="text-sm font-semibold text-foreground">
+              Continue with Google
+            </span>
+          </Button>
 
-              <div className="flex items-center my-6">
-                <Separator className="flex-1" />
-                <span className="px-4 text-sm text-muted-foreground whitespace-nowrap">
-                  or continue with email
-                </span>
-                <Separator className="flex-1" />
-              </div>
+          <div className="flex items-center my-6 w-full">
+            <Separator className="flex-1" />
+            <span className="px-4 text-sm text-muted-foreground whitespace-nowrap">
+              or continue with email
+            </span>
+            <Separator className="flex-1" />
+          </div>
 
-              <Controller
-                control={form.control}
-                name="email"
-                render={({ field, fieldState: { error } }) => (
-                  <TextField
-                    {...field}
-                    id="email"
-                    label="Email"
-                    type="email"
-                    placeholder="name@example.com"
-                    className="shadow-none"
-                    error={error?.message}
-                  />
-                )}
-              />
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-semibold">
-                    Password
-                  </Label>
-                  <Link
-                    href="/auth/forgot-password"
-                    className="text-sm font-semibold underline hover:text-foreground transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <Controller
-                  control={form.control}
-                  name="password"
-                  render={({ field, fieldState: { error } }) => (
-                    <div className="space-y-1.5">
-                      <InputGroup
-                        className={ "shadow-none"}
-                        aria-invalid={error ? "true" : "false"}
-                      >
-                        <InputGroupInput
-                          {...field}
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          className="shadow-none"
-                        />
-                        <InputGroupAddon align="inline-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 hover:bg-transparent shadow-none"
-                            onClick={() => setShowPassword(!showPassword)}
-                            aria-label={showPassword ? "Hide password" : "Show password"}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                        </InputGroupAddon>
-                      </InputGroup>
-                      {error?.message && (
-                        <p className="text-sm text-destructive">{error.message}</p>
-                      )}
-                    </div>
-                  )}
+          <div className="w-full">
+            <Controller
+              control={form.control}
+              name="email"
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  id="email"
+                  label="Email"
+                  type="email"
+                  placeholder="name@example.com"
+                  className="shadow-none w-full"
+                  error={error?.message}
                 />
-              </div>
+              )}
+            />
+          </div>
 
-              {/* Remember Me Checkbox */}
-              <Controller
-                control={form.control}
-                name="rememberMe"
-                render={({ field }) => (
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="remember-me"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                    <Label
-                      htmlFor="remember-me"
-                      className="text-sm font-semibold cursor-pointer"
-                    >
-                      Remember me
-                    </Label>
-                  </div>
-                )}
-              />
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full font-semibold rounded-md transition-all duration-300 hover:scale-[1.02] focus:ring-4 hover:shadow-lg"
-                disabled={isSubmitting}
+          <div className="space-y-2 w-full">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-sm font-semibold">
+                Password
+              </Label>
+              <Link
+                href="/auth/forgot-password"
+                className="text-sm font-semibold underline hover:text-foreground transition-colors"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign in"
-                )}
-              </Button>
-
-              <div className="my-6">
-                <p className="text-center text-sm text-muted-foreground">
-                  By continuing you agree to our{" "}
-                  <Link
-                    href="/terms"
-                    className="underline hover:text-foreground transition-colors"
+                Forgot password?
+              </Link>
+            </div>
+            <Controller
+              control={form.control}
+              name="password"
+              render={({ field, fieldState: { error } }) => (
+                <div className="space-y-1.5">
+                  <InputGroup
+                    className="shadow-none w-full"
+                    aria-invalid={error ? "true" : "false"}
                   >
-                    Terms of Service
-                  </Link>
-                  {" "}and{" "}
-                  <Link
-                    href="/privacy"
-                    className="underline hover:text-foreground transition-colors"
-                  >
-                    Privacy Policy
-                  </Link>
-                </p>
-              </div>
+                    <InputGroupInput
+                      {...field}
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="shadow-none"
+                    />
+                    <InputGroupAddon align="inline-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-transparent shadow-none"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </InputGroupAddon>
+                  </InputGroup>
+                  {error?.message && (
+                    <p className="text-sm text-destructive">{error.message}</p>
+                  )}
+                </div>
+              )}
+            />
+          </div>
 
-              {/* Sign Up Link */}
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Don&apos;t have an account?{" "}
-                  <Link
-                    href="/auth/signup"
-                    className="font-semibold underline hover:text-foreground transition-colors"
+          <div className="w-full">
+            <Controller
+              control={form.control}
+              name="rememberMe"
+              render={({ field }) => (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="remember-me"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                  <Label
+                    htmlFor="remember-me"
+                    className="text-sm font-semibold cursor-pointer"
                   >
-                    Sign up
-                  </Link>
-                </p>
-              </div>
-            </CardContent>
+                    Remember me
+                  </Label>
+                </div>
+              )}
+            />
+          </div>
+          <Button
+            type="submit"
+            className="w-full font-semibold rounded-md transition-all duration-300 hover:scale-[1.02] focus:ring-4 hover:shadow-lg"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
+          </Button>
 
-            <CardFooter className="text-center text-sm text-muted-foreground">
-              {/* Footer content if needed */}
-            </CardFooter>
-          </Card>
+          <div className="my-6 w-full">
+            <p className="text-center text-sm text-muted-foreground">
+              By continuing you agree to our{" "}
+              <Link
+                href="/terms"
+                className="underline hover:text-foreground transition-colors"
+              >
+                Terms of Service
+              </Link>
+              {" "}and{" "}
+              <Link
+                href="/privacy"
+                className="underline hover:text-foreground transition-colors"
+              >
+                Privacy Policy
+              </Link>
+            </p>
+          </div>
+
+          <div className="text-center w-full">
+            <p className="text-sm text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/auth/signup"
+                className="font-semibold underline hover:text-foreground transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
         </form>
       </div>
     </div>
