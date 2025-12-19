@@ -21,18 +21,14 @@ const signUpSchema = z.object({
     .min(1, "Name is required")
     .min(3, "Name must be at least 3 characters"),
   email: z
-    .string()
-    .email("Invalid email address")
-    .toLowerCase()
+  .email()
+  .toLowerCase()
     .trim(),
    password: z
-     .string()
-    .min(1, "Password is required")
-    .min(8, "Password must be at least 8 characters")
-    .regex(
-      /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$/,
-      "Password must contain at least one uppercase letter, one number, and one special character"
-    ),
+  .string()
+  .min(1, "Password is required")
+  .min(8, "Password must be at least 8 characters"),
+  
 });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;

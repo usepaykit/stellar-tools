@@ -18,12 +18,11 @@ import Image from "next/image";
 
 const signInSchema = z.object({
   email: z.email()
-    .toLowerCase()
-    .trim(),
+    .toLowerCase(),
   password: z
-    .string()
-    .min(1, "Password is required")
-    .min(8, "Password must be at least 8 characters"),
+  .string()
+  .min(1, "Password is required")
+  .min(8, "Password must be at least 8 characters"),
   rememberMe: z.boolean(),
 });
 

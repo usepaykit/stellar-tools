@@ -13,8 +13,7 @@ import Image from "next/image";
 
 const forgotPasswordSchema = z.object({
   email: z
-    .string()
-    .email("Invalid email address")
+    .email()
     .toLowerCase()
     .trim(),
 });
