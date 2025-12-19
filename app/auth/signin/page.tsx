@@ -35,7 +35,7 @@ const Signin = () =>
             Stella Tools
           </h2>
           <p className="text-lg opacity-90">
-            The world awaits. Embark on your next journey.
+            Lorem ipsum, dolor sit amet consectetur adipisicing elit. Totam?
           </p>
         </div>
 
@@ -45,11 +45,10 @@ const Signin = () =>
           rounded-2xl border border-white/20 p-6 text-white shadow-lg"
         >
           <h3 className="text-xl font-semibold mb-1">
-            Wander, Explore, Experience
+           Lorem ipsum dolor sit amet.
           </h3>
           <p className="text-sm text-white/90">
-            Discover breathtaking destinations, vibrant cultures, and
-            unforgettable adventures across the globe.
+           Lorem ipsum dolor sit amet consectetur adipisicing elit. Illum exercitationem rem accusamus commodi, itaque consectetur possimus doloribus? Excepturi molestiae fugiat maiores eum fuga obcaecati, quas, autem, animi doloribus dolorem aspernatur.
           </p>
         </div>
       </div>
