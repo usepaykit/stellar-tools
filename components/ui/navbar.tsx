@@ -282,9 +282,10 @@ export function Header() {
               </Button>
               <Button variant={"default"} size={"sm"}>
                 <Link href='/dashboard/create'>
-                <Button variant={ "default" } size={ "sm" }>
+            
                   
                 Get Started
+             
                 </Link>
               </Button>
             </>
