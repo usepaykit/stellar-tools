@@ -375,29 +375,29 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <Sparkles />
+                    <DropdownMenuItem className="gap-2">
+                      <Sparkles className="size-4" />
                       Upgrade to Pro
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                      <BadgeCheck />
+                    <DropdownMenuItem className="gap-2">
+                      <BadgeCheck className="size-4"  />
                       Account
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <CreditCard />
+                    <DropdownMenuItem className="gap-2">
+                      <CreditCard className="size-4"  />
                       Billing
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Bell />
+                    <DropdownMenuItem className="gap-2">
+                      <Bell className="size-4"  />
                       Notifications
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut />
+                  <DropdownMenuItem className="gap-2">
+                    <LogOut className="size-4"  />
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
