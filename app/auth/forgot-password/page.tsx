@@ -12,10 +12,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 const forgotPasswordSchema = z.object({
-  email: z
-    .email()
-    .toLowerCase()
-    .trim(),
+  email: z.email(),
 });
 
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
@@ -28,7 +25,6 @@ export default function ForgotPassword() {
     defaultValues: {
       email: "",
     },
-    mode: "onBlur",
   });
 
   const onSubmit = async (data: ForgotPasswordFormData) => {
@@ -40,7 +36,8 @@ export default function ForgotPassword() {
         timestamp: new Date().toISOString(),
       });
       toast.success("Password reset link sent", {
-        description: "Check your email for instructions to reset your password.",
+        description:
+          "Check your email for instructions to reset your password.",
       } as Parameters<typeof toast.success>[1]);
     } catch (error) {
       console.error("Password reset error:", error);
@@ -97,7 +94,7 @@ export default function ForgotPassword() {
             {/* Value Proposition - Concise and impactful */}
             <div className="space-y-6 max-w-lg">
               <p className="text-lg text-white/80 leading-relaxed font-light tracking-wide">
-                The cloud platform for managing Stellar payment SDKs. 
+                The cloud platform for managing Stellar payment SDKs.
                 Centralized control with enterprise reliability.
               </p>
 
@@ -105,16 +102,21 @@ export default function ForgotPassword() {
               <div className="flex flex-col gap-4 pt-2">
                 <div className="flex items-start gap-4 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Cloud-Native</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Cloud-Native
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
-                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
+                      Unified dashboard to deploy, monitor, and scale—zero
+                      infrastructure overhead.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Global Infrastructure</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Global Infrastructure
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
                       99.9% uptime with enterprise-grade security by default.
                     </p>
@@ -128,7 +130,7 @@ export default function ForgotPassword() {
           <div className="relative">
             {/* Subtle border accent */}
             <div className="absolute -top-px left-0 right-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
-            
+
             <div className="pt-8 space-y-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold text-white tracking-wide">
@@ -136,7 +138,8 @@ export default function ForgotPassword() {
                 </h3>
               </div>
               <p className="text-sm text-white/70 leading-relaxed max-w-md font-light">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of
+                applications worldwide.
               </p>
             </div>
           </div>
@@ -150,11 +153,10 @@ export default function ForgotPassword() {
           className="flex flex-col items-center justify-center px-6 py-12 w-full max-w-md mx-auto space-y-4"
         >
           <div className="space-y-2 text-center w-full">
-            <h2 className="text-3xl f tracking-tighter">
-              Reset your password
-            </h2>
+            <h2 className="text-3xl f tracking-tighter">Reset your password</h2>
             <p className="text-sm text-muted-foreground">
-              Enter your email address and we&apos;ll send you a link to reset your password.
+              Enter your email address and we&apos;ll send you a link to reset
+              your password.
             </p>
           </div>
 
@@ -167,7 +169,6 @@ export default function ForgotPassword() {
                   {...field}
                   id="email"
                   label="Email"
-                  type="email"
                   placeholder="name@example.com"
                   className="shadow-none w-full"
                   error={error?.message}
@@ -176,7 +177,6 @@ export default function ForgotPassword() {
             />
           </div>
 
-          {/* Submit Button */}
           <Button
             type="submit"
             className="w-full font-semibold rounded-md transition-all duration-300 hover:scale-[1.02] focus:ring-4 hover:shadow-lg"
@@ -208,4 +208,3 @@ export default function ForgotPassword() {
     </div>
   );
 }
-

@@ -12,22 +12,24 @@ import { Label } from "@/components/ui/label";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/input-picker";
 import { toast } from "@/components/ui/toast";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from "@/components/ui/input-group";
 import Link from "next/link";
 import Image from "next/image";
 
 const signInSchema = z.object({
-  email: z.email()
-    .toLowerCase(),
+  email: z.email().toLowerCase(),
   password: z
-  .string()
-  .min(1, "Password is required")
-  .min(8, "Password must be at least 8 characters"),
+    .string()
+    .min(1, "Password is required")
+    .min(8, "Password must be at least 8 characters"),
   rememberMe: z.boolean(),
 });
 
 type SignInFormData = z.infer<typeof signInSchema>;
-
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
@@ -40,22 +42,18 @@ export default function SignIn() {
       password: "",
       rememberMe: false,
     },
-    mode: "onBlur",
   });
 
   const onSubmit = async (data: SignInFormData) => {
     setIsSubmitting(true);
 
     try {
-
-
       console.log("Sign-in attempt:", {
         email: data.email,
         rememberMe: data.rememberMe,
         timestamp: new Date().toISOString(),
       });
       toast.success("Signed in successfully");
-
     } catch (error) {
       console.error("Sign-in error:", error);
       toast.error("Sign-in failed", {
@@ -68,7 +66,6 @@ export default function SignIn() {
       setIsSubmitting(false);
     }
   };
-
 
   const handleGoogleSignIn = async () => {
     try {
@@ -97,15 +94,14 @@ export default function SignIn() {
             <div className="space-y-6">
               <div className="relative inline-block">
                 <div className="absolute -inset-4 rounded-2xl bg-primary/5 blur-2xl opacity-50 " />
-                  <Image
-                    src="/images/logo-dark.png"
-                    alt="Stellar Tools"
-                    width={150}
-                    height={1}
-                    className="object-contain p-5"
-                    priority
-                  />
-            
+                <Image
+                  src="/images/logo-dark.png"
+                  alt="Stellar Tools"
+                  width={150}
+                  height={1}
+                  className="object-contain p-5"
+                  priority
+                />
               </div>
 
               <div className="space-y-3">
@@ -118,25 +114,28 @@ export default function SignIn() {
 
             <div className="space-y-6 max-w-lg">
               <p className="text-lg text-white/80 leading-relaxed font-light tracking-wide">
-                The cloud platform for managing Stellar payment SDKs. 
+                The cloud platform for managing Stellar payment SDKs.
                 Centralized control with enterprise reliability.
               </p>
 
               <div className="flex flex-col gap-4 pt-2">
                 <div className="flex items-start gap-4 group">
-                 
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Cloud-Native</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Cloud-Native
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
-                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
+                      Unified dashboard to deploy, monitor, and scale—zero
+                      infrastructure overhead.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4 group">
-               
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Global Infrastructure</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Global Infrastructure
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
                       99.9% uptime with enterprise-grade security by default.
                     </p>
@@ -148,16 +147,16 @@ export default function SignIn() {
           <div className="relative">
             {/* Subtle border accent */}
             <div className="absolute -top-px left-0 right-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
-            
+
             <div className="pt-8 space-y-4">
               <div className="flex items-center gap-3">
-              
                 <h3 className="text-base font-semibold text-white tracking-wide">
                   Trusted Cloud Platform
                 </h3>
               </div>
               <p className="text-sm text-white/70 leading-relaxed max-w-md font-light">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of
+                applications worldwide.
               </p>
             </div>
           </div>
@@ -204,7 +203,6 @@ export default function SignIn() {
                   {...field}
                   id="email"
                   label="Email"
-                  type="email"
                   placeholder="name@example.com"
                   className="shadow-none w-full"
                   error={error?.message}
@@ -248,7 +246,9 @@ export default function SignIn() {
                         size="icon"
                         className="h-6 w-6 hover:bg-transparent shadow-none"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -310,8 +310,8 @@ export default function SignIn() {
                 className="underline hover:text-foreground transition-colors"
               >
                 Terms of Service
-              </Link>
-              {" "}and{" "}
+              </Link>{" "}
+              and{" "}
               <Link
                 href="/privacy"
                 className="underline hover:text-foreground transition-colors"

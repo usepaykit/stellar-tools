@@ -11,7 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/input-picker";
 import { toast } from "@/components/ui/toast";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from "@/components/ui/input-group";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -20,15 +24,11 @@ const signUpSchema = z.object({
     .string()
     .min(1, "Name is required")
     .min(3, "Name must be at least 3 characters"),
-  email: z
-  .email()
-  .toLowerCase()
-    .trim(),
-   password: z
-  .string()
-  .min(1, "Password is required")
-  .min(8, "Password must be at least 8 characters"),
-  
+  email: z.email(),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .min(8, "Password must be at least 8 characters"),
 });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
@@ -44,7 +44,6 @@ export default function SignUp() {
       email: "",
       password: "",
     },
-    mode: "onBlur",
   });
 
   const onSubmit = async (data: SignUpFormData) => {
@@ -83,7 +82,7 @@ export default function SignUp() {
   };
 
   return (
-      <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       <div className="relative hidden lg:flex bg-black overflow-hidden">
         {/* Sophisticated gradient mesh background */}
         <div className="absolute inset-0">
@@ -124,7 +123,7 @@ export default function SignUp() {
             {/* Value Proposition - Concise and impactful */}
             <div className="space-y-6 max-w-lg">
               <p className="text-lg text-white/80 leading-relaxed font-light tracking-wide">
-                The cloud platform for managing Stellar payment SDKs. 
+                The cloud platform for managing Stellar payment SDKs.
                 Centralized control with enterprise reliability.
               </p>
 
@@ -132,20 +131,25 @@ export default function SignUp() {
               <div className="flex flex-col gap-4 pt-2">
                 <div className="flex items-start gap-4 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Cloud-Native</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Cloud-Native
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
-                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
+                      Unified dashboard to deploy, monitor, and scale—zero
+                      infrastructure overhead.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Global Infrastructure</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Global Infrastructure
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
                       99.9% uptime with enterprise-grade security by default.
-          </p>
-        </div>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -155,15 +159,16 @@ export default function SignUp() {
           <div className="relative">
             {/* Subtle border accent */}
             <div className="absolute -top-px left-0 right-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
-            
+
             <div className="pt-8 space-y-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold text-white tracking-wide">
                   Trusted Cloud Platform
-          </h3>
+                </h3>
               </div>
               <p className="text-sm text-white/70 leading-relaxed max-w-md font-light">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of
+                applications worldwide.
               </p>
             </div>
           </div>
@@ -177,9 +182,7 @@ export default function SignUp() {
           className="flex flex-col items-center justify-center px-6 py-12 w-full max-w-md mx-auto space-y-4"
         >
           <div className="space-y-2 text-center w-full">
-            <h2 className="text-3xl f tracking-tighter">
-              Create your account
-            </h2>
+            <h2 className="text-3xl f tracking-tighter">Create your account</h2>
           </div>
 
           <Button
@@ -195,31 +198,31 @@ export default function SignUp() {
           </Button>
 
           <div className="flex items-center my-6 w-full">
-              <Separator className="flex-1" />
-              <span className="px-4 text-sm text-muted-foreground whitespace-nowrap">
-                or continue with email
-              </span>
-              <Separator className="flex-1" />
-            </div>
+            <Separator className="flex-1" />
+            <span className="px-4 text-sm text-muted-foreground whitespace-nowrap">
+              or continue with email
+            </span>
+            <Separator className="flex-1" />
+          </div>
 
           <div className="w-full">
-                  <Controller
+            <Controller
               control={form.control}
-                    name="name" 
+              name="name"
               render={({ field, fieldState: { error } }) => (
                 <TextField
                   {...field}
                   id="name"
                   label="Name"
-                      type="text"
+                  type="text"
                   placeholder="John Doe"
                   className="shadow-none w-full"
                   error={error?.message}
                 />
               )}
             />
-                </div>
- 
+          </div>
+
           <div className="w-full">
             <Controller
               control={form.control}
@@ -227,9 +230,8 @@ export default function SignUp() {
               render={({ field, fieldState: { error } }) => (
                 <TextField
                   {...field}
-                    id="email"
+                  id="email"
                   label="Email"
-                    type="email"
                   placeholder="name@example.com"
                   className="shadow-none w-full"
                   error={error?.message}
@@ -265,7 +267,9 @@ export default function SignUp() {
                         size="icon"
                         className="h-6 w-6 hover:bg-transparent shadow-none"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -307,8 +311,8 @@ export default function SignUp() {
                 className="underline hover:text-foreground transition-colors"
               >
                 Terms of Service
-              </Link>
-              {" "}and{" "}
+              </Link>{" "}
+              and{" "}
               <Link
                 href="/privacy"
                 className="underline hover:text-foreground transition-colors"

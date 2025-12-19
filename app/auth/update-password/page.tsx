@@ -8,22 +8,26 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
-import { InputGroup, InputGroupInput, InputGroupAddon } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupInput,
+  InputGroupAddon,
+} from "@/components/ui/input-group";
 import Link from "next/link";
 import Image from "next/image";
 
-const updatePasswordSchema = z.object({
-  newPassword: z
-    .string()
-    .min(1, "New password is required")
-    .min(8, "New password must be at least 8 characters"),
-  confirmPassword: z
-    .string()
-    .min(1, "Please confirm your new password"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
+const updatePasswordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(1, "New password is required")
+      .min(8, "New password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 
@@ -38,7 +42,6 @@ export default function UpdatePassword() {
       newPassword: "",
       confirmPassword: "",
     },
-    mode: "onBlur",
   });
 
   const onSubmit = async (data: UpdatePasswordFormData) => {
@@ -100,23 +103,28 @@ export default function UpdatePassword() {
 
             <div className="space-y-6 max-w-lg">
               <p className="text-lg text-white/80 leading-relaxed font-light tracking-wide">
-                The cloud platform for managing Stellar payment SDKs. 
+                The cloud platform for managing Stellar payment SDKs.
                 Centralized control with enterprise reliability.
               </p>
 
               <div className="flex flex-col gap-4 pt-2">
                 <div className="flex items-start gap-4 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Cloud-Native</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Cloud-Native
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
-                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
+                      Unified dashboard to deploy, monitor, and scale—zero
+                      infrastructure overhead.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4 group">
                   <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Global Infrastructure</h4>
+                    <h4 className="text-sm font-semibold text-white mb-1">
+                      Global Infrastructure
+                    </h4>
                     <p className="text-sm text-white/60 leading-relaxed">
                       99.9% uptime with enterprise-grade security by default.
                     </p>
@@ -128,7 +136,7 @@ export default function UpdatePassword() {
 
           <div className="relative">
             <div className="absolute -top-px left-0 right-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
-            
+
             <div className="pt-8 space-y-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold text-white tracking-wide">
@@ -136,7 +144,8 @@ export default function UpdatePassword() {
                 </h3>
               </div>
               <p className="text-sm text-white/70 leading-relaxed max-w-md font-light">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of
+                applications worldwide.
               </p>
             </div>
           </div>
@@ -184,7 +193,9 @@ export default function UpdatePassword() {
                         size="icon"
                         className="h-6 w-6 hover:bg-transparent shadow-none"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        aria-label={showNewPassword ? "Hide password" : "Show password"}
+                        aria-label={
+                          showNewPassword ? "Hide password" : "Show password"
+                        }
                       >
                         {showNewPassword ? (
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -228,8 +239,14 @@ export default function UpdatePassword() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 hover:bg-transparent shadow-none"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        aria-label={
+                          showConfirmPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -278,4 +295,3 @@ export default function UpdatePassword() {
     </div>
   );
 }
-
