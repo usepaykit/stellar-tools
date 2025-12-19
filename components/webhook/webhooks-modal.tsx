@@ -16,53 +16,26 @@ import { TypeScript, Curl } from "../icon";
 import { toast } from "@/components/ui/toast";
 
 const schema = z.object({
-  destinationName: z
-    .string()
-    .min(1, "Destination name is required")
-    .min(3, "Destination name must be at least 3 characters")
-    .max(100, "Destination name must be less than 100 characters")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Destination name can only contain lowercase letters, numbers, and hyphens"
-    ),
-  endpointUrl: z
-    .string()
-    .min(1, "Endpoint URL is required")
-    .url("Please enter a valid URL")
-    .refine(
-      (url) => {
-        try {
-          const parsedUrl = new URL(url);
-          return parsedUrl.protocol === "https:";
-        } catch {
-          return false;
-        }
-      },
-      {
-        message: "Endpoint URL must use HTTPS protocol",
+  destinationName: z.string().regex(/^[a-z0-9-]+$/),
+  endpointUrl: z.url().refine(
+    (url) => {
+      try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.protocol === "https:";
+      } catch {
+        return false;
       }
-    )
-    .refine(
-      (url) => {
-        try {
-          const parsedUrl = new URL(url);
-          return parsedUrl.hostname.length > 0;
-        } catch {
-          return false;
-        }
-      },
-      {
-        message: "Please enter a valid domain name",
-      }
-    ),
+    },
+    {
+      message: "Endpoint URL must use HTTPS protocol",
+    }
+  ),
   description: z
     .string()
     .max(500, "Description must be less than 500 characters")
     .optional()
     .or(z.literal("")),
-  events: z
-    .array(z.string())
-    .min(1, "Please select at least one event"),
+  events: z.array(z.string()).min(1, "Please select at least one event"),
 });
 
 interface WebhooksModalProps {
@@ -116,11 +89,11 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
     setIsSubmitting(true);
-    
+
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      
+
       // Log to console
       console.log("Webhook destination created:", {
         destinationName: data.destinationName,
@@ -131,12 +104,9 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
       });
 
       // Show success toast
-      toast.success(
-        "Webhook destination created successfully",
-        {
-          description: `${data.destinationName} is now configured to receive events.`,
-        } as Parameters<typeof toast.success>[1]
-      );
+      toast.success("Webhook destination created successfully", {
+        description: `${data.destinationName} is now configured to receive events.`,
+      } as Parameters<typeof toast.success>[1]);
 
       // Reset form and close modal
       form.reset();
@@ -169,7 +139,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <Button 
+        <Button
           type="button"
           onClick={() => form.handleSubmit(onSubmit)()}
           className="gap-2"
@@ -181,7 +151,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
               Creating...
             </>
           ) : (
-            "Create destination" 
+            "Create destination"
           )}
         </Button>
       </div>
@@ -195,10 +165,8 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
       title="Configure destination"
       description="Tell StellarToo where to send events and give your destination a helpful description."
       footer={footer}
-      dialogClassName="flex" 
-     
+      dialogClassName="flex"
     >
-
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         <form
           ref={formRef}
@@ -228,7 +196,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 {...field}
                 id="endpoint-url"
                 label="Endpoint URL"
-                   className="shadow-none"
+                className="shadow-none"
                 error={error?.message}
               />
             )}
@@ -311,40 +279,41 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
 
         {/* Code Examples Section */}
         <div className="flex-1 space-y-6 min-w-0 lg:max-w-2xl">
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Code Examples</h3>
-              <p className="text-sm text-muted-foreground">
-                Here are examples of how to handle webhook events in your application.
-              </p>
-            </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Code Examples</h3>
+            <p className="text-sm text-muted-foreground">
+              Here are examples of how to handle webhook events in your
+              application.
+            </p>
+          </div>
 
-            <Tabs defaultValue="typescript" className="w-full">
-              <TabsList className="w-fit">
-                <TabsTrigger 
-                  value="typescript" 
-                  className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
-                >
-                  <TypeScript className="w-4 h-4" />
-                  TypeScript
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="curl" 
-                  className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
-                >
-                  <Curl className="w-4 h-4" />
-                  cURL
-                </TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="typescript" className="w-full">
+            <TabsList className="w-fit">
+              <TabsTrigger
+                value="typescript"
+                className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
+              >
+                <TypeScript className="w-4 h-4" />
+                TypeScript
+              </TabsTrigger>
+              <TabsTrigger
+                value="curl"
+                className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
+              >
+                <Curl className="w-4 h-4" />
+                cURL
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="typescript" className="mt-4">
-                <div className="space-y-2">
-                  <Label>TypeScript Example</Label>
-                  <CodeBlock
-                    language="typescript"
-                    filename="webhook-handler.ts"
-                    maxHeight="400px"
-                  >
-{`import { NextRequest, NextResponse } from 'next/server';
+            <TabsContent value="typescript" className="mt-4">
+              <div className="space-y-2">
+                <Label>TypeScript Example</Label>
+                <CodeBlock
+                  language="typescript"
+                  filename="webhook-handler.ts"
+                  maxHeight="400px"
+                >
+                  {`import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@stellar/webhooks';
 
 export async function POST(request: NextRequest) {
@@ -407,18 +376,15 @@ async function handlePaymentFailed(data: any) {
   // Your payment failure logic
   console.log('Payment failed:', data);
 }`}
-                  </CodeBlock>
-                </div>
-              </TabsContent>
+                </CodeBlock>
+              </div>
+            </TabsContent>
 
             <TabsContent value="curl" className="mt-4">
               <div className="space-y-2">
                 <Label>cURL Example</Label>
-                <CodeBlock
-                  language="bash"
-                  maxHeight="400px"
-                >
-{`# Test webhook endpoint with cURL
+                <CodeBlock language="bash" maxHeight="400px">
+                  {`# Test webhook endpoint with cURL
 curl -X POST https://your-endpoint.com/api/webhooks/stellar \\
   -H "Content-Type: application/json" \\
   -H "Stellar-Signature: your_signature_here" \\
@@ -448,7 +414,7 @@ curl -X POST https://your-endpoint.com/api/webhooks/stellar \\
                 </CodeBlock>
               </div>
             </TabsContent>
-            </Tabs>
+          </Tabs>
         </div>
       </div>
     </FullScreenModal>
