@@ -2,22 +2,9 @@ import { z } from "zod";
 
 export const stellarOptionsSchema = z.object({
   /**
-   * Stellar Horizon Server instance URL
+   * Stellar API key for authentication
    */
-  horizonServerUrl: z.string().url(),
-
-  /**
-   * Public key where payments are sent (merchant account)
-   */
-  merchantPublicKey: z.string(),
-
-  /**
-   * The network passphrase ("Public Global Stellar Network ; September 2015" or "Test SDF Network ; September 2015")
-   */
-  networkPassphrase: z.enum([
-    "Public Global Stellar Network ; September 2015",
-    "Test SDF Network ; September 2015",
-  ]),
+  apiKey: z.string().min(1, "API key is required"),
 
   /**
    * Default asset for payments (XLM, USDC, etc.)
@@ -29,11 +16,6 @@ export const stellarOptionsSchema = z.object({
     })
     .optional()
     .default({ code: "XLM" }),
-
-  /**
-   * Payment timeout in seconds
-   */
-  paymentTimeout: z.number().optional().default(300),
 
   /**
    * Whether to enable debug mode

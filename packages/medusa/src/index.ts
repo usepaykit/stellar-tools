@@ -36,11 +36,19 @@ import type { StellarMedusaOptions, StellarPaymentData } from "./types";
 import { stellarOptionsSchema } from "./types";
 import { tryCatchAsync } from "./utils";
 
+interface ResolvedConfig {
+  horizonServerUrl: string;
+  merchantPublicKey: string;
+  networkPassphrase: string;
+}
+
 export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaOptions> {
   static identifier = "stellar";
 
-  protected readonly horizonServer: Horizon.Server;
+  protected horizonServer: Horizon.Server | null = null;
   protected readonly options: StellarMedusaOptions;
+  private configPromise: Promise<ResolvedConfig> | null = null;
+  private resolvedConfig: ResolvedConfig | null = null;
 
   static validateOptions(options: Record<string, unknown>): void | never {
     const { error } = stellarOptionsSchema.safeParse(options);
@@ -52,17 +60,55 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaO
     return;
   }
 
-  constructor(cradle: Record<string, unknown>, options: StellarMedusaOptions) {
-    super(cradle, options);
+  private async resolveConfigFromApiKey(): Promise<ResolvedConfig> {
+    if (this.resolvedConfig) {
+      return this.resolvedConfig;
+    }
 
-    this.options = options;
-    this.horizonServer = new Horizon.Server(options.horizonServerUrl);
+    if (!this.configPromise) {
+      this.configPromise = this.fetchConfig();
+    }
+
+    return this.configPromise;
+  }
+
+  private async fetchConfig(): Promise<ResolvedConfig> {
+    // TODO: Replace with actual SDK/cloud service implementation
+
+    // fake promise to relace with actual api key to resolve the config
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const mockConfig: ResolvedConfig = {
+      horizonServerUrl:
+        process.env.STELLAR_HORIZON_URL ||
+        "https://horizon-testnet.stellar.org",
+      merchantPublicKey:
+        process.env.STELLAR_MERCHANT_PUBLIC_KEY ||
+        "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+      networkPassphrase:
+        process.env.STELLAR_NETWORK_PASSPHRASE ||
+        "Test SDF Network ; September 2015",
+    };
+
+    this.resolvedConfig = mockConfig;
+    this.horizonServer = new Horizon.Server(mockConfig.horizonServerUrl);
 
     if (this.options.debug) {
       console.info(
-        `[Stellar] Initialized with network: ${options.networkPassphrase}`
+        `[Stellar] Initialized with network: ${mockConfig.networkPassphrase}`
       );
     }
+
+    return mockConfig;
+  }
+
+  private async ensureInitialized(): Promise<ResolvedConfig> {
+    return this.resolveConfigFromApiKey();
+  }
+
+  constructor(cradle: Record<string, unknown>, options: StellarMedusaOptions) {
+    super(cradle, options);
+    this.options = options;
   }
 
   initiatePayment = async ({
@@ -71,6 +117,8 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaO
     currency_code,
     data,
   }: InitiatePaymentInput): Promise<InitiatePaymentOutput> => {
+    const config = await this.ensureInitialized();
+
     if (this.options.debug) {
       console.info("[Stellar] Initiating payment", {
         context,
@@ -96,8 +144,8 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaO
       asset_issuer: this.options.defaultAsset?.issuer,
       status: "pending",
       created_at: Date.now(),
-      expires_at: Date.now() + this.options.paymentTimeout * 1000,
-      payment_url: `stellar:${this.options.merchantPublicKey}?amount=${amount}&memo=${memo}&asset=${currency_code}`,
+      expires_at: Date.now() + 600 * 1000,
+      payment_url: `stellar:${config.merchantPublicKey}?amount=${amount}&memo=${memo}&asset=${currency_code}`,
     };
 
     return {
@@ -110,6 +158,8 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaO
   capturePayment = async (
     input: CapturePaymentInput
   ): Promise<CapturePaymentOutput> => {
+    const config = await this.ensureInitialized();
+
     if (this.options.debug) {
       console.info("[Stellar] Capturing payment", input);
     }
@@ -126,6 +176,13 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaO
     // TODO: Cloud integration - Verify payment via cloud service
     // TODO: Cloud integration - Update payment status in cloud database
     // TODO: Cloud integration - Trigger fulfillment webhooks
+
+    if (!this.horizonServer) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        "Horizon server not initialized"
+      );
+    }
 
     const [tx, txError] = await tryCatchAsync(
       this.horizonServer.transactions().transaction(paymentData.txHash).call()
@@ -148,7 +205,7 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaO
     const operations = await tx.operations();
     const paymentOp = operations.records.find(
       (op: Horizon.ServerApi.OperationRecord) =>
-        op.type === "payment" && op.to === this.options.merchantPublicKey
+        op.type === "payment" && op.to === config.merchantPublicKey
     );
 
     if (!paymentOp) {
