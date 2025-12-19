@@ -7,14 +7,9 @@ import {
   type FileWithPreview,
 } from "@/components/file-upload-picker";
 import { TextAreaField, TextField } from "@/components/input-picker";
+import { PricePicker } from "@/components/price-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText,
-} from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -25,7 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -42,7 +36,16 @@ const productSchema = z.object({
   recurringInterval: z.number().min(1).optional(),
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   pricingModel: z.enum(["fixed", "tiered", "usage"]),
-  price: z.number().min(1, "Price must be at least $1"),
+  price: z.object({
+    amount: z
+      .string()
+      .min(1, "Amount is required")
+      .refine(
+        (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+        "Price must be greater than 0"
+      ),
+    asset: z.string().min(1, "Asset is required"),
+  }),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -63,7 +66,10 @@ export default function OnboardingProject() {
       recurringInterval: 1,
       recurringPeriod: "month",
       pricingModel: "fixed",
-      price: 1,
+      price: {
+        amount: "",
+        asset: "XLM",
+      },
     },
   });
 
@@ -285,42 +291,32 @@ export default function OnboardingProject() {
               </div>
 
               {/* Price */}
-              <div className="space-y-2">
-                <Label>Price</Label>
-                <RHF.Controller
-                  control={form.control}
-                  name="price"
-                  render={({ field, fieldState }) => (
-                    <div className="space-y-1">
-                      <InputGroup
-                        className={cn(
-                          "shadow-none",
-                          fieldState.error && "border-destructive"
-                        )}
-                      >
-                        <InputGroupAddon>
-                          <InputGroupText>$</InputGroupText>
-                        </InputGroupAddon>
-                        <InputGroupInput
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseFloat(e.target.value) || 0)
-                          }
-                          value={field.value || ""}
-                          placeholder="0.00"
-                          type="number"
-                          step="0.01"
-                        />
-                      </InputGroup>
-                      {fieldState.error && (
-                        <p className="text-destructive text-xs">
-                          {fieldState.error.message}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                />
-              </div>
+              <RHF.Controller
+                control={form.control}
+                name="price"
+                render={({ field }) => {
+                  const priceError = form.formState.errors.price;
+                  const errorMessage =
+                    priceError?.amount?.message ||
+                    priceError?.asset?.message ||
+                    priceError?.message;
+
+                  return (
+                    <PricePicker
+                      id="price"
+                      value={field.value}
+                      onChange={field.onChange}
+                      assets={["XLM", "USDC"]}
+                      isLoading={isSubmitting}
+                      label="Price"
+                      error={errorMessage}
+                      disabled={isSubmitting}
+                      placeholder="0.00"
+                      className="shadow-none"
+                    />
+                  );
+                }}
+              />
             </CardContent>
           </Card>
 
