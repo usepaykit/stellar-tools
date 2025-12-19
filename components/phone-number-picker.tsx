@@ -124,6 +124,8 @@ const CountryFlag = React.memo(
   }
 );
 
+CountryFlag.displayName = "CountryFlag";
+
 export const PhoneNumberPicker = React.forwardRef<
   HTMLInputElement,
   PhoneNumberPickerProps
