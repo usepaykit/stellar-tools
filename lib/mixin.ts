@@ -1,5 +1,3 @@
-
-
 export type MixinProps<Mixin extends string, Props> = {
   [Key in keyof Props as `${Mixin}${Capitalize<Key & string>}`]: Props[Key];
 };
@@ -58,4 +56,3 @@ export const splitProps = <Props, Mixins extends string[]>(
   result["rest"] = rest;
   return result as SplitProps<Props, Mixins>;
 };
-

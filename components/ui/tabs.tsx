@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as TabsPrimitive from "@radix-ui/react-tabs"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
 
 function Tabs({
   className,
@@ -15,54 +15,54 @@ function Tabs({
       className={cn("flex flex-col gap-2", className)}
       {...props}
     />
-  )
+  );
 }
 
 function TabsList({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
-  const listRef = React.useRef<HTMLDivElement>(null)
+  const listRef = React.useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = React.useState<{
-    left: number
-    width: number
-  }>({ left: 0, width: 0 })
+    left: number;
+    width: number;
+  }>({ left: 0, width: 0 });
 
   React.useEffect(() => {
-    const list = listRef.current
-    if (!list) return
+    const list = listRef.current;
+    if (!list) return;
 
     const updateIndicator = () => {
       const activeTrigger = list.querySelector<HTMLElement>(
         '[data-state="active"]'
-      )
+      );
       if (activeTrigger) {
-        const listRect = list.getBoundingClientRect()
-        const triggerRect = activeTrigger.getBoundingClientRect()
+        const listRect = list.getBoundingClientRect();
+        const triggerRect = activeTrigger.getBoundingClientRect();
         setIndicatorStyle({
           left: triggerRect.left - listRect.left,
           width: triggerRect.width,
-        })
+        });
       }
-    }
+    };
 
-    updateIndicator()
+    updateIndicator();
 
-    const observer = new MutationObserver(updateIndicator)
+    const observer = new MutationObserver(updateIndicator);
     observer.observe(list, {
       attributes: true,
       attributeFilter: ["data-state"],
       subtree: true,
-    })
+    });
 
     // Update on resize
-    window.addEventListener("resize", updateIndicator)
+    window.addEventListener("resize", updateIndicator);
 
     return () => {
-      observer.disconnect()
-      window.removeEventListener("resize", updateIndicator)
-    }
-  }, [])
+      observer.disconnect();
+      window.removeEventListener("resize", updateIndicator);
+    };
+  }, []);
 
   return (
     <TabsPrimitive.List
@@ -75,7 +75,7 @@ function TabsList({
       {...props}
     >
       <span
-        className="absolute top-[3px] h-[calc(100%-6px)] rounded-md bg-background  transition-all duration-300 ease-out dark:bg-input/30 dark:border-input dark:border"
+        className="bg-background dark:bg-input/30 dark:border-input absolute top-[3px] h-[calc(100%-6px)] rounded-md transition-all duration-300 ease-out dark:border"
         style={{
           left: `${indicatorStyle.left}px`,
           width: `${indicatorStyle.width}px`,
@@ -84,7 +84,7 @@ function TabsList({
       />
       {props.children}
     </TabsPrimitive.List>
-  )
+  );
 }
 
 function TabsTrigger({
@@ -95,12 +95,12 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "relative z-10 dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-foreground dark:text-muted-foreground inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "dark:data-[state=active]:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-foreground dark:text-muted-foreground relative z-10 inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
     />
-  )
+  );
 }
 
 function TabsContent({
@@ -113,7 +113,7 @@ function TabsContent({
       className={cn("flex-1 outline-none", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent };

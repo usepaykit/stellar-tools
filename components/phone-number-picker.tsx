@@ -2,11 +2,6 @@
 
 import * as React from "react";
 
-import { TCountryCode, getCountryData } from "countries-list";
-import { countries } from "country-flag-icons";
-import * as CountryFlags from "country-flag-icons/react/3x2";
-import { Check } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -23,8 +18,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { splitProps, type MixinProps } from "@/lib/mixin";
+import { type MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
+import { TCountryCode, getCountryData } from "countries-list";
+import { countries } from "country-flag-icons";
+import * as CountryFlags from "country-flag-icons/react/3x2";
+import { Check } from "lucide-react";
 
 export interface PhoneNumber {
   number: string;
@@ -72,7 +71,8 @@ type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 
 export interface PhoneNumberPickerProps
-  extends MixinProps<
+  extends
+    MixinProps<
       "flag",
       React.ComponentProps<(typeof CountryFlags)[TCountryCode]>
     >,
@@ -114,7 +114,7 @@ const CountryFlag = React.memo(
     return FlagComponent ? (
       <FlagComponent
         className={cn(
-          "w-6 h-4 shrink-0 rounded object-cover border border-border/40",
+          "border-border/40 h-4 w-6 shrink-0 rounded border object-cover",
           className
         )}
       />
@@ -216,7 +216,7 @@ export const PhoneNumberPicker = React.forwardRef<
 
         <InputGroup
           className={cn(
-            "relative flex h-10 mt-2 w-full rounded-md border border-input bg-transparent text-sm has-[[data-slot=input-group-control]:focus-visible]:ring-ring has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-offset-2",
+            "border-input has-[[data-slot=input-group-control]:focus-visible]:ring-ring relative mt-2 flex h-10 w-full rounded-md border bg-transparent text-sm has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-offset-2",
             group.className
           )}
           {...group}
@@ -228,20 +228,20 @@ export const PhoneNumberPicker = React.forwardRef<
                 role="combobox"
                 aria-expanded={open}
                 disabled={disabled}
-                className="flex h-full gap-2 rounded-r-none border-r border-input bg-transparent px-3 hover:bg-accent hover:text-accent-foreground"
+                className="border-input hover:bg-accent hover:text-accent-foreground flex h-full gap-2 rounded-r-none border-r bg-transparent px-3"
               >
                 <CountryFlag
                   countryCode={value.countryCode || "US"}
                   className={flag.className}
                 />
-                <span className="text-sm font-mono text-foreground">
+                <span className="text-foreground font-mono text-sm">
                   {selectedCountry?.prefix || "+1"}
                 </span>
               </Button>
             </PopoverTrigger>
 
             <PopoverContent
-              className="w-[300px] p-0 bg-background border shadow-lg"
+              className="bg-background w-[300px] border p-0 shadow-lg"
               align="start"
               onWheel={(e) => e.stopPropagation()}
             >
@@ -268,7 +268,7 @@ export const PhoneNumberPicker = React.forwardRef<
                           className={flag.className}
                         />
                         <span className="flex-1 truncate">{country.name}</span>
-                        <span className="text-sm font-mono text-muted-foreground">
+                        <span className="text-muted-foreground font-mono text-sm">
                           {country.prefix}
                         </span>
                         {value.countryCode === country.countryCode && (
@@ -292,7 +292,7 @@ export const PhoneNumberPicker = React.forwardRef<
             onChange={handleNumberChange}
             disabled={disabled}
             className={cn(
-              "no-autofill-bg flex-1 border-0 bg-transparent px-3 mr-3 py-1 ml-1 text-sm shadow-none focus-visible:ring-0",
+              "no-autofill-bg mr-3 ml-1 flex-1 border-0 bg-transparent px-3 py-1 text-sm shadow-none focus-visible:ring-0",
               input.className
             )}
           />
@@ -302,7 +302,7 @@ export const PhoneNumberPicker = React.forwardRef<
           <p
             {...errorProps}
             className={cn(
-              "text-sm text-destructive flex items-start gap-1.5",
+              "text-destructive flex items-start gap-1.5 text-sm",
               errorProps.className
             )}
             role="alert"

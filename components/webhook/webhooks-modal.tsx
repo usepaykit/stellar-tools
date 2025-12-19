@@ -1,19 +1,21 @@
 "use client";
 
 import React from "react";
+
 import { FullScreenModal } from "@/components/fullscreen-modal";
+import { TextAreaField, TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/toast";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { TextAreaField, TextField } from "@/components/input-picker";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+
 import { CodeBlock } from "../code-block";
-import { TypeScript, Curl } from "../icon";
-import { toast } from "@/components/ui/toast";
+import { Curl, TypeScript } from "../icon";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 const schema = z.object({
   destinationName: z.string().regex(/^[a-z0-9-]+$/),
@@ -167,12 +169,12 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
       footer={footer}
       dialogClassName="flex"
     >
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <form
           ref={formRef}
           id="webhook-form"
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex-1 space-y-6 min-w-0"
+          className="min-w-0 flex-1 space-y-6"
         >
           <RHF.Controller
             control={form.control}
@@ -226,14 +228,14 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 variant="ghost"
                 size="sm"
                 onClick={handleSelectAll}
-                className="h-auto py-1 px-2 text-xs shadow-none"
+                className="h-auto px-2 py-1 text-xs shadow-none"
               >
                 {events.length === WEBHOOK_EVENTS.length
                   ? "Deselect all"
                   : "Select all"}
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Choose which events this webhook should listen to.
             </p>
             <RHF.Controller
@@ -258,7 +260,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                         />
                         <Label
                           htmlFor={event.id}
-                          className="text-sm font-medium cursor-pointer"
+                          className="cursor-pointer text-sm font-medium"
                         >
                           {event.label}
                         </Label>
@@ -267,7 +269,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                   </div>
 
                   {error?.message && (
-                    <p className="text-sm text-destructive" role="alert">
+                    <p className="text-destructive text-sm" role="alert">
                       {error.message}
                     </p>
                   )}
@@ -278,10 +280,10 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
         </form>
 
         {/* Code Examples Section */}
-        <div className="flex-1 space-y-6 min-w-0 lg:max-w-2xl">
+        <div className="min-w-0 flex-1 space-y-6 lg:max-w-2xl">
           <div className="space-y-2">
             <h3 className="text-lg font-semibold">Code Examples</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Here are examples of how to handle webhook events in your
               application.
             </p>
@@ -291,16 +293,16 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
             <TabsList className="w-fit">
               <TabsTrigger
                 value="typescript"
-                className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
+                className="min-w-[120px] px-4 py-2 data-[state=active]:shadow-none"
               >
-                <TypeScript className="w-4 h-4" />
+                <TypeScript className="h-4 w-4" />
                 TypeScript
               </TabsTrigger>
               <TabsTrigger
                 value="curl"
-                className="px-4 py-2 min-w-[120px] data-[state=active]:shadow-none"
+                className="min-w-[120px] px-4 py-2 data-[state=active]:shadow-none"
               >
-                <Curl className="w-4 h-4" />
+                <Curl className="h-4 w-4" />
                 cURL
               </TabsTrigger>
             </TabsList>

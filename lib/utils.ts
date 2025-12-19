@@ -1,16 +1,20 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 export const truncate = (
   text: string,
-  { start = 6, end = 4, separator = "..." }: { start?: number, end?: number, separator?: string } = {}
+  {
+    start = 6,
+    end = 4,
+    separator = "...",
+  }: { start?: number; end?: number; separator?: string } = {}
 ): string => {
   if (!text) return "";
-  
+
   if (text.length <= start + end) {
     return text;
   }

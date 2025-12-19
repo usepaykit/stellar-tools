@@ -1,8 +1,7 @@
 "use client";
 
-import { useTheme } from "next-themes";
-import Link from "next/link";
 import * as React from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,10 +24,12 @@ import {
 } from "@/components/ui/navigation-menu";
 import { cn } from "@/lib/utils";
 import { CirclePlus, LogOut, Monitor, Moon, Sun } from "@aliimam/icons";
-import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
-import { Paykit, GitHub, AiApps, ShoppingCart , WebApps} from "../icon";
 import axios from "axios";
+import { useTheme } from "next-themes";
+import Image from "next/image";
+import Link from "next/link";
+
+import { AiApps, GitHub, Paykit, ShoppingCart, WebApps } from "../icon";
 
 const cloud: {
   title: string;
@@ -136,12 +137,12 @@ export function Header() {
   }, []);
   return (
     <div
-      className={`flex sticky px-4 z-50 top-0 w-full bg-background items-center h-16 justify-between transition-border duration-300 ${
+      className={`bg-background transition-border sticky top-0 z-50 flex h-16 w-full items-center justify-between px-4 duration-300 ${
         scrolled ? "border-b" : "border-b-0"
       }`}
     >
       {" "}
-      <div className="flex items-center justify-between w-full  mx-auto max-w-7xl">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
         <div className="flex h-14 justify-center">
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-8" />
@@ -151,9 +152,9 @@ export function Header() {
               alt="Stellar Tools logo"
               width={32}
               height={32}
-              className="size-8 object-contain rounded-md"
+              className="size-8 rounded-md object-contain"
             />
-            <span className="text-lg font-semibold font-rosemary">
+            <span className="font-rosemary text-lg font-semibold">
               Stellar Tools
             </span>
           </Link>
@@ -163,7 +164,7 @@ export function Header() {
                 <NavigationMenuTrigger
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground"
+                    "text-muted-foreground h-7.5 rounded-full font-normal"
                   )}
                 >
                   Products
@@ -171,7 +172,7 @@ export function Header() {
                 <NavigationMenuContent className="bg-background pt-3">
                   <ul className="w-[300px]">
                     <div>
-                      <span className="p-4 text-muted-foreground">
+                      <span className="text-muted-foreground p-4">
                         Adapters
                       </span>
                       {cloud.map((component) => (
@@ -193,7 +194,7 @@ export function Header() {
                 <NavigationMenuTrigger
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground"
+                    "text-muted-foreground h-7.5 rounded-full font-normal"
                   )}
                 >
                   Solutions
@@ -201,7 +202,7 @@ export function Header() {
                 <NavigationMenuContent className="bg-background pt-3">
                   <ul className="w-[300px]">
                     <div>
-                      <span className="p-4 text-muted-foreground">
+                      <span className="text-muted-foreground p-4">
                         Use Cases
                       </span>
                       {cases.map((component) => (
@@ -223,7 +224,7 @@ export function Header() {
                   asChild
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground"
+                    "text-muted-foreground h-7.5 rounded-full font-normal"
                   )}
                 >
                   <Link href="#">Docs</Link>
@@ -234,7 +235,7 @@ export function Header() {
                   asChild
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground"
+                    "text-muted-foreground h-7.5 rounded-full font-normal"
                   )}
                 >
                   <Link href="#">Pricing</Link>
@@ -259,7 +260,7 @@ export function Header() {
                 asChild
                 size={"sm"}
                 variant={"ghost"}
-                className="flex items-center gap-2  "
+                className="flex items-center gap-2"
               >
                 <a
                   href="https://github.com/usepaykit/stellar-tools"
@@ -281,12 +282,7 @@ export function Header() {
                 Docs
               </Button>
               <Button variant={"default"} size={"sm"}>
-                <Link href='/dashboard/create'>
-            
-                  
-                Get Started
-             
-                </Link>
+                <Link href="/dashboard/create">Get Started</Link>
               </Button>
             </>
           )}
@@ -301,10 +297,10 @@ export function Header() {
               <AvatarFallback>AI</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-70 p-3 rounded-xl" align="end">
+          <DropdownMenuContent className="w-70 rounded-xl p-3" align="end">
             <div className="p-2">
               <h1 className="font-semibold">Ali Imam</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 contact@aliimam.in
               </p>
             </div>
@@ -313,19 +309,19 @@ export function Header() {
               <DropdownMenuItem className="py-3">
                 Account Settings
               </DropdownMenuItem>
-              <DropdownMenuItem className="py-3 justify-between">
+              <DropdownMenuItem className="justify-between py-3">
                 Create Taems <CirclePlus strokeWidth={2} />
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="-mx-3" />
             <DropdownMenuGroup>
-              <DropdownMenuItem className="py-3 justify-between">
+              <DropdownMenuItem className="justify-between py-3">
                 Theme <ThemeSwitcher />
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="-mx-3" />
 
-            <DropdownMenuItem className="py-3 justify-between">
+            <DropdownMenuItem className="justify-between py-3">
               Logout <LogOut strokeWidth={2} />
             </DropdownMenuItem>
             <DropdownMenuSeparator className="-mx-3" />
@@ -367,24 +363,24 @@ function ListItem({
 
   return (
     <li {...props}>
-      <NavigationMenuLink asChild className="hover:bg-transparent w-fit">
+      <NavigationMenuLink asChild className="w-fit hover:bg-transparent">
         <Link href={href} target="_blank" rel="noreferrer">
-          <div className="flex gap-3 items-start rounded p-2">
+          <div className="flex items-start gap-3 rounded p-2">
             {logoUrl ? (
               <Image
                 src={logoUrl}
                 alt={`${title} logo`}
                 width={24}
                 height={24}
-                className="size-6 object-contain rounded-full"
+                className="size-6 rounded-full object-contain"
               />
             ) : IconElement ? (
-              <div className="border rounded-sm p-2 icon-container">
+              <div className="icon-container rounded-sm border p-2">
                 {IconElement}
               </div>
             ) : null}
             <div className="text-container">
-              <div className="text-sm font-medium leading-none">{title}</div>
+              <div className="text-sm leading-none font-medium">{title}</div>
               <p className="text-muted-foreground line-clamp-2 pt-1 text-xs leading-snug">
                 {children}
               </p>
@@ -460,7 +456,7 @@ const ThemeSwitcher = ({ className }: ThemeSwitcherProps) => {
   return (
     <div
       className={cn(
-        "relative isolate flex h-7 rounded-full bg-background p-1 ring-1 ring-border",
+        "bg-background ring-border relative isolate flex h-7 rounded-full p-1 ring-1",
         className
       )}
     >
@@ -476,7 +472,7 @@ const ThemeSwitcher = ({ className }: ThemeSwitcherProps) => {
             type="button"
           >
             {isActive && (
-              <div className="absolute inset-0 rounded-full bg-secondary" />
+              <div className="bg-secondary absolute inset-0 rounded-full" />
             )}
             <Icon
               className={cn(

@@ -1,17 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-import * as RHF from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Loader2 } from "lucide-react";
+
+import {
+  FileUploadPicker,
+  type FileWithPreview,
+} from "@/components/file-upload-picker";
+import { TextAreaField, TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
-import { TextField, TextAreaField } from "@/components/input-picker";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -19,19 +24,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupText,
-  InputGroupInput,
-} from "@/components/ui/input-group";
 import { toast } from "@/components/ui/toast";
-import {
-  FileUploadPicker,
-  type FileWithPreview,
-} from "@/components/file-upload-picker";
 import { cn } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
 const productSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -84,10 +85,10 @@ export default function OnboardingProject() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-[600px] flex flex-col items-center">
+    <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
+      <div className="flex w-full max-w-[600px] flex-col items-center">
         {/* Header Section */}
-        <div className="mb-8 text-center flex flex-col items-center">
+        <div className="mb-8 flex flex-col items-center text-center">
           <Image
             src="/images/logo-light.png"
             alt="Logo"
@@ -96,7 +97,7 @@ export default function OnboardingProject() {
             className="mb-6 rounded-md object-contain"
             priority
           />
-          <h1 className="text-3xl font-normal tracking-tight mb-2">
+          <h1 className="mb-2 text-3xl font-normal tracking-tight">
             Your first product
           </h1>
           <p className="text-muted-foreground">
@@ -112,7 +113,7 @@ export default function OnboardingProject() {
             <CardContent className="space-y-5 pt-6">
               <div className="space-y-1">
                 <h2 className="text-lg font-normal">Product Information</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Basic details about your product.
                 </p>
               </div>
@@ -155,7 +156,7 @@ export default function OnboardingProject() {
             <CardContent className="space-y-5 pt-6">
               <div className="space-y-1">
                 <h2 className="text-lg font-normal">Media</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Enhance the product page with visual media.
                 </p>
               </div>
@@ -182,7 +183,7 @@ export default function OnboardingProject() {
             <CardContent className="space-y-5 pt-6">
               <div className="space-y-1">
                 <h2 className="text-lg font-normal">Pricing</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Set your billing cycle and model.
                 </p>
               </div>
@@ -200,7 +201,7 @@ export default function OnboardingProject() {
                       <RadioGroupItem value="one-time" id="one-time" />
                       <Label
                         htmlFor="one-time"
-                        className="font-normal cursor-pointer"
+                        className="cursor-pointer font-normal"
                       >
                         One-time purchase
                       </Label>
@@ -209,7 +210,7 @@ export default function OnboardingProject() {
                       <RadioGroupItem value="recurring" id="recurring" />
                       <Label
                         htmlFor="recurring"
-                        className="font-normal cursor-pointer"
+                        className="cursor-pointer font-normal"
                       >
                         Recurring subscription
                       </Label>
@@ -312,7 +313,7 @@ export default function OnboardingProject() {
                         />
                       </InputGroup>
                       {fieldState.error && (
-                        <p className="text-xs text-destructive">
+                        <p className="text-destructive text-xs">
                           {fieldState.error.message}
                         </p>
                       )}
@@ -341,7 +342,7 @@ export default function OnboardingProject() {
             </Button>
           </div>
 
-          <div className="flex justify-center gap-2 text-sm text-muted-foreground">
+          <div className="text-muted-foreground flex justify-center gap-2 text-sm">
             <Link
               href={`/dashboard/${id}/configure`}
               className="hover:text-foreground"

@@ -1,31 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
-import {
-  AudioWaveform,
-  BadgeCheck,
-  Bell,
-  ChevronRight,
-  ChevronsUpDown,
-  Command,
-  CreditCard,
-  GalleryVerticalEnd,
-  LayoutDashboard,
-  LogOut,
-  Plus,
-  Receipt,
-  Repeat,
-  Settings2,
-  Sparkles,
-  Users,
-  Activity,
-  Code,
-} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
-
 import {
   Collapsible,
   CollapsibleContent,
@@ -56,6 +33,28 @@ import {
   SidebarProvider,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import {
+  Activity,
+  AudioWaveform,
+  BadgeCheck,
+  Bell,
+  ChevronRight,
+  ChevronsUpDown,
+  Code,
+  Command,
+  CreditCard,
+  GalleryVerticalEnd,
+  LayoutDashboard,
+  LogOut,
+  Plus,
+  Receipt,
+  Repeat,
+  Settings2,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import { usePathname } from "next/navigation";
 
 // This is sample data.
 const data = {
@@ -157,7 +156,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     size="lg"
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
-                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                    <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                       <activeTeam.logo className="size-4" />
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
@@ -177,7 +176,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   side="bottom"
                   sideOffset={4}
                 >
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  <DropdownMenuLabel className="text-muted-foreground text-xs">
                     Teams
                   </DropdownMenuLabel>
                   {data.teams.map((team, index) => (
@@ -195,10 +194,10 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   ))}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="gap-2 p-2">
-                    <div className="flex size-6 items-center justify-center rounded-md border bg-background">
+                    <div className="bg-background flex size-6 items-center justify-center rounded-md border">
                       <Plus className="size-4" />
                     </div>
-                    <div className="font-medium text-muted-foreground">
+                    <div className="text-muted-foreground font-medium">
                       Add team
                     </div>
                   </DropdownMenuItem>
@@ -230,7 +229,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                             isActive={itemActive || hasActiveSubItem}
                             className={cn(
                               itemActive || hasActiveSubItem
-                                ? "text-primary bg-transparent hover:bg-sidebar-accent data-[active=true]:bg-transparent data-[active=true]:text-primary"
+                                ? "text-primary hover:bg-sidebar-accent data-[active=true]:text-primary bg-transparent data-[active=true]:bg-transparent"
                                 : ""
                             )}
                           >
@@ -266,7 +265,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                     isActive={subItemActive}
                                     className={cn(
                                       subItemActive
-                                        ? "text-primary bg-transparent hover:bg-sidebar-accent data-[active=true]:bg-transparent data-[active=true]:text-primary"
+                                        ? "text-primary hover:bg-sidebar-accent data-[active=true]:text-primary bg-transparent data-[active=true]:bg-transparent"
                                         : ""
                                     )}
                                   >
@@ -383,21 +382,21 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
                     <DropdownMenuItem className="gap-2">
-                      <BadgeCheck className="size-4"  />
+                      <BadgeCheck className="size-4" />
                       Account
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2">
-                      <CreditCard className="size-4"  />
+                      <CreditCard className="size-4" />
                       Billing
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2">
-                      <Bell className="size-4"  />
+                      <Bell className="size-4" />
                       Notifications
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="gap-2">
-                    <LogOut className="size-4"  />
+                    <LogOut className="size-4" />
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

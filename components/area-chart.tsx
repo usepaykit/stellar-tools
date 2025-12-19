@@ -1,20 +1,21 @@
 "use client";
 
+import React from "react";
+
 import {
-  Area,
-  AreaChart as RechartsAreaChart,
-  CartesianGrid,
-  XAxis,
-} from "recharts";
-import {
+  type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  type ChartConfig,
 } from "@/components/ui/chart";
-import { splitProps, MixinProps } from "@/lib/mixin";
-import React from "react";
+import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
+import {
+  Area,
+  CartesianGrid,
+  AreaChart as RechartsAreaChart,
+  XAxis,
+} from "recharts";
 
 export type BaseChartData = Record<string, string | number>;
 
@@ -26,7 +27,8 @@ export type ChartColor =
   | "var(--chart-5)";
 
 interface AreaChartProps<T extends BaseChartData>
-  extends Omit<React.ComponentProps<typeof ChartContainer>, "children">,
+  extends
+    Omit<React.ComponentProps<typeof ChartContainer>, "children">,
     MixinProps<
       "xAxis",
       Omit<React.ComponentProps<typeof XAxis>, "dataKey" | "key" | "ref">
@@ -118,7 +120,7 @@ export function AreaChart<T extends BaseChartData>({
               <ChartTooltipContent
                 {...tooltip}
                 className={cn(
-                  "w-fit min-w-[120px] px-2 py-1.5 gap-1 text-[11px] border-muted/40 shadow-lg backdrop-blur-sm",
+                  "border-muted/40 w-fit min-w-[120px] gap-1 px-2 py-1.5 text-[11px] shadow-lg backdrop-blur-sm",
                   tooltip.className
                 )}
                 labelClassName="font-medium text-muted-foreground/80 mb-0.5"

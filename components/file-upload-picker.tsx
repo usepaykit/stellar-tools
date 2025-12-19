@@ -1,22 +1,25 @@
 "use client";
 
 import * as React from "react";
+
+import { MixinProps, splitProps } from "@/lib/mixin";
+import { cn } from "@/lib/utils";
+import { ImagePlus, Pencil } from "lucide-react";
 import Image from "next/image";
 import {
-  useDropzone,
   type DropzoneOptions,
   type FileRejection,
+  useDropzone,
 } from "react-dropzone";
-import { ImagePlus, Pencil } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { MixinProps, splitProps } from "@/lib/mixin";
 
 export interface FileWithPreview extends File {
   preview: string;
 }
 
-interface FileUploadPickerProps
-  extends MixinProps<"dropzone", Omit<DropzoneOptions, "onDrop">> {
+interface FileUploadPickerProps extends MixinProps<
+  "dropzone",
+  Omit<DropzoneOptions, "onDrop">
+> {
   id?: string;
   value?: FileWithPreview[];
   onFilesChange?: (files: FileWithPreview[]) => void;
@@ -93,10 +96,10 @@ export const FileUploadPicker = React.forwardRef<
         <div
           {...getRootProps()}
           className={cn(
-            "group relative flex flex-col items-center justify-center w-full h-64 rounded-lg border-2 border-dashed border-input bg-muted/5 transition-all cursor-pointer overflow-hidden",
+            "group border-input bg-muted/5 relative flex h-64 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all",
             isDragActive &&
-              "border-primary bg-primary/5 ring-4 ring-primary/10",
-            disabled && "opacity-50 cursor-not-allowed",
+              "border-primary bg-primary/5 ring-primary/10 ring-4",
+            disabled && "cursor-not-allowed opacity-50",
             !hasImage && "hover:bg-muted/50 hover:border-primary/50"
           )}
         >
@@ -111,9 +114,9 @@ export const FileUploadPicker = React.forwardRef<
                 fill
                 className="object-cover"
               />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center gap-2 text-white">
-                  <div className="p-3 rounded-full bg-white/20 backdrop-blur-sm">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-200 group-hover:bg-black/40">
+                <div className="flex flex-col items-center gap-2 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  <div className="rounded-full bg-white/20 p-3 backdrop-blur-sm">
                     <Pencil className="h-6 w-6" />
                   </div>
                   <p className="text-sm font-medium">Change image</p>
@@ -121,14 +124,14 @@ export const FileUploadPicker = React.forwardRef<
               </div>
             </>
           ) : (
-            <div className="flex flex-col items-center gap-2 text-center px-6">
-              <div className="p-4 rounded-full bg-background border shadow-sm">
-                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+            <div className="flex flex-col items-center gap-2 px-6 text-center">
+              <div className="bg-background rounded-full border p-4 shadow-sm">
+                <ImagePlus className="text-muted-foreground h-6 w-6" />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium">{label}</p>
                 {description && (
-                  <p className="text-xs text-muted-foreground">{description}</p>
+                  <p className="text-muted-foreground text-xs">{description}</p>
                 )}
               </div>
             </div>

@@ -1,29 +1,26 @@
 "use client";
 
-import { DashboardSidebarInset } from '@/components/dashboard/app-sidebar-inset';
-import { DashboardSidebar } from '@/components/dashboard/dashboard-sidebar';
-import { DataTable, TableAction } from '@/components/data-table';
+import { useState } from "react";
+
+import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { DataTable, TableAction } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ColumnDef } from "@tanstack/react-table";
-import {
-    ArrowDown,
-    ArrowUp,
-    ArrowUpDown,
-    Plus
-} from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { truncate } from "@/lib/utils";
+import { ColumnDef } from "@tanstack/react-table";
+import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+
 // Customer type definition
 type Customer = {
-  id: string
-  name: string
-  email: string
-  phone: string
-  walletAddress: string
-  createdAt: Date
-}
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  walletAddress: string;
+  createdAt: Date;
+};
 
 const mockCustomers: Customer[] = [
   {
@@ -66,18 +63,18 @@ const mockCustomers: Customer[] = [
     walletAddress: "GABCD1234567890EFGHIJKLMNOPQRSTUVWXYZ1234567890",
     createdAt: new Date("2024-12-18T05:25:00"),
   },
-]
+];
 
 // Column definitions
 const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => {
-      const isSorted = column.getIsSorted()
+      const isSorted = column.getIsSorted();
       return (
         <Button
-          className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
-          variant={'ghost'}
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          variant={"ghost"}
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           aria-label={`Sort by name ${isSorted === "asc" ? "descending" : "ascending"}`}
         >
@@ -87,25 +84,26 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+            <ArrowUpDown
+              className="ml-1 h-4 w-4 opacity-50"
+              aria-hidden="true"
+            />
           )}
         </Button>
-      )
+      );
     },
-    cell: ({ row }) => (
-      <div className="font-medium">{row.original.name}</div>
-    ),
+    cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
     enableSorting: true,
   },
   {
     accessorKey: "email",
     header: ({ column }) => {
-      const isSorted = column.getIsSorted()
+      const isSorted = column.getIsSorted();
       return (
         <Button
-          className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          variant={'ghost'}
+          variant={"ghost"}
           aria-label={`Sort by email ${isSorted === "asc" ? "descending" : "ascending"}`}
         >
           <span>Email</span>
@@ -114,10 +112,13 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+            <ArrowUpDown
+              className="ml-1 h-4 w-4 opacity-50"
+              aria-hidden="true"
+            />
           )}
         </Button>
-      )
+      );
     },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.original.email}</div>
@@ -134,12 +135,12 @@ const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: "walletAddress",
     header: ({ column }) => {
-      const isSorted = column.getIsSorted()
+      const isSorted = column.getIsSorted();
       return (
         <Button
-          className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          variant={'ghost'}
+          variant={"ghost"}
           aria-label={`Sort by wallet address ${isSorted === "asc" ? "descending" : "ascending"}`}
         >
           <span>Wallet Address</span>
@@ -148,10 +149,13 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+            <ArrowUpDown
+              className="ml-1 h-4 w-4 opacity-50"
+              aria-hidden="true"
+            />
           )}
         </Button>
-      )
+      );
     },
     cell: ({ row }) => (
       <div className="text-muted-foreground font-mono text-sm">
@@ -163,10 +167,10 @@ const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: "createdAt",
     header: ({ column }) => {
-      const isSorted = column.getIsSorted()
+      const isSorted = column.getIsSorted();
       return (
         <Button
-          className="flex items-center gap-2 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-sm px-1 -mx-1"
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           variant="ghost"
           aria-label={`Sort by created date ${isSorted === "asc" ? "descending" : "ascending"}`}
@@ -177,13 +181,16 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+            <ArrowUpDown
+              className="ml-1 h-4 w-4 opacity-50"
+              aria-hidden="true"
+            />
           )}
         </Button>
-      )
+      );
     },
     cell: ({ row }) => {
-      const date = row.original.createdAt
+      const date = row.original.createdAt;
       return (
         <div className="text-muted-foreground">
           {date.toLocaleDateString("en-US", {
@@ -197,48 +204,48 @@ const columns: ColumnDef<Customer>[] = [
             hour12: true,
           })}
         </div>
-      )
+      );
     },
     enableSorting: true,
   },
-]
+];
 
 // Filter mapping
 const filterMap: Record<number, string> = {
   0: "All",
   1: "First-time customers",
   2: "Recent customers",
-}
+};
 
 // Filter options (numeric indices)
-const filterOptions = [0, 1, 2]
+const filterOptions = [0, 1, 2];
 
 export default function CustomersPage() {
-  const [selectedFilter, setSelectedFilter] = useState<number>(0)
-  const router = useRouter()
+  const [selectedFilter, setSelectedFilter] = useState<number>(0);
+  const router = useRouter();
 
   // Handle row click to navigate to customer detail page
   const handleRowClick = (customer: Customer) => {
-    router.push(`/dashboard/customers/${customer.id}`)
-  }
+    router.push(`/dashboard/customers/${customer.id}`);
+  };
 
   // Table actions
   const tableActions: TableAction<Customer>[] = [
     {
       label: "Create invoice",
       onClick: (customer) => {
-        console.log("Create invoice for:", customer)
+        console.log("Create invoice for:", customer);
         // Add your create invoice logic here
       },
     },
     {
       label: "Create subscription",
       onClick: (customer) => {
-        console.log("Create subscription for:", customer)
+        console.log("Create subscription for:", customer);
         // Add your create subscription logic here
       },
     },
-  ]
+  ];
 
   return (
     <div className="w-full">
@@ -252,7 +259,6 @@ export default function CustomersPage() {
                 <Button className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add customer
-               
                 </Button>
               </div>
 
@@ -263,7 +269,7 @@ export default function CustomersPage() {
                     key={filterIndex}
                     onClick={() => setSelectedFilter(filterIndex)}
                     className={cn(
-                      "px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap",
+                      "rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
                       selectedFilter === filterIndex
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -273,8 +279,6 @@ export default function CustomersPage() {
                   </Button>
                 ))}
               </div>
-
-     
             </div>
 
             {/* Data Table */}
@@ -289,5 +293,5 @@ export default function CustomersPage() {
         </DashboardSidebarInset>
       </DashboardSidebar>
     </div>
-  )
+  );
 }

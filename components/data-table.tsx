@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
@@ -22,7 +24,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
-import * as React from "react";
+
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -38,7 +40,8 @@ export interface TableAction<TData> {
 }
 
 interface DataTableProps<TData, TValue>
-  extends React.ComponentProps<typeof Table>,
+  extends
+    React.ComponentProps<typeof Table>,
     MixinProps<"row", React.ComponentProps<typeof TableRow>>,
     MixinProps<"checkbox", React.ComponentProps<typeof Checkbox>>,
     MixinProps<"body", React.ComponentProps<typeof TableBody>>,
@@ -240,7 +243,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       <div className="flex items-center justify-end space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex-1 text-sm">
           {enableBulkSelect && (
             <>
               {reactTable.getFilteredSelectedRowModel().rows.length} of{" "}
@@ -250,14 +253,14 @@ export function DataTable<TData, TValue>({
         </div>
         <div className="space-x-2">
           <button
-            className="px-3 py-2 border rounded text-sm disabled:opacity-50"
+            className="rounded border px-3 py-2 text-sm disabled:opacity-50"
             onClick={() => reactTable.previousPage()}
             disabled={!reactTable.getCanPreviousPage()}
           >
             Previous
           </button>
           <button
-            className="px-3 py-2 border rounded text-sm disabled:opacity-50"
+            className="rounded border px-3 py-2 text-sm disabled:opacity-50"
             onClick={() => reactTable.nextPage()}
             disabled={!reactTable.getCanNextPage()}
           >

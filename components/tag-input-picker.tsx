@@ -1,16 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { MixinProps, splitProps } from "@/lib/mixin";
 import { Input } from "@/components/ui/input";
 import { InputGroup } from "@/components/ui/input-group";
+import { MixinProps, splitProps } from "@/lib/mixin";
+import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 interface TagInputPickerProps
-  extends MixinProps<
+  extends
+    MixinProps<
       "input",
       Omit<React.ComponentProps<typeof Input>, "value" | "onChange">
     >,
@@ -68,7 +70,7 @@ export const TagInputPicker = React.forwardRef<
 
     return (
       <InputGroup
-        className={cn("h-auto min-h-10 flex-wrap p-2 gap-2", className)}
+        className={cn("h-auto min-h-10 flex-wrap gap-2 p-2", className)}
         {...rest}
       >
         {value.map((t) => (
@@ -82,10 +84,10 @@ export const TagInputPicker = React.forwardRef<
             <Button
               variant="ghost"
               size="icon"
-              className="h-4 w-4 hover:bg-transparent p-0"
+              className="h-4 w-4 p-0 hover:bg-transparent"
               onClick={() => removeTag(t)}
             >
-              <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+              <X className="text-muted-foreground hover:text-foreground h-3 w-3" />
             </Button>
           </Badge>
         ))}
@@ -94,7 +96,7 @@ export const TagInputPicker = React.forwardRef<
           ref={ref}
           data-slot="input-group-control"
           className={cn(
-            "flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0 min-w-[80px] h-7",
+            "h-7 min-w-[80px] flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0",
             input.className
           )}
           value={pendingData}
