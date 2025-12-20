@@ -158,7 +158,12 @@ export class Stellar {
     assetIssuer: string,
     amount: string,
     memo?: string
-  ): Promise<ApiResponse<unknown, string>> => {
+  ): Promise<
+    ApiResponse<
+      StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null,
+      string
+    >
+  > => {
     try {
       const keypair = StellarSDK.Keypair.fromSecret(sourceSecret);
       const account = await this.server.loadAccount(keypair.publicKey());

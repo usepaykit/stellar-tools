@@ -3,7 +3,6 @@ import {
   AuthorizePaymentOutput,
   CancelPaymentInput,
   CancelPaymentOutput,
-  CapturePaymentInput,
   CapturePaymentOutput,
   CreateAccountHolderInput,
   CreateAccountHolderOutput,
@@ -22,7 +21,6 @@ import {
   RetrievePaymentOutput,
   UpdateAccountHolderInput,
   UpdateAccountHolderOutput,
-  UpdatePaymentInput,
   UpdatePaymentOutput,
   WebhookActionResult,
 } from "@medusajs/framework/types";
@@ -33,6 +31,9 @@ import {
   PaymentSessionStatus,
 } from "@medusajs/framework/utils";
 import { z } from "zod";
+
+import { ApiClient } from "./api-client";
+import { tryCatchAsync, validateRequiredKeys } from "./utils";
 
 const optionsSchema = z.object({
   apiKey: z.string(),
@@ -45,9 +46,11 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
   /**
    * The unique identifier for this payment provider
    */
-  static identifier = "pp_stellar";
+  static identifier = "stellar";
 
   protected readonly options: StellarMedusaAdapterOptions;
+
+  private apiClient: ApiClient;
 
   static validateOptions(options: Record<string, unknown>): void | never {
     const { error } = optionsSchema.safeParse(options);
@@ -73,154 +76,69 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
 
     this.options = options;
 
-    if (this.options.debug) {
+    const debug = this.options.debug ?? false;
+
+    if (debug) {
       console.info(
         `[Stellar] Initialized with API key: ${this.options.apiKey}`
       );
     }
+
+    this.apiClient = new ApiClient({
+      baseUrl: "http://localhost:3000",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.options.apiKey,
+      },
+      retryOptions: { max: 3, baseDelay: 1000, debug },
+    });
   }
 
   initiatePayment = async ({
     context,
     amount,
-    currency_code,
+    currency_code = "XLM",
     data,
   }: InitiatePaymentInput): Promise<InitiatePaymentOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Initiating payment", {
-        context,
-        amount,
-        currency_code,
-        data,
-      });
+      console.info("[Stellar] Initiating payment", { amount, currency_code });
     }
 
-    const intent: Record<string, unknown> = {
-      amount: Number(amount),
-      currency: currency_code,
-      metadata: {
-        ...(data?.metadata ?? {}),
-        session_id: data?.session_id ?? null,
-      },
-      provider_metadata: data?.provider_metadata as
-        | Record<string, unknown>
-        | undefined,
-      capture_method: "manual",
-      item_id: data?.item_id as string | null,
-    };
-
-    let customer: Payee | undefined;
-
-    if (context?.account_holder?.data?.id) {
-      customer = context.account_holder.data.id as Payee;
-    }
-
-    if (data?.email) {
-      customer = { email: data.email } as Payee;
-    }
-
-    if (!customer) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        "Required: customer ID (account_holder) or email (data)"
-      );
-    }
-
-    if (typeof customer === "object" && "email" in customer) {
-      const customerName = data?.name
-        ? (data.name as string)
-        : (customer.email.split("@")[0] as string);
-
-      const [createdCustomer, createError] = await tryCatchAsync(
-        this.paykit.customers.create({
-          email: customer.email,
-          phone: (data?.phone as string) ?? "",
-          name: customerName,
-          metadata: {
-            PAYKIT_METADATA_KEY: JSON.stringify({
-              source: "medusa-paykit-adapter",
-            }),
-          },
-        })
-      );
-
-      if (createError) {
-        if (createError.name === "ProviderNotSupportedError") {
-          if (this.options.debug) {
-            console.info(
-              `[PayKit] Provider ${this.provider.providerName} doesn't support customer creation, using email object`
-            );
-          }
-        } else {
-          throw new MedusaError(
-            MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-            `Failed to create customer: ${createError.message}`
-          );
+    const [checkoutResult, checkoutError] = await tryCatchAsync(
+      this.apiClient.post<{ id: string; paymentUrl: string }>(
+        "/api/checkouts",
+        {
+          body: JSON.stringify({
+            amount: Number(amount),
+            assetCode: currency_code,
+            metadata: data?.metadata ?? {},
+            description: data?.description ?? "Payment for order",
+            customerId: context?.customer?.id,
+          }),
         }
-      } else {
-        customer = createdCustomer.id;
-      }
-    } else {
-      customer = customer as string;
-    }
-
-    intent.customer = customer;
-
-    const [paymentIntentResult, paymentIntentError] = await tryCatchAsync(
-      this.paykit.payments.create(intent as unknown as CreatePaymentSchema)
+      )
     );
 
-    if (paymentIntentError) {
+    if (!checkoutResult?.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        paymentIntentError.message
+        MedusaError.Types.UNEXPECTED_STATE,
+        checkoutError?.message ?? "Failed to create checkout"
       );
-    }
-
-    if (
-      paymentIntentResult.requires_action &&
-      paymentIntentResult.payment_url
-    ) {
-      return {
-        id: paymentIntentResult.id,
-        status: PaymentSessionStatus.REQUIRES_MORE,
-        data: {
-          payment_url: paymentIntentResult.payment_url,
-        },
-      };
     }
 
     return {
-      id: paymentIntentResult.id,
-      status: medusaStatus$InboundSchema(paymentIntentResult.status),
+      id: checkoutResult.value.id,
+      status: PaymentSessionStatus.REQUIRES_MORE,
+      data: { payment_url: checkoutResult.value.paymentUrl },
     };
   };
 
-  capturePayment = async (
-    input: CapturePaymentInput
-  ): Promise<CapturePaymentOutput> => {
+  capturePayment = async (): Promise<CapturePaymentOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Capturing payment", input);
+      console.info("[Stellar] Capture requested (no-op for Stellar)");
     }
 
-    const { id, amount } = validateRequiredKeys(
-      ["id", "amount"],
-      (input?.data ?? {}) as Record<string, string>,
-      "Missing required fields: {keys}",
-      (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
-    );
-
-    const [paymentIntentResult, paymentIntentError] = await tryCatchAsync(
-      this.paykit.payments.capture(id, { amount: Number(amount) })
-    );
-
-    if (paymentIntentError)
-      throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        paymentIntentError.message
-      );
-
-    return { data: paymentIntentResult as unknown as Record<string, unknown> };
+    return { data: { captured: true } };
   };
 
   authorizePayment = async (
@@ -237,27 +155,13 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
     input: CancelPaymentInput
   ): Promise<CancelPaymentOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Canceling payment", input);
+      console.info("[StellarTools] Canceling payment", input);
     }
 
-    const { id } = validateRequiredKeys(
-      ["id"],
-      (input?.data ?? {}) as Record<string, string>,
-      "Missing required fields: {keys}",
-      (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      "Cannot cancel payment as the blockchain is immutable"
     );
-
-    const [paymentIntentResult, paymentIntentError] = await tryCatchAsync(
-      this.paykit.payments.cancel(id)
-    );
-
-    if (paymentIntentError)
-      throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        paymentIntentError.message
-      );
-
-    return { data: paymentIntentResult as unknown as Record<string, unknown> };
   };
 
   deletePayment = async (
@@ -269,32 +173,36 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
   getPaymentStatus = async (
     input: GetPaymentStatusInput
   ): Promise<GetPaymentStatusOutput> => {
-    const { id } = validateRequiredKeys(
+    const { id: paymentId } = validateRequiredKeys(
       ["id"],
       (input?.data ?? {}) as Record<string, string>,
       "Missing required fields: {keys}",
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const [paymentIntentResult, paymentIntentError] = await tryCatchAsync(
-      this.paykit.payments.retrieve(id)
-    );
+    const result = await this.apiClient.get<{
+      id: string;
+      status: "pending" | "confirmed" | "failed";
+      transaction_hash?: string;
+      amount: number;
+    }>(`/api/payments/${paymentId}`);
 
-    if (paymentIntentError)
+    if (!result.ok) {
       throw new MedusaError(
         MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        paymentIntentError.message
+        result.error.message
       );
+    }
 
-    if (!paymentIntentResult)
-      throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        "Payment not found"
-      );
+    const statusMap: Record<string, PaymentSessionStatus> = {
+      pending: PaymentSessionStatus.REQUIRES_MORE,
+      confirmed: PaymentSessionStatus.AUTHORIZED,
+      failed: PaymentSessionStatus.ERROR,
+    };
 
     return {
-      status: medusaStatus$InboundSchema(paymentIntentResult.status),
-      data: paymentIntentResult as unknown as Record<string, unknown>,
+      status: statusMap[result.value.status] || PaymentSessionStatus.PENDING,
+      data: result.value,
     };
   };
 
@@ -302,7 +210,7 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
     input: RefundPaymentInput
   ): Promise<RefundPaymentOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Refunding payment", input);
+      console.info("[StellarTools] Refunding payment", input);
     }
 
     const { id: paymentId } = validateRequiredKeys(
@@ -312,165 +220,91 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const [refundResult, refundError] = await tryCatchAsync(
-      this.paykit.refunds.create({
-        payment_id: paymentId,
-        amount: Number(input.amount),
-        reason: null,
-        metadata: input.data?.metadata
-          ? (input.data.metadata as unknown as PaykitMetadata)
-          : null,
-        provider_metadata: input.data?.provider_metadata
-          ? (input.data.provider_metadata as unknown as Record<string, unknown>)
-          : undefined,
-      })
-    );
+    const result = await this.apiClient.post<{ id: string }>("/api/refunds", {
+      body: JSON.stringify({
+        paymentId,
+        amount: input.amount,
+        reason: input.data?.reason,
+        metadata: input.data?.metadata,
+      }),
+    });
 
-    if (refundError)
+    if (!result.ok) {
       throw new MedusaError(
         MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        refundError.message
+        result.error.message
       );
+    }
 
-    return { data: refundResult as unknown as Record<string, unknown> };
+    return { data: result.value as Record<string, unknown> };
   };
 
   retrievePayment = async (
     input: RetrievePaymentInput
   ): Promise<RetrievePaymentOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Retrieving payment", input);
+      console.info("[Stellar] Retrieving payment", input);
     }
 
-    const { id } = validateRequiredKeys(
+    const { id: paymentId } = validateRequiredKeys(
       ["id"],
       (input?.data ?? {}) as Record<string, string>,
       "Missing required fields: {keys}",
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const [paymentIntentResult, paymentIntentError] = await tryCatchAsync(
-      this.paykit.payments.retrieve(id)
-    );
+    const result = await this.apiClient.get<{
+      id: string;
+      status: "pending" | "confirmed" | "failed";
+      transaction_hash?: string;
+      amount: number;
+    }>(`/api/payments/${paymentId}`);
 
-    if (paymentIntentError)
+    if (!result.ok) {
       throw new MedusaError(
         MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        paymentIntentError.message
+        result.error.message
       );
-
-    return { data: paymentIntentResult as unknown as Record<string, unknown> };
-  };
-
-  updatePayment = async (
-    input: UpdatePaymentInput
-  ): Promise<UpdatePaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[PayKit] Updating payment", input);
     }
 
-    const { amount, currency_code } = validateRequiredKeys(
-      ["amount", "currency_code"],
-      input as unknown as Record<string, string>,
-      "Missing required fields: {keys}",
-      (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
+    return { data: result.value };
+  };
+
+  updatePayment = async (): Promise<UpdatePaymentOutput> => {
+    if (this.options.debug) {
+      console.info("[Stellar] Update payment requested");
+    }
+
+    throw new MedusaError(
+      MedusaError.Types.UNEXPECTED_STATE,
+      "Cannot update payment as the blockchain is immutable"
     );
-
-    const { id: paymentId } = validateRequiredKeys(
-      ["id"],
-      input.data as Record<string, string>,
-      "Missing required fields: {keys}",
-      (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
-    );
-
-    const metadata = input.data?.metadata ?? ({} as PaykitMetadata);
-
-    const [paymentIntentResult, paymentIntentError] = await tryCatchAsync(
-      this.paykit.payments.update(paymentId, {
-        amount: Number(amount),
-        currency: currency_code,
-        metadata: stringifyMetadataValues(metadata),
-        provider_metadata: input.data?.provider_metadata
-          ? (input.data.provider_metadata as unknown as Record<string, unknown>)
-          : undefined,
-      })
-    );
-
-    if (paymentIntentError)
-      throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        paymentIntentError.message
-      );
-
-    return { data: paymentIntentResult as unknown as Record<string, unknown> };
   };
 
   getWebhookActionAndData = async (
     payload: ProviderWebhookPayload["payload"]
   ): Promise<WebhookActionResult> => {
     if (this.options.debug) {
-      console.info("[PayKit] Getting webhook action and data", payload);
+      console.info("[StellarTools] Getting webhook action and data", payload);
     }
 
-    const { rawData, headers } = payload;
+    const body = JSON.parse(payload.rawData.toString());
 
-    const bodyString = Buffer.isBuffer(rawData)
-      ? rawData.toString("utf8")
-      : rawData;
+    const eventActionMap: Record<string, PaymentActions> = {
+      "payment.pending": PaymentActions.PENDING,
+      "payment.confirmed": PaymentActions.SUCCESSFUL,
+      "payment.failed": PaymentActions.FAILED,
+      "checkout.completed": PaymentActions.SUCCESSFUL,
+      "checkout.expired": PaymentActions.CANCELED,
+    };
 
-    const webhook = this.paykit.webhooks
-      .setup({ webhookSecret: this.options.webhookSecret })
-      .on("payment.created", async (event) => {
-        return {
-          action: PaymentActions.PENDING,
-          data: {
-            session_id: event.data?.metadata?.session_id as string,
-            amount: event.data?.amount,
-          },
-        };
-      })
-      .on("payment.updated", async (event) => {
-        const statusActionMap: Record<PaymentStatus, string> = {
-          pending: PaymentActions.PENDING,
-          processing: PaymentActions.PENDING,
-          requires_action: PaymentActions.REQUIRES_MORE,
-          requires_capture: PaymentActions.AUTHORIZED,
-          succeeded: PaymentActions.SUCCESSFUL,
-          failed: PaymentActions.FAILED,
-          canceled: PaymentActions.CANCELED,
-        };
-
-        return {
-          action: event.data?.status
-            ? statusActionMap[event.data.status]
-            : PaymentActions.PENDING,
-          data: {
-            session_id: event.data?.metadata?.session_id as string,
-            amount: event.data?.amount,
-          },
-        };
-      })
-      .on("payment.canceled", async (event) => {
-        return {
-          action: PaymentActions.CANCELED,
-          data: {
-            session_id: event.data?.metadata?.session_id as string,
-            amount: event.data?.amount,
-          },
-        };
-      });
-
-    const stringifiedHeaders = Object.fromEntries(
-      Object.entries(headers).map(([key, value]) => [key, String(value)])
-    );
-
-    const webhookEvents = await webhook.handle({
-      body: bodyString,
-      headers: new Headers(stringifiedHeaders),
-      fullUrl: getURLFromHeaders(stringifiedHeaders),
-    });
-
-    return webhookEvents as unknown as WebhookActionResult;
+    return {
+      action: eventActionMap[body.event] || PaymentActions.NOT_SUPPORTED,
+      data: {
+        session_id: body.data?.metadata?.session_id,
+        amount: body.data?.amount,
+      },
+    };
   };
 
   createAccountHolder = async ({
@@ -478,14 +312,46 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
     data,
   }: CreateAccountHolderInput): Promise<CreateAccountHolderOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Creating account holder", context, data);
+      console.info("[StellarTools] Creating account holder", context, data);
     }
 
-    const { customer, account_holder } = context;
+    const { customer } = context;
 
-    if (account_holder?.data?.id) {
-      return { id: account_holder.data.id as string };
+    const metadata =
+      typeof data?.metadata === "object" && data?.metadata !== null
+        ? (data.metadata as Record<string, unknown>)
+        : {};
+
+    const result = await this.apiClient.post<{ id: string }>("/api/customers", {
+      body: JSON.stringify({
+        email: customer?.email,
+        name: `${customer?.first_name} ${customer?.last_name}`,
+        phone: customer?.phone,
+        internalMetadata: { source: "medusa-adapter" },
+        ...(metadata && { appMetadata: metadata }),
+      }),
+    });
+    if (!result.ok) {
+      throw new MedusaError(
+        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
+        result.error.message
+      );
     }
+
+    return { id: result.value.id, data: result.value };
+  };
+
+  updateAccountHolder = async ({
+    context,
+    data,
+  }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
+    if (this.options.debug) {
+      console.info("[StellarTools] Updating account holder", context, data);
+    }
+
+    const accountHolderId = context.account_holder?.data?.id as string;
+
+    const { customer } = context;
 
     if (!customer) {
       throw new MedusaError(
@@ -494,77 +360,26 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       );
     }
 
-    const [accountHolderResult, accountHolderError] = await tryCatchAsync(
-      this.paykit.customers.create({
-        email: customer.email as string,
-        name: customer.email.split("@")[0] as string,
-        phone: customer.phone as string,
-        metadata: {
-          PAYKIT_METADATA_KEY: JSON.stringify({
-            source: "medusa-paykit-adapter",
-          }),
-        },
-      })
-    );
-
-    if (accountHolderError) {
-      throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        accountHolderError.message
-      );
-    }
-
-    return {
-      id: accountHolderResult.id,
-      data: accountHolderResult as unknown as Record<string, unknown>,
-    };
-  };
-
-  updateAccountHolder = async ({
-    context,
-    data,
-  }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
-    if (this.options.debug) {
-      console.info("[PayKit] Updating account holder", context, data);
-    }
-
-    const { account_holder, customer, idempotency_key } = context;
-
-    if (!account_holder.data?.id) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        "Account holder not found in context"
-      );
-    }
-
-    // If no customer context was provided, we simply don't update anything within the provider
-    if (!customer) {
-      return {};
-    }
-
-    const accountHolderId = account_holder.data.id as string;
-
-    const [accountHolderResult, accountHolderError] = await tryCatchAsync(
-      this.paykit.customers.update(accountHolderId, {
-        email: customer.email as string,
-        name: customer.email.split("@")[0] as string,
-        phone: customer.phone as string,
-        ...((data?.metadata as unknown as PaykitMetadata) && {
-          metadata: stringifyMetadataValues(
-            (data?.metadata as unknown as PaykitMetadata) ?? {}
-          ),
+    const result = await this.apiClient.patch<{ id: string }>(
+      `/api/customers/${accountHolderId}`,
+      {
+        body: JSON.stringify({
+          email: customer.email,
+          name: `${customer.first_name} ${customer.last_name}`,
+          phone: customer.phone,
+          appMetadata: data?.metadata,
         }),
-      })
+      }
     );
 
-    if (accountHolderError) {
+    if (!result.ok) {
       throw new MedusaError(
         MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        accountHolderError.message
+        result.error.message
       );
     }
 
-    return { data: accountHolderResult as unknown as Record<string, unknown> };
+    return { data: result.value };
   };
 
   deleteAccountHolder = async ({
@@ -572,31 +387,22 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
     data,
   }: DeleteAccountHolderInput): Promise<DeleteAccountHolderOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Deleting account holder", context, data);
+      console.info("[StellarTools] Deleting account holder", context, data);
     }
 
-    const { account_holder } = context;
+    const accountHolderId = context.account_holder?.data?.id as string;
 
-    if (!account_holder.data?.id) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        "Account holder not found in context"
-      );
-    }
-
-    const accountHolderId = account_holder.data.id as string;
-
-    const [accountHolderResult, accountHolderError] = await tryCatchAsync(
-      this.paykit.customers.delete(accountHolderId)
+    const result = await this.apiClient.delete<{ id: string }>(
+      `/api/customers/${accountHolderId}`
     );
 
-    if (accountHolderError) {
+    if (!result.ok) {
       throw new MedusaError(
         MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        accountHolderError.message
+        result.error.message
       );
     }
 
-    return { data: accountHolderResult as unknown as Record<string, unknown> };
+    return { data: result.value };
   };
 }

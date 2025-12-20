@@ -7,10 +7,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const postCheckoutSchema = schemaFor<
-  Partial<Checkout> & { customerEmail?: string }
+  Partial<Checkout> & { customerEmail?: string; amount?: number }
 >()(
   z.object({
-    priceId: z.string(),
+    priceId: z.string().optional(),
+    amount: z.number().optional(),
+    assetCode: z.string().optional(),
+    description: z.string().optional(),
     customerId: z.string().optional(),
     metadata: z.record(z.string(), z.any()).default({}),
     customerEmail: z.email().optional(),
@@ -30,7 +33,7 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  let customer: Customer | null = null;
+  let customer: Omit<Customer, "internalMetadata"> | null = null;
 
   if (data.customerEmail) {
     customer = await retrieveCustomer(data.customerEmail, organizationId);
@@ -45,10 +48,11 @@ export const POST = async (req: NextRequest) => {
   }
 
   const checkout = await postCheckout({
+    ...data,
     organizationId,
     environment,
     customerId: customer?.id,
-    ...data,
+    ...(data.amount && { metadata: { ...data.metadata, amount: data.amount } }),
   });
 
   return NextResponse.json({ data: checkout });

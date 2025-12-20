@@ -6,13 +6,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const postCustomerSchema = schemaFor<
-  Pick<Customer, "email" | "name" | "phone" | "appMetadata">
+  Pick<
+    Customer,
+    "email" | "name" | "phone" | "appMetadata" | "internalMetadata"
+  >
 >()(
   z.object({
     email: z.email(),
     phone: z.string(),
     name: z.string(),
     appMetadata: z.record(z.string(), z.any()).default({}),
+    internalMetadata: z.record(z.string(), z.any()).default({}),
   })
 );
 

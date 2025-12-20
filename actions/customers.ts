@@ -1,7 +1,7 @@
 "use server";
 
 import { Customer, Network, customers, db } from "@/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCustomer = async (params: Partial<Customer>) => {
@@ -19,8 +19,10 @@ export const retrieveCustomers = async (
   organizationId: string,
   environment: Network
 ) => {
+  const { internalMetadata, ...columnsToSelect } = getTableColumns(customers);
+
   return await db
-    .select()
+    .select(columnsToSelect)
     .from(customers)
     .where(
       and(
@@ -31,8 +33,10 @@ export const retrieveCustomers = async (
 };
 
 export const retrieveCustomer = async (id: string, organizationId: string) => {
+  const { internalMetadata, ...columnsToSelect } = getTableColumns(customers);
+
   const [customer] = await db
-    .select()
+    .select(columnsToSelect)
     .from(customers)
     .where(
       and(eq(customers.id, id), eq(customers.organizationId, organizationId))

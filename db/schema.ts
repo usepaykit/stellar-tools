@@ -1,6 +1,7 @@
-import { InferSelectModel } from "drizzle-orm";
+import { InferSelectModel, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -46,9 +47,11 @@ export const organizations = pgTable("organization", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
   environment: networkEnum("network").notNull(),
-  stellar_account: jsonb("stellar_account").$type<{
-    testnet: { public_key: string; secret_key_hash: string };
-    mainnet: { public_key: string; secret_key_hash: string };
+  stellarAccounts: jsonb("stellar_account").$type<{
+    [K in (typeof networkEnum.enumValues)[number]]: {
+      public_key: string;
+      secret_key: string;
+    };
   }>(),
 });
 
@@ -188,22 +191,34 @@ export const checkoutStatusEnum = pgEnum("checkout_status", [
   "failed",
 ]);
 
-export const checkouts = pgTable("checkout", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id),
-  apiKeyId: text("api_key_id").references(() => apiKeys.id),
-  customerId: text("customer_id").references(() => customers.id),
-  priceId: text("price_id").notNull(),
-  status: checkoutStatusEnum("status").notNull(),
-  paymentUrl: text("payment_url").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
-  environment: networkEnum("network").notNull(),
-});
+export const checkouts = pgTable(
+  "checkout",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    apiKeyId: text("api_key_id").references(() => apiKeys.id),
+    customerId: text("customer_id").references(() => customers.id),
+    productId: text("product_id").references(() => products.id),
+    amount: integer("amount"),
+    assetCode: text("asset_code").default("XLM"),
+    description: text("description"),
+    status: checkoutStatusEnum("status").notNull(),
+    paymentUrl: text("payment_url").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    metadata: jsonb("metadata").$type<object>().default({}),
+    environment: networkEnum("network").notNull(),
+  },
+  (table) => ({
+    amountOrProductCheck: check(
+      "amount_or_product_check",
+      sql`${table.productId} IS NOT NULL OR ${table.amount} IS NOT NULL`
+    ),
+  })
+);
 
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
@@ -296,6 +311,32 @@ export const webhookLogs = pgTable("webhook_log", {
   environment: networkEnum("network").notNull(),
 });
 
+export const refundStatusEnum = pgEnum("refund_status", [
+  "pending",
+  "succeeded",
+  "failed",
+]);
+
+export const refunds = pgTable("refund", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  paymentId: text("payment_id")
+    .notNull()
+    .references(() => payments.id),
+  customerId: text("customer_id").references(() => customers.id),
+  assetId: text("asset_id").references(() => assets.id),
+  amount: integer("amount").notNull(),
+  transactionHash: text("tx_hash").notNull().unique(),
+  reason: text("reason"),
+  status: refundStatusEnum("status").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  environment: networkEnum("network").notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+});
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type TeamMember = InferSelectModel<typeof teamMembers>;
@@ -310,3 +351,4 @@ export type Webhook = InferSelectModel<typeof webhooks>;
 export type WebhookLog = InferSelectModel<typeof webhookLogs>;
 export type Network = (typeof networkEnum.enumValues)[number];
 export type TeamInvite = InferSelectModel<typeof teamInvites>;
+export type Refund = InferSelectModel<typeof refunds>;
