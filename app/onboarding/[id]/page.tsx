@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,6 +44,7 @@ const productSchema = z.object({
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   pricingModel: z.enum(["fixed", "tiered", "usage"]),
   price: z.number().min(1, "Price must be at least $1"),
+  phoneNumberEnabled: z.boolean(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -50,7 +52,7 @@ type ProductFormData = z.infer<typeof productSchema>;
 export default function OnboardingProject() {
   const params = useParams();
   const router = useRouter();
-  const id = params?.id as string;
+  const organizationid = params?.id;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = RHF.useForm<ProductFormData>({
@@ -64,6 +66,7 @@ export default function OnboardingProject() {
       recurringPeriod: "month",
       pricingModel: "fixed",
       price: 1,
+      phoneNumberEnabled: false,
     },
   });
 
@@ -75,7 +78,7 @@ export default function OnboardingProject() {
       console.log("Submitting:", data);
 
       toast.success("Product created!");
-      router.push(`/dashboard/${id}`);
+      router.push(`/dashboard/${organizationid}`);
     } catch (error) {
       console.error(error);
       toast.error("Failed to create product");
@@ -321,6 +324,29 @@ export default function OnboardingProject() {
                   )}
                 />
               </div>
+
+              {/* Phone Number Toggle */}
+              <div className="flex items-center justify-between space-x-2 pt-2 border-t border-border">
+                <div className="space-y-0.5">
+                  <Label htmlFor="phone-number-enabled" className="cursor-pointer">
+                    Require phone number
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Customers must provide a phone number to purchase
+                  </p>
+                </div>
+                <RHF.Controller
+                  control={form.control}
+                  name="phoneNumberEnabled"
+                  render={({ field }) => (
+                    <Switch
+                      id="phone-number-enabled"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -344,7 +370,7 @@ export default function OnboardingProject() {
 
           <div className="text-muted-foreground flex justify-center gap-2 text-sm">
             <Link
-              href={`/dashboard/${id}/configure`}
+              href={`/dashboard/${organizationid}/configure`}
               className="hover:text-foreground"
             >
               Configure manually
@@ -352,7 +378,7 @@ export default function OnboardingProject() {
             <span>·</span>
             <button
               type="button"
-              onClick={() => router.push(`/dashboard/${id}`)}
+              onClick={() => router.push(`/dashboard/${organizationid}`)}
               className="hover:text-foreground"
             >
               Skip onboarding
