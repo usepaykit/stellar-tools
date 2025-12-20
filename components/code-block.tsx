@@ -1,30 +1,29 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
-import { Check, Copy } from "lucide-react";
-import { useTheme } from "next-themes";
-import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-  oneDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
-
-import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
-import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
-import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx";
-import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
 
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
+import { Check, Copy } from "lucide-react";
+import { useTheme } from "next-themes";
+import Image from "next/image";
+import { PrismLight as SyntaxHighlighter } from "react-syntax-highlighter";
+import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
+import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
+import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx";
+import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
+import {
+  oneDark,
+  oneLight,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
 
 SyntaxHighlighter.registerLanguage("tsx", tsx);
 SyntaxHighlighter.registerLanguage("typescript", typescript);
@@ -75,8 +74,8 @@ export function CodeBlock({
         ? "#1f1f1f"
         : "#f5f5f5" // Muted for shell
       : isDark
-      ? "#0f0f0f"
-      : "#fafafa"; // Standard for code
+        ? "#0f0f0f"
+        : "#fafafa"; // Standard for code
 
     return {
       ...baseTheme,
@@ -100,7 +99,7 @@ export function CodeBlock({
     return (
       <div
         className={cn(
-          "w-full h-[100px] animate-pulse rounded-lg bg-muted",
+          "bg-muted h-[100px] w-full animate-pulse rounded-lg",
           className
         )}
       />
@@ -116,14 +115,14 @@ export function CodeBlock({
     <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "group relative w-full overflow-hidden rounded-xl border bg-muted/50 text-sm flex flex-col",
+          "group bg-muted/50 relative flex w-full flex-col overflow-hidden rounded-xl border text-sm",
           className
         )}
         style={hasMaxHeight ? { maxHeight } : undefined}
       >
         {/* Header Section - Sticky */}
         {showHeader && (
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-muted/50 px-3 py-2 backdrop-blur-sm">
+          <div className="bg-muted/50 sticky top-0 z-10 flex items-center justify-between border-b px-3 py-2 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               {logo && (
                 <Image
@@ -135,7 +134,7 @@ export function CodeBlock({
                 />
               )}
               {filename && (
-                <span className="text-xs font-medium text-muted-foreground">
+                <span className="text-muted-foreground text-xs font-medium">
                   {filename}
                 </span>
               )}
@@ -149,7 +148,7 @@ export function CodeBlock({
 
         {/* Code Content with ScrollArea */}
         {hasMaxHeight ? (
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea className="min-h-0 flex-1">
             <div className={`max-h-[${maxHeight}]`}>
               <SyntaxHighlighter
                 language={lang}
@@ -182,7 +181,7 @@ export function CodeBlock({
 
             {/* Floating Copy Button for Shell/No-Header view */}
             {!showHeader && showCopyButton && (
-              <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
                 <CopyButton
                   copied={copied}
                   onCopy={copyToClipboard}
@@ -213,8 +212,8 @@ function CopyButton({
           variant="ghost"
           size="icon"
           className={cn(
-            "h-6 w-6 text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground",
-            variant === "floating" && "bg-muted/80 backdrop-blur-sm h-8 w-8"
+            "text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground h-6 w-6",
+            variant === "floating" && "bg-muted/80 h-8 w-8 backdrop-blur-sm"
           )}
           onClick={onCopy}
         >

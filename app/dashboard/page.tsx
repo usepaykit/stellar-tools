@@ -1,17 +1,16 @@
+import React from "react";
 
-import { DashboardSidebar,  } from '@/components/dashboard/dashboard-sidebar'
-import { DashboardSidebarInset } from '@/components/dashboard/app-sidebar-inset'
-
-import React from 'react'
+import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 
 export default function DashboardPage() {
   return (
     <div className="">
       <div className="w-full">
         <DashboardSidebar>
-        <DashboardSidebarInset>
+          <DashboardSidebarInset>
             <h1>scroll content</h1>
-        </DashboardSidebarInset>
+          </DashboardSidebarInset>
         </DashboardSidebar>
       </div>
     </div>

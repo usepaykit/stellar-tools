@@ -1,15 +1,17 @@
+import React from "react";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import { Textarea } from "@/components/ui/textarea";
-import React from "react";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 
 interface TextFieldProps
-  extends Omit<React.ComponentProps<typeof Input>, "value" | "onChange">,
+  extends
+    Omit<React.ComponentProps<typeof Input>, "value" | "onChange">,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">> {
   id: string;
@@ -46,7 +48,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
         {error && (
           <p
             {...errorProps}
-            className={cn("text-sm text-destructive", errorProps.className)}
+            className={cn("text-destructive text-sm", errorProps.className)}
             role="alert"
           >
             {error}
@@ -59,7 +61,8 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
 TextField.displayName = "TextField";
 
 interface TextAreaFieldProps
-  extends Omit<React.ComponentProps<typeof Textarea>, "value" | "onChange">,
+  extends
+    Omit<React.ComponentProps<typeof Textarea>, "value" | "onChange">,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">> {
   id: string;
@@ -99,7 +102,7 @@ export const TextAreaField = React.forwardRef<
       {error && (
         <p
           {...errorProps}
-          className={cn("text-sm text-destructive", errorProps.className)}
+          className={cn("text-destructive text-sm", errorProps.className)}
           role="alert"
         >
           {error}

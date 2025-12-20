@@ -1,18 +1,18 @@
 "use client";
 
-import {
-  Search,
-  LayoutGrid,
-  Plus,
-  HelpCircle,
-  Bell,
-  Settings,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
+import {
+  Bell,
+  HelpCircle,
+  LayoutGrid,
+  Plus,
+  Search,
+  Settings,
+} from "lucide-react";
 import { X } from "lucide-react";
 
 interface NavIconButtonProps {
@@ -39,7 +39,7 @@ function NavIconButton({
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
-        "relative rounded-md bg-muted/50 hover:bg-muted transition-colors",
+        "bg-muted/50 hover:bg-muted relative rounded-md transition-colors",
         className
       )}
     >
@@ -63,15 +63,15 @@ export default function DashboardHeader() {
       <div className="container flex h-14 items-center justify-between gap-4 px-4">
         {/* Search Bar */}
         <SidebarTrigger className="-ml-1" />
-        <div className="relative flex-1 max-w-md">
+        <div className="relative max-w-md flex-1">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden="true"
           />
           <Input
             type="search"
             placeholder="Search"
-            className="pl-9 h-9 w-full bg-muted/50 border-input focus-visible:ring-ring/50 shadow-none"
+            className="bg-muted/50 border-input focus-visible:ring-ring/50 h-9 w-full pl-9 shadow-none"
             aria-label="Search"
           />
         </div>
@@ -81,8 +81,8 @@ export default function DashboardHeader() {
           {/* Web Apps Icon with Notification */}
           <NavIconButton
             icon={
-              <div className="flex items-center justify-center size-5">
-                <span className="text-sm font-semibold text-primary">W</span>
+              <div className="flex size-5 items-center justify-center">
+                <span className="text-primary text-sm font-semibold">W</span>
               </div>
             }
             notificationCount={1}
@@ -119,7 +119,7 @@ export default function DashboardHeader() {
           {/* Primary Action Button */}
           <Button
             size="icon"
-            className="size-9 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 size-9 rounded-full shadow-sm"
             aria-label="Add new item"
           >
             <Plus className="size-4" />

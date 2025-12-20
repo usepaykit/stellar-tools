@@ -1,11 +1,12 @@
 "use client";
 
-import { Toaster as Sonner, toast as sonnerToast, type ToastT } from "sonner";
-
-import { useTheme } from "next-themes";
-import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
-import { CheckMark, Warning, Info, Error } from "@/components/icon";
+
+import { CheckMark, Error, Info, Warning } from "@/components/icon";
+import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
+import { Toaster as Sonner, type ToastT, toast as sonnerToast } from "sonner";
+
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
@@ -51,8 +52,8 @@ export const toast = {
     return sonnerToast.success(message, {
       ...options,
       icon: (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full shrink-0">
-          <CheckMark className="size-6 text-primary" />
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+          <CheckMark className="text-primary size-6" />
         </div>
       ),
       className: options?.className,
@@ -62,8 +63,8 @@ export const toast = {
     return sonnerToast.error(message, {
       ...options,
       icon: (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full shrink-0">
-          <Error className="size-6 text-destructive" />
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+          <Error className="text-destructive size-6" />
         </div>
       ),
       className: options?.className,
@@ -73,8 +74,8 @@ export const toast = {
     return sonnerToast.info(message, {
       ...options,
       icon: (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full shrink-0">
-          <Info className="size-6 text-primary" />
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+          <Info className="text-primary size-6" />
         </div>
       ),
       className: options?.className,
@@ -84,7 +85,7 @@ export const toast = {
     return sonnerToast.warning(message, {
       ...options,
       icon: (
-        <div className="flex items-center justify-center w-6 h-6 rounded-full shrink-0">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
           <Warning className="size-6 text-orange-500" />
         </div>
       ),
