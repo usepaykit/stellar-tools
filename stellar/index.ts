@@ -138,6 +138,19 @@ export class Stellar {
     return { data: payments };
   };
 
+  retrievePayment = async (
+    transactionHash: string
+  ): Promise<
+    ApiResponse<StellarSDK.Horizon.ServerApi.TransactionRecord | null>
+  > => {
+    const transaction = await this.server
+      .transactions()
+      .transaction(transactionHash)
+      .call();
+
+    return { data: transaction };
+  };
+
   sendAssetPayment = async (
     sourceSecret: string,
     destinationPublicKey: string,
@@ -181,5 +194,21 @@ export class Stellar {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  };
+
+  streamTx = (
+    publicKey: string,
+    evts: {
+      onError: (event: MessageEvent) => void;
+      onMessage: (
+        event: StellarSDK.Horizon.ServerApi.TransactionRecord
+      ) => void;
+    }
+  ): (() => void) => {
+    return this.server
+      .transactions()
+      .forAccount(publicKey)
+      .cursor("now")
+      .stream({ onerror: evts.onError, onmessage: evts.onMessage });
   };
 }

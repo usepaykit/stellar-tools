@@ -274,3 +274,4 @@ export type Payment = InferSelectModel<typeof payments>;
 export type UsageRecord = InferSelectModel<typeof usageRecords>;
 export type Webhook = InferSelectModel<typeof webhooks>;
 export type WebhookLog = InferSelectModel<typeof webhookLogs>;
+export type Network = (typeof networkEnum.enumValues)[number];
