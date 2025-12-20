@@ -11,11 +11,9 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 
-// ============================================================================
-// 1. IDENTITY, ACCESS & ORGANIZATIONS
-// ============================================================================
+export const networkEnum = pgEnum("network", ["testnet", "mainnet"]);
 
-export const accounts = pgTable("accounts", {
+export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   userName: text("user_name").notNull(),
@@ -33,23 +31,22 @@ export const accounts = pgTable("accounts", {
   metadata: jsonb("metadata").$type<object>().default({}),
 });
 
-export const organizations = pgTable("organizations", {
+export const organizations = pgTable("organization", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   ownerAccountId: text("owner_account_id")
     .notNull()
     .references(() => accounts.id),
-  settings: jsonb("settings")
-    .$type<{
-      default_currency: string;
-      stellar_network: "testnet" | "mainnet";
-      statement_descriptor?: string;
-    }>()
-    .notNull(),
+  settings: jsonb("settings").$type<object>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
+  environment: networkEnum("network").notNull(),
+  stellar_account: jsonb("stellar_account").$type<{
+    testnet: { public_key: string; secret_key_hash: string };
+    mainnet: { public_key: string; secret_key_hash: string };
+  }>(),
 });
 
 export const roleEnum = pgEnum("role", [
@@ -60,7 +57,7 @@ export const roleEnum = pgEnum("role", [
 ]);
 
 export const teamMembers = pgTable(
-  "team_members",
+  "team_member",
   {
     id: text("id").primaryKey(),
     organizationId: text("organization_id")
@@ -79,7 +76,7 @@ export const teamMembers = pgTable(
   })
 );
 
-export const apiKeys = pgTable("api_keys", {
+export const apiKeys = pgTable("api_key", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
@@ -92,17 +89,13 @@ export const apiKeys = pgTable("api_keys", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastUsedAt: timestamp("last_used_at"),
   metadata: jsonb("metadata").$type<object>().default({}),
+  environment: networkEnum("network").notNull(),
 });
 
-// ============================================================================
-// 2. CORE STELLAR INFRASTRUCTURE (Assets & Networks)
-// ============================================================================
-
-export const networkEnum = pgEnum("network", ["testnet", "mainnet"]);
 export const assetCodeEnum = pgEnum("asset_code", ["XLM", "USDC"]);
 
 export const assets = pgTable(
-  "assets",
+  "asset",
   {
     id: text("id").primaryKey(),
     code: assetCodeEnum("code").notNull(),
@@ -121,12 +114,8 @@ export const assets = pgTable(
   })
 );
 
-// ============================================================================
-// 3. COMMERCE & CRM (Customers, Products, Billing)
-// ============================================================================
-
 export const customers = pgTable(
-  "customers",
+  "customer",
   {
     id: text("id").primaryKey(),
     organizationId: text("organization_id")
@@ -139,35 +128,10 @@ export const customers = pgTable(
     internalMetadata: jsonb("internal_metadata").$type<object>().default({}),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    environment: networkEnum("network").notNull(),
   },
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
-  })
-);
-
-export const stellarAccountTypeEnum = pgEnum("stellar_account_type", [
-  "custodial",
-  "external",
-]);
-
-export const stellarAccounts = pgTable(
-  "stellar_accounts",
-  {
-    id: text("id").primaryKey(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organizations.id),
-    customerId: text("customer_id").references(() => customers.id),
-    publicKey: text("public_key").notNull(),
-    memo: text("memo"),
-    type: stellarAccountTypeEnum("type").notNull(),
-    network: networkEnum("network").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<object>().default({}),
-  },
-  (table) => ({
-    uniquePublicKeyNetwork: unique().on(table.publicKey, table.network),
   })
 );
 
@@ -177,7 +141,7 @@ export const billingTypeEnum = pgEnum("billing_type", [
   "metered",
 ]);
 
-export const products = pgTable("products", {
+export const products = pgTable("product", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
@@ -192,11 +156,8 @@ export const products = pgTable("products", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
+  environment: networkEnum("network").notNull(),
 });
-
-// ============================================================================
-// 4. CHECKOUT & PAYMENTS
-// ============================================================================
 
 export const checkoutStatusEnum = pgEnum("checkout_status", [
   "open",
@@ -205,7 +166,7 @@ export const checkoutStatusEnum = pgEnum("checkout_status", [
   "failed",
 ]);
 
-export const checkouts = pgTable("checkouts", {
+export const checkouts = pgTable("checkout", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
@@ -219,6 +180,7 @@ export const checkouts = pgTable("checkouts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
+  environment: networkEnum("network").notNull(),
 });
 
 export const paymentStatusEnum = pgEnum("payment_status", [
@@ -227,32 +189,26 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "failed",
 ]);
 
-export const payments = pgTable("payments", {
+export const payments = pgTable("payment", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id),
   checkoutId: text("checkout_id").references(() => checkouts.id),
   customerId: text("customer_id").references(() => customers.id),
-  stellarAccountId: text("stellar_account_id")
-    .notNull()
-    .references(() => stellarAccounts.id),
   assetId: text("asset_id")
     .notNull()
     .references(() => assets.id),
   amount: integer("amount").notNull(),
-  transactionHash: text("transaction_hash").notNull().unique(),
+  transactionHash: text("tx_hash").notNull().unique(),
   status: paymentStatusEnum("status").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  environment: networkEnum("network").notNull(),
 });
 
-// ============================================================================
-// 5. DEVELOPER TOOLS (Webhooks & Usage)
-// ============================================================================
-
 export const usageRecords = pgTable(
-  "usage_records",
+  "usage_record",
   {
     id: text("id").primaryKey(),
     organizationId: text("organization_id")
@@ -267,6 +223,7 @@ export const usageRecords = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<object>().default({}),
+    environment: networkEnum("network").notNull(),
   },
   (table) => ({
     orgFeatureCreatedIdx: index("usage_records_org_feature_created_idx").on(
@@ -277,7 +234,7 @@ export const usageRecords = pgTable(
   })
 );
 
-export const webhooks = pgTable("webhooks", {
+export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
@@ -288,9 +245,10 @@ export const webhooks = pgTable("webhooks", {
   isDisabled: boolean("is_disabled").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  environment: networkEnum("network").notNull(),
 });
 
-export const webhookLogs = pgTable("webhook_logs", {
+export const webhookLogs = pgTable("webhook_log", {
   id: text("id").primaryKey(),
   webhookId: text("webhook_id")
     .notNull()
@@ -301,6 +259,7 @@ export const webhookLogs = pgTable("webhook_logs", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  environment: networkEnum("network").notNull(),
 });
 
 export type Account = InferSelectModel<typeof accounts>;
@@ -309,7 +268,6 @@ export type TeamMember = InferSelectModel<typeof teamMembers>;
 export type ApiKey = InferSelectModel<typeof apiKeys>;
 export type Asset = InferSelectModel<typeof assets>;
 export type Customer = InferSelectModel<typeof customers>;
-export type StellarAccount = InferSelectModel<typeof stellarAccounts>;
 export type Product = InferSelectModel<typeof products>;
 export type Checkout = InferSelectModel<typeof checkouts>;
 export type Payment = InferSelectModel<typeof payments>;

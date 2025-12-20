@@ -7,14 +7,9 @@ import {
   type FileWithPreview,
 } from "@/components/file-upload-picker";
 import { TextAreaField, TextField } from "@/components/input-picker";
+import { PricePicker } from "@/components/price-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-  InputGroupText,
-} from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -26,7 +21,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -45,6 +39,16 @@ const productSchema = z.object({
   pricingModel: z.enum(["fixed", "tiered", "usage"]),
   price: z.number().min(1, "Price must be at least $1"),
   phoneNumberEnabled: z.boolean(),
+  price: z.object({
+    amount: z
+      .string()
+      .min(1, "Amount is required")
+      .refine(
+        (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+        "Price must be greater than 0"
+      ),
+    asset: z.string().min(1, "Asset is required"),
+  }),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -67,6 +71,10 @@ export default function OnboardingProject() {
       pricingModel: "fixed",
       price: 1,
       phoneNumberEnabled: false,
+      price: {
+        amount: "",
+        asset: "XLM",
+      },
     },
   });
 
@@ -347,6 +355,32 @@ export default function OnboardingProject() {
                   )}
                 />
               </div>
+              <RHF.Controller
+                control={form.control}
+                name="price"
+                render={({ field }) => {
+                  const priceError = form.formState.errors.price;
+                  const errorMessage =
+                    priceError?.amount?.message ||
+                    priceError?.asset?.message ||
+                    priceError?.message;
+
+                  return (
+                    <PricePicker
+                      id="price"
+                      value={field.value}
+                      onChange={field.onChange}
+                      assets={["XLM", "USDC"]}
+                      isLoading={isSubmitting}
+                      label="Price"
+                      error={errorMessage}
+                      disabled={isSubmitting}
+                      placeholder="0.00"
+                      className="shadow-none"
+                    />
+                  );
+                }}
+              />
             </CardContent>
           </Card>
 
