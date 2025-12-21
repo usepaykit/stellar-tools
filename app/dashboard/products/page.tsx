@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -322,9 +323,25 @@ const columns: ColumnDef<Product>[] = [
 ];
 
 export default function ProductPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>("Created");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const activeParam = searchParams.get("active");
+  const [isModalOpen, setIsModalOpen] = useState(activeParam === "true");
+
+  useEffect(() => {
+    if (activeParam === "true") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("active");
+      const newUrl = params.toString() 
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      router.replace(newUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const activeProducts = mockProducts.filter((p) => p.status === "active");
   const archivedProducts = mockProducts.filter((p) => p.status === "archived");
@@ -333,7 +350,6 @@ export default function ProductPage() {
     ? mockProducts.filter((p) => p.status === selectedStatus)
     : mockProducts;
 
-  // Table actions
   const tableActions: TableAction<Product>[] = [
     {
       label: "Edit",
@@ -520,7 +536,18 @@ export default function ProductPage() {
       {/* Products Modal */}
       <ProductsModal
         open={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          // Clean up query parameter when modal closes
+          if (!open) {
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("active");
+            const newUrl = params.toString() 
+              ? `${window.location.pathname}?${params.toString()}`
+              : window.location.pathname;
+            router.replace(newUrl);
+          }
+        }}
         onSubmit={async (data) => {
           console.log("Product created:", data);
           // Add your API call here
