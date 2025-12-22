@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -307,7 +308,16 @@ const columns: ColumnDef<WebhookDestination>[] = [
 
 export default function WebhooksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Table actions
   const tableActions: TableAction<WebhookDestination>[] = [
     {
@@ -461,6 +471,8 @@ export default function WebhooksPage() {
                     data={mockWebhooks}
                     enableBulkSelect={true}
                     actions={tableActions}
+                    isLoading={isLoading}
+                    skeletonRowCount={5}
                     onRowClick={(row) => {
                       router.push(`/dashboard/webhooks/${row.id}`);
                       console.log("Row clicked:", row);
