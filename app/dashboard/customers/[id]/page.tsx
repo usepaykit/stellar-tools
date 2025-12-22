@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { RefundModal } from "@/app/dashboard/transactions/page";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -284,6 +285,8 @@ export default function CustomerDetailPage() {
     new Set()
   );
   const [hiddenWallets, setHiddenWallets] = useState<Set<string>>(new Set());
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -552,10 +555,8 @@ export default function CustomerDetailPage() {
                                           <DropdownMenuItem
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              console.log(
-                                                "Refund payment:",
-                                                payment.id
-                                              );
+                                              setSelectedPaymentId(payment.id);
+                                              setIsRefundModalOpen(true);
                                             }}
                                           >
                                             Refund payment
@@ -814,6 +815,18 @@ export default function CustomerDetailPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
+
+      {/* Refund Modal */}
+      <RefundModal
+        open={isRefundModalOpen}
+        onOpenChange={(open) => {
+          setIsRefundModalOpen(open);
+          if (!open) {
+            setSelectedPaymentId(null);
+          }
+        }}
+        initialPaymentId={selectedPaymentId || undefined}
+      />
     </div>
   );
 }
