@@ -164,7 +164,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
       open={open}
       onOpenChange={onOpenChange}
       title="Configure destination"
-      description="Tell StellarToo where to send events and give your destination a helpful description."
+      description="Tell StellarTools where to send events and give your destination a helpful description."
       footer={footer}
       dialogClassName="flex"
     >

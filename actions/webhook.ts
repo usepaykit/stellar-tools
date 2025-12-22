@@ -1,7 +1,7 @@
 "use server";
 
 import { Stellar } from "@/core/stellar";
-import { Webhook as WebhookUtils } from "@/core/webhook";
+import { WebhookDelivery } from "@/core/webhook-delivery";
 import {
   Checkout,
   Network,
@@ -224,7 +224,7 @@ export const triggerWebhooks = async (
 
   const results = await Promise.allSettled(
     subscribedWebhooks.map((webhook) =>
-      new WebhookUtils().deliverWebhook(
+      new WebhookDelivery().deliver(
         webhook,
         eventType as unknown as string,
         payload,

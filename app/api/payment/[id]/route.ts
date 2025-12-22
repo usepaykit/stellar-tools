@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const getSchema = z.object({
-  poll: z.boolean().default(false),
+  verifyOnChain: z.boolean().default(false),
 });
 
 export const GET = async (
@@ -21,11 +21,11 @@ export const GET = async (
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const { poll } = getSchema.parse(await req.json());
+  const { verifyOnChain } = getSchema.parse(await req.json());
 
   const payment = await retrievePayment(id, organizationId);
 
-  if (poll && payment.status === "pending") {
+  if (verifyOnChain && payment.status === "pending") {
     await refreshTxStatus(
       id,
       payment.transactionHash,

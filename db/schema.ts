@@ -217,7 +217,6 @@ export const checkouts = pgTable(
     customerId: text("customer_id").references(() => customers.id),
     productId: text("product_id").references(() => products.id),
     amount: integer("amount"),
-    assetId: text("asset_id").references(() => assets.id),
     description: text("description"),
     status: checkoutStatusEnum("status").notNull(),
     paymentUrl: text("payment_url").notNull(),
@@ -308,7 +307,7 @@ export const webhooks = pgTable("webhook", {
     .notNull()
     .references(() => organizations.id),
   url: text("url").notNull(),
-  secretHash: text("secret_hash").notNull(),
+  secret: text("secret").notNull(),
   events: text("events").array().notNull(),
   name: text("name").notNull(),
   description: text("description"),
@@ -341,25 +340,36 @@ export const refundStatusEnum = pgEnum("refund_status", [
   "failed",
 ]);
 
-export const refunds = pgTable("refund", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id),
-  paymentId: text("payment_id")
-    .notNull()
-    .references(() => payments.id),
-  customerId: text("customer_id").references(() => customers.id),
-  assetId: text("asset_id").references(() => assets.id),
-  amount: integer("amount").notNull(),
-  transactionHash: text("tx_hash").notNull().unique(),
-  reason: text("reason"),
-  status: refundStatusEnum("status").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  environment: networkEnum("network").notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
-});
+export const refunds = pgTable(
+  "refund",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    paymentId: text("payment_id")
+      .notNull()
+      .references(() => payments.id),
+    customerId: text("customer_id").references(() => customers.id),
+    assetId: text("asset_id").references(() => assets.id),
+    amount: integer("amount").notNull(),
+    transactionHash: text("tx_hash").notNull().unique(),
+    reason: text("reason"),
+    status: refundStatusEnum("status").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    environment: networkEnum("network").notNull(),
+    metadata: jsonb("metadata").$type<object>().default({}),
+    receiverPublicKey: text("receiver_public_key").notNull(),
+  },
+  (table) => ({
+    uniquePaymentCustomerAsset: unique().on(
+      table.paymentId,
+      table.customerId,
+      table.assetId
+    ),
+  })
+);
 
 export const creditBalances = pgTable(
   "credit_balance",

@@ -2,7 +2,7 @@ import { resolveApiKey } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { postCustomer, retrieveCustomer } from "@/actions/customers";
 import { Checkout, Customer } from "@/db";
-import { schemaFor } from "@/types";
+import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
