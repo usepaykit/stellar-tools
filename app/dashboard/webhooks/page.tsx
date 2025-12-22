@@ -26,6 +26,7 @@ import {
   TrendingUp,
   Webhook,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Webhook destination type definition
 type WebhookDestination = {
@@ -306,7 +307,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
 
 export default function WebhooksPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const router = useRouter();
   // Table actions
   const tableActions: TableAction<WebhookDestination>[] = [
     {
@@ -379,7 +380,7 @@ export default function WebhooksPage() {
                     {/* Animated Icon Container */}
                     <div className="relative mb-8">
                       <div className="bg-primary/20 absolute inset-0 animate-pulse rounded-full blur-3xl" />
-                      <div className="from-primary/10 to-primary/5 border-primary/20 relative flex h-24 w-24 items-center justify-center rounded-2xl border bg-gradient-to-br">
+                      <div className="from-primary/10 to-primary/5 border-primary/20 relative flex h-24 w-24 items-center justify-center rounded-2xl border bg-linear-to-br">
                         <BarChart3 className="text-primary h-12 w-12" />
                       </div>
                       <div className="absolute -top-2 -right-2">
@@ -390,7 +391,7 @@ export default function WebhooksPage() {
                     {/* Main Content */}
                     <div className="max-w-2xl space-y-4 text-center">
                       <div className="flex items-center justify-center gap-3">
-                        <h2 className="from-foreground to-foreground/70 bg-gradient-to-r bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
+                        <h2 className="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
                           Webhook Overview
                         </h2>
                         <Badge
@@ -460,6 +461,10 @@ export default function WebhooksPage() {
                     data={mockWebhooks}
                     enableBulkSelect={true}
                     actions={tableActions}
+                    onRowClick={(row) => {
+                      router.push(`/dashboard/webhooks/${row.id}`);
+                      console.log("Row clicked:", row);
+                    }}
                   />
                 </TabsContent>
               </Tabs>
