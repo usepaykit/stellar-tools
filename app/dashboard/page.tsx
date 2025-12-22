@@ -1,15 +1,19 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
-import Link from "next/link";
 
+import { AreaChart } from "@/components/area-chart";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { AreaChart } from "@/components/area-chart";
 import { LineChart } from "@/components/line-chart";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -17,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Image from "next/image";
+import Link from "next/link";
 
 // Sample data for the overview charts (Last 7 days)
 const overviewData = [
@@ -147,9 +153,9 @@ export default function DashboardPage() {
   });
 
   return (
-      <div className="w-full">
-        <DashboardSidebar>
-          <DashboardSidebarInset>
+    <div className="w-full">
+      <DashboardSidebar>
+        <DashboardSidebarInset>
           <div className="flex flex-col gap-8 p-6">
             <div className="space-y-6">
               <div>
@@ -160,9 +166,13 @@ export default function DashboardPage() {
                 <Card className="shadow-none">
                   <CardContent className="pt-6">
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Gross volume</p>
+                      <p className="text-muted-foreground text-sm">
+                        Gross volume
+                      </p>
                       <p className="text-2xl font-semibold">1,613.60 XLM</p>
-                      <p className="text-xs text-muted-foreground">as of {currentTime}</p>
+                      <p className="text-muted-foreground text-xs">
+                        as of {currentTime}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
@@ -171,7 +181,7 @@ export default function DashboardPage() {
                 <Card className="shadow-none">
                   <CardContent className="pt-6">
                     <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Yesterday</p>
+                      <p className="text-muted-foreground text-sm">Yesterday</p>
                       <p className="text-2xl font-semibold">2,955.81 XLM</p>
                     </div>
                   </CardContent>
@@ -182,10 +192,12 @@ export default function DashboardPage() {
                   <CardContent className="pt-6">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground">XLM balance</p>
+                        <p className="text-muted-foreground text-sm">
+                          XLM balance
+                        </p>
                         <Link
                           href="#"
-                          className="text-xs text-primary hover:underline"
+                          className="text-primary text-xs hover:underline"
                         >
                           View
                         </Link>
@@ -200,26 +212,29 @@ export default function DashboardPage() {
                   <CardContent className="pt-6">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground">Payouts</p>
+                        <p className="text-muted-foreground text-sm">Payouts</p>
                         <Link
                           href="#"
-                          className="text-xs text-primary hover:underline"
+                          className="text-primary text-xs hover:underline"
                         >
                           View
                         </Link>
                       </div>
                       <p className="text-2xl font-semibold">2,343.36 XLM</p>
-                      <p className="text-xs text-muted-foreground">Expected tomorrow</p>
+                      <p className="text-muted-foreground text-xs">
+                        Expected tomorrow
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
               </div>
-           
             </div>
 
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold tracking-tight">Your overview</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Your overview
+                </h2>
                 <Select value={dateRange} onValueChange={setDateRange}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select date range" />
@@ -264,209 +279,210 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <h2 className="text-2xl font-semibold tracking-tight">Integrations</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Integrations
+              </h2>
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <Card className="shadow-none">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
-                      <Image
-                        src="/images/integrations/uploadthing.png"
-                        alt="UploadThing"
-                        width={24}
-                        height={24}
-                        className="object-contain"
-                      />
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
+                        <Image
+                          src="/images/integrations/uploadthing.png"
+                          alt="UploadThing"
+                          width={24}
+                          height={24}
+                          className="object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle>UploadThing</CardTitle>
+                        <CardDescription>
+                          File uploads processed through UploadThing
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle>UploadThing</CardTitle>
-                      <CardDescription>
-                        File uploads processed through UploadThing
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <LineChart
-                    data={uploadThingData}
-                    config={uploadThingChartConfig}
-                    xAxisKey="month"
-                    activeKey="uploads"
-                    color="var(--chart-2)"
-                    className="h-[250px]"
-                  />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <LineChart
+                      data={uploadThingData}
+                      config={uploadThingChartConfig}
+                      xAxisKey="month"
+                      activeKey="uploads"
+                      color="var(--chart-2)"
+                      className="h-[250px]"
+                    />
+                  </CardContent>
+                </Card>
 
-              {/* AI SDK Chart */}
-              <Card className="shadow-none">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
-                      <Image
-                        src="/images/integrations/aisdk.jpg"
-                        alt="AI SDK"
-                        width={24}
-                        height={24}
-                        className="object-contain rounded"
-                      />
+                {/* AI SDK Chart */}
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
+                        <Image
+                          src="/images/integrations/aisdk.jpg"
+                          alt="AI SDK"
+                          width={24}
+                          height={24}
+                          className="rounded object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle>AI SDK</CardTitle>
+                        <CardDescription>
+                          API requests handled by AI SDK
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle>AI SDK</CardTitle>
-                      <CardDescription>
-                        API requests handled by AI SDK
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <LineChart
-                    data={aiSdkData}
-                    config={aiSdkChartConfig}
-                    xAxisKey="month"
-                    activeKey="requests"
-                    color="var(--chart-3)"
-                    className="h-[250px]"
-                  />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <LineChart
+                      data={aiSdkData}
+                      config={aiSdkChartConfig}
+                      xAxisKey="month"
+                      activeKey="requests"
+                      color="var(--chart-3)"
+                      className="h-[250px]"
+                    />
+                  </CardContent>
+                </Card>
 
-              {/* Medusa Chart */}
-              <Card className="shadow-none">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
-                      <Image
-                        src="/images/integrations/medusa.jpeg"
-                        alt="Medusa"
-                        width={24}
-                        height={24}
-                        className="object-contain rounded"
-                      />
+                {/* Medusa Chart */}
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
+                        <Image
+                          src="/images/integrations/medusa.jpeg"
+                          alt="Medusa"
+                          width={24}
+                          height={24}
+                          className="rounded object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle>Medusa</CardTitle>
+                        <CardDescription>
+                          Orders processed through Medusa
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle>Medusa</CardTitle>
-                      <CardDescription>
-                        Orders processed through Medusa
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <LineChart
-                    data={medusaData}
-                    config={medusaChartConfig}
-                    xAxisKey="month"
-                    activeKey="orders"
-                    color="var(--chart-4)"
-                    className="h-[250px]"
-                  />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <LineChart
+                      data={medusaData}
+                      config={medusaChartConfig}
+                      xAxisKey="month"
+                      activeKey="orders"
+                      color="var(--chart-4)"
+                      className="h-[250px]"
+                    />
+                  </CardContent>
+                </Card>
 
-            
-              <Card className="shadow-none">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
-                      <Image
-                        src="/images/integrations/better-auth.png"
-                        alt="Better Auth"
-                        width={24}
-                        height={24}
-                        className="object-contain"
-                      />
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
+                        <Image
+                          src="/images/integrations/better-auth.png"
+                          alt="Better Auth"
+                          width={24}
+                          height={24}
+                          className="object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle>Better Auth</CardTitle>
+                        <CardDescription>
+                          User sessions managed by Better Auth
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle>Better Auth</CardTitle>
-                      <CardDescription>
-                        User sessions managed by Better Auth
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <LineChart
-                    data={betterAuthData}
-                    config={betterAuthChartConfig}
-                    xAxisKey="month"
-                    activeKey="sessions"
-                    color="var(--chart-1)"
-                    className="h-[250px]"
-                  />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <LineChart
+                      data={betterAuthData}
+                      config={betterAuthChartConfig}
+                      xAxisKey="month"
+                      activeKey="sessions"
+                      color="var(--chart-1)"
+                      className="h-[250px]"
+                    />
+                  </CardContent>
+                </Card>
 
-              {/* Shopify Chart */}
-              <Card className="shadow-none">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
-                      <Image
-                        src="/images/integrations/shopify.png"
-                        alt="Shopify"
-                        width={24}
-                        height={24}
-                        className="object-contain"
-                      />
+                {/* Shopify Chart */}
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
+                        <Image
+                          src="/images/integrations/shopify.png"
+                          alt="Shopify"
+                          width={24}
+                          height={24}
+                          className="object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle>Shopify</CardTitle>
+                        <CardDescription>
+                          Transactions processed via Shopify
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle>Shopify</CardTitle>
-                      <CardDescription>
-                        Transactions processed via Shopify
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <LineChart
-                    data={shopifyData}
-                    config={shopifyChartConfig}
-                    xAxisKey="month"
-                    activeKey="transactions"
-                    color="var(--chart-2)"
-                    className="h-[250px]"
-                  />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <LineChart
+                      data={shopifyData}
+                      config={shopifyChartConfig}
+                      xAxisKey="month"
+                      activeKey="transactions"
+                      color="var(--chart-2)"
+                      className="h-[250px]"
+                    />
+                  </CardContent>
+                </Card>
 
-              {/* Payload CMS Chart */}
-              <Card className="shadow-none">
-                <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background">
-                      <Image
-                        src="/images/integrations/payloadcms.png"
-                        alt="Payload CMS"
-                        width={24}
-                        height={24}
-                        className="object-contain"
-                      />
+                {/* Payload CMS Chart */}
+                <Card className="shadow-none">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
+                        <Image
+                          src="/images/integrations/payloadcms.png"
+                          alt="Payload CMS"
+                          width={24}
+                          height={24}
+                          className="object-contain"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <CardTitle>Payload CMS</CardTitle>
+                        <CardDescription>
+                          Content updates in Payload CMS
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <CardTitle>Payload CMS</CardTitle>
-                      <CardDescription>
-                        Content updates in Payload CMS
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <LineChart
-                    data={payloadCmsData}
-                    config={payloadCmsChartConfig}
-                    xAxisKey="month"
-                    activeKey="content"
-                    color="var(--chart-3)"
-                    className="h-[250px]"
-                  />
-                </CardContent>
-              </Card>
+                  </CardHeader>
+                  <CardContent>
+                    <LineChart
+                      data={payloadCmsData}
+                      config={payloadCmsChartConfig}
+                      xAxisKey="month"
+                      activeKey="content"
+                      color="var(--chart-3)"
+                      className="h-[250px]"
+                    />
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
-          </DashboardSidebarInset>
-        </DashboardSidebar>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
     </div>
   );
 }
