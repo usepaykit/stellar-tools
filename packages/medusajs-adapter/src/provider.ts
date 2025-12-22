@@ -185,7 +185,9 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       status: "pending" | "confirmed" | "failed";
       transaction_hash?: string;
       amount: number;
-    }>(`/api/payments/${paymentId}`);
+    }>(`/api/payments/${paymentId}`, {
+      body: JSON.stringify({ poll: true }),
+    });
 
     if (!result.ok) {
       throw new MedusaError(

@@ -1,6 +1,11 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { refreshTxStatus, retrievePayment } from "@/actions/payment";
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+const getSchema = z.object({
+  poll: z.boolean().default(false),
+});
 
 export const GET = async (
   req: NextRequest,
@@ -16,11 +21,11 @@ export const GET = async (
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
+  const { poll } = getSchema.parse(await req.json());
+
   const payment = await retrievePayment(id, organizationId);
 
-  // Refresh payment status, mostly needed by adapters to get the latest status.
-
-  if (payment.status === "pending") {
+  if (poll && payment.status === "pending") {
     await refreshTxStatus(
       id,
       payment.transactionHash,
