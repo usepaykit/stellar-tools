@@ -229,15 +229,7 @@ const columns: ColumnDef<UsageRecord>[] = [
 
 export default function UsagePage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Filter records based on search query
   const filteredRecords = React.useMemo(() => {
@@ -334,11 +326,10 @@ export default function UsagePage() {
               columns={columns}
               data={filteredRecords}
               actions={tableActions}
-              isLoading={isLoading}
-              skeletonRowCount={5}
+
               onRowClick={(row) => {
                 // Navigate to customer page
-                router.push(`/dashboard/customers/${row.customerId}`);
+                router.push(`/dashboard/usage/${row.id}`);
               }}
             />
           </div>
