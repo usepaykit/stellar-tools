@@ -4,7 +4,7 @@ import {
   RetrievePayment,
   retrievePaymentSchema,
 } from "../schema/payment";
-import { ERR, OK, buildError, tryCatchAsync } from "../utils";
+import { tryCatchAsync } from "../utils";
 
 export class PaymentApi {
   constructor(private apiClient: ApiClient) {}
@@ -13,7 +13,7 @@ export class PaymentApi {
     const { error, data } = retrievePaymentSchema.safeParse(opts);
 
     if (error) {
-      return ERR(buildError(`Invalid parameters: ${error.message}`, error));
+      throw new Error(`Invalid parameters: ${error.message}`);
     }
 
     const [response, paymentError] = await tryCatchAsync(
@@ -23,14 +23,9 @@ export class PaymentApi {
     );
 
     if (paymentError) {
-      return ERR(
-        buildError(
-          `Failed to retrieve payment: ${paymentError.message}`,
-          paymentError
-        )
-      );
+      throw new Error(`Failed to retrieve payment: ${paymentError.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 }

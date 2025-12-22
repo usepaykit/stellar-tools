@@ -100,8 +100,6 @@ export const refundSchema = schemaFor<Refund>()(
 
 export const createRefundSchema = refundSchema.pick({
   paymentId: true,
-  customerId: true,
-  assetId: true,
   amount: true,
   reason: true,
   metadata: true,
@@ -110,14 +108,5 @@ export const createRefundSchema = refundSchema.pick({
 
 export interface CreateRefund extends Pick<
   Refund,
-  | "paymentId"
-  | "customerId"
-  | "assetId"
-  | "amount"
-  | "reason"
-  | "metadata"
-  | "receiverPublicKey"
-> {
-  organizationId: string;
-  environment: Environment;
-}
+  "paymentId" | "amount" | "reason" | "metadata" | "receiverPublicKey"
+> {}

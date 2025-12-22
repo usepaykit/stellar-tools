@@ -39,9 +39,14 @@ export interface Checkout {
   amount?: number;
 
   /**
+   * The asset code of the checkout.
+   */
+  assetCode?: string;
+
+  /**
    * The description of the checkout.
    */
-  description: string;
+  description?: string;
 
   /**
    * The status of the checkout.
@@ -86,7 +91,7 @@ export const checkoutSchema = schemaFor<Checkout>()(
     customerId: z.string(),
     productId: z.string().optional(),
     amount: z.number().optional(),
-    description: z.string(),
+    description: z.string().optional(),
     status: checkoutStatusEnum,
     paymentUrl: z.string(),
     expiresAt: z.string(),
@@ -99,13 +104,12 @@ export const checkoutSchema = schemaFor<Checkout>()(
 
 export const createCheckoutSchema = checkoutSchema
   .pick({
-    organizationId: true,
     customerId: true,
     productId: true,
     amount: true,
     description: true,
     metadata: true,
-    environment: true,
+    assetCode: true,
   })
   .refine((data) => data.productId !== undefined || data.amount !== undefined, {
     message: "Either productId or amount must be specified",
@@ -114,13 +118,13 @@ export const createCheckoutSchema = checkoutSchema
 
 export type CreateCheckout = Pick<
   Checkout,
-  | "organizationId"
   | "customerId"
   | "productId"
   | "amount"
   | "description"
   | "metadata"
-  | "environment"
+  | "description"
+  | "assetCode"
 >;
 
 export const updateCheckoutSchema = checkoutSchema.pick({

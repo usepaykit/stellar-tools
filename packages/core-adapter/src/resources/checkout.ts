@@ -15,7 +15,7 @@ export class CheckoutApi {
     const { error, data } = createCheckoutSchema.safeParse(params);
 
     if (error) {
-      return ERR(buildError(`Invalid parameters: ${error.message}`, error));
+      throw new Error(`Invalid parameters: ${error.message}`);
     }
 
     const [response, checkoutError] = await tryCatchAsync(
@@ -25,15 +25,10 @@ export class CheckoutApi {
     );
 
     if (checkoutError) {
-      return ERR(
-        buildError(
-          `Failed to create checkout: ${checkoutError.message}`,
-          checkoutError
-        )
-      );
+      throw new Error(`Failed to create checkout: ${checkoutError.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 
   retrieve = async (id: string) => {
@@ -42,7 +37,7 @@ export class CheckoutApi {
     );
 
     if (error) {
-      return ERR(buildError(`Invalid parameters: ${error.message}`, error));
+      throw new Error(`Invalid parameters: ${error.message}`);
     }
 
     return OK(response);
@@ -62,15 +57,10 @@ export class CheckoutApi {
     );
 
     if (checkoutError) {
-      return ERR(
-        buildError(
-          `Failed to update checkout: ${checkoutError.message}`,
-          checkoutError
-        )
-      );
+      throw new Error(`Failed to update checkout: ${checkoutError.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 
   delete = async (id: string) => {
@@ -79,9 +69,7 @@ export class CheckoutApi {
     );
 
     if (error) {
-      return ERR(
-        buildError(`Failed to delete checkout: ${error.message}`, error)
-      );
+      throw new Error(`Failed to delete checkout: ${error.message}`);
     }
 
     return OK(response);

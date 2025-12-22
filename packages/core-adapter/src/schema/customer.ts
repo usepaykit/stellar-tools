@@ -64,7 +64,6 @@ export const customerSchema = schemaFor<Customer>()(
 );
 
 export const createCustomerSchema = customerSchema.pick({
-  organizationId: true,
   email: true,
   name: true,
   phone: true,
@@ -74,9 +73,7 @@ export const createCustomerSchema = customerSchema.pick({
 export interface CreateCustomer extends Pick<
   Customer,
   "email" | "name" | "phone" | "appMetadata"
-> {
-  organizationId: string;
-}
+> {}
 
 export const updateCustomerSchema = customerSchema.partial().pick({
   email: true,

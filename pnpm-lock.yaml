@@ -222,6 +222,9 @@ importers:
       '@medusajs/framework':
         specifier: ^2.12.3
         version: 2.12.3(@medusajs/cli@2.12.3(@types/node@20.19.27))(@types/node@20.19.27)
+      '@stellartools/core':
+        specifier: workspace:*
+        version: link:../core-adapter
 
 packages:
 
@@ -7209,7 +7212,7 @@ snapshots:
 
   '@oclif/config@1.18.2':
     dependencies:
-      '@oclif/errors': 1.3.5
+      '@oclif/errors': 1.3.6
       '@oclif/parser': 3.8.17
       debug: 4.4.3(supports-color@8.1.1)
       globby: 11.1.0

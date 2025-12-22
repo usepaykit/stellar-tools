@@ -6,7 +6,7 @@ import {
   createCustomerSchema,
   updateCustomerSchema,
 } from "../schema/customer";
-import { ERR, OK, buildError, tryCatchAsync } from "../utils";
+import { tryCatchAsync } from "../utils";
 
 export class CustomerApi {
   private apiClient: ApiClient;
@@ -19,7 +19,7 @@ export class CustomerApi {
     const { error, data } = createCustomerSchema.safeParse(params);
 
     if (error) {
-      return ERR(buildError(`Invalid parameters: ${error.message}`, error));
+      throw new Error(`Invalid parameters: ${error.message}`);
     }
 
     const [response, customerError] = await tryCatchAsync(
@@ -29,15 +29,10 @@ export class CustomerApi {
     );
 
     if (customerError) {
-      return ERR(
-        buildError(
-          `Failed to create customer: ${customerError.message}`,
-          customerError
-        )
-      );
+      throw new Error(`Failed to create customer: ${customerError.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 
   retrieve = async (id: string) => {
@@ -46,19 +41,17 @@ export class CustomerApi {
     );
 
     if (error) {
-      return ERR(
-        buildError(`Failed to retrieve customer: ${error.message}`, error)
-      );
+      throw new Error(`Failed to retrieve customer: ${error.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 
   update = async (id: string, params: UpdateCustomer) => {
     const { error, data } = updateCustomerSchema.safeParse(params);
 
     if (error) {
-      return ERR(buildError(`Invalid parameters: ${error.message}`, error));
+      throw new Error(`Invalid parameters: ${error.message}`);
     }
 
     const [response, customerError] = await tryCatchAsync(
@@ -68,15 +61,10 @@ export class CustomerApi {
     );
 
     if (customerError) {
-      return ERR(
-        buildError(
-          `Failed to update customer: ${customerError.message}`,
-          customerError
-        )
-      );
+      throw new Error(`Failed to update customer: ${customerError.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 
   delete = async (id: string) => {
@@ -85,11 +73,9 @@ export class CustomerApi {
     );
 
     if (error) {
-      return ERR(
-        buildError(`Failed to delete customer: ${error.message}`, error)
-      );
+      throw new Error(`Failed to delete customer: ${error.message}`);
     }
 
-    return OK(response);
+    return response;
   };
 }
