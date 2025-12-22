@@ -11,15 +11,9 @@ export type CheckoutResult = {
     };
 };
 
-export type TextResult = {
-    type: "text";
-    text: string;
-};
 
-export type EmbedResult = {
-    type: "embedding";
-    embedding: number[];
-};
+
+
 
 export type ObjectResult<T> = {
     type: "object";
