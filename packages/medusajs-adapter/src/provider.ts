@@ -30,10 +30,8 @@ import {
   PaymentActions,
   PaymentSessionStatus,
 } from "@medusajs/framework/utils";
-import { StellarTools } from "@stellartools/core";
+import { StellarTools, validateRequiredKeys } from "@stellartools/core";
 import { z } from "zod";
-
-import { validateRequiredKeys } from "./utils";
 
 const optionsSchema = z.object({
   apiKey: z.string(),

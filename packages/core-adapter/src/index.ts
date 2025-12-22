@@ -43,7 +43,7 @@ export class StellarTools {
 
 export * from "./types";
 export * from "./resources/webhook";
-export { schemaFor } from "./utils";
+export { schemaFor, tryCatchAsync, validateRequiredKeys } from "./utils";
 export * from "./schema/customer";
 export * from "./schema/checkout";
 export * from "./schema/payment";
