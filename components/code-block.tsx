@@ -149,7 +149,7 @@ export function CodeBlock({
         {/* Code Content with ScrollArea */}
         {hasMaxHeight ? (
           <ScrollArea className="min-h-0 flex-1">
-            <div className={`max-h-[${maxHeight}]`}>
+            <div className={`max-h-[${maxHeight}] h-[700px]`}>
               <SyntaxHighlighter
                 language={lang}
                 style={syntaxTheme}

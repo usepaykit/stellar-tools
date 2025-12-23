@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-// Webhook destination type definition
 type WebhookDestination = {
   id: string;
   name: string;
@@ -41,7 +40,6 @@ type WebhookDestination = {
   errorRate: number;
 };
 
-// Mock webhook destinations data
 const mockWebhooks: WebhookDestination[] = [
   {
     id: "1",
@@ -96,7 +94,6 @@ const mockWebhooks: WebhookDestination[] = [
   },
 ];
 
-// Status badge component
 const StatusBadge = ({ status }: { status: WebhookDestination["status"] }) => {
   return (
     <Badge
@@ -127,19 +124,11 @@ const responseTimeChartConfig: ChartConfig = {
   },
 };
 
-// Transform data array to LineChart format
-const transformDataForChart = (data: number[] | undefined) => {
-  if (!data || data.length === 0) return null;
-
-  return data.map((value, index) => ({
+const ActivityChart = ({ data }: { data?: number[] }) => {
+  const chartData = data?.map((value, index) => ({
     index: index.toString(),
     value,
   }));
-};
-
-// Activity chart component using LineChart
-const ActivityChart = ({ data }: { data?: number[] }) => {
-  const chartData = transformDataForChart(data);
 
   if (!chartData) {
     return (
@@ -166,9 +155,11 @@ const ActivityChart = ({ data }: { data?: number[] }) => {
   );
 };
 
-// Response time chart component using LineChart
 const ResponseTimeChart = ({ data }: { data?: number[] }) => {
-  const chartData = transformDataForChart(data);
+  const chartData = data?.map((value, index) => ({
+    index: index.toString(),
+    value,
+  }));
 
   if (!chartData) {
     return (
@@ -306,9 +297,17 @@ const columns: ColumnDef<WebhookDestination>[] = [
 ];
 
 export default function WebhooksPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
   const router = useRouter();
-  // Table actions
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const tableActions: TableAction<WebhookDestination>[] = [
     {
       label: "Edit",
@@ -339,7 +338,6 @@ export default function WebhooksPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-6 p-4 sm:p-6">
-            {/* Header Section */}
             <div className="flex flex-col gap-4">
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-2">
@@ -358,7 +356,6 @@ export default function WebhooksPage() {
                 </Button>
               </div>
 
-              {/* Tabs */}
               <Tabs defaultValue="webhooks" className="w-full shadow-none">
                 <TabsList>
                   <TabsTrigger
@@ -377,7 +374,6 @@ export default function WebhooksPage() {
 
                 <TabsContent value="overview" className="mt-6">
                   <div className="flex min-h-[500px] flex-col items-center justify-center px-4 py-16">
-                    {/* Animated Icon Container */}
                     <div className="relative mb-8">
                       <div className="bg-primary/20 absolute inset-0 animate-pulse rounded-full blur-3xl" />
                       <div className="from-primary/10 to-primary/5 border-primary/20 relative flex h-24 w-24 items-center justify-center rounded-2xl border bg-linear-to-br">
@@ -388,7 +384,6 @@ export default function WebhooksPage() {
                       </div>
                     </div>
 
-                    {/* Main Content */}
                     <div className="max-w-2xl space-y-4 text-center">
                       <div className="flex items-center justify-center gap-3">
                         <h2 className="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
@@ -408,7 +403,6 @@ export default function WebhooksPage() {
                       </p>
                     </div>
 
-                    {/* Feature Preview Cards */}
                     <div className="mt-12 grid w-full max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
                       <div className="group bg-card/50 hover:bg-card/80 hover:border-primary/20 relative rounded-lg border p-6 backdrop-blur-sm transition-all duration-300">
                         <div className="mb-3 flex items-center gap-3">
@@ -461,6 +455,8 @@ export default function WebhooksPage() {
                     data={mockWebhooks}
                     enableBulkSelect={true}
                     actions={tableActions}
+                    isLoading={isLoading}
+                    skeletonRowCount={5}
                     onRowClick={(row) => {
                       router.push(`/dashboard/webhooks/${row.id}`);
                       console.log("Row clicked:", row);
