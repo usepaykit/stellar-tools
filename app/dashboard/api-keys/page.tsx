@@ -17,21 +17,32 @@ import {
 import { Button } from "@/components/ui/button";
 import { truncate } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
 import { ChevronRight, ExternalLink, Info, Plus } from "lucide-react";
 import Link from "next/link";
 
-type ApiKeyType = "restricted" | "standard";
 type ApiKey = {
   id: string;
   name: string;
   token: string;
-  type: ApiKeyType;
-  ipRestrictions?: string[];
-  lastUsed?: Date;
+  scope: string[];
+  isRevoked: boolean;
+  lastUsedAt: Date | null;
   createdAt: Date;
 };
 
-const mockRestrictedKeys: ApiKey[] = [];
+const mockRestrictedKeys: ApiKey[] = [
+  {
+    id: "key_restricted_1",
+    name: "Read-only API Key",
+    token:
+      "stellar_rk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
+    scope: ["read:payments", "read:customers"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-23"),
+    createdAt: new Date("2024-12-16"),
+  },
+];
 
 const mockStandardKeys: ApiKey[] = [
   {
@@ -39,9 +50,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Publishable key",
     token:
       "stellar_pk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-23"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-23"),
     createdAt: new Date("2024-12-16"),
   },
   {
@@ -49,9 +60,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Secret key",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-22"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-22"),
     createdAt: new Date("2024-12-16"),
   },
   {
@@ -59,9 +70,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Main Backend Key [Yash]",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-22"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-22"),
     createdAt: new Date("2024-07-10"),
   },
   {
@@ -69,9 +80,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Saqlain_Key_LM",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-23"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-23"),
     createdAt: new Date("2024-08-25"),
   },
   {
@@ -79,9 +90,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Saqlain_key_LM_C",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-23"),
+    scope: ["*"],
+    isRevoked: true,
+    lastUsedAt: new Date("2024-12-23"),
     createdAt: new Date("2024-10-09"),
   },
 ];
@@ -116,14 +127,14 @@ export default function ApiKeysPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "ipRestrictions",
-      header: "IP RESTRICTIONS",
+      accessorKey: "scope",
+      header: "SCOPE",
       cell: ({ row }) => {
-        const restrictions = row.original.ipRestrictions;
+        const scope = row.original.scope;
         return (
           <div className="flex items-center gap-1.5">
-            {restrictions && restrictions.length > 0 ? (
-              <span className="text-sm">{restrictions.join(", ")}</span>
+            {scope && scope.length > 0 ? (
+              <span className="text-sm">{scope.join(", ")}</span>
             ) : (
               <>
                 <span className="text-sm">None</span>
@@ -136,10 +147,30 @@ export default function ApiKeysPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "lastUsed",
+      accessorKey: "isRevoked",
+      header: "STATUS",
+      cell: ({ row }) => {
+        const isRevoked = row.original.isRevoked;
+        return (
+          <Badge
+            variant="outline"
+            className={
+              isRevoked
+                ? "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                : "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+            }
+          >
+            {isRevoked ? "Revoked" : "Active"}
+          </Badge>
+        );
+      },
+      enableSorting: true,
+    },
+    {
+      accessorKey: "lastUsedAt",
       header: "LAST USED",
       cell: ({ row }) => {
-        const date = row.original.lastUsed;
+        const date = row.original.lastUsedAt;
         if (!date)
           return <span className="text-muted-foreground text-sm">—</span>;
         return (
@@ -197,14 +228,14 @@ export default function ApiKeysPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "ipRestrictions",
-      header: "IP RESTRICTIONS",
+      accessorKey: "scope",
+      header: "SCOPE",
       cell: ({ row }) => {
-        const restrictions = row.original.ipRestrictions;
+        const scope = row.original.scope;
         return (
           <div className="flex items-center gap-1.5">
-            {restrictions && restrictions.length > 0 ? (
-              <span className="text-sm">{restrictions.join(", ")}</span>
+            {scope && scope.length > 0 ? (
+              <span className="text-sm">{scope.join(", ")}</span>
             ) : (
               <>
                 <span className="text-sm">None</span>
@@ -217,10 +248,30 @@ export default function ApiKeysPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "lastUsed",
+      accessorKey: "isRevoked",
+      header: "STATUS",
+      cell: ({ row }) => {
+        const isRevoked = row.original.isRevoked;
+        return (
+          <Badge
+            variant="outline"
+            className={
+              isRevoked
+                ? "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                : "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+            }
+          >
+            {isRevoked ? "Revoked" : "Active"}
+          </Badge>
+        );
+      },
+      enableSorting: true,
+    },
+    {
+      accessorKey: "lastUsedAt",
       header: "LAST USED",
       cell: ({ row }) => {
-        const date = row.original.lastUsed;
+        const date = row.original.lastUsedAt;
         if (!date)
           return <span className="text-muted-foreground text-sm">—</span>;
         return (
@@ -273,9 +324,9 @@ export default function ApiKeysPage() {
       },
     },
     {
-      label: "Manage IP restrictions",
+      label: "Manage scope",
       onClick: (key) => {
-        console.log("Manage IP restrictions:", key.id);
+        console.log("Manage scope:", key.id);
       },
     },
     {
@@ -313,9 +364,9 @@ export default function ApiKeysPage() {
       },
     },
     {
-      label: "Manage IP restrictions",
+      label: "Manage scope",
       onClick: (key) => {
-        console.log("Manage IP restrictions:", key.id);
+        console.log("Manage scope:", key.id);
       },
     },
     {
