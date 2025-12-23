@@ -107,7 +107,7 @@ export const apiKeys = pgTable("api_key", {
     .notNull()
     .references(() => organizations.id),
   name: text("name").notNull(),
-  keyHash: text("key_hash").notNull().unique(),
+  token: text("token").notNull().unique(),
   scope: jsonb("scope").$type<string[]>().notNull(),
   isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
