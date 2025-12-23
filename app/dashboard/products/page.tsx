@@ -50,7 +50,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-// --- Types & Schema ---
 
 type Product = {
   id: string;
@@ -85,7 +84,7 @@ const productSchema = z.object({
   }),
   phoneNumberEnabled: z.boolean(),
 
-  unit: z.string().optional(), // Freeform text
+  unit: z.string().optional(), 
   unitsPerCredit: z.number().min(1).default(1).optional(),
   creditsGranted: z.number().min(1).optional(),
   creditExpiryDays: z.number().min(1).optional(),
@@ -93,7 +92,7 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-// --- Mock Data ---
+
 
 const mockProducts: Product[] = [
   {
@@ -143,7 +142,6 @@ const mockProducts: Product[] = [
   },
 ];
 
-// --- Sub-Components ---
 
 const SortableHeader = ({
   column,
@@ -199,7 +197,6 @@ const StatCard = ({
   </Card>
 );
 
-// --- Table Columns ---
 
 const columns: ColumnDef<Product>[] = [
   {
@@ -256,6 +253,9 @@ function ProductsPageContent() {
   const [isModalOpen, setIsModalOpen] = React.useState(
     searchParams.get("active") === "true"
   );
+  const [editingProduct, setEditingProduct] = React.useState<Product | null>(
+    null
+  );
 
   const [selectedStatus, setSelectedStatus] = React.useState<string | null>(
     null
@@ -270,21 +270,10 @@ function ProductsPageContent() {
     []
   );
 
-  const tableActions: TableAction<Product>[] = [
-    { label: "Edit", onClick: (p) => console.log("Edit", p) },
-    {
-      label: "Archive",
-      onClick: (p) => console.log("Archive", p),
-      variant: "destructive",
-    },
-  ];
-
   const handleModalChange = React.useCallback(
     (value: boolean) => {
-      console.log({ value });
       const params = new URLSearchParams(searchParams.toString());
 
-      console.log({ params });
       if (value) {
         params.set("active", "true");
         router.replace(
@@ -295,11 +284,27 @@ function ProductsPageContent() {
         router.replace(
           `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
         );
+        setEditingProduct(null);
       }
       setIsModalOpen(value);
     },
     [searchParams, router]
   );
+
+  const tableActions: TableAction<Product>[] = [
+    {
+      label: "Edit",
+      onClick: (p) => {
+        setEditingProduct(p);
+        handleModalChange(true);
+      },
+    },
+    {
+      label: "Archive",
+      onClick: (p) => console.log("Archive", p),
+      variant: "destructive",
+    },
+  ];
 
   return (
     <div className="w-full">
@@ -316,7 +321,10 @@ function ProductsPageContent() {
                 </p>
               </div>
               <Button
-                onClick={() => handleModalChange(true)}
+                onClick={() => {
+                  setEditingProduct(null);
+                  handleModalChange(true);
+                }}
                 className="gap-2 shadow-sm"
               >
                 <Plus className="h-4 w-4" /> Create product
@@ -372,6 +380,7 @@ function ProductsPageContent() {
             <ProductsModal
               open={isModalOpen}
               onOpenChange={handleModalChange}
+              editingProduct={editingProduct}
             />
           </div>
         </DashboardSidebarInset>
@@ -395,11 +404,15 @@ export default function ProductsPage() {
 function ProductsModal({
   open,
   onOpenChange,
+  editingProduct,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
+  editingProduct?: Product | null;
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isEditMode = !!editingProduct;
+
   const form = RHF.useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -413,14 +426,48 @@ function ProductsModal({
     },
   });
 
+  // Reset form when modal opens/closes or editingProduct changes
+  React.useEffect(() => {
+    if (open && editingProduct) {
+      // Pre-populate form with product data
+      form.reset({
+        name: editingProduct.name,
+        description: "",
+        images: [],
+        billingCycle: editingProduct.pricing.isRecurring
+          ? "recurring"
+          : "one-time",
+        recurringPeriod: (editingProduct.pricing.period as "day" | "week" | "month" | "year") || "month",
+        price: {
+          amount: editingProduct.pricing.amount,
+          asset: editingProduct.pricing.asset,
+        },
+        phoneNumberEnabled: false,
+      });
+    } else if (open && !editingProduct) {
+      // Reset to defaults for create mode
+      form.reset({
+        name: "",
+        description: "",
+        images: [],
+        billingCycle: "recurring",
+        recurringPeriod: "month",
+        price: { amount: "", asset: "XLM" },
+        phoneNumberEnabled: false,
+      });
+    }
+  }, [open, editingProduct, form]);
+
   const watched = form.watch();
   const total = parseFloat(watched.price?.amount) || 0;
 
   const onSubmit = async (data: ProductFormData) => {
     setIsSubmitting(true);
-    console.log({ data });
+    console.log({ data, isEditMode, editingProduct });
     await new Promise((r) => setTimeout(r, 1000)); // Simulate API
-    toast.success("Product created!");
+    toast.success(
+      isEditMode ? "Product updated successfully!" : "Product created!"
+    );
     form.reset();
     onOpenChange(false);
     setIsSubmitting(false);
@@ -430,7 +477,7 @@ function ProductsModal({
     <FullScreenModal
       open={open}
       onOpenChange={onOpenChange}
-      title="Add a product"
+      title={isEditMode ? "Edit product" : "Add a product"}
       footer={
         <div className="flex gap-3">
           <Button
@@ -442,7 +489,7 @@ function ProductsModal({
           </Button>
           <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{" "}
-            Add product
+            {isEditMode ? "Update product" : "Add product"}
           </Button>
         </div>
       }
@@ -540,9 +587,9 @@ function ProductsModal({
                   control={form.control}
                   name="unit"
                   render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
+                    <TextField
                       {...field}
-                      value={field.value || 0}
+                      value={field.value || ""}
                       id="unit"
                       label="Unit Type"
                       placeholder="e.g., tokens, MB, requests, images"
@@ -559,6 +606,10 @@ function ProductsModal({
                     <NumberPicker
                       {...field}
                       value={field.value || 0}
+                      onChange={(value) => {
+                        const numValue = value === "" ? 0 : parseFloat(value);
+                        field.onChange(isNaN(numValue) ? 0 : numValue);
+                      }}
                       id="unitsPerCredit"
                       label="Units per Credit"
                       helpText="How many units equal 1 credit?"
@@ -574,6 +625,10 @@ function ProductsModal({
                     <NumberPicker
                       {...field}
                       value={field.value || 0}
+                      onChange={(value) => {
+                        const numValue = value === "" ? 0 : parseFloat(value);
+                        field.onChange(isNaN(numValue) ? 0 : numValue);
+                      }}
                       id="creditsGranted"
                       label="Credits Granted"
                       placeholder="e.g., 10000"
@@ -594,6 +649,10 @@ function ProductsModal({
                     <NumberPicker
                       {...field}
                       value={field.value || 0}
+                      onChange={(value) => {
+                        const numValue = value === "" ? 0 : parseFloat(value);
+                        field.onChange(isNaN(numValue) ? 0 : numValue);
+                      }}
                       id="creditExpiryDays"
                       label="Expiry (days)"
                       helpText="Credits expire after X days"

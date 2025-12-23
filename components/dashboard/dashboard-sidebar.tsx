@@ -47,6 +47,7 @@ import {
   GalleryVerticalEnd,
   LayoutDashboard,
   LogOut,
+  Package,
   Plus,
   Receipt,
   Repeat,
@@ -85,6 +86,11 @@ const data = {
       title: "Overview",
       url: "/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      title: "Products",
+      url: "/dashboard/products",
+      icon: Package,
     },
     {
       title: "Transactions",
