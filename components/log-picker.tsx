@@ -46,6 +46,21 @@ export function LogPicker<TData, TValue>({
     setTimeout(() => setSelectedRow(null), 200);
   }, []);
 
+  React.useEffect(() => {
+    if (!selectedRow) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [selectedRow, handleClose]);
+
   if (data.length === 0) {
     return (
       <div

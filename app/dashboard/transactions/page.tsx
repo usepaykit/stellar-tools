@@ -413,6 +413,7 @@ export function RefundModal({
               error={error?.message}
               placeholder="Enter payment ID"
               className="shadow-none"
+              disabled={!!initialPaymentId}
             />
           )}
         />
@@ -459,6 +460,9 @@ type TabType = "all" | TransactionStatus;
 export default function TransactionsPage() {
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = React.useState<
+    string | undefined
+  >(undefined);
   const searchParams = useSearchParams();
   const customerId = searchParams.get("customer");
   const paymentId = searchParams.get("paymentId");
@@ -500,7 +504,10 @@ export default function TransactionsPage() {
     },
     {
       label: "Refund",
-      onClick: (transaction) => console.log("Refund", transaction),
+      onClick: (transaction) => {
+        setSelectedPaymentId(transaction.description);
+        setIsRefundModalOpen(true);
+      },
     },
     {
       label: "Delete",
@@ -531,7 +538,10 @@ export default function TransactionsPage() {
               <div className="flex items-center gap-2">
                 <Button
                   className="gap-2 shadow-sm"
-                  onClick={() => setIsRefundModalOpen(true)}
+                  onClick={() => {
+                    setSelectedPaymentId(undefined);
+                    setIsRefundModalOpen(true);
+                  }}
                 >
                   <Plus className="h-4 w-4" />
                   Create refund
@@ -620,7 +630,13 @@ export default function TransactionsPage() {
       {/* Refund Modal */}
       <RefundModal
         open={isRefundModalOpen}
-        onOpenChange={setIsRefundModalOpen}
+        onOpenChange={(open) => {
+          setIsRefundModalOpen(open);
+          if (!open) {
+            setSelectedPaymentId(undefined);
+          }
+        }}
+        initialPaymentId={selectedPaymentId}
       />
     </div>
   );
