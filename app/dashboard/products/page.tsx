@@ -15,6 +15,7 @@ import {
   TextAreaField,
   TextField,
 } from "@/components/input-picker";
+import { MarkdownPicker } from "@/components/markdown-picker";
 import { PricePicker } from "@/components/price-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Download,
+  HelpCircle,
   Loader2,
   Package,
   Plus,
@@ -86,6 +88,7 @@ const productSchema = z.object({
   unit: z.string().optional(),
   unitsPerCredit: z.number().min(1).default(1).optional(),
   unitDivisor: z.number().min(1).optional(),
+  creditsGranted: z.number().min(0).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -405,6 +408,7 @@ function ProductsModal({
   editingProduct?: Product | null;
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
   const isEditMode = !!editingProduct;
 
   const form = RHF.useForm<ProductFormData>({
@@ -418,6 +422,8 @@ function ProductsModal({
       price: { amount: "", asset: "XLM" },
       phoneNumberEnabled: false,
       unitDivisor: 1,
+      unitsPerCredit: 1,
+      creditsGranted: 0,
     },
   });
 
@@ -474,280 +480,374 @@ function ProductsModal({
   };
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title={isEditMode ? "Edit product" : "Add a product"}
-      footer={
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{" "}
-            {isEditMode ? "Update product" : "Add product"}
-          </Button>
-        </div>
-      }
-    >
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="space-y-6">
-          <RHF.Controller
-            control={form.control}
-            name="name"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                id="name"
-                label="Name"
-                error={error?.message}
-                placeholder="e.g. Premium Subscription"
-                className="shadow-none"
-              />
-            )}
-          />
-
-          <RHF.Controller
-            control={form.control}
-            name="description"
-            render={({ field, fieldState: { error } }) => (
-              <TextAreaField
-                {...field}
-                value={field.value as string}
-                id="description"
-                label="Description"
-                error={error?.message}
-                placeholder="Describe your product..."
-                className="shadow-none"
-              />
-            )}
-          />
-
-          <RHF.Controller
-            control={form.control}
-            name="images"
-            render={({ field }) => (
-              <FileUploadPicker
-                value={field.value}
-                onFilesChange={field.onChange}
-                dropzoneMultiple={false}
-                dropzoneAccept={{
-                  "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-                }}
-              />
-            )}
-          />
-
-          <div className="space-y-4 pt-4">
-            <Label className="font-medium">Pricing Model</Label>
+    <>
+      <FullScreenModal
+        open={open}
+        onOpenChange={onOpenChange}
+        title={isEditMode ? "Edit product" : "Add a product"}
+        footer={
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={isSubmitting}
+            >
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}{" "}
+              {isEditMode ? "Update product" : "Add product"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <div className="space-y-6">
             <RHF.Controller
               control={form.control}
-              name="billingCycle"
-              render={({ field }) => (
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="recurring" id="recurring" />
-                    <Label htmlFor="recurring" className="font-normal">
-                      Recurring
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="one-time" id="one-time" />
-                    <Label htmlFor="one-time" className="font-normal">
-                      One-off
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="metered" id="metered" />
-                    <Label htmlFor="metered" className="font-normal">
-                      Metered (Credits)
-                    </Label>
-                  </div>
-                </RadioGroup>
+              name="name"
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  id="name"
+                  label="Name"
+                  error={error?.message}
+                  placeholder="e.g. Premium Subscription"
+                  className="shadow-none"
+                />
               )}
             />
 
-            {watched.billingCycle === "metered" && (
-              <div className="space-y-4 rounded-lg border p-4">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-semibold">
-                    Credit Configuration
-                  </h4>
-                </div>
-
-                <RHF.Controller
-                  control={form.control}
-                  name="unit"
-                  render={({ field, fieldState: { error } }) => (
-                    <TextField
-                      {...field}
-                      value={field.value || ""}
-                      id="unit"
-                      label="Unit Type"
-                      placeholder="e.g., tokens, MB, requests, images"
-                      helpText="What does 1 credit represent?"
-                      error={error?.message}
-                    />
-                  )}
+            <RHF.Controller
+              control={form.control}
+              name="description"
+              render={({ field, fieldState: { error } }) => (
+                <TextAreaField
+                  {...field}
+                  value={field.value as string}
+                  id="description"
+                  label="Description"
+                  error={error?.message}
+                  placeholder="Describe your product..."
+                  className="shadow-none"
                 />
+              )}
+            />
 
-                <RHF.Controller
-                  control={form.control}
-                  name="unitsPerCredit"
-                  render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
-                      {...field}
-                      value={field.value || 0}
-                      id="unitsPerCredit"
-                      label="Units per Credit"
-                      helpText="How many units equal 1 credit?"
-                      error={error?.message}
-                    />
-                  )}
+            <RHF.Controller
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FileUploadPicker
+                  value={field.value}
+                  onFilesChange={field.onChange}
+                  dropzoneMultiple={false}
+                  dropzoneAccept={{
+                    "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+                  }}
                 />
+              )}
+            />
 
-                <RHF.Controller
-                  control={form.control}
-                  name="unitDivisor"
-                  render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
-                      {...field}
-                      value={field.value || 1}
-                      id="unitDivisor"
-                      label="Unit Divisor"
-                      helpText="Custom divisor to convert raw usage to units"
-                      error={error?.message}
-                    />
-                  )}
-                />
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium">Pricing Model</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto gap-1.5 px-2 py-1 text-xs"
+                  onClick={() => setIsLearnMoreOpen(true)}
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  Learn about metered billing
+                </Button>
               </div>
-            )}
-
-            <div className="flex gap-2">
               <RHF.Controller
                 control={form.control}
-                name="price"
+                name="billingCycle"
                 render={({ field }) => (
-                  <PricePicker
-                    id="price"
-                    className="flex-1"
-                    value={field.value}
-                    onChange={field.onChange}
-                    assets={["XLM", "USDC"]}
-                    error={form.formState.errors.price?.amount?.message}
-                  />
+                  <RadioGroup
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="recurring" id="recurring" />
+                      <Label htmlFor="recurring" className="font-normal">
+                        Recurring
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="one-time" id="one-time" />
+                      <Label htmlFor="one-time" className="font-normal">
+                        One-off
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="metered" id="metered" />
+                      <Label htmlFor="metered" className="font-normal">
+                        Metered (Credits)
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 )}
               />
 
-              {watched.billingCycle == "recurring" && (
+              {watched.billingCycle === "metered" && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold">
+                      Credit Configuration
+                    </h4>
+                    <p className="text-muted-foreground text-xs">
+                      Define how usage is measured and converted to credits
+                    </p>
+                  </div>
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="unit"
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        value={field.value || ""}
+                        id="unit"
+                        label="Unit Label"
+                        placeholder="e.g., tokens, MB, requests, minutes"
+                        helpText="Display name for your unit (can be anything)"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="unitDivisor"
+                    render={({ field, fieldState: { error } }) => (
+                      <NumberPicker
+                        {...field}
+                        value={field.value || 1}
+                        id="unitDivisor"
+                        label="Unit Divisor"
+                        helpText="Converts raw data (e.g., bytes) to your unit"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="unitsPerCredit"
+                    render={({ field, fieldState: { error } }) => (
+                      <NumberPicker
+                        {...field}
+                        value={field.value || 1}
+                        id="unitsPerCredit"
+                        label="Units per Credit"
+                        helpText="How many units equal 1 credit?"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="creditsGranted"
+                    render={({ field, fieldState: { error } }) => (
+                      <NumberPicker
+                        {...field}
+                        value={field.value || 0}
+                        id="creditsGranted"
+                        label="Credits Granted"
+                        placeholder="e.g., 1000"
+                        helpText="Initial credits included with this product"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2">
                 <RHF.Controller
                   control={form.control}
-                  name="recurringPeriod"
+                  name="price"
                   render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <SelectTrigger className="mt-2.5 h-12 w-[150px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="day">Daily</SelectItem>
-                        <SelectItem value="week">Weekly</SelectItem>
-                        <SelectItem value="month">Monthly</SelectItem>
-                        <SelectItem value="year">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <PricePicker
+                      id="price"
+                      className="flex-1"
+                      value={field.value}
+                      onChange={field.onChange}
+                      assets={["XLM", "USDC"]}
+                      error={form.formState.errors.price?.amount?.message}
+                    />
                   )}
                 />
-              )}
+
+                {watched.billingCycle == "recurring" && (
+                  <RHF.Controller
+                    control={form.control}
+                    name="recurringPeriod"
+                    render={({ field }) => (
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <SelectTrigger className="mt-2.5 h-12 w-[150px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="day">Daily</SelectItem>
+                          <SelectItem value="week">Weekly</SelectItem>
+                          <SelectItem value="month">Monthly</SelectItem>
+                          <SelectItem value="year">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t pt-4">
+              <RHF.Controller
+                control={form.control}
+                name="phoneNumberEnabled"
+                render={({ field }) => (
+                  <div className="flex w-full items-center justify-between space-x-2">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="phoneNumberEnabled"
+                        className="flex flex-col items-start gap-1"
+                      >
+                        Require phone number
+                        <p className="text-muted-foreground text-xs">
+                          Customers must provide a phone number
+                        </p>
+                      </Label>
+                    </div>
+
+                    <Switch
+                      id="phoneNumberEnabled"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </div>
+                )}
+              />
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t pt-4">
-            <RHF.Controller
-              control={form.control}
-              name="phoneNumberEnabled"
-              render={({ field }) => (
-                <div className="flex w-full items-center justify-between space-x-2">
-                  <div className="space-y-0.5">
-                    <Label
-                      htmlFor="phoneNumberEnabled"
-                      className="flex flex-col items-start gap-1"
-                    >
-                      Require phone number
-                      <p className="text-muted-foreground text-xs">
-                        Customers must provide a phone number
-                      </p>
-                    </Label>
-                  </div>
+          <div className="hidden lg:block">
+            <Card className="bg-muted/30 sticky top-6 shadow-none">
+              <CardContent className="space-y-6 p-6">
+                <h3 className="text-lg font-semibold">Preview</h3>
 
-                  <Switch
-                    id="phoneNumberEnabled"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
+                {watched.images?.[0] && (
+                  <div className="relative aspect-video overflow-hidden rounded-lg border">
+                    <Image
+                      src={
+                        watched.images[0].preview ||
+                        URL.createObjectURL(watched.images[0])
+                      }
+                      alt="Preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <h4 className="text-base font-bold">
+                    {watched.name || "Product Name"}
+                  </h4>
+                  <p className="text-muted-foreground line-clamp-2 text-sm">
+                    {watched.description || "No description provided."}
+                  </p>
                 </div>
-              )}
-            />
+
+                <div className="border-t pt-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">
+                      Total Price
+                    </span>
+                    <span className="font-bold">
+                      {total.toFixed(2)} {watched.price.asset}
+                    </span>
+                  </div>
+                  {watched.billingCycle === "recurring" && (
+                    <p className="text-muted-foreground mt-1 text-right text-xs">
+                      Billed every {watched.recurringPeriod}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
+      </FullScreenModal>
 
-        <div className="hidden lg:block">
-          <Card className="bg-muted/30 sticky top-6 shadow-none">
-            <CardContent className="space-y-6 p-6">
-              <h3 className="text-lg font-semibold">Preview</h3>
+      <FullScreenModal
+        open={isLearnMoreOpen}
+        onOpenChange={setIsLearnMoreOpen}
+        title="Understanding Metered Billing"
+        size="full"
+        footer={
+          <Button onClick={() => setIsLearnMoreOpen(false)}>Got it</Button>
+        }
+      >
+        <MarkdownPicker
+          content={
+            /* html */ `
+## What is metered billing?
 
-              {watched.images?.[0] && (
-                <div className="relative aspect-video overflow-hidden rounded-lg border">
-                  <Image
-                    src={
-                      watched.images[0].preview ||
-                      URL.createObjectURL(watched.images[0])
-                    }
-                    alt="Preview"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
+Metered billing charges customers based on their actual usage. Think pay-as-you-go: upload storage, API calls, AI tokens, processing time, anything measurable.
 
-              <div className="space-y-1">
-                <h4 className="text-base font-bold">
-                  {watched.name || "Product Name"}
-                </h4>
-                <p className="text-muted-foreground line-clamp-2 text-sm">
-                  {watched.description || "No description provided."}
-                </p>
-              </div>
+---
 
-              <div className="border-t pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground font-medium">
-                    Total Price
-                  </span>
-                  <span className="font-bold">
-                    {total.toFixed(2)} {watched.price.asset}
-                  </span>
-                </div>
-                {watched.billingCycle === "recurring" && (
-                  <p className="text-muted-foreground mt-1 text-right text-xs">
-                    Billed every {watched.recurringPeriod}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </FullScreenModal>
+## Unit Label
+
+A human-friendly name for what you're measuring. This can be anything: "tokens", "megabytes", "API calls", "minutes", "images", whatever makes sense for your service.
+
+**Example:** "MB" for file storage, "tokens" for AI usage
+
+---
+
+## Unit Divisor
+
+Converts raw measurements into your chosen unit. For example, if you're measuring file storage and raw data comes in bytes, set this to 1,048,576 to convert bytes to megabytes.
+
+**Common divisors:**
+- File count: 1 (or leave as default)
+- Kilobytes: 1,024
+- Megabytes: 1,048,576
+- Gigabytes: 1,073,741,824
+
+---
+
+## Units per Credit
+
+How many units equal one credit. If you set this to 10, then every 10 units costs 1 credit.
+
+**Example:** Set to 5 means uploading 50MB costs 10 credits (50 / 5)
+
+---
+
+## Credits Granted
+
+The number of credits customers get when they purchase this product. They'll spend these credits as they use your service.
+
+**Example:** Grant 1,000 credits = 5,000 units if unitsPerCredit is 5
+`
+          }
+        />
+      </FullScreenModal>
+    </>
   );
 }

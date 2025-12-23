@@ -457,7 +457,7 @@ export function RefundModal({
 
 type TabType = "all" | TransactionStatus;
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
   const searchParams = useSearchParams();
   const customerId = searchParams.get("customer");
   const paymentId = searchParams.get("paymentId");
@@ -642,5 +642,13 @@ export default function TransactionsPage() {
         initialPaymentId={selectedPaymentId ?? undefined}
       />
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <TransactionsPageContent />
+    </React.Suspense>
   );
 }
