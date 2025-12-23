@@ -69,7 +69,7 @@ export const resolveApiKey = async (apiKey: string) => {
   const [record] = await db
     .select()
     .from(apiKeys)
-    .where(eq(apiKeys.keyHash, apiKey))
+    .where(eq(apiKeys.token, apiKey))
     .limit(1);
 
   if (!record) throw new Error("Invalid apiKey");
