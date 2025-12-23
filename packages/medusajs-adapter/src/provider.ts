@@ -82,10 +82,7 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       );
     }
 
-    this.stellar = new StellarTools({
-      apiKey: this.options.apiKey,
-      debug,
-    });
+    this.stellar = new StellarTools({ apiKey: this.options.apiKey });
   }
 
   initiatePayment = async ({

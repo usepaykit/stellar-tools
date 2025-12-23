@@ -289,7 +289,7 @@ export const usageRecords = pgTable(
   })
 );
 
-export type WebhookEvent = [
+export const webhookEvent = [
   "customer.created",
   "customer.updated",
   "customer.deleted",
@@ -300,7 +300,9 @@ export type WebhookEvent = [
   "refund.created",
   "refund.succeeded",
   "refund.failed",
-];
+] as const;
+
+export type WebhookEvent = (typeof webhookEvent)[number];
 
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),

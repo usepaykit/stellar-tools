@@ -1,5 +1,5 @@
 import { postWebhookLog } from "@/actions/webhook";
-import { Network } from "@/db";
+import { Network, WebhookEvent } from "@/db";
 import { Webhook as WebhookSchema } from "@/db/schema";
 import { Webhook } from "@stellartools/core";
 import { nanoid } from "nanoid";
@@ -9,7 +9,7 @@ export class WebhookDelivery {
 
   deliver = async (
     webhook: WebhookSchema,
-    eventType: string,
+    eventType: WebhookEvent,
     payload: Record<string, unknown>,
     environment: Network
   ) => {

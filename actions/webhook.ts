@@ -212,7 +212,7 @@ export const triggerWebhooks = async (
     );
 
   const subscribedWebhooks = orgWebhooks.filter((webhook) =>
-    webhook.events.includes(eventType as unknown as string)
+    webhook.events.includes(eventType)
   );
 
   if (subscribedWebhooks.length === 0) {
@@ -224,12 +224,7 @@ export const triggerWebhooks = async (
 
   const results = await Promise.allSettled(
     subscribedWebhooks.map((webhook) =>
-      new WebhookDelivery().deliver(
-        webhook,
-        eventType as unknown as string,
-        payload,
-        environment
-      )
+      new WebhookDelivery().deliver(webhook, eventType, payload, environment)
     )
   );
 
@@ -285,7 +280,7 @@ export const processStellarWebhook = async (
 
         await triggerWebhooks(
           organization.id,
-          "payment.confirmed" as unknown as WebhookEvent,
+          "payment.confirmed",
           { payment_id: tx.hash, checkout_id: checkout.id },
           environment
         );
