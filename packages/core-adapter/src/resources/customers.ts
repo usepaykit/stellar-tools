@@ -15,7 +15,7 @@ export class CustomerApi {
     this.apiClient = apiClient;
   }
 
-  create = async (params: CreateCustomer) => {
+  async create(params: CreateCustomer) {
     const { error, data } = createCustomerSchema.safeParse(params);
 
     if (error) {
@@ -33,9 +33,9 @@ export class CustomerApi {
     }
 
     return response;
-  };
+  }
 
-  retrieve = async (id: string) => {
+  async retrieve(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.get<Customer>(`/customers/${id}`)
     );
@@ -45,9 +45,9 @@ export class CustomerApi {
     }
 
     return response;
-  };
+  }
 
-  update = async (id: string, params: UpdateCustomer) => {
+  async update(id: string, params: UpdateCustomer) {
     const { error, data } = updateCustomerSchema.safeParse(params);
 
     if (error) {
@@ -65,9 +65,9 @@ export class CustomerApi {
     }
 
     return response;
-  };
+  }
 
-  delete = async (id: string) => {
+  async delete(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.delete<Customer>(`/customers/${id}`)
     );
@@ -77,5 +77,5 @@ export class CustomerApi {
     }
 
     return response;
-  };
+  }
 }

@@ -34,6 +34,7 @@
   "dependencies": {
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
-    "uploadthing": "^7.7.4"
+    "uploadthing": "^7.7.4",
+    "@stellartools/core": "workspace:*"
   }
 }

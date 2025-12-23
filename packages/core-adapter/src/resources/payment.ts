@@ -9,7 +9,7 @@ import { tryCatchAsync } from "../utils";
 export class PaymentApi {
   constructor(private apiClient: ApiClient) {}
 
-  retrieve = async (id: string, opts?: RetrievePayment) => {
+  async retrieve(id: string, opts?: RetrievePayment) {
     const { error, data } = retrievePaymentSchema.safeParse(opts);
 
     if (error) {

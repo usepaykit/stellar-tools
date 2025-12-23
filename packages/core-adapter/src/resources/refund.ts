@@ -5,7 +5,7 @@ import { tryCatchAsync } from "../utils";
 export class RefundApi {
   constructor(private apiClient: ApiClient) {}
 
-  create = async (params: CreateRefund) => {
+  async create(params: CreateRefund) {
     const { error, data } = createRefundSchema.safeParse(params);
 
     if (error) {

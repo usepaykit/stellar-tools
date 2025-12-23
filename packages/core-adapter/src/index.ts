@@ -1,7 +1,9 @@
 import { ApiClient } from "./api-client";
 import { CheckoutApi } from "./resources/checkout";
+import { CreditApi } from "./resources/credit";
 import { CustomerApi } from "./resources/customers";
 import { PaymentApi } from "./resources/payment";
+import { ProductApi } from "./resources/product";
 import { RefundApi } from "./resources/refund";
 import { Webhook } from "./resources/webhook";
 import { StellarToolsConfig, stellarToolsConfigSchema } from "./schema/shared";
@@ -13,6 +15,8 @@ export class StellarTools {
   public refund: RefundApi;
   public checkout: CheckoutApi;
   public payment: PaymentApi;
+  public credit: CreditApi;
+  public product: ProductApi;
 
   constructor(config: StellarToolsConfig) {
     const { error, data } = stellarToolsConfigSchema.safeParse(config);
@@ -29,7 +33,7 @@ export class StellarTools {
         "Content-Type": "application/json",
         "x-api-key": this.config.apiKey,
       },
-      retryOptions: { max: 3, baseDelay: 1000, debug: this.config.debug },
+      retryOptions: { max: 3, baseDelay: 1000, debug: false },
     });
 
     this.webhook = new Webhook();
@@ -38,6 +42,8 @@ export class StellarTools {
     this.refund = new RefundApi(apiClient);
     this.checkout = new CheckoutApi(apiClient);
     this.payment = new PaymentApi(apiClient);
+    this.credit = new CreditApi(apiClient);
+    this.product = new ProductApi(apiClient);
   }
 }
 

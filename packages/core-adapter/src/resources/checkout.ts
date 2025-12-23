@@ -11,7 +11,7 @@ import { tryCatchAsync } from "../utils";
 export class CheckoutApi {
   constructor(private apiClient: ApiClient) {}
 
-  create = async (params: CreateCheckout) => {
+  async create(params: CreateCheckout) {
     const { error, data } = createCheckoutSchema.safeParse(params);
 
     if (error) {
@@ -29,9 +29,9 @@ export class CheckoutApi {
     }
 
     return response;
-  };
+  }
 
-  retrieve = async (id: string) => {
+  async retrieve(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.get<Checkout>(`/checkouts/${id}`)
     );
@@ -41,9 +41,9 @@ export class CheckoutApi {
     }
 
     return response;
-  };
+  }
 
-  update = async (id: string, params: UpdateCheckout) => {
+  async update(id: string, params: UpdateCheckout) {
     const { error, data } = updateCheckoutSchema.safeParse(params);
 
     if (error) {
@@ -61,9 +61,9 @@ export class CheckoutApi {
     }
 
     return response;
-  };
+  }
 
-  delete = async (id: string) => {
+  async delete(id: string) {
     const [response, error] = await tryCatchAsync(
       this.apiClient.delete<Checkout>(`/checkouts/${id}`)
     );
@@ -73,5 +73,5 @@ export class CheckoutApi {
     }
 
     return response;
-  };
+  }
 }

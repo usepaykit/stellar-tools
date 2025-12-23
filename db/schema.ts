@@ -194,6 +194,7 @@ export const products = pgTable("product", {
 
   // Metered billing
   unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
+  unitDivisor: integer("unit_divisor"), // HOW to convert bytes → units (null = use file count)
   unitsPerCredit: integer("units_per_credit").default(1), // if 1, 1 unit = 1 credit, if 10, 10 units = 1 credit
   creditsGranted: integer("credits_granted"),
   creditExpiryDays: integer("credit_expiry_days"),
@@ -402,6 +403,36 @@ export const creditBalances = pgTable(
   })
 );
 
+export const creditTransactions = pgTable(
+  "credit_transaction",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    customerId: text("customer_id").references(() => customers.id),
+    productId: text("product_id").references(() => products.id),
+    balanceId: text("balance_id")
+      .notNull()
+      .references(() => creditBalances.id),
+    amount: integer("amount").notNull(),
+    balanceBefore: integer("balance_before").notNull(),
+    balanceAfter: integer("balance_after").notNull(),
+    reason: text("reason"),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    customerIdx: index("credit_tx_customer_idx").on(
+      table.customerId,
+      table.productId
+    ),
+    balanceIdx: index("credit_tx_balance_idx").on(table.balanceId),
+    createdAtIdx: index("credit_tx_created_at_idx").on(table.createdAt),
+  })
+);
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type TeamMember = InferSelectModel<typeof teamMembers>;
@@ -418,3 +449,4 @@ export type Network = (typeof networkEnum.enumValues)[number];
 export type TeamInvite = InferSelectModel<typeof teamInvites>;
 export type Refund = InferSelectModel<typeof refunds>;
 export type CreditBalance = InferSelectModel<typeof creditBalances>;
+export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
