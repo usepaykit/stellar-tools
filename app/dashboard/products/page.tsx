@@ -546,6 +546,8 @@ function ProductsModal({
                 <FileUploadPicker
                   value={field.value}
                   onFilesChange={field.onChange}
+                  enableTransformation
+                  targetFormat="image/png"
                   dropzoneMultiple={false}
                   dropzoneAccept={{
                     "image/*": [".png", ".jpg", ".jpeg", ".webp"],

@@ -2,9 +2,10 @@
 
 import * as React from "react";
 
+import { ImageTransformer, type MimeType } from "@/core/image-transformer";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import { ImagePlus, Pencil } from "lucide-react";
+import { ImagePlus, Loader2, Pencil } from "lucide-react";
 import Image from "next/image";
 import {
   type DropzoneOptions,
@@ -28,6 +29,16 @@ interface FileUploadPickerProps extends MixinProps<
   description?: string;
   className?: string;
   disabled?: boolean;
+  /**
+   * Enable automatic image transformation for web-compatible formats
+   * @default false
+   */
+  enableTransformation?: boolean;
+  /**
+   * Target format for image transformation
+   * @default "image/png"
+   */
+  targetFormat?: MimeType;
 }
 
 export const FileUploadPicker = React.forwardRef<
@@ -44,42 +55,79 @@ export const FileUploadPicker = React.forwardRef<
       className,
       id,
       disabled = false,
+      enableTransformation = false,
+      targetFormat = "image/png",
       ...mixinProps
     },
     ref
   ) => {
     const { dropzone } = splitProps(mixinProps, "dropzone");
+    const [isTransforming, setIsTransforming] = React.useState(false);
 
     const onDrop = React.useCallback(
-      (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+      async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
         if (acceptedFiles.length > 0) {
-          // Revoke old preview URLs when replacing files in single mode
-          if (!dropzone.multiple && value.length > 0) {
-            value.forEach((file) => URL.revokeObjectURL(file.preview));
+          setIsTransforming(true);
+
+          try {
+            // Revoke old preview URLs when replacing files in single mode
+            if (!dropzone.multiple && value.length > 0) {
+              value.forEach((file) => URL.revokeObjectURL(file.preview));
+            }
+
+            // Transform and create preview URLs
+            const processedFiles = await Promise.all(
+              acceptedFiles.map(async (file) => {
+                let processedFile = file;
+                let previewUrl: string;
+
+                if (enableTransformation) {
+                  try {
+                    processedFile = await new ImageTransformer().transformTo(
+                      file,
+                      targetFormat
+                    );
+                    previewUrl = URL.createObjectURL(processedFile);
+                  } catch (error) {
+                    console.error("Image transformation failed:", error);
+                    previewUrl = URL.createObjectURL(file);
+                  }
+                } else {
+                  previewUrl = URL.createObjectURL(file);
+                }
+
+                return Object.assign(processedFile, {
+                  preview: previewUrl,
+                });
+              })
+            );
+
+            const updatedFiles = dropzone.multiple
+              ? [...value, ...processedFiles]
+              : processedFiles;
+            onFilesChange?.(updatedFiles);
+          } finally {
+            setIsTransforming(false);
           }
-
-          const newFiles = acceptedFiles.map((file) =>
-            Object.assign(file, {
-              preview: URL.createObjectURL(file),
-            })
-          );
-
-          const updatedFiles = dropzone.multiple
-            ? [...value, ...newFiles]
-            : newFiles;
-          onFilesChange?.(updatedFiles);
         }
 
         if (fileRejections.length > 0) {
           onFilesRejected?.(fileRejections);
         }
       },
-      [dropzone.multiple, value, onFilesChange, onFilesRejected]
+      [
+        dropzone.multiple,
+        value,
+        onFilesChange,
+        onFilesRejected,
+        enableTransformation,
+        targetFormat,
+      ]
     );
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
       onDrop,
-      disabled,
+      disabled: disabled || isTransforming,
       ...dropzone,
     });
 
@@ -99,11 +147,20 @@ export const FileUploadPicker = React.forwardRef<
             "group border-input bg-muted/5 relative flex h-64 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all",
             isDragActive &&
               "border-primary bg-primary/5 ring-primary/10 ring-4",
-            disabled && "cursor-not-allowed opacity-50",
-            !hasImage && "hover:bg-muted/50 hover:border-primary/50"
+            (disabled || isTransforming) && "cursor-not-allowed opacity-50",
+            !hasImage &&
+              !isTransforming &&
+              "hover:bg-muted/50 hover:border-primary/50"
           )}
         >
           <input ref={ref} {...getInputProps({ id })} />
+
+          {isTransforming && (
+            <div className="bg-background/80 absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              <p className="text-sm font-medium">Processing image...</p>
+            </div>
+          )}
 
           {hasImage ? (
             <>
