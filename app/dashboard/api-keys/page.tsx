@@ -2,7 +2,8 @@
 
 import * as React from "react";
 
-import { ApiKeyModal } from "@/components/api-keys/api-key-modal";
+import { FullScreenModal } from "@/components/fullscreen-modal";
+import { TextField } from "@/components/input-picker";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
@@ -15,23 +16,42 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { truncate } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
-import { ChevronRight, ExternalLink, Info, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Info,
+  Loader2,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
-type ApiKeyType = "restricted" | "standard";
 type ApiKey = {
   id: string;
   name: string;
   token: string;
-  type: ApiKeyType;
-  ipRestrictions?: string[];
-  lastUsed?: Date;
+  scope: string[];
+  isRevoked: boolean;
+  lastUsedAt: Date | null;
   createdAt: Date;
 };
 
-const mockRestrictedKeys: ApiKey[] = [];
+const apiKeySchema = z.object({
+  name: z
+    .string()
+    .min(1, "Name is required")
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be less than 100 characters")
+    .trim(),
+});
+
+type ApiKeyFormData = z.infer<typeof apiKeySchema>;
 
 const mockStandardKeys: ApiKey[] = [
   {
@@ -39,9 +59,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Publishable key",
     token:
       "stellar_pk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-23"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-23"),
     createdAt: new Date("2024-12-16"),
   },
   {
@@ -49,9 +69,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Secret key",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-22"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-22"),
     createdAt: new Date("2024-12-16"),
   },
   {
@@ -59,9 +79,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Main Backend Key [Yash]",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-22"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-22"),
     createdAt: new Date("2024-07-10"),
   },
   {
@@ -69,9 +89,9 @@ const mockStandardKeys: ApiKey[] = [
     name: "Saqlain_Key_LM",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-23"),
+    scope: ["*"],
+    isRevoked: false,
+    lastUsedAt: new Date("2024-12-23"),
     createdAt: new Date("2024-08-25"),
   },
   {
@@ -79,19 +99,20 @@ const mockStandardKeys: ApiKey[] = [
     name: "Saqlain_key_LM_C",
     token:
       "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    type: "standard",
-    ipRestrictions: undefined,
-    lastUsed: new Date("2024-12-23"),
+    scope: ["*"],
+    isRevoked: true,
+    lastUsedAt: new Date("2024-12-23"),
     createdAt: new Date("2024-10-09"),
   },
 ];
 
 export default function ApiKeysPage() {
-  const [isRestrictedModalOpen, setIsRestrictedModalOpen] =
-    React.useState(false);
-  const [isStandardModalOpen, setIsStandardModalOpen] = React.useState(false);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(
+    null
+  );
 
-  const restrictedColumns: ColumnDef<ApiKey>[] = [
+  const columns: ColumnDef<ApiKey>[] = [
     {
       accessorKey: "name",
       header: "NAME",
@@ -102,28 +123,25 @@ export default function ApiKeysPage() {
     },
     {
       accessorKey: "token",
-      header: "TOKEN",
-      cell: ({ row }) => {
-        const token = row.original.token;
+      header: "API KEY",
+      cell: () => {
         return (
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm">
-              {truncate(token, { start: 1, end: 1 })}
-            </span>
+            <span className="font-mono text-sm">••••••••••••••••</span>
           </div>
         );
       },
       enableSorting: false,
     },
     {
-      accessorKey: "ipRestrictions",
-      header: "IP RESTRICTIONS",
+      accessorKey: "scope",
+      header: "SCOPE",
       cell: ({ row }) => {
-        const restrictions = row.original.ipRestrictions;
+        const scope = row.original.scope;
         return (
           <div className="flex items-center gap-1.5">
-            {restrictions && restrictions.length > 0 ? (
-              <span className="text-sm">{restrictions.join(", ")}</span>
+            {scope && scope.length > 0 ? (
+              <span className="text-sm">{scope.join(", ")}</span>
             ) : (
               <>
                 <span className="text-sm">None</span>
@@ -136,10 +154,30 @@ export default function ApiKeysPage() {
       enableSorting: false,
     },
     {
-      accessorKey: "lastUsed",
+      accessorKey: "isRevoked",
+      header: "STATUS",
+      cell: ({ row }) => {
+        const isRevoked = row.original.isRevoked;
+        return (
+          <Badge
+            variant="outline"
+            className={
+              isRevoked
+                ? "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                : "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+            }
+          >
+            {isRevoked ? "Revoked" : "Active"}
+          </Badge>
+        );
+      },
+      enableSorting: true,
+    },
+    {
+      accessorKey: "lastUsedAt",
       header: "LAST USED",
       cell: ({ row }) => {
-        const date = row.original.lastUsed;
+        const date = row.original.lastUsedAt;
         if (!date)
           return <span className="text-muted-foreground text-sm">—</span>;
         return (
@@ -172,88 +210,7 @@ export default function ApiKeysPage() {
     },
   ];
 
-  const standardColumns: ColumnDef<ApiKey>[] = [
-    {
-      accessorKey: "name",
-      header: "NAME",
-      cell: ({ row }) => (
-        <span className="text-sm font-medium">{row.original.name}</span>
-      ),
-      enableSorting: true,
-    },
-    {
-      accessorKey: "token",
-      header: "TOKEN",
-      cell: ({ row }) => {
-        const token = row.original.token;
-        return (
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-sm">
-              {truncate(token, { start: 4, end: 2, separator: "...." })}
-            </span>
-          </div>
-        );
-      },
-      enableSorting: false,
-    },
-    {
-      accessorKey: "ipRestrictions",
-      header: "IP RESTRICTIONS",
-      cell: ({ row }) => {
-        const restrictions = row.original.ipRestrictions;
-        return (
-          <div className="flex items-center gap-1.5">
-            {restrictions && restrictions.length > 0 ? (
-              <span className="text-sm">{restrictions.join(", ")}</span>
-            ) : (
-              <>
-                <span className="text-sm">None</span>
-                <Info className="text-muted-foreground h-3.5 w-3.5" />
-              </>
-            )}
-          </div>
-        );
-      },
-      enableSorting: false,
-    },
-    {
-      accessorKey: "lastUsed",
-      header: "LAST USED",
-      cell: ({ row }) => {
-        const date = row.original.lastUsed;
-        if (!date)
-          return <span className="text-muted-foreground text-sm">—</span>;
-        return (
-          <span className="text-sm">
-            {date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        );
-      },
-      enableSorting: true,
-    },
-    {
-      accessorKey: "createdAt",
-      header: "CREATED",
-      cell: ({ row }) => {
-        const date = row.original.createdAt;
-        return (
-          <span className="text-sm">
-            {date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
-        );
-      },
-      enableSorting: true,
-    },
-  ];
-
-  const restrictedActions: TableAction<ApiKey>[] = [
+  const actions: TableAction<ApiKey>[] = [
     {
       label: "Copy API key ID",
       onClick: (key) => {
@@ -273,49 +230,9 @@ export default function ApiKeysPage() {
       },
     },
     {
-      label: "Manage IP restrictions",
+      label: "Manage scope",
       onClick: (key) => {
-        console.log("Manage IP restrictions:", key.id);
-      },
-    },
-    {
-      label: "View request logs",
-      onClick: (key) => {
-        console.log("View request logs:", key.id);
-      },
-    },
-    {
-      label: "Delete key",
-      onClick: (key) => {
-        console.log("Delete key:", key.id);
-      },
-      variant: "destructive",
-    },
-  ];
-
-  const standardActions: TableAction<ApiKey>[] = [
-    {
-      label: "Copy API key ID",
-      onClick: (key) => {
-        navigator.clipboard.writeText(key.id);
-      },
-    },
-    {
-      label: "Rotate key",
-      onClick: (key) => {
-        console.log("Rotate key:", key.id);
-      },
-    },
-    {
-      label: "Edit key",
-      onClick: (key) => {
-        console.log("Edit key:", key.id);
-      },
-    },
-    {
-      label: "Manage IP restrictions",
-      onClick: (key) => {
-        console.log("Manage IP restrictions:", key.id);
+        console.log("Manage scope:", key.id);
       },
     },
     {
@@ -369,49 +286,11 @@ export default function ApiKeysPage() {
               </Link>
             </div>
 
-            {/* Restricted Keys Section */}
+            {/* API Keys Section */}
             <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-xl font-semibold">Restricted keys</h2>
-                  <p className="text-muted-foreground text-sm">
-                    Create a key with specific access limits and permissions for
-                    greater security.{" "}
-                    <Link href="#" className="text-primary hover:underline">
-                      Learn more
-                    </Link>
-                    .
-                  </p>
-                </div>
-                <Button
-                  className="gap-2"
-                  onClick={() => setIsRestrictedModalOpen(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Create restricted key
-                </Button>
-              </div>
-
-              {mockRestrictedKeys.length === 0 ? (
-                <div className="border-border bg-muted/10 flex min-h-[200px] flex-col items-center justify-center rounded-lg border p-12 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    No restricted keys
-                  </p>
-                </div>
-              ) : (
-                <DataTable
-                  columns={restrictedColumns}
-                  data={mockRestrictedKeys}
-                  actions={restrictedActions}
-                />
-              )}
-            </div>
-
-            {/* Standard Keys Section */}
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-xl font-semibold">Standard keys</h2>
+                  <h2 className="text-xl font-semibold">API keys</h2>
                   <p className="text-muted-foreground text-sm">
                     Create a key that unlocks full API access, enabling
                     extensive interaction with your account.{" "}
@@ -423,7 +302,7 @@ export default function ApiKeysPage() {
                 </div>
                 <Button
                   className="gap-2"
-                  onClick={() => setIsStandardModalOpen(true)}
+                  onClick={() => setIsModalOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
                   Create secret key
@@ -431,34 +310,202 @@ export default function ApiKeysPage() {
               </div>
 
               <DataTable
-                columns={standardColumns}
+                columns={columns}
                 data={mockStandardKeys}
-                actions={standardActions}
+                actions={actions}
               />
             </div>
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      {/* Modals */}
+      {/* Modal */}
       <ApiKeyModal
-        open={isRestrictedModalOpen}
-        onOpenChange={setIsRestrictedModalOpen}
-        type="restricted"
-        onSuccess={() => {
-          // Refresh data or update state here
-          console.log("Restricted key created successfully");
-        }}
-      />
-      <ApiKeyModal
-        open={isStandardModalOpen}
-        onOpenChange={setIsStandardModalOpen}
-        type="standard"
-        onSuccess={() => {
-          // Refresh data or update state here
-          console.log("Standard key created successfully");
-        }}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        createdApiKey={createdApiKey}
+        onApiKeyCreated={setCreatedApiKey}
       />
     </div>
+  );
+}
+
+// --- Modal Component ---
+
+function ApiKeyModal({
+  open,
+  onOpenChange,
+  createdApiKey,
+  onApiKeyCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  createdApiKey: string | null;
+  onApiKeyCreated: (key: string | null) => void;
+}) {
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const form = RHF.useForm<ApiKeyFormData>({
+    resolver: zodResolver(apiKeySchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const handleCopyKey = async () => {
+    if (createdApiKey) {
+      await navigator.clipboard.writeText(createdApiKey);
+      toast.success("API key copied to clipboard");
+    }
+  };
+
+  const onSubmit = async (data: ApiKeyFormData) => {
+    setIsSubmitting(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      // Generate a mock API key
+      const mockApiKey =
+        "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo";
+
+      console.log("Creating API key:", {
+        name: data.name,
+      });
+
+      onApiKeyCreated(mockApiKey);
+      toast.success("API key created", {
+        description: `Your key "${data.name}" has been created successfully.`,
+      } as Parameters<typeof toast.success>[1]);
+    } catch (error) {
+      toast.error("Failed to create API key", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      } as Parameters<typeof toast.error>[1]);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      if (!isSubmitting) {
+        form.reset();
+        onApiKeyCreated(null);
+      }
+    }
+    onOpenChange(newOpen);
+  };
+
+  const handleContinue = () => {
+    form.reset();
+    onApiKeyCreated(null);
+    onOpenChange(false);
+  };
+
+  return (
+    <FullScreenModal
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={createdApiKey ? "API key created" : "Create secret key"}
+      description={
+        createdApiKey
+          ? "Make sure to copy your API key now. You won't be able to see it again!"
+          : "Create a key that unlocks full API access, enabling extensive interaction with your account."
+      }
+      size="small"
+      showCloseButton={true}
+      footer={
+        <div className="flex w-full items-center justify-end gap-3">
+          {createdApiKey ? (
+            <Button onClick={handleContinue}>Continue</Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create key"
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+      }
+    >
+      {createdApiKey ? (
+        <div className="space-y-4">
+          <div className="bg-muted/50 border-border rounded-lg border p-4">
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Important:</strong> Make sure
+              to copy your API key now. You won&apos;t be able to see it again!
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Your API key</label>
+            <div className="flex items-center gap-2">
+              <div className="bg-muted border-border flex-1 rounded-md border p-3">
+                <code className="font-mono text-sm break-all">
+                  {createdApiKey}
+                </code>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleCopyKey}
+                className="shrink-0"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Click the copy button to copy your API key to the clipboard.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6"
+          id="api-key-form"
+        >
+          <TextField
+            id="name"
+            label="Name"
+            value={form.watch("name")}
+            onChange={(value) => form.setValue("name", value)}
+            error={form.formState.errors.name?.message}
+            helpText="Give your API key a descriptive name to help you identify it later."
+            placeholder="e.g., Production API Key"
+            required
+            className="shadow-none"
+          />
+
+          <div className="bg-muted/50 border-border rounded-lg border p-4">
+            <p className="text-muted-foreground text-sm">
+              <strong className="text-foreground">Note:</strong> API keys have
+              full API access. Make sure to keep your secret keys secure and
+              never expose them in client-side code.
+            </p>
+          </div>
+        </form>
+      )}
+    </FullScreenModal>
   );
 }
