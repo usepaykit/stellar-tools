@@ -1,4 +1,5 @@
 import { setTimeout } from "timers/promises";
+import { z } from "zod";
 
 type Success<T> = [T, undefined];
 
@@ -120,4 +121,9 @@ export const validateRequiredKeys = <K extends string>(
   }
 
   return result as Record<K, string>;
+};
+
+export const schemaFor = <TInterface>() => {
+  return <TSchema extends z.ZodType<TInterface>>(schema: TSchema): TSchema =>
+    schema;
 };

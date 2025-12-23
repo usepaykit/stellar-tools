@@ -25,6 +25,7 @@ export interface FullScreenModalProps
   description?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  size?: "small" | "medium" | "full";
   animationConfig?: {
     initialScale?: number;
     stiffness?: number;
@@ -57,6 +58,7 @@ export const FullScreenModal = ({
   description,
   children,
   footer,
+  size = "full",
   animationConfig = {},
   showCloseButton = false,
   ...mixProps
@@ -70,6 +72,24 @@ export const FullScreenModal = ({
     duration = 0.3,
   } = animationConfig;
 
+  const sizeClasses = {
+    small: cn(
+      "m-4 h-auto max-h-[90vh] w-full max-w-2xl rounded-lg",
+      "sm:max-w-2xl",
+      "top-1/2! left-1/2! -translate-x-1/2! -translate-y-1/2!"
+    ),
+    medium: cn(
+      "m-4 h-auto max-h-[90vh] w-full max-w-4xl rounded-lg",
+      "sm:max-w-4xl",
+      "top-1/2! left-1/2! -translate-x-1/2! -translate-y-1/2!"
+    ),
+    full: cn(
+      "m-0 h-full max-h-screen w-full max-w-none rounded-none",
+      "sm:h-full sm:w-full sm:max-w-none",
+      "top-0! left-0! translate-x-0! translate-y-0!"
+    ),
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
@@ -77,10 +97,9 @@ export const FullScreenModal = ({
           <DialogContent
             {...dialog}
             className={cn(
-              "m-0 h-full max-h-screen w-full max-w-none gap-0 rounded-none p-0",
-              "sm:h-full sm:w-full sm:max-w-none",
-              "top-0! left-0! translate-x-0! translate-y-0!",
+              "gap-0 p-0",
               "grid-rows-none!",
+              sizeClasses[size],
               dialog.className
             )}
             showCloseButton={showCloseButton}
@@ -95,7 +114,10 @@ export const FullScreenModal = ({
                 damping,
                 duration,
               }}
-              className="bg-background flex h-full w-full flex-col"
+              className={cn(
+                "bg-background flex w-full flex-col",
+                size === "full" ? "h-full" : "h-auto"
+              )}
             >
               {/* Header */}
               <DialogHeader className="shrink-0 border-b px-6 pt-8 pb-6">
@@ -111,9 +133,14 @@ export const FullScreenModal = ({
 
               {/* Content - Scrollable */}
               <ScrollArea
-                className={cn(" flex-1", scrollArea.className)}
+                className={cn(
+                  size === "full" ? "flex-1" : "max-h-[calc(90vh-200px)]",
+                  scrollArea.className
+                )}
               >
-                <div className="px-6 py-6 h-[200px]">{children}</div>
+                <div className={cn("px-6 py-6", size === "full" && "h-[200px]")}>
+                  {children}
+                </div>
               </ScrollArea>
 
               {/* Footer - Sticky */}

@@ -30,10 +30,8 @@ import {
   PaymentActions,
   PaymentSessionStatus,
 } from "@medusajs/framework/utils";
+import { StellarTools, validateRequiredKeys } from "@stellartools/core";
 import { z } from "zod";
-
-import { ApiClient } from "./api-client";
-import { tryCatchAsync, validateRequiredKeys } from "./utils";
 
 const optionsSchema = z.object({
   apiKey: z.string(),
@@ -50,7 +48,7 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
 
   protected readonly options: StellarMedusaAdapterOptions;
 
-  private apiClient: ApiClient;
+  private stellar: StellarTools;
 
   static validateOptions(options: Record<string, unknown>): void | never {
     const { error } = optionsSchema.safeParse(options);
@@ -84,13 +82,9 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       );
     }
 
-    this.apiClient = new ApiClient({
-      baseUrl: "https://localhost:3000",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": this.options.apiKey,
-      },
-      retryOptions: { max: 3, baseDelay: 1000, debug },
+    this.stellar = new StellarTools({
+      apiKey: this.options.apiKey,
+      debug,
     });
   }
 
@@ -104,32 +98,25 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       console.info("[Stellar] Initiating payment", { amount, currency_code });
     }
 
-    const [checkoutResult, checkoutError] = await tryCatchAsync(
-      this.apiClient.post<{ id: string; paymentUrl: string }>(
-        "/api/checkouts",
-        {
-          body: JSON.stringify({
-            amount: Number(amount),
-            assetCode: currency_code,
-            metadata: data?.metadata ?? {},
-            description: data?.description ?? "Payment for order",
-            customerId: context?.customer?.id,
-          }),
-        }
-      )
-    );
+    const checkout = await this.stellar.checkout.create({
+      amount: Number(amount),
+      assetCode: currency_code,
+      metadata: data?.metadata as Record<string, unknown>,
+      description: (data?.description as string) ?? "Payment for order",
+      customerId: context?.customer?.id as string,
+    });
 
-    if (!checkoutResult?.ok) {
+    if (!checkout.ok) {
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        checkoutError?.message ?? "Failed to create checkout"
+        checkout.error?.message ?? "Failed to create checkout"
       );
     }
 
     return {
-      id: checkoutResult.value.id,
+      id: checkout.value.id,
       status: PaymentSessionStatus.REQUIRES_MORE,
-      data: { payment_url: checkoutResult.value.paymentUrl },
+      data: { payment_url: checkout.value.paymentUrl },
     };
   };
 
@@ -145,7 +132,7 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
     input: AuthorizePaymentInput
   ): Promise<AuthorizePaymentOutput> => {
     if (this.options.debug) {
-      console.info("[PayKit] Authorizing payment", input);
+      console.info("[StellarTools] Authorizing payment", input);
     }
 
     return this.getPaymentStatus(input);
@@ -180,19 +167,14 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const result = await this.apiClient.get<{
-      id: string;
-      status: "pending" | "confirmed" | "failed";
-      transaction_hash?: string;
-      amount: number;
-    }>(`/api/payments/${paymentId}`, {
-      body: JSON.stringify({ poll: true }),
+    const payment = await this.stellar.payment.retrieve(paymentId, {
+      verifyOnChain: true,
     });
 
-    if (!result.ok) {
+    if (!payment.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        result.error.message
+        MedusaError.Types.UNEXPECTED_STATE,
+        payment.error?.message ?? "Failed to retrieve payment"
       );
     }
 
@@ -203,8 +185,8 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
     };
 
     return {
-      status: statusMap[result.value.status] || PaymentSessionStatus.PENDING,
-      data: result.value,
+      status: statusMap[payment.value.status] || PaymentSessionStatus.PENDING,
+      data: payment.value as unknown as Record<string, unknown>,
     };
   };
 
@@ -215,30 +197,29 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       console.info("[StellarTools] Refunding payment", input);
     }
 
-    const { id: paymentId } = validateRequiredKeys(
-      ["id"],
+    const { id: paymentId, receiverPublicKey } = validateRequiredKeys(
+      ["id", "receiverPublicKey"],
       (input?.data ?? {}) as Record<string, string>,
       "Missing required fields: {keys}",
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const result = await this.apiClient.post<{ id: string }>("/api/refunds", {
-      body: JSON.stringify({
-        paymentId,
-        amount: input.amount,
-        reason: input.data?.reason,
-        metadata: input.data?.metadata,
-      }),
+    const refund = await this.stellar.refund.create({
+      paymentId,
+      amount: Number(input.amount),
+      reason: (input.data?.reason as string) ?? "Refund for order",
+      metadata: (input.data?.metadata as Record<string, unknown>) ?? {},
+      receiverPublicKey,
     });
 
-    if (!result.ok) {
+    if (!refund.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        result.error.message
+        MedusaError.Types.UNEXPECTED_STATE,
+        refund.error?.message ?? "Failed to create refund"
       );
     }
 
-    return { data: result.value as Record<string, unknown> };
+    return { data: refund as Record<string, unknown> };
   };
 
   retrievePayment = async (
@@ -255,21 +236,18 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
     );
 
-    const result = await this.apiClient.get<{
-      id: string;
-      status: "pending" | "confirmed" | "failed";
-      transaction_hash?: string;
-      amount: number;
-    }>(`/api/payments/${paymentId}`);
+    const payment = await this.stellar.payment.retrieve(paymentId, {
+      verifyOnChain: true,
+    });
 
-    if (!result.ok) {
+    if (!payment.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        result.error.message
+        MedusaError.Types.UNEXPECTED_STATE,
+        payment.error?.message ?? "Failed to retrieve payment"
       );
     }
 
-    return { data: result.value };
+    return { data: payment.value as unknown as Record<string, unknown> };
   };
 
   updatePayment = async (): Promise<UpdatePaymentOutput> => {
@@ -324,23 +302,24 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
         ? (data.metadata as Record<string, unknown>)
         : {};
 
-    const result = await this.apiClient.post<{ id: string }>("/api/customers", {
-      body: JSON.stringify({
-        email: customer?.email,
-        name: `${customer?.first_name} ${customer?.last_name}`,
-        phone: customer?.phone,
-        internalMetadata: { source: "medusa-adapter" },
-        ...(metadata && { appMetadata: metadata }),
-      }),
+    const stellarCustomer = await this.stellar.customer.create({
+      email: customer?.email,
+      name: `${customer?.first_name} ${customer?.last_name}`,
+      phone: customer?.phone ?? undefined,
+      appMetadata: { source: "medusa-adapter", ...(metadata ?? {}) },
     });
-    if (!result.ok) {
+
+    if (!stellarCustomer.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        result.error.message
+        MedusaError.Types.UNEXPECTED_STATE,
+        stellarCustomer.error?.message ?? "Failed to create customer"
       );
     }
 
-    return { id: result.value.id, data: result.value };
+    return {
+      id: stellarCustomer.value.id,
+      data: stellarCustomer.value as unknown as Record<string, unknown>,
+    };
   };
 
   updateAccountHolder = async ({
@@ -362,26 +341,26 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
       );
     }
 
-    const result = await this.apiClient.patch<{ id: string }>(
-      `/api/customers/${accountHolderId}`,
+    const updatedCustomer = await this.stellar.customer.update(
+      accountHolderId,
       {
-        body: JSON.stringify({
-          email: customer.email,
-          name: `${customer.first_name} ${customer.last_name}`,
-          phone: customer.phone,
-          appMetadata: data?.metadata,
-        }),
+        email: customer.email,
+        name: `${customer.first_name} ${customer.last_name}`,
+        phone: customer.phone ?? undefined,
+        appMetadata: data?.metadata as Record<string, unknown>,
       }
     );
 
-    if (!result.ok) {
+    if (!updatedCustomer.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        result.error.message
+        MedusaError.Types.UNEXPECTED_STATE,
+        updatedCustomer.error?.message ?? "Failed to update customer"
       );
     }
 
-    return { data: result.value };
+    return {
+      data: updatedCustomer.value as unknown as Record<string, unknown>,
+    };
   };
 
   deleteAccountHolder = async ({
@@ -394,17 +373,15 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
 
     const accountHolderId = context.account_holder?.data?.id as string;
 
-    const result = await this.apiClient.delete<{ id: string }>(
-      `/api/customers/${accountHolderId}`
-    );
+    const result = await this.stellar.customer.delete(accountHolderId);
 
     if (!result.ok) {
       throw new MedusaError(
-        MedusaError.Types.PAYMENT_AUTHORIZATION_ERROR,
-        result.error.message
+        MedusaError.Types.UNEXPECTED_STATE,
+        result.error?.message ?? "Failed to delete customer"
       );
     }
 
-    return { data: result.value };
+    return { data: result.value as unknown as Record<string, unknown> };
   };
 }

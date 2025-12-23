@@ -1,7 +1,7 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postWebhook } from "@/actions/webhook";
 import { Webhook } from "@/db";
-import { schemaFor } from "@/types";
+import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 

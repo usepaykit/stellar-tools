@@ -19,7 +19,8 @@ export const retrieveCustomers = async (
   organizationId: string,
   environment: Network
 ) => {
-  const { internalMetadata, ...columnsToSelect } = getTableColumns(customers);
+  const { internalMetadata: _, ...columnsToSelect } =
+    getTableColumns(customers);
 
   return await db
     .select(columnsToSelect)
@@ -33,7 +34,8 @@ export const retrieveCustomers = async (
 };
 
 export const retrieveCustomer = async (id: string, organizationId: string) => {
-  const { internalMetadata, ...columnsToSelect } = getTableColumns(customers);
+  const { internalMetadata: _, ...columnsToSelect } =
+    getTableColumns(customers);
 
   const [customer] = await db
     .select(columnsToSelect)

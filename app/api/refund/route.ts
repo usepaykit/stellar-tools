@@ -5,7 +5,7 @@ import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { Stellar } from "@/core/stellar";
 import { Refund } from "@/db";
-import { schemaFor } from "@/types";
+import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 

@@ -1,0 +1,1 @@
+ALTER TABLE "credit_balance" ADD COLUMN "is_revoked" boolean DEFAULT false NOT NULL;

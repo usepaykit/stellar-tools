@@ -38,23 +38,27 @@ export class ApiClient {
       ...options,
     };
   }
-
   private retryErrorHandler = (error: unknown, attempt: number) => {
-    const retryableTypes = [
-      "rate_limit",
-      "connection",
-      "timeout",
-      "internal_server_error",
-      "bad_gateway",
-      "service_unavailable",
-      "gateway_timeout",
+    const errorString = String(error).toLowerCase();
+
+    const retryablePatterns = [
+      /rate[_\-\s]?limit/i,
+      /connection/i,
+      /timeout/i,
+      /internal[_\-\s]?server[_\-\s]?error/i,
+      /bad[_\-\s]?gateway/i,
+      /service[_\-\s]?unavailable/i,
+      /gateway[_\-\s]?timeout/i,
+      /500|502|503|504/,
     ];
 
-    const shouldRetry = retryableTypes.includes(String(error));
+    const shouldRetry = retryablePatterns.some((pattern) =>
+      pattern.test(errorString)
+    );
 
     if (this.config.retryOptions.debug) {
       console.info(
-        `[ApiClient] Attempt ${attempt} failed: ${String(error)} - Retry: ${shouldRetry}`
+        `[ApiClient] Attempt ${attempt} failed: "${String(error)}" - Retry: ${shouldRetry}`
       );
     }
 

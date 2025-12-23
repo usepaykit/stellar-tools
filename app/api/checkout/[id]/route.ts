@@ -5,7 +5,7 @@ import {
   retrieveCheckout,
 } from "@/actions/checkout";
 import { Checkout, checkoutStatusEnum } from "@/db";
-import { schemaFor } from "@/types";
+import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 

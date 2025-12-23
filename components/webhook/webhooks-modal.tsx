@@ -18,6 +18,92 @@ import { CodeBlock } from "../code-block";
 import { Curl, TypeScript } from "../icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
+const WEBHOOK_HANDLER_TYPESCRIPT = /* ts */ `import { NextRequest, NextResponse } from 'next/server';
+import { StellarTools } from '@stellartools/core';
+
+const stellar = new StellarTools({
+  apiKey: process.env.STELLAR_API_KEY!,
+  debug: false,
+});
+
+export async function POST(request: NextRequest) {
+  const body = await request.text();
+  const signature = request.headers.get('stellar-signature');
+
+  if (!signature) {
+    return NextResponse.json( { error: 'Missing signature' }, { status: 401 });
+  }
+
+  // Verify webhook signature
+  const isValid = stellar.webhook.verifySignature(
+    body,
+    signature,
+    process.env.STELLAR_WEBHOOK_SECRET!
+  );
+
+  if (!isValid) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  }
+
+  const event = JSON.parse(body);
+
+  // Handle different event types
+  switch (event.type) {
+    case 'customer.created':
+      await handleCustomerCreated(event.data);
+      break;
+    case 'checkout.created':
+      await handleCheckoutCreated(event.data);
+      break;
+    case 'payment.confirmed':
+      await handlePaymentConfirmed(event.data);
+      break;
+    case 'payment.failed':
+      await handlePaymentFailed(event.data);
+      break;
+    case 'refund.succeeded':
+      await handleRefundSucceeded(event.data);
+      break;
+    default:
+      console.log('Unhandled event:', event.type);
+  }
+
+  return NextResponse.json({ received: true });
+}
+`;
+
+// prettier-ignore
+const WEBHOOK_CURL_EXAMPLE = /* sh */ `
+curl -X POST https://your-domain.com/api/webhooks \\
+  -H "Content-Type: application/json" \\
+  -H "stellar-signature: t=1735000000,v1=abc123..." \\
+  -d '{
+    "id": "evt_123",
+    "type": "payment.confirmed",
+    "created": 1735000000,
+    "data": {
+      "id": "pay_123",
+      "amount": 100,
+      "assetCode": "USDC",
+      "status": "confirmed",
+      "transactionHash": "abc123...",
+      "customerId": "cus_123"
+    }
+  }'
+
+# Available webhook events:
+# - customer.created
+# - customer.updated
+# - customer.deleted
+# - checkout.created
+# - payment.pending
+# - payment.confirmed
+# - payment.failed
+# - refund.created
+# - refund.succeeded
+# - refund.failed
+`;
+
 const schema = z.object({
   destinationName: z.string().regex(/^[a-z0-9-]+$/),
   endpointUrl: z.url().refine(
@@ -164,7 +250,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
       open={open}
       onOpenChange={onOpenChange}
       title="Configure destination"
-      description="Tell StellarToo where to send events and give your destination a helpful description."
+      description="Tell StellarTools where to send events and give your destination a helpful description."
       footer={footer}
       dialogClassName="flex"
     >
@@ -311,72 +397,10 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 <Label>TypeScript Example</Label>
                 <CodeBlock
                   language="typescript"
-                  filename="webhook-handler.ts"
+                  filename="app/api/webhooks/route.ts"
                   maxHeight="400px"
                 >
-                  {`import { NextRequest, NextResponse } from 'next/server';
-import { verifyWebhookSignature } from '@stellar/webhooks';
-
-export async function POST(request: NextRequest) {
-  const body = await request.text();
-  const signature = request.headers.get('stellar-signature');
-
-  // Verify webhook signature
-  const isValid = verifyWebhookSignature(
-    body,
-    signature,
-    process.env.STELLAR_WEBHOOK_SECRET!
-  );
-
-  if (!isValid) {
-    return NextResponse.json(
-      { error: 'Invalid signature' },
-      { status: 401 }
-    );
-  }
-
-  const event = JSON.parse(body);
-
-  // Handle different event types
-  switch (event.type) {
-    case 'customer_created':
-      await handleCustomerCreated(event.data);
-      break;
-    case 'invoice_created':
-      await handleInvoiceCreated(event.data);
-      break;
-    case 'payment_succeded':
-      await handlePaymentSucceeded(event.data);
-      break;
-    case 'payment_failed':
-      await handlePaymentFailed(event.data);
-      break;
-    default:
-      console.log('Unknown event type:', event.type);
-  }
-
-  return NextResponse.json({ received: true });
-}
-
-async function handleCustomerCreated(data: any) {
-  // Your customer creation logic
-  console.log('Customer created:', data);
-}
-
-async function handleInvoiceCreated(data: any) {
-  // Your invoice creation logic
-  console.log('Invoice created:', data);
-}
-
-async function handlePaymentSucceeded(data: any) {
-  // Your payment success logic
-  console.log('Payment succeeded:', data);
-}
-
-async function handlePaymentFailed(data: any) {
-  // Your payment failure logic
-  console.log('Payment failed:', data);
-}`}
+                  {WEBHOOK_HANDLER_TYPESCRIPT}
                 </CodeBlock>
               </div>
             </TabsContent>
@@ -385,33 +409,7 @@ async function handlePaymentFailed(data: any) {
               <div className="space-y-2">
                 <Label>cURL Example</Label>
                 <CodeBlock language="bash" maxHeight="400px">
-                  {`# Test webhook endpoint with cURL
-curl -X POST https://your-endpoint.com/api/webhooks/stellar \\
-  -H "Content-Type: application/json" \\
-  -H "Stellar-Signature: your_signature_here" \\
-  -d '{
-    "id": "evt_1234567890",
-    "type": "customer_created",
-    "created": 1640995200,
-    "data": {
-      "id": "cus_1234567890",
-      "email": "customer@example.com",
-      "name": "John Doe"
-    }
-  }'
-
-# Example webhook payload structure
-# {
-#   "id": "evt_1234567890",
-#   "type": "payment_succeded",
-#   "created": 1640995200,
-#   "data": {
-#     "payment_id": "pay_1234567890",
-#     "amount": 1000,
-#     "currency": "USD",
-#     "customer_id": "cus_1234567890"
-#   }
-# }`}
+                  {WEBHOOK_CURL_EXAMPLE}
                 </CodeBlock>
               </div>
             </TabsContent>
