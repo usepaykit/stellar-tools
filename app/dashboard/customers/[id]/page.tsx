@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 
+import { RefundModal } from "@/app/dashboard/transactions/page";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { RefundModal } from "@/app/dashboard/transactions/page";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -286,7 +286,9 @@ export default function CustomerDetailPage() {
   );
   const [hiddenWallets, setHiddenWallets] = useState<Set<string>>(new Set());
   const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
-  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null);
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(
+    null
+  );
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {

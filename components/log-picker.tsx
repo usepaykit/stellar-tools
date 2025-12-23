@@ -76,7 +76,7 @@ export function LogPicker<TData, TValue>({
       {renderDetail && selectedRow && (
         <div
           className={cn(
-            "bg-background border-border shrink-0 rounded-lg border transition-all duration-200 ease-in-out h-full",
+            "bg-background border-border h-full shrink-0 rounded-lg border transition-all duration-200 ease-in-out",
             isAnimating
               ? "translate-x-0 opacity-100"
               : "translate-x-4 opacity-0"
@@ -84,7 +84,7 @@ export function LogPicker<TData, TValue>({
           style={{ width: detailPanelWidth }}
         >
           <div className="flex h-full flex-col">
-            <div className="border-border flex items-center justify-end border-b p-2 shrink-0">
+            <div className="border-border flex shrink-0 items-center justify-end border-b p-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -96,7 +96,7 @@ export function LogPicker<TData, TValue>({
               </Button>
             </div>
 
-            <div className="flex-1 min-h-0 p-4">
+            <div className="min-h-0 flex-1 p-4">
               {renderDetail(selectedRow)}
             </div>
           </div>

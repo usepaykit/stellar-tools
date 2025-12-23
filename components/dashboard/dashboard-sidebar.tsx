@@ -118,7 +118,7 @@ const data = {
       items: [
         {
           title: "API Keys",
-          url: "/dashboard/developers/api-keys",
+          url: "/dashboard/api-keys",
         },
         {
           title: "Webhooks",
@@ -126,7 +126,7 @@ const data = {
         },
         {
           title: "Documentation",
-          url: "/dashboard/developers/documentation",
+          url: "/dashboard/documentation",
         },
       ],
     },

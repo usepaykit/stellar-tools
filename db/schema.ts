@@ -107,7 +107,7 @@ export const apiKeys = pgTable("api_key", {
     .notNull()
     .references(() => organizations.id),
   name: text("name").notNull(),
-  keyHash: text("key_hash").notNull().unique(),
+  token: text("token").notNull().unique(),
   scope: jsonb("scope").$type<string[]>().notNull(),
   isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -388,6 +388,7 @@ export const creditBalances = pgTable(
     granted: integer("granted").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    isRevoked: boolean("is_revoked").default(false).notNull(),
   },
   (table) => ({
     // One balance per customer per product

@@ -11,10 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
-import * as RHF from "react-hook-form";
-import { z } from "zod";
 import {
   CheckCircle2,
   Copy,
@@ -25,14 +24,13 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
 // --- Types ---
 
-type TransactionStatus =
-  | "succeeded"
-  | "refunded"
-  | "failed";
+type TransactionStatus = "succeeded" | "refunded" | "failed";
 
 type Transaction = {
   id: string;
@@ -216,7 +214,7 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
 
   return (
     <div className="flex items-center gap-2">
-      <Wallet className="h-4 w-4 text-muted-foreground" />
+      <Wallet className="text-muted-foreground h-4 w-4" />
       <span className="font-mono text-sm">{displayAddress}</span>
       <Button
         variant="ghost"
@@ -267,7 +265,7 @@ const columns: ColumnDef<Transaction>[] = [
     header: "Description",
     cell: ({ row }) => {
       return (
-        <div className="font-mono text-sm text-muted-foreground">
+        <div className="text-muted-foreground font-mono text-sm">
           {row.original.description}
         </div>
       );
@@ -277,11 +275,7 @@ const columns: ColumnDef<Transaction>[] = [
     accessorKey: "customer",
     header: "Customer",
     cell: ({ row }) => {
-      return (
-        <div className="text-sm">
-          {row.original.customer.email}
-        </div>
-      );
+      return <div className="text-sm">{row.original.customer.email}</div>;
     },
   },
   {
@@ -290,7 +284,7 @@ const columns: ColumnDef<Transaction>[] = [
     cell: ({ row }) => {
       const date = row.original.date;
       return (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           {date.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -307,7 +301,7 @@ const columns: ColumnDef<Transaction>[] = [
     cell: ({ row }) => {
       const refundedDate = row.original.refundedDate;
       return (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           {refundedDate
             ? refundedDate.toLocaleDateString("en-US", {
                 month: "short",
@@ -400,10 +394,7 @@ export function RefundModal({
           >
             Cancel
           </Button>
-          <Button
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-          >
+          <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create refund
           </Button>
@@ -452,7 +443,7 @@ export function RefundModal({
               label="Reason"
               error={error?.message}
               placeholder="Enter reason for refund"
-              className="shadow-none min-h-[120px]"
+              className="min-h-[120px] shadow-none"
             />
           )}
         />
@@ -468,6 +459,9 @@ type TabType = "all" | TransactionStatus;
 export default function TransactionsPage() {
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("customer");
+  const paymentId = searchParams.get("paymentId");
 
   // Calculate statistics
   const stats = React.useMemo(() => {
@@ -485,15 +479,29 @@ export default function TransactionsPage() {
 
   // Filter transactions based on active tab
   const filteredTransactions = React.useMemo(() => {
+    if (customerId) {
+      return mockTransactions.filter((t) => t.customer.email === customerId);
+    }
+
+    if (paymentId) {
+      return mockTransactions.filter((t) => t.description === paymentId);
+    }
+
     if (activeTab === "all") {
       return mockTransactions;
     }
     return mockTransactions.filter((t) => t.status === activeTab);
-  }, [activeTab]);
+  }, [activeTab, customerId, paymentId]);
 
   const tableActions: TableAction<Transaction>[] = [
-    { label: "View details", onClick: (transaction) => console.log(transaction) },
-    { label: "Refund", onClick: (transaction) => console.log("Refund", transaction) },
+    {
+      label: "View details",
+      onClick: (transaction) => console.log(transaction),
+    },
+    {
+      label: "Refund",
+      onClick: (transaction) => console.log("Refund", transaction),
+    },
     {
       label: "Delete",
       onClick: (transaction) => console.log("Delete", transaction),
@@ -532,13 +540,13 @@ export default function TransactionsPage() {
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center gap-1 border-b border-border">
+            <div className="border-border flex items-center gap-1 border-b">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "relative px-4 py-2 text-sm font-medium transition-colors hover:text-foreground",
+                    "hover:text-foreground relative px-4 py-2 text-sm font-medium transition-colors",
                     activeTab === tab.id
                       ? "text-foreground"
                       : "text-muted-foreground"
@@ -546,12 +554,12 @@ export default function TransactionsPage() {
                 >
                   {tab.label}
                   {tab.count > 0 && (
-                    <span className="ml-2 text-xs text-muted-foreground">
+                    <span className="text-muted-foreground ml-2 text-xs">
                       ({tab.count})
                     </span>
                   )}
                   {activeTab === tab.id && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                    <div className="bg-primary absolute right-0 bottom-0 left-0 h-0.5" />
                   )}
                 </button>
               ))}
@@ -563,14 +571,14 @@ export default function TransactionsPage() {
                 <Card
                   key={tab.id}
                   className={cn(
-                    "shadow-none cursor-pointer transition-colors",
+                    "cursor-pointer shadow-none transition-colors",
                     activeTab === tab.id && "border-primary"
                   )}
                   onClick={() => setActiveTab(tab.id)}
                 >
                   <CardContent className="p-4">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-muted-foreground">
+                      <p className="text-muted-foreground text-sm font-medium">
                         {tab.label}
                       </p>
                       <p className="text-2xl font-bold tracking-tight">
@@ -584,7 +592,6 @@ export default function TransactionsPage() {
 
             {/* Actions */}
             <div className="flex items-center justify-between">
-         
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="gap-2">
                   <Download className="h-4 w-4" />
@@ -598,7 +605,7 @@ export default function TransactionsPage() {
             </div>
 
             {/* Data Table */}
-            <div className="overflow-hidden rounded-lg border border-border/50">
+            <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
                 data={filteredTransactions}
@@ -618,4 +625,3 @@ export default function TransactionsPage() {
     </div>
   );
 }
-

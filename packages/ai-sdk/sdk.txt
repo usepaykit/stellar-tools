@@ -1,0 +1,28 @@
+dodopayments example  https://github.com/dodopayments/ingestion-blueprints
+LLM TXT FOR AISDK (ai-sdk.dev/llms.txt)
+AI SDK docs https://ai-sdk.dev/
+APIs we need wrapped are generateText, streamText, embed, generateObject, streamObject.
+
+
+Import and initialize style:
+import { createStellarAI } from "@stellartools/ai-sdk";
+import { openai } from "@ai-sdk/openai";
+
+const stellar = createStellarAI({
+  apiKey: process.env.STELLAR_API_KEY,
+  customerId: "cus_456",
+  model: openai("gpt-4o-mini"),
+});
+
+Example usage
+const result = await stellar.generateText({
+  prompt: "Explain Stellar to a 5 year old",
+});
+
+if (result.type === "text") {
+  console.log(result.text);
+}
+
+if (result.type === "checkout") {
+  redirect(result.checkout.url);
+}

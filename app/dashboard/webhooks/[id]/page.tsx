@@ -2,18 +2,15 @@
 
 import * as React from "react";
 
+import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { CodeBlock } from "@/components/code-block";
 import {
   LogDetailItem,
   LogDetailSection,
   LogPicker,
 } from "@/components/log-picker";
-import { UnderlineTabs } from "@/components/underline-tabs";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ColumnDef } from "@tanstack/react-table";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,17 +19,21 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import {
+  UnderlineTabs,
+  UnderlineTabsList,
+  UnderlineTabsTrigger,
+} from "@/components/underline-tabs";
+import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
   ChevronRight,
   Copy,
   RefreshCw,
-
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-
-
 
 type WebhookLogStatus = "failed" | "succeeded";
 
@@ -51,7 +52,6 @@ type WebhookLog = {
   request: object;
   nextRetry?: string;
 };
-
 
 const mockWebhookLogs: WebhookLog[] = [
   {
@@ -197,8 +197,13 @@ const mockWebhookLogs: WebhookLog[] = [
   },
 ];
 
-
-const StatusBadge = ({ status, statusCode }: { status: WebhookLogStatus; statusCode?: number }) => {
+const StatusBadge = ({
+  status,
+  statusCode,
+}: {
+  status: WebhookLogStatus;
+  statusCode?: number;
+}) => {
   if (status === "succeeded" && statusCode === 200) {
     return (
       <Badge
@@ -221,7 +226,6 @@ const StatusBadge = ({ status, statusCode }: { status: WebhookLogStatus; statusC
     </Badge>
   );
 };
-
 
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   const [copied, setCopied] = React.useState(false);
@@ -249,7 +253,6 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   );
 };
 
-
 const columns: ColumnDef<WebhookLog>[] = [
   {
     accessorKey: "status",
@@ -260,8 +263,8 @@ const columns: ColumnDef<WebhookLog>[] = [
         <div className="flex items-center gap-3">
           <StatusBadge status={log.status} statusCode={log.statusCode} />
           <div className="flex flex-col">
-            <span className="font-medium text-sm">{log.eventType}</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm font-medium">{log.eventType}</span>
+            <span className="text-muted-foreground text-xs">
               {log.timestamp.toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",
@@ -278,11 +281,9 @@ const columns: ColumnDef<WebhookLog>[] = [
 // --- Main Component ---
 
 export default function WebhookLogPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  // Filter logs based on search and status 
   const filteredLogs = React.useMemo(() => {
     let logs = mockWebhookLogs;
 
@@ -301,131 +302,115 @@ export default function WebhookLogPage() {
     return logs;
   }, [searchQuery, statusFilter]);
 
-  const formatJSON = (obj: object) => {
-    return JSON.stringify(obj, null, 2);
-  };
-
   const renderDetail = (log: WebhookLog) => {
     return (
       <div className="flex h-full flex-col">
-        {/* Header with Resend Button */}
-        <div className="flex items-start justify-between border-b border-border pb-4 mb-4">
+        <div className="border-border mb-4 flex items-start justify-between border-b pb-4">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Delivery attempt</h3>
-            <p className="text-sm text-muted-foreground">{log.eventType}</p>
+            <p className="text-muted-foreground text-sm">{log.eventType}</p>
           </div>
-          <Button size="sm">
-            Resend
-          </Button>
+          <Button size="sm">Resend</Button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-
-        {/* Delivery Status Section */}
-        <LogDetailSection title="Delivery status">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Delivery status</span>
-              <div className="flex items-center gap-2">
-                {log.status === "failed" ? (
-                  <Badge
-                    variant="outline"
-                    className="border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
-                  >
-                    Failed
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
-                  >
-                    Succeeded
-                  </Badge>
-                )}
-                {log.nextRetry && (
-                  <span className="text-xs text-muted-foreground">
-                    Next retry in {log.nextRetry}
-                  </span>
-                )}
+        <div className="flex-1 space-y-6 overflow-y-auto pr-2">
+          <LogDetailSection title="Delivery status">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Delivery status</span>
+                <div className="flex items-center gap-2">
+                  {log.status === "failed" ? (
+                    <Badge
+                      variant="outline"
+                      className="border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                    >
+                      Failed
+                    </Badge>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+                    >
+                      Succeeded
+                    </Badge>
+                  )}
+                  {log.nextRetry && (
+                    <span className="text-muted-foreground text-xs">
+                      Next retry in {log.nextRetry}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <LogDetailItem
-              label="Attempt date"
-              value={log.timestamp.toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            />
-
-            <div className="flex items-center justify-between">
               <LogDetailItem
-                label="Event ID"
+                label="Attempt date"
+                value={log.timestamp.toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              />
+
+              <div className="flex items-center justify-between">
+                <LogDetailItem
+                  label="Event ID"
+                  value={
+                    <Link href="#" className="text-primary hover:underline">
+                      {log.eventId}
+                    </Link>
+                  }
+                />
+                <CopyButton text={log.eventId} label="Copy event ID" />
+              </div>
+
+              <LogDetailItem
+                label="Origin date"
                 value={
-                  <Link
-                    href="#"
-                    className="text-primary hover:underline"
-                  >
-                    {log.eventId}
-                  </Link>
+                  log.originDate.toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  }) + " IST"
                 }
               />
-              <CopyButton text={log.eventId} label="Copy event ID" />
+
+              <LogDetailItem label="Source" value={log.source} />
+              <LogDetailItem label="API version" value={log.apiVersion} />
+              <LogDetailItem label="Description" value={log.description} />
             </div>
+          </LogDetailSection>
 
-            <LogDetailItem
-              label="Origin date"
-              value={log.originDate.toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              }) + " IST"}
-            />
+          <LogDetailSection title="Response">
+            {log.response ? (
+              <CodeBlock
+                language="json"
+                showCopyButton={true}
+                maxHeight="200px"
+              >
+                {typeof log.response === "string"
+                  ? log.response
+                  : JSON.stringify(log.response, null, 2)}
+              </CodeBlock>
+            ) : (
+              <p className="text-muted-foreground text-sm">No data</p>
+            )}
+          </LogDetailSection>
 
-            <LogDetailItem label="Source" value={log.source} />
-            <LogDetailItem label="API version" value={log.apiVersion} />
-            <LogDetailItem label="Description" value={log.description} />
-          </div>
-        </LogDetailSection>
-
-        {/* Response Section */}
-        <LogDetailSection title="Response">
-          {log.response ? (
-            <CodeBlock
-              language="json"
-              showCopyButton={true}
-              maxHeight="200px"
-            >
-              {typeof log.response === "string"
-                ? log.response
-                : formatJSON(log.response)}
+          <LogDetailSection title="Request">
+            <CodeBlock language="json" showCopyButton={true} maxHeight="400px">
+              {JSON.stringify(log.request, null, 2)}
             </CodeBlock>
-          ) : (
-            <p className="text-sm text-muted-foreground">No data</p>
-          )}
-        </LogDetailSection>
-
-        <LogDetailSection title="Request">
-          <CodeBlock
-            language="json"
-            showCopyButton={true}
-            maxHeight="400px"
-          >
-            {formatJSON(log.request)}
-          </CodeBlock>
-        </LogDetailSection>
+          </LogDetailSection>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-xs text-muted-foreground text-center">
+        <div className="border-border mt-4 border-t pt-4">
+          <p className="text-muted-foreground text-center text-xs">
             Resent automatically
           </p>
         </div>
@@ -457,26 +442,30 @@ export default function WebhookLogPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Webhook Logs</h1>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Webhook Logs
+                </h1>
                 <p className="text-muted-foreground mt-1.5 text-sm">
                   View delivery attempts and event details
                 </p>
               </div>
             </div>
 
-            {/* Search and Filters */}
             <div className="flex items-center justify-between gap-4">
-              {/* @ts-expect-error - MixinProps type definition issue, component works correctly */}
               <UnderlineTabs
                 value={statusFilter}
                 onValueChange={setStatusFilter}
                 className="w-auto"
               >
-                <UnderlineTabs.List>
-                  <UnderlineTabs.Trigger value="all">All</UnderlineTabs.Trigger>
-                  <UnderlineTabs.Trigger value="succeeded">Succeeded</UnderlineTabs.Trigger>
-                  <UnderlineTabs.Trigger value="failed">Failed</UnderlineTabs.Trigger>
-                </UnderlineTabs.List>
+                <UnderlineTabsList>
+                  <UnderlineTabsTrigger value="all">All</UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="succeeded">
+                    Succeeded
+                  </UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="failed">
+                    Failed
+                  </UnderlineTabsTrigger>
+                </UnderlineTabsList>
               </UnderlineTabs>
               <Button variant="outline" size="sm" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
@@ -484,9 +473,8 @@ export default function WebhookLogPage() {
               </Button>
             </div>
 
-            {/* Update Info */}
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-    <div>
+            <div className="text-muted-foreground flex items-center justify-between text-sm">
+              <div>
                 Updated today{" "}
                 {new Date().toLocaleTimeString("en-US", {
                   hour: "numeric",
@@ -501,14 +489,13 @@ export default function WebhookLogPage() {
               </Button>
             </div>
 
-            {/* Log Picker */}
             <div className="h-[calc(100vh-400px)] min-h-[600px]">
               <LogPicker
                 data={filteredLogs}
                 columns={columns}
                 renderDetail={renderDetail}
                 detailPanelWidth={500}
-                emptyMessage="No webhook logs found"
+                emptyMessage="No logs found"
                 className="h-full"
               />
             </div>

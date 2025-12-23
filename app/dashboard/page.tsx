@@ -153,9 +153,9 @@ export default function DashboardPage() {
   });
 
   return (
-      <div className="w-full">
-        <DashboardSidebar>
-          <DashboardSidebarInset>
+    <div className="w-full">
+      <DashboardSidebar>
+        <DashboardSidebarInset>
           <div className="flex flex-col gap-8 p-6">
             <div className="space-y-6">
               <div>
@@ -481,8 +481,8 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-          </DashboardSidebarInset>
-        </DashboardSidebar>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
     </div>
   );
 }

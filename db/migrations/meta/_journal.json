@@ -57,6 +57,13 @@
       "when": 1766415564589,
       "tag": "0007_silky_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1766474787642,
+      "tag": "0008_fuzzy_toxin",
+      "breakpoints": true
     }
   ]
 }
