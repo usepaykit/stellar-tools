@@ -29,6 +29,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
   ChevronRight,
+  Clock,
   Copy,
   RefreshCw,
   XCircle,
@@ -200,9 +201,11 @@ const mockWebhookLogs: WebhookLog[] = [
 const StatusBadge = ({
   status,
   statusCode,
+  nextRetry,
 }: {
   status: WebhookLogStatus;
   statusCode?: number;
+  nextRetry?: string;
 }) => {
   if (status === "succeeded" && statusCode === 200) {
     return (
@@ -221,7 +224,11 @@ const StatusBadge = ({
       variant="outline"
       className="gap-1.5 border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
     >
+      {nextRetry ? (
+        <Clock className="h-3 w-3" />
+      ) : (
       <XCircle className="h-3 w-3" />
+      )}
       Failed
     </Badge>
   );
@@ -261,20 +268,38 @@ const columns: ColumnDef<WebhookLog>[] = [
       const log = row.original;
       return (
         <div className="flex items-center gap-3">
-          <StatusBadge status={log.status} statusCode={log.statusCode} />
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">{log.eventType}</span>
-            <span className="text-muted-foreground text-xs">
-              {log.timestamp.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </span>
+          <div className="shrink-0">
+            <StatusBadge
+              status={log.status}
+              statusCode={log.statusCode}
+              nextRetry={log.nextRetry}
+            />
           </div>
+            <span className="text-sm font-medium">{log.eventType}</span>
         </div>
       );
     },
+    size: 1000,
+  },
+  {
+    accessorKey: "timestamp",
+    header: () => null,
+    cell: ({ row }) => {
+      const log = row.original;
+      return (
+        <div className="text-right whitespace-nowrap">
+          <span className="text-muted-foreground text-sm">
+              {log.timestamp.toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+              second: "2-digit",
+                hour12: true,
+              })}
+            </span>
+        </div>
+      );
+    },
+    size: 150,
   },
 ];
 
@@ -316,9 +341,9 @@ export default function WebhookLogPage() {
         <div className="flex-1 space-y-6 overflow-y-auto pr-2">
           <LogDetailSection title="Delivery status">
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <span className="text-sm font-medium">Delivery status</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {log.status === "failed" ? (
                     <Badge
                       variant="outline"
@@ -335,7 +360,7 @@ export default function WebhookLogPage() {
                     </Badge>
                   )}
                   {log.nextRetry && (
-                    <span className="text-muted-foreground text-xs">
+                    <span className="text-muted-foreground text-xs whitespace-nowrap">
                       Next retry in {log.nextRetry}
                     </span>
                   )}
@@ -354,7 +379,8 @@ export default function WebhookLogPage() {
                 })}
               />
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
                 <LogDetailItem
                   label="Event ID"
                   value={
@@ -363,7 +389,10 @@ export default function WebhookLogPage() {
                     </Link>
                   }
                 />
+                </div>
+                <div className="flex items-center pt-4">
                 <CopyButton text={log.eventId} label="Copy event ID" />
+                </div>
               </div>
 
               <LogDetailItem
@@ -442,12 +471,7 @@ export default function WebhookLogPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Webhook Logs
-                </h1>
-                <p className="text-muted-foreground mt-1.5 text-sm">
-                  View delivery attempts and event details
-                </p>
+                <h1 className="text-3xl font-bold tracking-tight">Today</h1>
               </div>
             </div>
 
@@ -473,7 +497,7 @@ export default function WebhookLogPage() {
               </Button>
             </div>
 
-            <div className="text-muted-foreground flex items-center justify-between text-sm">
+            <div className="text-muted-foreground flex items-center justify-end text-sm">
               <div>
                 Updated today{" "}
                 {new Date().toLocaleTimeString("en-US", {
@@ -484,9 +508,6 @@ export default function WebhookLogPage() {
                 })}{" "}
                 IST
               </div>
-              <Button variant="ghost" size="sm" className="h-auto p-0 text-sm">
-                Show new events
-              </Button>
             </div>
 
             <div className="h-[calc(100vh-400px)] min-h-[600px]">
