@@ -6,6 +6,7 @@ import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FileSearch, X } from "lucide-react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 interface LogPickerProps<TData, TValue> extends React.ComponentProps<
   typeof DataTable<TData, TValue>
@@ -46,20 +47,7 @@ export function LogPicker<TData, TValue>({
     setTimeout(() => setSelectedRow(null), 200);
   }, []);
 
-  React.useEffect(() => {
-    if (!selectedRow) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        handleClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleEscape);
-    return () => {
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [selectedRow, handleClose]);
+  useHotkeys("esc", () => handleClose(), [handleClose]);
 
   if (data.length === 0) {
     return (

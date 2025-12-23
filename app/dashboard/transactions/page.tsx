@@ -349,7 +349,7 @@ export function RefundModal({
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
     defaultValues: {
-      paymentId: initialPaymentId || "",
+      paymentId: initialPaymentId,
       walletAddress: "",
       reason: "",
     },
@@ -458,14 +458,17 @@ export function RefundModal({
 type TabType = "all" | TransactionStatus;
 
 export default function TransactionsPage() {
-  const [activeTab, setActiveTab] = React.useState<TabType>("all");
-  const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
-  const [selectedPaymentId, setSelectedPaymentId] = React.useState<
-    string | undefined
-  >(undefined);
   const searchParams = useSearchParams();
   const customerId = searchParams.get("customer");
   const paymentId = searchParams.get("paymentId");
+
+  const [activeTab, setActiveTab] = React.useState<TabType>("all");
+
+  const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
+
+  const [selectedPaymentId, setSelectedPaymentId] = React.useState<
+    string | null
+  >(null);
 
   // Calculate statistics
   const stats = React.useMemo(() => {
@@ -539,7 +542,7 @@ export default function TransactionsPage() {
                 <Button
                   className="gap-2 shadow-sm"
                   onClick={() => {
-                    setSelectedPaymentId(undefined);
+                    setSelectedPaymentId(null);
                     setIsRefundModalOpen(true);
                   }}
                 >
@@ -633,10 +636,10 @@ export default function TransactionsPage() {
         onOpenChange={(open) => {
           setIsRefundModalOpen(open);
           if (!open) {
-            setSelectedPaymentId(undefined);
+            setSelectedPaymentId(null);
           }
         }}
-        initialPaymentId={selectedPaymentId}
+        initialPaymentId={selectedPaymentId ?? undefined}
       />
     </div>
   );
