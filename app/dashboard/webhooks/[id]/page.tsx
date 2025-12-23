@@ -20,7 +20,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { UnderlineTabs } from "@/components/underline-tabs";
+import {
+  UnderlineTabs,
+  UnderlineTabsList,
+  UnderlineTabsTrigger,
+} from "@/components/underline-tabs";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -277,11 +281,9 @@ const columns: ColumnDef<WebhookLog>[] = [
 // --- Main Component ---
 
 export default function WebhookLogPage() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  // Filter logs based on search and status
   const filteredLogs = React.useMemo(() => {
     let logs = mockWebhookLogs;
 
@@ -300,14 +302,9 @@ export default function WebhookLogPage() {
     return logs;
   }, [searchQuery, statusFilter]);
 
-  const formatJSON = (obj: object) => {
-    return JSON.stringify(obj, null, 2);
-  };
-
   const renderDetail = (log: WebhookLog) => {
     return (
       <div className="flex h-full flex-col">
-        {/* Header with Resend Button */}
         <div className="border-border mb-4 flex items-start justify-between border-b pb-4">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Delivery attempt</h3>
@@ -316,9 +313,7 @@ export default function WebhookLogPage() {
           <Button size="sm">Resend</Button>
         </div>
 
-        {/* Scrollable Content */}
         <div className="flex-1 space-y-6 overflow-y-auto pr-2">
-          {/* Delivery Status Section */}
           <LogDetailSection title="Delivery status">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -391,7 +386,6 @@ export default function WebhookLogPage() {
             </div>
           </LogDetailSection>
 
-          {/* Response Section */}
           <LogDetailSection title="Response">
             {log.response ? (
               <CodeBlock
@@ -401,7 +395,7 @@ export default function WebhookLogPage() {
               >
                 {typeof log.response === "string"
                   ? log.response
-                  : formatJSON(log.response)}
+                  : JSON.stringify(log.response, null, 2)}
               </CodeBlock>
             ) : (
               <p className="text-muted-foreground text-sm">No data</p>
@@ -410,7 +404,7 @@ export default function WebhookLogPage() {
 
           <LogDetailSection title="Request">
             <CodeBlock language="json" showCopyButton={true} maxHeight="400px">
-              {formatJSON(log.request)}
+              {JSON.stringify(log.request, null, 2)}
             </CodeBlock>
           </LogDetailSection>
         </div>
@@ -457,23 +451,21 @@ export default function WebhookLogPage() {
               </div>
             </div>
 
-            {/* Search and Filters */}
             <div className="flex items-center justify-between gap-4">
-              {/* @ts-expect-error - MixinProps type definition issue, component works correctly */}
               <UnderlineTabs
                 value={statusFilter}
                 onValueChange={setStatusFilter}
                 className="w-auto"
               >
-                <UnderlineTabs.List>
-                  <UnderlineTabs.Trigger value="all">All</UnderlineTabs.Trigger>
-                  <UnderlineTabs.Trigger value="succeeded">
+                <UnderlineTabsList>
+                  <UnderlineTabsTrigger value="all">All</UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="succeeded">
                     Succeeded
-                  </UnderlineTabs.Trigger>
-                  <UnderlineTabs.Trigger value="failed">
+                  </UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="failed">
                     Failed
-                  </UnderlineTabs.Trigger>
-                </UnderlineTabs.List>
+                  </UnderlineTabsTrigger>
+                </UnderlineTabsList>
               </UnderlineTabs>
               <Button variant="outline" size="sm" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
@@ -481,7 +473,6 @@ export default function WebhookLogPage() {
               </Button>
             </div>
 
-            {/* Update Info */}
             <div className="text-muted-foreground flex items-center justify-between text-sm">
               <div>
                 Updated today{" "}
@@ -498,14 +489,13 @@ export default function WebhookLogPage() {
               </Button>
             </div>
 
-            {/* Log Picker */}
             <div className="h-[calc(100vh-400px)] min-h-[600px]">
               <LogPicker
                 data={filteredLogs}
                 columns={columns}
                 renderDetail={renderDetail}
                 detailPanelWidth={500}
-                emptyMessage="No webhook logs found"
+                emptyMessage="No logs found"
                 className="h-full"
               />
             </div>
