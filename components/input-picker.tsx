@@ -147,7 +147,7 @@ interface NumberPickerProps
     MixinProps<"helpText", Omit<HelpTextProps, "children">> {
   id: string;
   value: number | string | undefined;
-  onChange: (value: string) => void;
+  onChange: (value: number | undefined) => void;
   label?: React.ReactNode;
   error?: React.ReactNode;
   helpText?: React.ReactNode;
@@ -176,12 +176,40 @@ export const NumberPicker = React.forwardRef<
     rest,
   } = splitProps(mixProps, "label", "error", "helpText");
 
+  const [displayValue, setDisplayValue] = React.useState<string>(() =>
+    value !== undefined ? String(value) : ""
+  );
+
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setDisplayValue(String(value));
+    } else if (value === undefined && displayValue !== "") {
+      setDisplayValue("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
-    // Regex: Allow empty, or positive decimal numbers (e.g., 1, 1.5, 0.5)
-    if (inputValue === "" || /^\d*\.?\d*$/.test(inputValue)) {
-      onChange(inputValue);
+    if (inputValue === "") {
+      setDisplayValue("");
+      onChange(undefined);
+      return;
+    }
+
+    // Regex: Allow positive decimal numbers, including trailing decimal point
+    const regex = allowDecimal ? /^\d*\.?\d*$/ : /^\d*$/;
+
+    if (regex.test(inputValue)) {
+      setDisplayValue(inputValue);
+
+      const parsed = parseFloat(inputValue);
+      if (!isNaN(parsed)) {
+        onChange(parsed);
+      } else if (inputValue === "." || inputValue.endsWith(".")) {
+        onChange(undefined);
+      }
     }
   };
 
@@ -215,7 +243,7 @@ export const NumberPicker = React.forwardRef<
         ref={ref}
         type="text"
         inputMode={allowDecimal ? "decimal" : "numeric"}
-        value={value ?? ""}
+        value={displayValue}
         onChange={handleAmountChange}
         className={cn(
           "w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
