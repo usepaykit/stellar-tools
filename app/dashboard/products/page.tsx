@@ -50,7 +50,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-
 type Product = {
   id: string;
   name: string;
@@ -84,15 +83,13 @@ const productSchema = z.object({
   }),
   phoneNumberEnabled: z.boolean(),
 
-  unit: z.string().optional(), 
+  unit: z.string().optional(),
   unitsPerCredit: z.number().min(1).default(1).optional(),
   creditsGranted: z.number().min(1).optional(),
   creditExpiryDays: z.number().min(1).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
-
-
 
 const mockProducts: Product[] = [
   {
@@ -141,7 +138,6 @@ const mockProducts: Product[] = [
     updatedAt: new Date("2024-11-10"),
   },
 ];
-
 
 const SortableHeader = ({
   column,
@@ -196,7 +192,6 @@ const StatCard = ({
     </CardContent>
   </Card>
 );
-
 
 const columns: ColumnDef<Product>[] = [
   {
@@ -437,7 +432,12 @@ function ProductsModal({
         billingCycle: editingProduct.pricing.isRecurring
           ? "recurring"
           : "one-time",
-        recurringPeriod: (editingProduct.pricing.period as "day" | "week" | "month" | "year") || "month",
+        recurringPeriod:
+          (editingProduct.pricing.period as
+            | "day"
+            | "week"
+            | "month"
+            | "year") || "month",
         price: {
           amount: editingProduct.pricing.amount,
           asset: editingProduct.pricing.asset,
@@ -606,10 +606,6 @@ function ProductsModal({
                     <NumberPicker
                       {...field}
                       value={field.value || 0}
-                      onChange={(value) => {
-                        const numValue = value === "" ? 0 : parseFloat(value);
-                        field.onChange(isNaN(numValue) ? 0 : numValue);
-                      }}
                       id="unitsPerCredit"
                       label="Units per Credit"
                       helpText="How many units equal 1 credit?"
@@ -625,10 +621,6 @@ function ProductsModal({
                     <NumberPicker
                       {...field}
                       value={field.value || 0}
-                      onChange={(value) => {
-                        const numValue = value === "" ? 0 : parseFloat(value);
-                        field.onChange(isNaN(numValue) ? 0 : numValue);
-                      }}
                       id="creditsGranted"
                       label="Credits Granted"
                       placeholder="e.g., 10000"
@@ -649,10 +641,6 @@ function ProductsModal({
                     <NumberPicker
                       {...field}
                       value={field.value || 0}
-                      onChange={(value) => {
-                        const numValue = value === "" ? 0 : parseFloat(value);
-                        field.onChange(isNaN(numValue) ? 0 : numValue);
-                      }}
                       id="creditExpiryDays"
                       label="Expiry (days)"
                       helpText="Credits expire after X days"
