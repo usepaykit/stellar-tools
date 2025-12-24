@@ -16,6 +16,8 @@ export const networkEnum = pgEnum("network", ["testnet", "mainnet"]);
 
 export const authProviderEnum = pgEnum("auth_provider", ["google", "local"]);
 
+export type AuthProvider = (typeof authProviderEnum.enumValues)[number];
+
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -27,7 +29,7 @@ export const accounts = pgTable("account", {
   }>(),
   phoneNumber: text("phone_number"),
   sso: jsonb("sso").$type<{
-    values: Array<{ provider: string; sub: string }>;
+    values: Array<{ provider: AuthProvider; sub: string }>;
   }>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
