@@ -1,35 +1,8 @@
 "use server";
 
-import { postAsset } from "@/actions/asset";
 import { Network, Product, assets, db, products } from "@/db";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-
-// Helper function to find or create an asset
-async function findOrCreateAsset(
-    code: "XLM" | "USDC",
-    network: Network
-): Promise<string> {
-    // Try to find existing asset
-    const [existingAsset] = await db
-        .select()
-        .from(assets)
-        .where(and(eq(assets.code, code), eq(assets.network, network)))
-        .limit(1);
-
-    if (existingAsset) {
-        return existingAsset.id;
-    }
-
-    // Create new asset if not found
-    const newAsset = await postAsset({
-        code,
-        network,
-        issuer: code === "XLM" ? null : undefined, // XLM has no issuer
-    });
-
-    return newAsset.id;
-}
 
 export const postProduct = async (params: Partial<Product>) => {
     const [product] = await db
@@ -44,9 +17,13 @@ export const retrieveProducts = async (
     organizationId: string,
     environment: Network
 ) => {
-    const productsList = await db
-        .select()
+    const retrievedProductsWithAssets = await db
+        .select({
+            product: products,
+            asset: assets,
+        })
         .from(products)
+        .innerJoin(assets, eq(products.assetId, assets.id))
         .where(
             and(
                 eq(products.organizationId, organizationId),
@@ -54,24 +31,9 @@ export const retrieveProducts = async (
             )
         );
 
-    // Fetch assets for all products
-    if (productsList.length === 0) {
-        return [];
-    }
-
-    const assetIds = [...new Set(productsList.map((p) => p.assetId))];
-    const assetsList = await db
-        .select()
-        .from(assets)
-        .where(inArray(assets.id, assetIds));
-
-    // Create a map for quick lookup
-    const assetMap = new Map(assetsList.map((a) => [a.id, a]));
-
-    // Combine products with their assets
-    return productsList.map((product) => ({
+    return retrievedProductsWithAssets.map(({ product, asset }) => ({
         ...product,
-        asset: assetMap.get(product.assetId),
+        asset,
     }));
 };
 
@@ -117,7 +79,3 @@ export const deleteProduct = async (id: string, organizationId: string) => {
 
     return null;
 };
-
-// Export the helper for use in mutations
-export { findOrCreateAsset };
-

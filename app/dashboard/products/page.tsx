@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { findOrCreateAsset, postProduct, retrieveProducts } from "@/actions/product";
+import { postProduct, retrieveProducts } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -74,9 +74,9 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one-time", "recurring", "metered"]),
+  billingCycle: z.enum(["one_time", "recurring", "metered"] as const),
   recurringInterval: z.number().min(1).optional(),
-  recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
+  recurringPeriod: z.enum(["day", "week", "month", "year"] as const).optional(),
   price: z.object({
     amount: z
       .string()
@@ -219,39 +219,37 @@ function ProductsPageContent() {
     null
   );
 
-  // Fetch products using React Query
+  // Fetch products using React Query with data transformation
   const {
-    data: productsData = [],
+    data: transformedProducts = [],
     isLoading,
   } = useQuery({
     queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
     queryFn: () => retrieveProducts(ORGANIZATION_ID, ENVIRONMENT),
+    select: (productsData) => {
+      return productsData.map((dbProduct: any) => {
+        const metadata = (dbProduct.metadata as Record<string, any>) || {};
+        const priceAmount = metadata.priceAmount || "0";
+        const assetCode = dbProduct.asset?.code || "XLM";
+        const isRecurring = dbProduct.billingType === "recurring";
+        const period = metadata.recurringPeriod || undefined;
+
+        return {
+          id: dbProduct.id,
+          name: dbProduct.name,
+          pricing: {
+            amount: priceAmount,
+            asset: assetCode,
+            isRecurring,
+            period,
+          },
+          status: dbProduct.status as "active" | "archived",
+          createdAt: dbProduct.createdAt,
+          updatedAt: dbProduct.updatedAt,
+        };
+      });
+    },
   });
-
-  // Transform database products to page Product type
-  const transformedProducts: Product[] = React.useMemo(() => {
-    return productsData.map((dbProduct: any) => {
-      const metadata = (dbProduct.metadata as Record<string, any>) || {};
-      const priceAmount = metadata.priceAmount || "0";
-      const assetCode = dbProduct.asset?.code || "XLM";
-      const isRecurring = dbProduct.billingType === "recurring";
-      const period = metadata.recurringPeriod || undefined;
-
-      return {
-        id: dbProduct.id,
-        name: dbProduct.name,
-        pricing: {
-          amount: priceAmount,
-          asset: assetCode,
-          isRecurring,
-          period,
-        },
-        status: dbProduct.status as "active" | "archived",
-        createdAt: dbProduct.createdAt,
-        updatedAt: dbProduct.updatedAt,
-      };
-    });
-  }, [productsData]);
 
   const stats = React.useMemo(
     () => ({
@@ -432,7 +430,7 @@ function ProductsModal({
         images: [],
         billingCycle: editingProduct.pricing.isRecurring
           ? "recurring"
-          : "one-time",
+          : "one_time",
         recurringPeriod:
           (editingProduct.pricing.period as
             | "day"
@@ -462,16 +460,12 @@ function ProductsModal({
   // Create product mutation
   const createProductMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
-      // Find or create asset
-      const assetId = await findOrCreateAsset(
-        data.price.asset as "XLM" | "USDC",
-        ENVIRONMENT
-      );
+
 
       // Transform billingCycle to billingType
       const billingTypeMap: Record<string, "one_time" | "recurring" | "metered"> =
       {
-        "one-time": "one_time",
+        one_time: "one_time",
         recurring: "recurring",
         metered: "metered",
       };
@@ -486,26 +480,23 @@ function ProductsModal({
       }
 
       // Build product data
-      const productData: any = {
+      const productData = {
         name: data.name,
         description: data.description || undefined,
         images: data.images?.map((img) => img.name) || [], // For now, just store file names
         billingType: billingTypeMap[data.billingCycle] || "one_time",
-        assetId,
+        assetId: data.price?.asset || "XLM",
         phoneNumberRequired: data.phoneNumberEnabled,
-        status: "active",
+        status: "active" as const,
         organizationId: ORGANIZATION_ID,
         environment: ENVIRONMENT,
         metadata,
+        // Metered billing fields (only set if metered)
+        unit: data.billingCycle === "metered" ? (data.unit || undefined) : undefined,
+        unitDivisor: data.billingCycle === "metered" ? (data.unitDivisor || undefined) : undefined,
+        unitsPerCredit: data.billingCycle === "metered" ? (data.unitsPerCredit || 1) : undefined,
+        creditsGranted: data.billingCycle === "metered" ? (data.creditsGranted || 0) : undefined,
       };
-
-      // Add metered billing fields if applicable
-      if (data.billingCycle === "metered") {
-        productData.unit = data.unit || undefined;
-        productData.unitDivisor = data.unitDivisor || undefined;
-        productData.unitsPerCredit = data.unitsPerCredit || 1;
-        productData.creditsGranted = data.creditsGranted || 0;
-      }
 
       return await postProduct(productData);
     },
@@ -649,8 +640,8 @@ function ProductsModal({
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="one-time" id="one-time" />
-                      <Label htmlFor="one-time" className="font-normal">
+                      <RadioGroupItem value="one_time" id="one_time" />
+                      <Label htmlFor="one_time" className="font-normal">
                         One-off
                       </Label>
                     </div>
