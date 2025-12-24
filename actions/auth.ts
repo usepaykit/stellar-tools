@@ -501,17 +501,19 @@ export const handleGoogleOAuth = async (
   }
 };
 
-export const googleSignin = async (redirectUrl: string) => {
+export const googleSignin = async (
+  metadata: Record<string, any>
+) => {
   const authUrlDomain = "https://accounts.google.com/o/oauth2/v2/auth";
 
   const authUrlParams = {
     client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: redirectUrl,
+    redirect_uri: `${process.env.APP_URL}/api/auth/verify-callback`,
     response_type: "id_token",
     scope: "profile email",
     nonce: nanoid(19),
     prompt: "consent",
-    state: btoa(JSON.stringify({ intent: "SIGN_IN", redirect: "/dashboard" })),
+    state: btoa(JSON.stringify({ ...metadata })),
   };
 
   const authUrl = `${authUrlDomain}?${new URLSearchParams(authUrlParams as Record<string, string>)}`;

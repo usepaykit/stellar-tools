@@ -71,7 +71,10 @@ export default function SignIn() {
 
   const handleGoogleSignIn = async () => {
     try {
-      const url = await googleSignin(`${process.env.APP_URL}/auth/signin`);
+      const url = await googleSignin({
+        intent: "SIGN_IN",
+        redirect: "/dashboard",
+      });
       router.push(url);
     } catch {
       toast.error("Google sign-in failed");
