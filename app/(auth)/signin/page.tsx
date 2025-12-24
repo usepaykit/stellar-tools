@@ -15,7 +15,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
-import { useGoogleOAuth } from "@/hooks/use-google-oauth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -39,10 +38,7 @@ type SignInFormData = z.infer<typeof signInSchema>;
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
-  const { isVerifying } = useGoogleOAuth({
-    defaultIntent: "SIGN_IN",
-    defaultRedirect: "/dashboard",
-  });
+
   const signinMutation = useMutation({
     mutationFn: (data: { email: string; password: string }) => signIn(data),
     onSuccess: () => {
@@ -181,7 +177,7 @@ export default function SignIn() {
             variant="ghost"
             onClick={handleGoogleSignIn}
             className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
-            disabled={isVerifying || signinMutation.isPending}
+            disabled={signinMutation.isPending}
           >
             <Google className="h-5 w-5" />
             <span className="text-foreground text-sm font-semibold">
@@ -293,12 +289,12 @@ export default function SignIn() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={signinMutation.isPending || isVerifying}
+            disabled={signinMutation.isPending}
           >
-            {signinMutation.isPending || isVerifying ? (
+            {signinMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isVerifying ? "Verifying..." : "Signing in..."}
+                Signing in...
               </>
             ) : (
               "Sign in"

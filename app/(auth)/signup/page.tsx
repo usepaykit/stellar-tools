@@ -14,7 +14,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
-import { useGoogleOAuth } from "@/hooks/use-google-oauth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -41,11 +40,6 @@ type SignUpFormData = z.infer<typeof signUpSchema>;
 export default function SignUp() {
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
-
-  const { isVerifying } = useGoogleOAuth({
-    defaultIntent: "SIGN_UP",
-    defaultRedirect: "/dashboard",
-  });
 
   const signupMutation = useMutation({
     mutationFn: (data: { name: string; email: string; password: string }) =>
@@ -205,7 +199,7 @@ export default function SignUp() {
             variant="ghost"
             onClick={handleGoogleSignUp}
             className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
-            disabled={isVerifying || signupMutation.isPending}
+            disabled={ signupMutation.isPending}
           >
             <Google className="h-5 w-5" />
             <span className="text-foreground text-sm font-semibold">
@@ -307,12 +301,12 @@ export default function SignUp() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={signupMutation.isPending || isVerifying}
+            disabled={signupMutation.isPending }
           >
-            {signupMutation.isPending || isVerifying ? (
+            {signupMutation.isPending  ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isVerifying ? "Verifying..." : "Creating account..."}
+                Creating account...
               </>
             ) : (
               "Sign up"

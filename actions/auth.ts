@@ -6,6 +6,7 @@ import {
   getAuthCookies,
   setAuthCookies,
 } from "@/lib/cookies";
+import { sendEmail } from "@/lib/email";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { OAuth2Client } from "google-auth-library";
@@ -225,7 +226,11 @@ export const forgotPassword = async (email: string) => {
 
     // TODO: Send email with reset link
     const resetLink = `${process.env.APP_URL}/auth/reset-password?token=${resetToken}`;
-
+    await sendEmail(
+      email,
+      "Reset Password",
+      `<a href="${resetLink}">Reset Password</a>`
+    );
     return { success: true };
   } catch (error) {
     // Don't reveal if email exists or not for security
@@ -501,9 +506,7 @@ export const handleGoogleOAuth = async (
   }
 };
 
-export const googleSignin = async (
-  metadata: Record<string, any>
-) => {
+export const googleSignin = async (metadata: Record<string, any>) => {
   const authUrlDomain = "https://accounts.google.com/o/oauth2/v2/auth";
 
   const authUrlParams = {
