@@ -189,11 +189,17 @@ const organizationSchema = z.object({
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
 const inviteMemberSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  email: z.email(),
   role: z.enum(["owner", "admin", "developer", "viewer"]),
 });
 
 type InviteMemberFormData = z.infer<typeof inviteMemberSchema>;
+
+const updateRoleSchema = z.object({
+  role: z.enum(["owner", "admin", "developer", "viewer"]),
+});
+
+type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = React.useState("profile");
@@ -206,6 +212,8 @@ export default function SettingsPage() {
     string | null
   >(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
+  const [isUpdateRoleModalOpen, setIsUpdateRoleModalOpen] = React.useState(false);
+  const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] = React.useState<TeamMember | null>(null);
 
   const profileForm = RHF.useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -228,6 +236,13 @@ export default function SettingsPage() {
     resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
       email: "",
+      role: "viewer",
+    },
+  });
+
+  const updateRoleForm = RHF.useForm<UpdateRoleFormData>({
+    resolver: zodResolver(updateRoleSchema),
+    defaultValues: {
       role: "viewer",
     },
   });
@@ -317,6 +332,51 @@ export default function SettingsPage() {
     toast.success(`Cancel invite ${inviteId} functionality coming soon`);
   };
 
+  const handleUpdateRole = React.useCallback((member: TeamMember) => {
+    setSelectedMemberForRoleUpdate(member);
+    updateRoleForm.reset({
+      role: member.role,
+    });
+    setIsUpdateRoleModalOpen(true);
+  }, [updateRoleForm]);
+
+  const onUpdateRoleSubmit = async (data: UpdateRoleFormData) => {
+    if (!selectedMemberForRoleUpdate) return;
+
+    setIsSubmitting(true);
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      console.log("Updating role:", {
+        memberId: selectedMemberForRoleUpdate.id,
+        email: selectedMemberForRoleUpdate.email,
+        newRole: data.role,
+      });
+      toast.success("Role updated successfully", {
+        description: `${selectedMemberForRoleUpdate.email}'s role has been updated to ${data.role}`,
+      } as Parameters<typeof toast.success>[1]);
+      updateRoleForm.reset();
+      setIsUpdateRoleModalOpen(false);
+      setSelectedMemberForRoleUpdate(null);
+    } catch (error) {
+      console.error("Failed to update role:", error);
+      toast.error("Failed to update role", {
+        description: "Please try again later",
+      } as Parameters<typeof toast.error>[1]);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Reset form when update role modal closes
+  React.useEffect(() => {
+    if (!isUpdateRoleModalOpen) {
+      updateRoleForm.reset();
+      setSelectedMemberForRoleUpdate(null);
+      setIsSubmitting(false);
+    }
+  }, [isUpdateRoleModalOpen, updateRoleForm]);
+
   const onInviteMemberSubmit = async (data: InviteMemberFormData) => {
     setIsSubmitting(true);
     try {
@@ -349,7 +409,7 @@ export default function SettingsPage() {
   }, [isInviteModalOpen, inviteMemberForm]);
 
   // Team table columns
-  const teamColumns: ColumnDef<TeamMember>[] = [
+  const teamColumns: ColumnDef<TeamMember>[] = React.useMemo(() => [
     {
       accessorKey: "member",
       header: "Member",
@@ -378,14 +438,6 @@ export default function SettingsPage() {
             )}
             <div>
               <p className="font-medium">{member.name || member.email}</p>
-              {member.status === "pending" &&
-                member.createdAt &&
-                member.expiresAt && (
-                  <p className="text-muted-foreground text-xs">
-                    Invited {moment(member.createdAt).format("MMM D, YYYY")} •
-                    Expires {moment(member.expiresAt).format("MMM D, YYYY")}
-                  </p>
-                )}
             </div>
           </div>
         );
@@ -447,7 +499,7 @@ export default function SettingsPage() {
     },
     {
       accessorKey: "joinedAt",
-      header: "Joined",
+      header: teamTab === "pending" ? "Invited" : "Joined",
       cell: ({ row }) => {
         const member = row.original;
         if (member.status === "pending" && member.createdAt) {
@@ -468,7 +520,27 @@ export default function SettingsPage() {
       },
       size: 150,
     },
-  ];
+    ...(teamTab === "pending"
+      ? [
+          {
+            accessorKey: "expiresAt",
+            header: "Expires",
+            cell: ({ row }) => {
+              const member = row.original;
+              if (member.status === "pending" && member.expiresAt) {
+                return (
+                  <p className="text-muted-foreground text-sm">
+                    {moment(member.expiresAt).format("MMM D, YYYY")}
+                  </p>
+                );
+              }
+              return <span className="text-muted-foreground text-sm">—</span>;
+            },
+            size: 150,
+          } as ColumnDef<TeamMember>,
+        ]
+      : []),
+  ], [teamTab]);
 
   // Filter data based on active tab
   const teamTableData = React.useMemo(() => {
@@ -483,6 +555,10 @@ export default function SettingsPage() {
     if (teamTab === "members") {
       return [
         {
+          label: "Update Role",
+          onClick: (member: TeamMember) => handleUpdateRole(member),
+        },
+        {
           label: "Remove",
           onClick: (member: TeamMember) => {
             if (member.role !== "owner") {
@@ -495,6 +571,10 @@ export default function SettingsPage() {
     }
     return [
       {
+        label: "Update Role",
+        onClick: (invite: TeamMember) => handleUpdateRole(invite),
+      },
+      {
         label: "Resend",
         onClick: (invite: TeamMember) => handleResendInvite(invite.id),
       },
@@ -504,7 +584,7 @@ export default function SettingsPage() {
         variant: "destructive" as const,
       },
     ];
-  }, [teamTab]);
+  }, [teamTab, handleUpdateRole]);
 
   return (
     <div className="w-full">
@@ -689,10 +769,7 @@ export default function SettingsPage() {
                               Saving...
                             </>
                           ) : (
-                            <>
-                              <Save className="h-4 w-4" />
-                              Save Changes
-                            </>
+                            "Save Changes"
                           )}
                         </Button>
                       </div>
@@ -1027,10 +1104,7 @@ export default function SettingsPage() {
                   Sending...
                 </>
               ) : (
-                <>
-                  <Mail className="h-4 w-4" />
-                  Send Invitation
-                </>
+                "Send Invitation"
               )}
             </Button>
           </div>
@@ -1064,6 +1138,83 @@ export default function SettingsPage() {
                 <Label htmlFor="invite-role">Role</Label>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger id="invite-role" className="w-full">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="developer">Developer</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="owner">Owner</SelectItem>
+                  </SelectContent>
+                </Select>
+                {error && (
+                  <p className="text-destructive text-sm" role="alert">
+                    {error.message}
+                  </p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  Choose the permission level for this team member
+                </p>
+              </div>
+            )}
+          />
+        </form>
+      </FullScreenModal>
+
+      {/* Update Role Modal */}
+      <FullScreenModal
+        open={isUpdateRoleModalOpen}
+        onOpenChange={setIsUpdateRoleModalOpen}
+        title="Update Role"
+        description={
+          selectedMemberForRoleUpdate
+            ? `Change the role for ${selectedMemberForRoleUpdate.email}`
+            : "Change the role for this team member"
+        }
+        size="small"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsUpdateRoleModalOpen(false)}
+              disabled={isSubmitting}
+              className="shadow-none"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() =>
+                updateRoleForm.handleSubmit(onUpdateRoleSubmit)()
+              }
+              disabled={isSubmitting}
+              className="gap-2 shadow-none"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Role"
+              )}
+            </Button>
+          </div>
+        }
+      >
+        <form
+          onSubmit={updateRoleForm.handleSubmit(onUpdateRoleSubmit)}
+          className="space-y-6"
+        >
+          <RHF.Controller
+            control={updateRoleForm.control}
+            name="role"
+            render={({ field, fieldState: { error } }) => (
+              <div className="space-y-2">
+                <Label htmlFor="update-role">Role</Label>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="update-role" className="w-full">
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
