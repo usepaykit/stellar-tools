@@ -35,6 +35,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useCopy } from "@/hooks/use-copy";
 
 type WebhookLogStatus = "failed" | "succeeded";
 
@@ -235,20 +236,14 @@ const StatusBadge = ({
 };
 
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, handleCopy } = useCopy();
 
   return (
     <Button
       variant="ghost"
       size="icon-sm"
       className="h-8 w-8"
-      onClick={handleCopy}
+      onClick={() => handleCopy({text, message: "Copied to clipboard"})}
       title={label || "Copy to clipboard"}
     >
       {copied ? (

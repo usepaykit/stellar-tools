@@ -26,7 +26,7 @@ import {
   TrendingUp,
   Webhook,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type WebhookDestination = {
   id: string;
@@ -297,9 +297,13 @@ const columns: ColumnDef<WebhookDestination>[] = [
 ];
 
 export default function WebhooksPage() {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = React.useState(true);
   const router = useRouter();
+
+  const [isModalOpen, setIsModalOpen] = React.useState(() => {
+    return searchParams.get("create") === "true";
+  });
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -307,6 +311,25 @@ export default function WebhooksPage() {
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  React.useEffect(() => {
+    if (searchParams.get("create") === "true") {
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
+
+  const handleModalChange = (open: boolean) => {
+    setIsModalOpen(open);
+    const params = new URLSearchParams(searchParams.toString());
+    if (open) {
+      params.set("create", "true");
+    } else {
+      params.delete("create");
+    }
+    router.replace(
+      `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
+    );
+  };
 
   const tableActions: TableAction<WebhookDestination>[] = [
     {
@@ -349,7 +372,7 @@ export default function WebhooksPage() {
                     services.
                   </p>
                 </div>
-                <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
+                <Button className="gap-2" onClick={() => handleModalChange(true)}>
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add destination</span>
                   <span className="sm:hidden">Add</span>
@@ -468,7 +491,7 @@ export default function WebhooksPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-      <WebHooksModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <WebHooksModal open={isModalOpen} onOpenChange={handleModalChange} />
     </div>
   );
 }

@@ -10,15 +10,16 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { WebhookEvent } from "@/db";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Loader2 } from "lucide-react";
+import { nanoid } from "nanoid";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
 import { CodeBlock } from "../code-block";
 import { Curl, TypeScript } from "../icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-
-const WEBHOOK_HANDLER_TYPESCRIPT = /* ts */ `import { NextRequest, NextResponse } from 'next/server';
+import {useCopy} from "@/hooks/use-copy";
+const getWebhookHandlerTypeScript = (secret: string) => /* ts */ `import { NextRequest, NextResponse } from 'next/server';
 import { StellarTools } from '@stellartools/core';
 
 const stellar = new StellarTools({
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
   const isValid = stellar.webhook.verifySignature(
     body,
     signature,
-    process.env.STELLAR_WEBHOOK_SECRET!
+    '${secret}'
   );
 
   if (!isValid) {
@@ -162,7 +163,23 @@ const WEBHOOK_EVENTS = [
 
 export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [webhookSecret, setWebhookSecret] = React.useState<string>("");
+  const { copied, handleCopy } = useCopy();
   const formRef = React.useRef<HTMLFormElement>(null);
+
+  // Generate webhook secret when modal opens
+  React.useEffect(() => {
+    if (open) {
+      const secret = `whsec_${nanoid(32)}`;
+      setWebhookSecret(secret);
+    }
+  }, [open]);
+
+  const handleCopySecret = async () => {
+    if (webhookSecret) {
+      await handleCopy({text: webhookSecret, message: "Webhook secret copied to clipboard"});
+    }
+  };
 
   const form = RHF.useForm({
     resolver: zodResolver(schema),
@@ -384,9 +401,35 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
             />
           </div>
         </form>
-
-        {/* Code Examples Section */}
         <div className="min-w-0 flex-1 space-y-6 lg:max-w-2xl">
+          <div className="space-y-2">
+            <Label>Webhook Secret</Label>
+            <div className="flex items-center gap-2">
+              <div className="bg-muted border-border flex-1 rounded-md border p-3 shadow-none">
+                <code className="font-mono text-sm break-all">
+                  {webhookSecret}
+                </code>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleCopySecret}
+                className="shrink-0 shadow-none"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              Use this secret to verify webhook signatures. Keep it secure and
+              never expose it in client-side code.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <h3 className="text-lg font-semibold">Code Examples</h3>
             <p className="text-muted-foreground text-sm">
@@ -421,7 +464,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
                   filename="app/api/webhooks/route.ts"
                   maxHeight="400px"
                 >
-                  {WEBHOOK_HANDLER_TYPESCRIPT}
+                  {getWebhookHandlerTypeScript(webhookSecret)}
                 </CodeBlock>
               </div>
             </TabsContent>

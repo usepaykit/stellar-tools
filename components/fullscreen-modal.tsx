@@ -74,12 +74,12 @@ export const FullScreenModal = ({
 
   const sizeClasses = {
     small: cn(
-      "m-4 h-auto max-h-[90vh] w-full max-w-2xl rounded-lg",
+      "m-4 h-auto max-h-[90vh] w-full max-w-2xl !rounded-md",
       "sm:max-w-2xl",
       "top-1/2! left-1/2! -translate-x-1/2! -translate-y-1/2!"
     ),
     medium: cn(
-      "m-4 h-auto max-h-[90vh] w-full max-w-4xl rounded-lg",
+      "m-4 h-auto max-h-[90vh] w-full max-w-4xl !rounded-md",
       "sm:max-w-4xl",
       "top-1/2! left-1/2! -translate-x-1/2! -translate-y-1/2!"
     ),
@@ -98,7 +98,7 @@ export const FullScreenModal = ({
             {...dialog}
             className={cn(
               "gap-0 p-0",
-              "grid-rows-none!",
+              "grid-rows-none! rounded-md",
               sizeClasses[size],
               dialog.className
             )}
@@ -115,7 +115,7 @@ export const FullScreenModal = ({
                 duration,
               }}
               className={cn(
-                "bg-background flex w-full flex-col",
+                "bg-background flex w-full flex-col rounded-md",
                 size === "full"
                   ? "h-full overflow-hidden"
                   : size === "small" || size === "medium"
@@ -164,7 +164,7 @@ export const FullScreenModal = ({
 
               {/* Footer */}
               {footer && (
-                <DialogFooter className="bg-background shrink-0 border-t px-6 py-4">
+                <DialogFooter className="bg-background shrink-0 border-t px-6 py-4 rounded-b-md">
                   {footer}
                 </DialogFooter>
               )}
