@@ -29,3 +29,11 @@ export const clearAuthCookies = async () => {
   cookieStore.delete("auth_token");
   cookieStore.delete("account_id");
 };
+    
+export const getAuthCookies = async () => {
+  const cookieStore = await cookies();
+  return {
+    authToken: cookieStore.get("auth_token")?.value,
+    accountId: cookieStore.get("account_id")?.value,
+  };
+};

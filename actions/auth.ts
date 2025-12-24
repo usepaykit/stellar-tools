@@ -1,7 +1,11 @@
 "use server";
 
 import { Account, Auth, auth, db } from "@/db";
-import { setAuthCookies } from "@/lib/cookies";
+import {
+  clearAuthCookies,
+  getAuthCookies,
+  setAuthCookies,
+} from "@/lib/cookies";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -155,4 +159,34 @@ export const signIn = async (params: { email: string; password: string }) => {
     authRecord.expiresAt
   );
   return { account, auth: authRecord };
+};
+
+export const getCurrentUser = async () => {
+  const { authToken, accountId } = await getAuthCookies();
+
+  if (!authToken || !accountId) {
+    return null;
+  }
+
+  try {
+    const authRecord = await retrieveAuthByAccountId(accountId);
+
+    // Verify token matches and is not revoked/expired
+    if (
+      authRecord.accessToken !== authToken ||
+      authRecord.isRevoked ||
+      new Date() > authRecord.expiresAt
+    ) {
+      return null;
+    }
+
+    const account = await retrieveAccount({ id: accountId });
+    return { account, auth: authRecord };
+  } catch {
+    return null;
+  }
+};
+
+export const signOut = async () => {
+  await clearAuthCookies();
 };

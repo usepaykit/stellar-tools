@@ -20,6 +20,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -36,10 +37,12 @@ type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
+  const router = useRouter();
   const signinMutation = useMutation({
     mutationFn: (data: { email: string; password: string }) => signIn(data),
     onSuccess: () => {
       toast.success("Signed in successfully");
+      router.push("/dashboard");
     },
     onError: (error: Error) => {
       toast.error("Sign-in failed", {
