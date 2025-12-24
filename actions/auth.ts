@@ -512,9 +512,9 @@ export const googleSignin = async (metadata: Record<string, any>) => {
   const authUrlParams = {
     client_id: process.env.GOOGLE_CLIENT_ID,
     redirect_uri: `${process.env.APP_URL}/api/auth/verify-callback`,
-    response_type: "id_token",
-    scope: "profile email",
-    nonce: nanoid(19),
+    response_type: "code",
+    scope: "openid profile email",
+    access_type: "offline",
     prompt: "consent",
     state: btoa(JSON.stringify({ ...metadata })),
   };
