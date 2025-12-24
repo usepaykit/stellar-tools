@@ -5,64 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1766152359600,
-      "tag": "0000_many_serpent_society",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1766236604215,
-      "tag": "0001_conscious_alex_wilder",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1766241174562,
-      "tag": "0002_flippant_trauma",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1766241211214,
-      "tag": "0003_shallow_mentor",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1766259536531,
-      "tag": "0004_busy_giant_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1766358967285,
-      "tag": "0005_flippant_miek",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1766362393948,
-      "tag": "0006_unique_thing",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1766415564589,
-      "tag": "0007_silky_ultimates",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1766474787642,
-      "tag": "0008_fuzzy_toxin",
+      "when": 1766567910841,
+      "tag": "0000_lively_cyclops",
       "breakpoints": true
     }
   ]

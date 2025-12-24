@@ -14,6 +14,8 @@ import {
 
 export const networkEnum = pgEnum("network", ["testnet", "mainnet"]);
 
+export const authProviderEnum = pgEnum("auth_provider", ["google", "local"]);
+
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -27,6 +29,21 @@ export const accounts = pgTable("account", {
   sso: jsonb("sso").$type<{
     values: Array<{ provider: string; sub: string }>;
   }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+});
+
+export const auth = pgTable("auth", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  provider: authProviderEnum("provider").notNull(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
@@ -460,3 +477,4 @@ export type TeamInvite = InferSelectModel<typeof teamInvites>;
 export type Refund = InferSelectModel<typeof refunds>;
 export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
+export type Auth = InferSelectModel<typeof auth>;
