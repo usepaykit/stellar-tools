@@ -18,7 +18,7 @@ import { z } from "zod";
 import { CodeBlock } from "../code-block";
 import { Curl, TypeScript } from "../icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-
+import {useCopy} from "@/hooks/use-copy";
 const getWebhookHandlerTypeScript = (secret: string) => /* ts */ `import { NextRequest, NextResponse } from 'next/server';
 import { StellarTools } from '@stellartools/core';
 
@@ -164,7 +164,7 @@ const WEBHOOK_EVENTS = [
 export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [webhookSecret, setWebhookSecret] = React.useState<string>("");
-  const [copied, setCopied] = React.useState(false);
+  const { copied, handleCopy } = useCopy();
   const formRef = React.useRef<HTMLFormElement>(null);
 
   // Generate webhook secret when modal opens
@@ -177,10 +177,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
 
   const handleCopySecret = async () => {
     if (webhookSecret) {
-      await navigator.clipboard.writeText(webhookSecret);
-      setCopied(true);
-      toast.success("Webhook secret copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
+      await handleCopy({text: webhookSecret, message: "Webhook secret copied to clipboard"});
     }
   };
 
@@ -201,7 +198,6 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
     if (!open) {
       form.reset();
       setIsSubmitting(false);
-      setCopied(false);
     }
   }, [open, form]);
 

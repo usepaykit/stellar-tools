@@ -24,6 +24,7 @@ import {
   oneDark,
   oneLight,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { useCopy } from "@/hooks/use-copy";
 
 SyntaxHighlighter.registerLanguage("tsx", tsx);
 SyntaxHighlighter.registerLanguage("typescript", typescript);
@@ -51,7 +52,7 @@ export function CodeBlock({
 }: CodeBlockProps) {
   const mounted = useMounted();
   const { resolvedTheme } = useTheme();
-  const [copied, setCopied] = React.useState(false);
+  const { copied, handleCopy } = useCopy();
 
   // Normalize language
   const lang = language.toLowerCase();
@@ -60,9 +61,7 @@ export function CodeBlock({
   // Copy Logic
   const copyToClipboard = React.useCallback(async () => {
     if (!children) return;
-    await navigator.clipboard.writeText(children);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    await handleCopy({text: children, message: "Copied to clipboard"});
   }, [children]);
 
   const syntaxTheme = React.useMemo(() => {

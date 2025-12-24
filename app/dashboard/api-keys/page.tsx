@@ -31,6 +31,7 @@ import {
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
+import { useCopy } from "@/hooks/use-copy";
 
 type ApiKey = {
   id: string;
@@ -109,8 +110,8 @@ const mockStandardKeys: ApiKey[] = [
 export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
-
-  const columns: ColumnDef<ApiKey>[] = [
+  const {  handleCopy } = useCopy();
+    const columns: ColumnDef<ApiKey>[] = [
     {
       accessorKey: "name",
       header: "NAME",
@@ -212,7 +213,7 @@ export default function ApiKeysPage() {
     {
       label: "Copy API key ID",
       onClick: (key) => {
-        navigator.clipboard.writeText(key.id);
+        handleCopy({text: key.id, message: "API key ID copied to clipboard"});
       },
     },
     {
@@ -339,7 +340,7 @@ function ApiKeyModal({
   onApiKeyCreated: (key: string | null) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-
+ const { handleCopy } = useCopy();
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
@@ -349,8 +350,7 @@ function ApiKeyModal({
 
   const handleCopyKey = async () => {
     if (createdApiKey) {
-      await navigator.clipboard.writeText(createdApiKey);
-      toast.success("API key copied to clipboard");
+      await handleCopy({text: createdApiKey, message: "API key copied to clipboard"});
     }
   };
 

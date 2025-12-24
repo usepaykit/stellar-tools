@@ -27,6 +27,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
+import { useCopy } from "@/hooks/use-copy";
 
 // --- Types ---
 
@@ -202,13 +203,7 @@ const StatusBadge = ({ status }: { status: TransactionStatus }) => {
 // --- Copy Wallet Address Component ---
 
 const CopyWalletAddress = ({ address }: { address: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, handleCopy } = useCopy();
 
   const displayAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
 
@@ -222,11 +217,15 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          handleCopy();
+          handleCopy({text: address, message: "Wallet address copied to clipboard"});
         }}
         title="Copy wallet address"
       >
-        <Copy className={cn("h-3 w-3", copied && "text-green-600")} />
+        {copied ? (
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+        ) : (
+          <Copy className="text-muted-foreground h-4 w-4" />
+        )}
       </Button>
     </div>
   );
