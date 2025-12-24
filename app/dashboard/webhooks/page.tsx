@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { getWebhooksWithAnalytics } from "@/actions/webhook";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -11,7 +12,10 @@ import { Button } from "@/components/ui/button";
 import type { ChartConfig } from "@/components/ui/chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WebHooksModal } from "@/components/webhook/webhooks-modal";
+import { Network } from "@/db";
+import { Webhook as WebhookSchema } from "@/db";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Activity,
@@ -28,83 +32,33 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-type WebhookDestination = {
-  id: string;
-  name: string;
-  url: string;
-  status: "active" | "disabled";
+interface WebhookDestination extends Pick<
+  WebhookSchema,
+  "id" | "name" | "url" | "isDisabled"
+> {
   eventCount: number;
   eventsFrom: "account" | "test";
   activity?: number[];
   responseTime?: number[];
   errorRate: number;
-};
+}
 
-const mockWebhooks: WebhookDestination[] = [
-  {
-    id: "1",
-    name: "Leadmash_custom",
-    url: "https://leadmash-backend-custom.onrender.com/api/stripe/webhook",
-    status: "active",
-    eventCount: 3,
-    eventsFrom: "account",
-    activity: [10, 12, 11, 13, 10],
-    responseTime: [150, 145, 152, 148, 150],
-    errorRate: 0,
-  },
-  {
-    id: "2",
-    name: "LM",
-    url: "https://leadmash-backend.onrender.com/api/stripe/webhook",
-    status: "active",
-    eventCount: 3,
-    eventsFrom: "account",
-    activity: [8, 9, 8, 10, 9],
-    responseTime: [200, 195, 205, 198, 200],
-    errorRate: 0,
-  },
-  {
-    id: "3",
-    name: "N8N Main",
-    url: "https://api.leadtechpros.com/webhook/dropleads-stripe",
-    status: "active",
-    eventCount: 11,
-    eventsFrom: "account",
-    activity: [25, 30, 22, 28, 35, 20, 32],
-    responseTime: [180, 200, 175, 190, 185, 195, 180],
-    errorRate: 0,
-  },
-  {
-    id: "4",
-    name: "",
-    url: "https://app.dropleads.io/api/webhook/stripe",
-    status: "disabled",
-    eventCount: 6,
-    eventsFrom: "account",
-    errorRate: 0,
-  },
-  {
-    id: "5",
-    name: "",
-    url: "https://leadmash.io/index.php?flu...i_notify=1&payment_method=",
-    status: "disabled",
-    eventCount: 7,
-    eventsFrom: "account",
-    errorRate: 0,
-  },
-];
+// TODO: Get organizationId and environment from context/session
+// For now using placeholder values - these should be obtained from user session or context
+const ORGANIZATION_ID = "org_placeholder";
+const ENVIRONMENT: Network = "testnet";
 
-const StatusBadge = ({ status }: { status: WebhookDestination["status"] }) => {
+const StatusBadge = ({ isDisabled }: { isDisabled: boolean }) => {
   return (
     <Badge
-      variant={status === "active" ? "default" : "secondary"}
+      variant={isDisabled ? "secondary" : "default"}
       className={cn(
-        status === "active"
+        isDisabled
           ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
           : "bg-muted text-muted-foreground"
       )}
     >
-      {status === "active" ? "Active" : "Disabled"}
+      {isDisabled ? "Disabled" : "Active"}
     </Badge>
   );
 };
@@ -242,7 +196,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
       const webhook = row.original;
       return (
         <div className="flex items-center gap-2">
-          <StatusBadge status={webhook.status} />
+          <StatusBadge isDisabled={webhook.isDisabled} />
           <span className="text-muted-foreground text-sm">
             {webhook.eventCount} event{webhook.eventCount !== 1 ? "s" : ""}
           </span>
@@ -297,20 +251,26 @@ const columns: ColumnDef<WebhookDestination>[] = [
 ];
 
 export default function WebhooksPage() {
-  const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [isModalOpen, setIsModalOpen] = React.useState(() => {
-    return searchParams.get("create") === "true";
+  const { data: webhooks = [], isLoading } = useQuery({
+    queryKey: ["webhooks", ORGANIZATION_ID, ENVIRONMENT],
+    queryFn: async () => {
+      return await getWebhooksWithAnalytics(ORGANIZATION_ID, ENVIRONMENT);
+    },
+    select: (webhooksData) => {
+      return webhooksData.map((webhook) => ({
+        ...webhook,
+        logsCount: webhook.logsCount ?? 0,
+        eventsFrom: "account" as const,
+        eventCount: webhook.logsCount ?? 0,
+        errorRate: 0,
+        activity: [],
+      }));
+    },
   });
-
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
 
   React.useEffect(() => {
     if (searchParams.get("create") === "true") {
@@ -478,7 +438,7 @@ export default function WebhooksPage() {
                 <TabsContent value="webhooks" className="mt-6">
                   <DataTable
                     columns={columns}
-                    data={mockWebhooks}
+                    data={webhooks}
                     enableBulkSelect={true}
                     actions={tableActions}
                     isLoading={isLoading}
@@ -494,7 +454,12 @@ export default function WebhooksPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-      <WebHooksModal open={isModalOpen} onOpenChange={handleModalChange} />
+      <WebHooksModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        organizationId={ORGANIZATION_ID}
+        environment={ENVIRONMENT}
+      />
     </div>
   );
 }

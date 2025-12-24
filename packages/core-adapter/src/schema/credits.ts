@@ -172,24 +172,49 @@ export const creditTransactionHistorySchema =
     })
   );
 
-export interface ConsumeCreditParams {
+export interface CheckCreditsParams {
   /**
-   * The product ID of the consume credit.
+   * The product ID of the credit action.
    */
   productId: string;
 
   /**
-   * The raw amount of the consume credit.
+   * The raw amount of the credit action.
    */
   rawAmount: number;
 
   /**
-   * The reason of the consume credit.
+  /**
+   * The metadata of the credit action.
    */
-  reason?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export const checkCreditSchema = schemaFor<CheckCreditsParams>()(
+  z.object({
+    productId: z.string(),
+    rawAmount: z.number(),
+    metadata: z.record(z.string(), z.any()).optional(),
+  })
+);
+
+export interface ConsumeCreditParams {
+  /**
+   * The product ID of the credit action.
+   */
+  productId: string;
 
   /**
-   * The metadata of the consume credit.
+   * The reason of the credit action.
+   */
+  reason: string;
+
+  /**
+   * The raw amount of the credit action.
+   */
+  rawAmount: number;
+  /**
+   * The metadata of the credit action.
    */
   metadata?: Record<string, unknown>;
 }
@@ -197,8 +222,8 @@ export interface ConsumeCreditParams {
 export const consumeCreditSchema = schemaFor<ConsumeCreditParams>()(
   z.object({
     productId: z.string(),
+    reason: z.string(),
     rawAmount: z.number(),
-    reason: z.string().optional(),
     metadata: z.record(z.string(), z.any()).optional(),
   })
 );

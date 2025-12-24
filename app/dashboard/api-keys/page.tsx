@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { postApiKey, retrieveApiKeys } from "@/actions/apikey";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
@@ -18,8 +19,10 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { ApiKey, Network } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   ChevronRight,
@@ -33,15 +36,10 @@ import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-type ApiKey = {
-  id: string;
-  name: string;
-  token: string;
-  scope: string[];
-  isRevoked: boolean;
-  lastUsedAt: Date | null;
-  createdAt: Date;
-};
+// TODO: Get organizationId and environment from context/session
+// For now using placeholder values - these should be obtained from user session or context
+const ORGANIZATION_ID = "org_placeholder";
+const ENVIRONMENT: Network = "testnet";
 
 const apiKeySchema = z.object({
   name: z
@@ -54,63 +52,18 @@ const apiKeySchema = z.object({
 
 type ApiKeyFormData = z.infer<typeof apiKeySchema>;
 
-const mockStandardKeys: ApiKey[] = [
-  {
-    id: "key_1",
-    name: "Publishable key",
-    token:
-      "stellar_pk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    scope: ["*"],
-    isRevoked: false,
-    lastUsedAt: new Date("2024-12-23"),
-    createdAt: new Date("2024-12-16"),
-  },
-  {
-    id: "key_2",
-    name: "Secret key",
-    token:
-      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    scope: ["*"],
-    isRevoked: false,
-    lastUsedAt: new Date("2024-12-22"),
-    createdAt: new Date("2024-12-16"),
-  },
-  {
-    id: "key_3",
-    name: "Main Backend Key [Yash]",
-    token:
-      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    scope: ["*"],
-    isRevoked: false,
-    lastUsedAt: new Date("2024-12-22"),
-    createdAt: new Date("2024-07-10"),
-  },
-  {
-    id: "key_4",
-    name: "Saqlain_Key_LM",
-    token:
-      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    scope: ["*"],
-    isRevoked: false,
-    lastUsedAt: new Date("2024-12-23"),
-    createdAt: new Date("2024-08-25"),
-  },
-  {
-    id: "key_5",
-    name: "Saqlain_key_LM_C",
-    token:
-      "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo",
-    scope: ["*"],
-    isRevoked: true,
-    lastUsedAt: new Date("2024-12-23"),
-    createdAt: new Date("2024-10-09"),
-  },
-];
-
 export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data: apiKeys = [], isLoading } = useQuery({
+    queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
+    queryFn: () => retrieveApiKeys(ORGANIZATION_ID, ENVIRONMENT),
+  });
+
   const { handleCopy } = useCopy();
+
   const columns: ColumnDef<ApiKey>[] = [
     {
       accessorKey: "name",
@@ -254,7 +207,6 @@ export default function ApiKeysPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-8 p-6">
-            {/* Breadcrumbs */}
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -271,7 +223,6 @@ export default function ApiKeysPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">API keys</h1>
@@ -285,7 +236,6 @@ export default function ApiKeysPage() {
               </Link>
             </div>
 
-            {/* API Keys Section */}
             <div className="space-y-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
@@ -307,20 +257,21 @@ export default function ApiKeysPage() {
 
               <DataTable
                 columns={columns}
-                data={mockStandardKeys}
+                data={apiKeys}
                 actions={actions}
+                isLoading={isLoading}
               />
             </div>
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      {/* Modal */}
       <ApiKeyModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         createdApiKey={createdApiKey}
         onApiKeyCreated={setCreatedApiKey}
+        queryClient={queryClient}
       />
     </div>
   );
@@ -333,13 +284,14 @@ function ApiKeyModal({
   onOpenChange,
   createdApiKey,
   onApiKeyCreated,
+  queryClient,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   createdApiKey: string | null;
   onApiKeyCreated: (key: string | null) => void;
+  queryClient: ReturnType<typeof useQueryClient>;
 }) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { handleCopy } = useCopy();
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
@@ -356,40 +308,38 @@ function ApiKeyModal({
       });
     }
   };
-
-  const onSubmit = async (data: ApiKeyFormData) => {
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Generate a mock API key
-      const mockApiKey =
-        "stellar_sk_test_51QWaf3SF0MtsiMvyIwjRpdU5vS87ITrdRAUfy0Ny1A9R8hdw1005vlQhdZo";
-
-      console.log("Creating API key:", {
+  const createApiKeyMutation = useMutation({
+    mutationFn: async (data: ApiKeyFormData) => {
+      return await postApiKey({
         name: data.name,
+        organizationId: ORGANIZATION_ID,
+        environment: ENVIRONMENT,
+        scope: ["*"],
+        isRevoked: false,
       });
-
-      onApiKeyCreated(mockApiKey);
+    },
+    onSuccess: (apiKey) => {
+      queryClient.invalidateQueries({
+        queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
+      });
+      onApiKeyCreated(apiKey.token);
       toast.success("API key created", {
-        description: `Your key "${data.name}" has been created successfully.`,
+        description: `Your key "${apiKey.name}" has been created successfully.`,
       } as Parameters<typeof toast.success>[1]);
-    } catch (error) {
+    },
+    onError: (error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
       toast.error("Failed to create API key", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      } as Parameters<typeof toast.error>[1]);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        id: "create-api-key-error",
+        description: errorMessage,
+      });
+    },
+  });
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      if (!isSubmitting) {
+      if (!createApiKeyMutation.isPending) {
         form.reset();
         onApiKeyCreated(null);
       }
@@ -424,15 +374,17 @@ function ApiKeyModal({
               <Button
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
-                disabled={isSubmitting}
+                disabled={createApiKeyMutation.isPending}
               >
                 Cancel
               </Button>
               <Button
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={isSubmitting}
+                onClick={form.handleSubmit((data) => {
+                  createApiKeyMutation.mutate(data);
+                })}
+                disabled={createApiKeyMutation.isPending}
               >
-                {isSubmitting ? (
+                {createApiKeyMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
@@ -479,20 +431,26 @@ function ApiKeyModal({
         </div>
       ) : (
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit((data) => {
+            createApiKeyMutation.mutate(data);
+          })}
           className="space-y-6"
           id="api-key-form"
         >
-          <TextField
-            id="name"
-            label="Name"
-            value={form.watch("name")}
-            onChange={(value) => form.setValue("name", value)}
-            error={form.formState.errors.name?.message}
-            helpText="Give your API key a descriptive name to help you identify it later."
-            placeholder="e.g., Production API Key"
-            required
-            className="shadow-none"
+          <RHF.Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                id="name"
+                label="Name"
+                helpText="Give your API key a descriptive name to help you identify it later."
+                error={error?.message}
+                placeholder="e.g., Production API Key"
+                className="shadow-none"
+              />
+            )}
           />
 
           <div className="bg-muted/50 border-border rounded-lg border p-4">

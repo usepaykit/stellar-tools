@@ -24,9 +24,9 @@ export const accounts = pgTable("account", {
   userName: text("user_name").notNull(),
   profile: jsonb("profile").$type<{
     first_name?: string;
-    last_name?: string;
+    last_name?: string; 
     avatar_url?: string;
-  }>(),
+  }>(), 
   phoneNumber: text("phone_number"),
   sso: jsonb("sso").$type<{
     values: Array<{ provider: AuthProvider; sub: string }>;
@@ -185,10 +185,23 @@ export const billingTypeEnum = pgEnum("billing_type", [
   "metered",
 ]);
 
+export type BillingType = (typeof billingTypeEnum.enumValues)[number];
+
 export const productStatusEnum = pgEnum("product_status", [
   "active",
   "archived",
 ]);
+
+export type ProductStatus = (typeof productStatusEnum.enumValues)[number];
+
+export const recurringPeriodEnum = pgEnum("recurring_period", [
+  "day",
+  "week",
+  "month",
+  "year",
+]);
+
+export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
@@ -210,6 +223,8 @@ export const products = pgTable("product", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
   environment: networkEnum("network").notNull(),
+  priceAmount: integer("price_amount").notNull(),
+  recurringPeriod: recurringPeriodEnum("recurring_period"),
 
   // Metered billing
   unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
@@ -280,33 +295,7 @@ export const payments = pgTable("payment", {
 
 export const featureEnum = pgEnum("feature", ["aisdk", "uploadthing"]);
 
-export const usageRecords = pgTable(
-  "usage_record",
-  {
-    id: text("id").primaryKey(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organizations.id),
-    apiKeyId: text("api_key_id")
-      .notNull()
-      .references(() => apiKeys.id),
-    customerId: text("customer_id").references(() => customers.id),
-    feature: featureEnum("feature").notNull(),
-    quantity: integer("quantity").notNull(), // Number of units consumed
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<object>().default({}),
-    environment: networkEnum("network").notNull(),
-    aisdk: jsonb("aisdk"),
-  },
-  (table) => ({
-    orgFeatureCreatedIdx: index("usage_records_org_feature_created_idx").on(
-      table.organizationId,
-      table.feature,
-      table.createdAt
-    ),
-  })
-);
+
 
 export const webhookEvent = [
   "customer.created",
@@ -353,6 +342,7 @@ export const webhookLogs = pgTable("webhook_log", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  responseTime: integer("response_time"), // in milliseconds
   environment: networkEnum("network").notNull(),
 });
 
@@ -471,7 +461,6 @@ export type Customer = InferSelectModel<typeof customers>;
 export type Product = InferSelectModel<typeof products>;
 export type Checkout = InferSelectModel<typeof checkouts>;
 export type Payment = InferSelectModel<typeof payments>;
-export type UsageRecord = InferSelectModel<typeof usageRecords>;
 export type Webhook = InferSelectModel<typeof webhooks>;
 export type WebhookLog = InferSelectModel<typeof webhookLogs>;
 export type Network = (typeof networkEnum.enumValues)[number];

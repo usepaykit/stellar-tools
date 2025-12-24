@@ -1,12 +1,10 @@
 import { ModuleProvider, Modules } from "@medusajs/framework/utils";
 
-import {
-  StellarMedusaAdapter,
-  type StellarMedusaAdapterOptions,
-} from "./provider";
+import { StellarToolsMedusaAdapter } from "./provider";
+import { type StellarToolsMedusaAdapterOptions } from "./schema";
 
 export default ModuleProvider(Modules.PAYMENT, {
-  services: [StellarMedusaAdapter],
+  services: [StellarToolsMedusaAdapter],
 });
 
-export { StellarMedusaAdapter, StellarMedusaAdapterOptions };
+export { type StellarToolsMedusaAdapterOptions, StellarToolsMedusaAdapter };

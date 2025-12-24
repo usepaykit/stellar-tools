@@ -2,15 +2,17 @@
 
 import React from "react";
 
+import { postWebhook } from "@/actions/webhook";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextAreaField, TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
-import { WebhookEvent } from "@/db";
+import { Network, WebhookEvent } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, Copy, Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import * as RHF from "react-hook-form";
@@ -149,6 +151,8 @@ const schema = z.object({
 interface WebhooksModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  organizationId: string;
+  environment: Network;
 }
 
 const WEBHOOK_EVENTS = [
@@ -164,11 +168,16 @@ const WEBHOOK_EVENTS = [
   { id: "refund.failed", label: "Refund Failed" },
 ] as const satisfies { id: WebhookEvent[number]; label: string }[];
 
-export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+export function WebHooksModal({
+  open,
+  onOpenChange,
+  organizationId,
+  environment,
+}: WebhooksModalProps) {
+  const formRef = React.useRef<HTMLFormElement>(null);
+  const queryClient = useQueryClient();
   const [webhookSecret, setWebhookSecret] = React.useState<string>("");
   const { copied, handleCopy } = useCopy();
-  const formRef = React.useRef<HTMLFormElement>(null);
 
   // Generate webhook secret when modal opens
   React.useEffect(() => {
@@ -199,11 +208,43 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
 
   const events = form.watch("events");
 
+  // Create webhook mutation
+  const createWebhookMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof schema>) => {
+      return await postWebhook(organizationId, {
+        name: data.destinationName,
+        url: data.endpointUrl,
+        description: data.description || undefined,
+        events: data.events as WebhookEvent[],
+        environment,
+      });
+    },
+    onSuccess: (webhook) => {
+      // Invalidate and refetch webhooks
+      queryClient.invalidateQueries({
+        queryKey: ["webhooks", organizationId, environment],
+      });
+      toast.success("Webhook destination created successfully", {
+        description: `${webhook.name} is now configured to receive events.`,
+      } as Parameters<typeof toast.success>[1]);
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      console.error("Failed to create webhook destination:", error);
+      toast.error("Failed to create webhook destination", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      } as Parameters<typeof toast.error>[1]);
+    },
+  });
+
   // Reset form when modal closes
   React.useEffect(() => {
     if (!open) {
       form.reset();
-      setIsSubmitting(false);
     }
   }, [open, form]);
 
@@ -219,35 +260,7 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
   };
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
-    setIsSubmitting(true);
-
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // Log to console
-      console.log("Webhook destination created:", {
-        destinationName: data.destinationName,
-        endpointUrl: data.endpointUrl,
-        description: data.description,
-        events: data.events,
-        createdAt: new Date().toISOString(),
-      });
-
-      // Show success toast
-      toast.success("Webhook destination created successfully", {
-        description: `${data.destinationName} is now configured to receive events.`,
-      } as Parameters<typeof toast.success>[1]);
-
-      // Reset form and close modal
-      form.reset();
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Failed to create webhook destination:", error);
-      toast.error("Failed to create webhook destination");
-    } finally {
-      setIsSubmitting(false);
-    }
+    createWebhookMutation.mutate(data);
   };
 
   const footer = (
@@ -274,9 +287,9 @@ export function WebHooksModal({ open, onOpenChange }: WebhooksModalProps) {
           type="button"
           onClick={() => form.handleSubmit(onSubmit)()}
           className="gap-2"
-          disabled={isSubmitting}
+          disabled={createWebhookMutation.isPending}
         >
-          {isSubmitting ? (
+          {createWebhookMutation.isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               Creating...

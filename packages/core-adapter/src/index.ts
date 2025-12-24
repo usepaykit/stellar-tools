@@ -55,3 +55,4 @@ export * from "./schema/checkout";
 export * from "./schema/payment";
 export * from "./schema/refund";
 export * from "./schema/shared";
+export * from "./schema/credits";
