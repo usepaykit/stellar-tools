@@ -2,10 +2,19 @@
 
 import * as React from "react";
 
-import { TextField } from "@/components/input-picker";
+import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
+import type { FileRejection } from "react-dropzone";
+import { PhoneNumberPicker } from "@/components/phone-number-picker";
+import { TextAreaField, TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +25,7 @@ import * as RHF from "react-hook-form";
 import { z } from "zod";
 
 const organizationSchema = z.object({
-  name: z.string().min(1).min(2).max(50).trim(),
+  name: z.string().min(1, "Name is required").min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters").trim(),
   slug: z
     .string()
     .min(1)
@@ -31,6 +40,30 @@ const organizationSchema = z.object({
       "Slug cannot start or end with a hyphen"
     )
     .trim(),
+  phoneNumber: z
+    .object({
+      number: z.string(),
+      countryCode: z.string(),
+    })
+    .optional()
+    .nullable(),
+  description: z.string().max(500, "Description must be less than 500 characters").optional().or(z.literal("")),
+  physicalAddress: z.string().max(500, "Address must be less than 500 characters").optional().or(z.literal("")),
+  supportEmail: z.email().optional(),
+  twitterHandle: z
+    .string()
+    .regex(/^@?[a-zA-Z0-9_]{1,15}$/, "Please enter a valid Twitter handle")
+    .optional()
+    .or(z.literal("")),
+  githubHandle: z
+    .string()
+    .regex(/^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/, "Please enter a valid GitHub username")
+    .optional(),
+  logo: z
+    .array(z.any())
+    .max(1, "Only one logo can be uploaded")
+    .default([])
+    .optional(),
   agreedToTerms: z
     .boolean()
     .refine((val) => val === true, "You must agree to the terms to continue"),
@@ -44,8 +77,48 @@ export default function CreateOrganization() {
 
   const form = RHF.useForm<OrganizationFormData>({
     resolver: zodResolver(organizationSchema),
-    defaultValues: { name: "", slug: "", agreedToTerms: false },
+    defaultValues: {
+      name: "",
+      slug: "",
+      phoneNumber: { number: "", countryCode: "US" },
+      description: "",
+      physicalAddress: "",
+      supportEmail: "",
+      twitterHandle: "",
+      githubHandle: "",
+      logo: [],
+      agreedToTerms: false,
+    },
   });
+
+  // Generate slug from name
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const watchedName = form.watch("name");
+  React.useEffect(() => {
+    if (watchedName) {
+      const generatedSlug = watchedName
+        .trim()
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
+      form.setValue("slug", generatedSlug);
+    }
+  }, [watchedName, form]);
+
+  const handleLogoChange = (files: FileWithPreview[]) => {
+    form.setValue("logo", files);
+  };
+
+  const handleLogoRejected = (rejections: FileRejection[]) => {
+    const firstError = rejections[0]?.errors[0];
+    if (firstError) {
+      toast.error(firstError.message || "Failed to upload logo");
+    }
+  };
 
   const onSubmit = async (data: OrganizationFormData) => {
     setIsSubmitting(true);
@@ -54,6 +127,13 @@ export default function CreateOrganization() {
       console.log("Creating Organization:", {
         name: data.name,
         slug: data.slug,
+        phoneNumber: data.phoneNumber,
+        description: data.description,
+        physicalAddress: data.physicalAddress,
+        supportEmail: data.supportEmail,
+        twitterHandle: data.twitterHandle,
+        githubHandle: data.githubHandle,
+        logo: data.logo?.[0]?.name,
       });
 
       toast.success("Organization created successfully!", {
@@ -72,7 +152,7 @@ export default function CreateOrganization() {
 
   return (
     <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="flex w-full max-w-[440px] flex-col items-center">
+      <div className="flex w-full max-w-2xl flex-col items-center">
         <div className="mb-8 transition-opacity duration-300">
           <Image
             src="/images/logo-light.png"
@@ -100,18 +180,56 @@ export default function CreateOrganization() {
         >
           <Card className="border-none shadow-none">
             <CardContent className="space-y-5 pt-1">
+      
+              <div className="pb-24">
+                <RHF.Controller
+                  control={form.control}
+                  name="logo"
+                  render={({ field, fieldState: { error } }) => (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Organization Logo</Label>
+                      <FileUploadPicker
+                        id="organization-logo"
+                        value={field.value || []}
+                        onFilesChange={(files) => {
+                          field.onChange(files);
+                          handleLogoChange(files);
+                        }}
+                        onFilesRejected={handleLogoRejected}
+                        label="Drag & drop your logo here, or click to select"
+                        description="PNG, JPG up to 5MB"
+                        disabled={isSubmitting}
+                        dropzoneAccept={{
+                          "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"],
+                        }}
+                        dropzoneMaxSize={5 * 1024 * 1024}
+                        dropzoneMultiple={false}
+                        className="h-40"
+                      />
+                      {error && (
+                        <p className="text-destructive text-sm" role="alert">
+                          {error.message}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                />
+              </div>
+
               <RHF.Controller
                 control={form.control}
                 name="name"
                 render={({ field, fieldState: { error } }) => (
                   <TextField
-                    id={field.name}
+                    id="organization-name"
                     label="Organization Name"
                     value={field.value}
                     onChange={field.onChange}
                     placeholder="Acme Inc."
                     error={error?.message || null}
                     labelClassName="text-sm font-medium"
+                    required
+                      className="w-full shadow-none"
                   />
                 )}
               />
@@ -124,26 +242,181 @@ export default function CreateOrganization() {
                     id={field.name}
                     label="Organization Slug"
                     value={field.value}
-                    onChange={(e) =>
-                      field.onChange(
-                        e
-                          .trim()
-                          .toLowerCase()
-                          .normalize("NFKD")
-                          .replace(/[\u0300-\u036f]/g, "")
-                          .replace(/[^a-z0-9\s-]/g, "")
-                          .replace(/\s+/g, "-")
-                          .replace(/-+/g, "-")
-                          .replace(/^-+|-+$/g, "")
-                      )
-                    }
+                    onChange={() => {}} // Disabled - read-only
                     placeholder="acme-inc"
                     error={error?.message || null}
                     className="font-mono text-sm shadow-none"
                     labelClassName="text-sm font-medium"
+                    disabled
+                    helpText="This will be used for your subdomain and cannot be changed later."
+                      
                   />
                 )}
               />
+
+              <RHF.Controller
+                control={form.control}
+                name="description"
+                render={({ field, fieldState: { error } }) => (
+                  <TextAreaField
+                    id={field.name}
+                    label="Description"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="Tell us about your organization..."
+                    error={error?.message || null}
+                    helpText="Optional: A brief description of your organization"
+                      className="w-full shadow-none"
+                  />
+                )}
+              />
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <RHF.Controller
+                  control={form.control}
+                  name="phoneNumber"
+                  render={({ field, fieldState: { error } }) => (
+                    <PhoneNumberPicker
+                      id={field.name}
+                      label="Phone Number"
+                      value={field.value || { number: "", countryCode: "US" }}
+                      onChange={field.onChange}
+                      error={error?.message || null}
+                      disabled={isSubmitting}
+                       groupClassName="w-full shadow-none"
+                    />
+                  )}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="supportEmail"
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      id={field.name}
+                      label="Support Email"
+                      type="email"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="support@example.com"
+                      error={error?.message || null}
+                
+                      className="w-full shadow-none mt-2"
+                    />
+                  )}
+                />
+              </div>
+
+              <RHF.Controller
+                control={form.control}
+                name="physicalAddress"
+                render={({ field, fieldState: { error } }) => (
+                  <TextAreaField
+                    id={field.name}
+                    label="Physical Address"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="123 Main St, City, State, ZIP"
+                    error={error?.message || null}
+                      className="w-full shadow-none"
+                  />
+                )}
+              />
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <RHF.Controller
+                  control={form.control}
+                  name="twitterHandle"
+                  render={({ field, fieldState: { error } }) => {
+                    const twitterPrefix = "https://twitter.com/@";
+                    const twitterUsername = field.value ? `${field.value}` : "";
+
+                    return (
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={field.name}
+                          className="text-sm font-medium"
+                        >
+                          Twitter Handle
+                        </Label>
+                        <InputGroup
+                          className={cn(
+                            error && "border-destructive ring-destructive/20",
+                             "w-full shadow-none"
+                          )}
+                        >
+                          <InputGroupAddon align="inline-start">
+                            {twitterPrefix}
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            id={field.name}
+                            type="text"
+                            value={twitterUsername}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/^@/, "");
+                              field.onChange(value || "");
+                            }}
+                            placeholder="username"
+                            aria-invalid={error ? "true" : "false"}
+                            disabled={isSubmitting}
+                          />
+                        </InputGroup>
+                        {error && (
+                          <p className="text-destructive text-sm" role="alert">
+                            {error.message}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="githubHandle"
+                  render={({ field, fieldState: { error } }) => {
+                    const githubPrefix = "https://github.com/@";
+                    const githubUsername = field.value ? `${field.value}` : "";
+
+                    return (
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor={field.name}
+                          className="text-sm font-medium"
+                        >
+                          GitHub Handle
+                        </Label>
+                        <InputGroup
+                          className={cn(
+                            error && "border-destructive ring-destructive/20",
+                            "w-full shadow-none"
+                          )}
+                        >
+                          <InputGroupAddon align="inline-start">
+                            {githubPrefix}
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            id={field.name}
+                            type="text"
+                            value={githubUsername}
+                            onChange={(e) => {
+                              field.onChange(e.target.value);
+                            }}
+                            placeholder="username"
+                            aria-invalid={error ? "true" : "false"}
+                            disabled={isSubmitting}
+                          />
+                        </InputGroup>
+                        {error && (
+                          <p className="text-destructive text-sm" role="alert">
+                            {error.message}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+              </div>
             </CardContent>
           </Card>
 
