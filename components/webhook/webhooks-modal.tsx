@@ -10,9 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { Network, WebhookEvent } from "@/db";
+import { useCopy } from "@/hooks/use-copy";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2 } from "lucide-react";
 import { ArrowLeft, Check, Copy, Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import * as RHF from "react-hook-form";
@@ -21,8 +21,10 @@ import { z } from "zod";
 import { CodeBlock } from "../code-block";
 import { Curl, TypeScript } from "../icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import {useCopy} from "@/hooks/use-copy";
-const getWebhookHandlerTypeScript = (secret: string) => /* ts */ `import { NextRequest, NextResponse } from 'next/server';
+
+const getWebhookHandlerTypeScript = (
+  secret: string
+) => /* ts */ `import { NextRequest, NextResponse } from 'next/server';
 import { StellarTools } from '@stellartools/core';
 
 const stellar = new StellarTools({
@@ -176,7 +178,7 @@ export function WebHooksModal({
   const queryClient = useQueryClient();
   const [webhookSecret, setWebhookSecret] = React.useState<string>("");
   const { copied, handleCopy } = useCopy();
-  
+
   // Generate webhook secret when modal opens
   React.useEffect(() => {
     if (open) {
@@ -187,7 +189,10 @@ export function WebHooksModal({
 
   const handleCopySecret = async () => {
     if (webhookSecret) {
-      await handleCopy({text: webhookSecret, message: "Webhook secret copied to clipboard"});
+      await handleCopy({
+        text: webhookSecret,
+        message: "Webhook secret copied to clipboard",
+      });
     }
   };
 
