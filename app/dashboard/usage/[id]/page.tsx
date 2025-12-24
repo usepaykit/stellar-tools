@@ -25,17 +25,17 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { useCopy } from "@/hooks/use-copy";
 import { ColumnDef } from "@tanstack/react-table";
 import {
+  CheckCircle2,
   ChevronRight,
   Copy,
   RefreshCw,
   TrendingDown,
   TrendingUp,
-  CheckCircle2
 } from "lucide-react";
 import Link from "next/link";
-import { useCopy } from "@/hooks/use-copy";
 
 type UsageRecordStatus = "granted" | "consumed" | "revoked";
 
@@ -215,14 +215,14 @@ const StatusBadge = ({ status }: { status: UsageRecordStatus }) => {
 };
 
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
-    const { copied, handleCopy } = useCopy();
+  const { copied, handleCopy } = useCopy();
 
   return (
     <Button
       variant="ghost"
       size="icon-sm"
       className="h-8 w-8"
-      onClick={() => handleCopy({text, message: "Copied to clipboard"})}
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
       {copied ? (

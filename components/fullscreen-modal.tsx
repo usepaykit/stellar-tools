@@ -138,33 +138,24 @@ export const FullScreenModal = ({
               {/* Content - Scrollable */}
               {size === "full" ? (
                 <ScrollArea
-                  className={cn(
-                    "flex-1 min-h-0",
-                    scrollArea.className
-                  )}
+                  className={cn("min-h-0 flex-1", scrollArea.className)}
                 >
-                  <div className="px-6 py-6">
-                    {children}
-                  </div>
+                  <div className="px-6 py-6">{children}</div>
                 </ScrollArea>
               ) : (
                 <ScrollArea
-                  className={cn(
-                    scrollArea.className
-                  )}
+                  className={cn(scrollArea.className)}
                   style={{
                     maxHeight: "calc(90vh - 2rem - 140px)",
                   }}
                 >
-                  <div className="px-6 py-6">
-                    {children}
-                  </div>
+                  <div className="px-6 py-6">{children}</div>
                 </ScrollArea>
               )}
 
               {/* Footer */}
               {footer && (
-                <DialogFooter className="bg-background shrink-0 border-t px-6 py-4 rounded-b-md">
+                <DialogFooter className="bg-background shrink-0 rounded-b-md border-t px-6 py-4">
                   {footer}
                 </DialogFooter>
               )}

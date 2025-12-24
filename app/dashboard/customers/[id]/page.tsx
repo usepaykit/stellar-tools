@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
@@ -49,7 +50,6 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useCopy } from "@/hooks/use-copy";
 
 // Wallet Address type definition
 type WalletAddress = {
@@ -257,7 +257,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
 
   return (
     <button
-      onClick={() => handleCopy({text, message: "Copied to clipboard"})}
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       className="hover:bg-muted inline-flex items-center justify-center rounded-md p-1 transition-colors"
       aria-label={label || "Copy to clipboard"}
     >

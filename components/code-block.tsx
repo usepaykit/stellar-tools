@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useCopy } from "@/hooks/use-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
@@ -24,7 +25,6 @@ import {
   oneDark,
   oneLight,
 } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { useCopy } from "@/hooks/use-copy";
 
 SyntaxHighlighter.registerLanguage("tsx", tsx);
 SyntaxHighlighter.registerLanguage("typescript", typescript);
@@ -61,7 +61,7 @@ export function CodeBlock({
   // Copy Logic
   const copyToClipboard = React.useCallback(async () => {
     if (!children) return;
-    await handleCopy({text: children, message: "Copied to clipboard"});
+    await handleCopy({ text: children, message: "Copied to clipboard" });
   }, [children]);
 
   const syntaxTheme = React.useMemo(() => {
@@ -159,24 +159,20 @@ export function CodeBlock({
         {/* Code Content with ScrollArea */}
         {hasMaxHeight ? (
           <div className="flex">
-
-          <ScrollArea
-            style={{ height: scrollAreaHeight }}
-            className="flex-1"
-          >
-            <SyntaxHighlighter
-              language={lang}
-              style={syntaxTheme}
-              showLineNumbers={false}
-              wrapLines={false}
-              customStyle={{
-                margin: 0,
-                borderRadius: showHeader ? "0 0 8px 8px" : "8px",
-              }}
-            >
-              {children.trim()}
-            </SyntaxHighlighter>
-          </ScrollArea>
+            <ScrollArea style={{ height: scrollAreaHeight }} className="flex-1">
+              <SyntaxHighlighter
+                language={lang}
+                style={syntaxTheme}
+                showLineNumbers={false}
+                wrapLines={false}
+                customStyle={{
+                  margin: 0,
+                  borderRadius: showHeader ? "0 0 8px 8px" : "8px",
+                }}
+              >
+                {children.trim()}
+              </SyntaxHighlighter>
+            </ScrollArea>
           </div>
         ) : (
           <div className="relative w-full overflow-x-auto">

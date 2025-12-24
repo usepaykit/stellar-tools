@@ -25,6 +25,7 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { useCopy } from "@/hooks/use-copy";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -35,7 +36,6 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useCopy } from "@/hooks/use-copy";
 
 type WebhookLogStatus = "failed" | "succeeded";
 
@@ -243,7 +243,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       variant="ghost"
       size="icon-sm"
       className="h-8 w-8"
-      onClick={() => handleCopy({text, message: "Copied to clipboard"})}
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
       {copied ? (

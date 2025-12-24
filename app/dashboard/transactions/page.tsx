@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
@@ -27,7 +28,6 @@ import {
 import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-import { useCopy } from "@/hooks/use-copy";
 
 // --- Types ---
 
@@ -217,7 +217,10 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          handleCopy({text: address, message: "Wallet address copied to clipboard"});
+          handleCopy({
+            text: address,
+            message: "Wallet address copied to clipboard",
+          });
         }}
         title="Copy wallet address"
       >

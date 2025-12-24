@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { useCopy } from "@/hooks/use-copy";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -31,7 +32,6 @@ import {
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-import { useCopy } from "@/hooks/use-copy";
 
 type ApiKey = {
   id: string;
@@ -110,8 +110,8 @@ const mockStandardKeys: ApiKey[] = [
 export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
-  const {  handleCopy } = useCopy();
-    const columns: ColumnDef<ApiKey>[] = [
+  const { handleCopy } = useCopy();
+  const columns: ColumnDef<ApiKey>[] = [
     {
       accessorKey: "name",
       header: "NAME",
@@ -213,7 +213,7 @@ export default function ApiKeysPage() {
     {
       label: "Copy API key ID",
       onClick: (key) => {
-        handleCopy({text: key.id, message: "API key ID copied to clipboard"});
+        handleCopy({ text: key.id, message: "API key ID copied to clipboard" });
       },
     },
     {
@@ -340,7 +340,7 @@ function ApiKeyModal({
   onApiKeyCreated: (key: string | null) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
- const { handleCopy } = useCopy();
+  const { handleCopy } = useCopy();
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
@@ -350,7 +350,10 @@ function ApiKeyModal({
 
   const handleCopyKey = async () => {
     if (createdApiKey) {
-      await handleCopy({text: createdApiKey, message: "API key copied to clipboard"});
+      await handleCopy({
+        text: createdApiKey,
+        message: "API key copied to clipboard",
+      });
     }
   };
 
@@ -491,7 +494,6 @@ function ApiKeyModal({
             required
             className="shadow-none"
           />
-  
 
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">

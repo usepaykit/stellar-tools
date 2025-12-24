@@ -1,11 +1,18 @@
 "use client";
-import React from 'react'
-import { toast } from 'sonner';
+import React from "react";
 
-export  function useCopy() {
+import { toast } from "sonner";
+
+export function useCopy() {
   const [copied, setCopied] = React.useState(false);
 
-  const handleCopy = async ({text, message}: {text: string, message: string}) => {
+  const handleCopy = async ({
+    text,
+    message,
+  }: {
+    text: string;
+    message: string;
+  }) => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     toast.success(message);
@@ -14,4 +21,3 @@ export  function useCopy() {
 
   return { copied, handleCopy };
 }
-

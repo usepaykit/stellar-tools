@@ -372,7 +372,10 @@ export default function WebhooksPage() {
                     services.
                   </p>
                 </div>
-                <Button className="gap-2" onClick={() => handleModalChange(true)}>
+                <Button
+                  className="gap-2"
+                  onClick={() => handleModalChange(true)}
+                >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add destination</span>
                   <span className="sm:hidden">Add</span>
