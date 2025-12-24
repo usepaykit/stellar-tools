@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrieveWebhook } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -25,6 +26,7 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -35,6 +37,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useCopy } from "@/hooks/use-copy";
 
 type WebhookLogStatus = "failed" | "succeeded";
@@ -243,7 +246,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       variant="ghost"
       size="icon-sm"
       className="h-8 w-8"
-      onClick={() => handleCopy({text, message: "Copied to clipboard"})}
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
       {copied ? (
@@ -298,11 +301,28 @@ const columns: ColumnDef<WebhookLog>[] = [
   },
 ];
 
+// TODO: Get organizationId from context/session
+const ORGANIZATION_ID = "org_placeholder";
+
 // --- Main Component ---
 
 export default function WebhookLogPage() {
+  const params = useParams();
+  const webhookId = params?.id as string;
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
+
+  const {
+    data: webhook,
+    isLoading: isLoadingWebhook,
+    error: webhookError,
+  } = useQuery({
+    queryKey: ["webhook", webhookId, ORGANIZATION_ID],
+    queryFn: async () => {
+      return await retrieveWebhook(webhookId, ORGANIZATION_ID);
+    },
+    enabled: !!webhookId,
+  });
 
   const filteredLogs = React.useMemo(() => {
     let logs = mockWebhookLogs;
@@ -458,7 +478,11 @@ export default function WebhookLogPage() {
                   <ChevronRight className="h-4 w-4" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Logs</BreadcrumbPage>
+                  <BreadcrumbPage>
+                    {isLoadingWebhook
+                      ? "Loading..."
+                      : webhook?.name || webhookId || "Logs"}
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -466,7 +490,35 @@ export default function WebhookLogPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Today</h1>
+                {isLoadingWebhook ? (
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    Loading...
+                  </h1>
+                ) : webhookError ? (
+                  <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-red-600">
+                      Error loading webhook
+                    </h1>
+                    <p className="text-muted-foreground text-sm mt-1">
+                      {webhookError instanceof Error
+                        ? webhookError.message
+                        : "Failed to load webhook"}
+                    </p>
+                  </div>
+                ) : webhook ? (
+                  <div>
+                    <h1 className="text-3xl font-bold tracking-tight">
+                      {webhook.name || "Webhook Logs"}
+                    </h1>
+                    {webhook.description && (
+                      <p className="text-muted-foreground text-sm mt-1">
+                        {webhook.description}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <h1 className="text-3xl font-bold tracking-tight">Today</h1>
+                )}
               </div>
             </div>
 

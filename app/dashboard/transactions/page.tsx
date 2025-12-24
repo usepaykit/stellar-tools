@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { postRefund } from "@/actions/refund";
+import { retrievePayment } from "@/actions/payment";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -13,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -25,6 +28,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { nanoid } from "nanoid";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 import { useCopy } from "@/hooks/use-copy";
@@ -217,7 +221,7 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          handleCopy({text: address, message: "Wallet address copied to clipboard"});
+          handleCopy({ text: address, message: "Wallet address copied to clipboard" });
         }}
         title="Copy wallet address"
       >
@@ -303,11 +307,11 @@ const columns: ColumnDef<Transaction>[] = [
         <div className="text-muted-foreground text-sm">
           {refundedDate
             ? refundedDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })
             : "—"}
         </div>
       );
@@ -332,6 +336,10 @@ const refundSchema = z.object({
 
 type RefundFormData = z.infer<typeof refundSchema>;
 
+// TODO: Get organizationId from context/session
+// For now using placeholder value - this should be obtained from user session or context
+const ORGANIZATION_ID = "org_placeholder";
+
 // --- Refund Modal Component ---
 
 export function RefundModal({
@@ -343,7 +351,7 @@ export function RefundModal({
   onOpenChange: (open: boolean) => void;
   initialPaymentId?: string;
 }) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const queryClient = useQueryClient();
 
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
@@ -354,28 +362,49 @@ export function RefundModal({
     },
   });
 
-  // Update form when initialPaymentId changes
   React.useEffect(() => {
     if (initialPaymentId) {
       form.setValue("paymentId", initialPaymentId);
     }
   }, [initialPaymentId, form]);
 
-  const onSubmit = async (data: RefundFormData) => {
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Refund data:", data);
+  const createRefundMutation = useMutation({
+    mutationFn: async (data: RefundFormData) => {
+      const payment = await retrievePayment(data.paymentId, ORGANIZATION_ID);
+      return await postRefund({
+        paymentId: payment.id,
+        organizationId: payment.organizationId,
+        environment: payment.environment,
+        amount: payment.amount,
+        assetId: payment.assetId,
+        customerId: payment.customerId || undefined,
+        receiverPublicKey: data.walletAddress,
+        reason: data.reason,
+        status: "pending",
+        transactionHash: `pending_${nanoid()}`,
+        metadata: {},
+      });
+    },
+    onSuccess: () => {
       toast.success("Refund created successfully!");
       form.reset();
       onOpenChange(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to create refund");
-    } finally {
-      setIsSubmitting(false);
-    }
+      queryClient.invalidateQueries({
+        queryKey: ["refunds", ORGANIZATION_ID],
+      });
+    },
+    onError: (error) => {
+      toast.error("Failed to create refund", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      } as Parameters<typeof toast.error>[1]);
+    },
+  });
+
+  const onSubmit = async (data: RefundFormData) => {
+    createRefundMutation.mutate(data);
   };
 
   return (
@@ -389,12 +418,17 @@ export function RefundModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
+            disabled={createRefundMutation.isPending}
           >
             Cancel
           </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={createRefundMutation.isPending}
+          >
+            {createRefundMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
             Create refund
           </Button>
         </div>
