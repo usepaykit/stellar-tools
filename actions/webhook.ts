@@ -84,10 +84,6 @@ export const getWebhooksWithAnalytics = async (
         sql<number>`cast(count(${webhookLogs.id}) filter (where ${webhookLogs.statusCode} >= 400 or ${webhookLogs.errorMessage} is not null) as integer)`.as(
           "error_count"
         ),
-      avgResponseTime:
-        sql<number>`cast(avg(${webhookLogs.responseTime}) as integer)`.as(
-          "avg_response_time"
-        ),
       responseTime: sql<number[]>`
         array_agg(${webhookLogs.responseTime} order by ${webhookLogs.createdAt} desc) 
         filter (where ${webhookLogs.responseTime} is not null)
