@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveWebhook, retrieveWebhookLogs } from "@/actions/webhook";
+import { retrieveWebhookLogs } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -313,7 +313,7 @@ export default function WebhookLogPage() {
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  const { data: webhookLogs, isLoading: isLoadingWebhookLogs } = useQuery({
+  const { data: _webhookLogs, isLoading: isLoadingWebhookLogs } = useQuery({
     queryKey: ["webhookLogs", webhookId, ORGANIZATION_ID],
     queryFn: async () => {
       return await retrieveWebhookLogs(webhookId, ORGANIZATION_ID);

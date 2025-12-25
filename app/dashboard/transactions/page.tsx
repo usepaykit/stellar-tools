@@ -377,7 +377,7 @@ export function RefundModal({
         metadata: {},
       });
 
-      // todo: use sendAssetPayment from stellar core and update the status. 
+      // todo: use sendAssetPayment from stellar core and update the status.
     },
     onSuccess: () => {
       toast.success("Refund created successfully!");
