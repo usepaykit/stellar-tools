@@ -1,7 +1,7 @@
 import { schemaFor } from "@stellartools/core";
 import { z } from "zod";
 
-export interface StellarUploadthingOptions {
+export interface StellarToolsUploadthingOptions {
   /**
    * The API key for the Stellar Tools API.
    */
@@ -18,8 +18,8 @@ export interface StellarUploadthingOptions {
   debug?: boolean;
 }
 
-export const stellarUploadthingOptionsSchema =
-  schemaFor<StellarUploadthingOptions>()(
+export const stellarToolsUploadthingOptionsSchema =
+  schemaFor<StellarToolsUploadthingOptions>()(
     z.object({
       apiKey: z.string(),
       productId: z.string(),
@@ -27,7 +27,7 @@ export const stellarUploadthingOptionsSchema =
     })
   );
 
-export interface StellarMetadata {
+export interface StellarToolsMetadata {
   __stellar: {
     /**
      * The customer ID of the Stellar metadata.
@@ -41,7 +41,7 @@ export interface StellarMetadata {
   };
 }
 
-export const stellarMetadataSchema = schemaFor<StellarMetadata>()(
+export const stellarToolsMetadataSchema = schemaFor<StellarToolsMetadata>()(
   z.object({
     __stellar: z.object({
       customerId: z.string(),

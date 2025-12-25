@@ -1,6 +1,6 @@
 {
-  "id": "37f2186b-90ba-4051-a5af-815b03008627",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "45b76470-4961-4a5b-b0a0-d8d056f3dd74",
+  "prevId": "37f2186b-90ba-4051-a5af-815b03008627",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1220,6 +1220,19 @@
           "primaryKey": false,
           "notNull": true
         },
+        "price_amount": {
+          "name": "price_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recurring_period": {
+          "name": "recurring_period",
+          "type": "recurring_period",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "unit": {
           "name": "unit",
           "type": "text",
@@ -1788,6 +1801,12 @@
           "notNull": true,
           "default": "now()"
         },
+        "response_time": {
+          "name": "response_time",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "network": {
           "name": "network",
           "type": "network",
@@ -1962,6 +1981,11 @@
       "name": "product_status",
       "schema": "public",
       "values": ["active", "archived"]
+    },
+    "public.recurring_period": {
+      "name": "recurring_period",
+      "schema": "public",
+      "values": ["day", "week", "month", "year"]
     },
     "public.refund_status": {
       "name": "refund_status",

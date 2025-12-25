@@ -1,4 +1,4 @@
-import { Providers } from "@/components/provider";
+import { Providers } from "@/providers";
 import { Toaster } from "@/components/ui/toast";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";

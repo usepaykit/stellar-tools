@@ -1,6 +1,6 @@
 {
-  "id": "37f2186b-90ba-4051-a5af-815b03008627",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "d9c87d49-aea9-4370-ba5d-32b93608ded8",
+  "prevId": "45b76470-4961-4a5b-b0a0-d8d056f3dd74",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1220,6 +1220,19 @@
           "primaryKey": false,
           "notNull": true
         },
+        "price_amount": {
+          "name": "price_amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recurring_period": {
+          "name": "recurring_period",
+          "type": "recurring_period",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "unit": {
           "name": "unit",
           "type": "text",
@@ -1588,146 +1601,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.usage_record": {
-      "name": "usage_record",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "api_key_id": {
-          "name": "api_key_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "feature": {
-          "name": "feature",
-          "type": "feature",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "quantity": {
-          "name": "quantity",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
-        "network": {
-          "name": "network",
-          "type": "network",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "aisdk": {
-          "name": "aisdk",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "usage_records_org_feature_created_idx": {
-          "name": "usage_records_org_feature_created_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "feature",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "usage_record_organization_id_organization_id_fk": {
-          "name": "usage_record_organization_id_organization_id_fk",
-          "tableFrom": "usage_record",
-          "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "usage_record_api_key_id_api_key_id_fk": {
-          "name": "usage_record_api_key_id_api_key_id_fk",
-          "tableFrom": "usage_record",
-          "tableTo": "api_key",
-          "columnsFrom": ["api_key_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "usage_record_customer_id_customer_id_fk": {
-          "name": "usage_record_customer_id_customer_id_fk",
-          "tableFrom": "usage_record",
-          "tableTo": "customer",
-          "columnsFrom": ["customer_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.webhook_log": {
       "name": "webhook_log",
       "schema": "",
@@ -1787,6 +1660,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "response_time": {
+          "name": "response_time",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "network": {
           "name": "network",
@@ -1962,6 +1841,11 @@
       "name": "product_status",
       "schema": "public",
       "values": ["active", "archived"]
+    },
+    "public.recurring_period": {
+      "name": "recurring_period",
+      "schema": "public",
+      "values": ["day", "week", "month", "year"]
     },
     "public.refund_status": {
       "name": "refund_status",

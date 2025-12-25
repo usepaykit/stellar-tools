@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrieveWebhookLogs } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -25,6 +26,8 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { useCopy } from "@/hooks/use-copy";
+import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -34,7 +37,9 @@ import {
   RefreshCw,
   XCircle,
 } from "lucide-react";
+import moment from "moment";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 type WebhookLogStatus = "failed" | "succeeded";
 
@@ -235,20 +240,14 @@ const StatusBadge = ({
 };
 
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, handleCopy } = useCopy();
 
   return (
     <Button
       variant="ghost"
       size="icon-sm"
       className="h-8 w-8"
-      onClick={handleCopy}
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
       {copied ? (
@@ -303,11 +302,24 @@ const columns: ColumnDef<WebhookLog>[] = [
   },
 ];
 
+// TODO: Get organizationId from context/session
+const ORGANIZATION_ID = "org_placeholder";
+
 // --- Main Component ---
 
 export default function WebhookLogPage() {
+  const params = useParams();
+  const webhookId = params?.id as string;
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
+
+  const { data: _webhookLogs, isLoading: isLoadingWebhookLogs } = useQuery({
+    queryKey: ["webhookLogs", webhookId, ORGANIZATION_ID],
+    queryFn: async () => {
+      return await retrieveWebhookLogs(webhookId, ORGANIZATION_ID);
+    },
+    enabled: !!webhookId,
+  });
 
   const filteredLogs = React.useMemo(() => {
     let logs = mockWebhookLogs;
@@ -468,12 +480,7 @@ export default function WebhookLogPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight">Today</h1>
-              </div>
-            </div>
+            <div className="flex items-center justify-between" />
 
             <div className="flex items-center justify-between gap-4">
               <UnderlineTabs
@@ -498,16 +505,7 @@ export default function WebhookLogPage() {
             </div>
 
             <div className="text-muted-foreground flex items-center justify-end text-sm">
-              <div>
-                Updated today{" "}
-                {new Date().toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: true,
-                })}{" "}
-                IST
-              </div>
+              <div>Updated today {moment().format("h:mm:ss A")} IST</div>
             </div>
 
             <div className="h-[calc(100vh-400px)] min-h-[600px]">
@@ -518,6 +516,7 @@ export default function WebhookLogPage() {
                 detailPanelWidth={500}
                 emptyMessage="No logs found"
                 className="h-full"
+                isLoading={isLoadingWebhookLogs}
               />
             </div>
           </div>
