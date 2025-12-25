@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
@@ -252,17 +253,11 @@ const StatusBadge = ({ status }: { status: Payment["status"] }) => {
 
 // Copy button component
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, handleCopy } = useCopy();
 
   return (
     <button
-      onClick={handleCopy}
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       className="hover:bg-muted inline-flex items-center justify-center rounded-md p-1 transition-colors"
       aria-label={label || "Copy to clipboard"}
     >

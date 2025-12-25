@@ -31,27 +31,24 @@ import {
   PaymentSessionStatus,
 } from "@medusajs/framework/utils";
 import { StellarTools, validateRequiredKeys } from "@stellartools/core";
-import { z } from "zod";
 
-const optionsSchema = z.object({
-  apiKey: z.string(),
-  debug: z.boolean().optional(),
-});
+import {
+  StellarToolsMedusaAdapterOptions,
+  stellarToolsMedusaAdapterOptionsSchema,
+} from "./schema";
 
-export type StellarMedusaAdapterOptions = z.infer<typeof optionsSchema>;
-
-export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaAdapterOptions> {
+export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarToolsMedusaAdapterOptions> {
   /**
    * The unique identifier for this payment provider
    */
   static identifier = "stellar";
 
-  protected readonly options: StellarMedusaAdapterOptions;
+  protected readonly options: StellarToolsMedusaAdapterOptions;
 
   private stellar: StellarTools;
 
   static validateOptions(options: Record<string, unknown>): void | never {
-    const { error } = optionsSchema.safeParse(options);
+    const { error } = stellarToolsMedusaAdapterOptionsSchema.safeParse(options);
 
     if (error) {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message);
@@ -68,7 +65,7 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
    */
   constructor(
     cradle: Record<string, unknown>,
-    options: StellarMedusaAdapterOptions
+    options: StellarToolsMedusaAdapterOptions
   ) {
     super(cradle, options);
 
@@ -93,6 +90,13 @@ export class StellarMedusaAdapter extends AbstractPaymentProvider<StellarMedusaA
   }: InitiatePaymentInput): Promise<InitiatePaymentOutput> => {
     if (this.options.debug) {
       console.info("[Stellar] Initiating payment", { amount, currency_code });
+    }
+
+    if (currency_code !== "XLM") {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `Only XLM is supported for now. Got ${currency_code}`
+      );
     }
 
     const checkout = await this.stellar.checkout.create({

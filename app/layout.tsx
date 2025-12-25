@@ -1,5 +1,6 @@
 import { Providers } from "@/components/provider";
 import { Toaster } from "@/components/ui/toast";
+import { QueryProvider } from "@/providers/query-provider";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";

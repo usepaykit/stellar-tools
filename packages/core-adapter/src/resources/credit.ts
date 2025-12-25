@@ -1,10 +1,12 @@
 import { ApiClient } from "../api-client";
 import {
+  CheckCreditsParams,
   ConsumeCreditParams,
   CreditBalance,
   CreditTransaction,
   CreditTransactionHistoryParams,
   CreditTransactionParams,
+  checkCreditSchema,
   consumeCreditSchema,
   creditTransactionHistorySchema,
   creditTransactionSchema,
@@ -86,12 +88,12 @@ export class CreditApi {
     return OK(response.value);
   }
 
-  async consume(customerId: string, params: ConsumeCreditParams) {
-    const { error, data } = consumeCreditSchema.safeParse(params);
+  async check(customerId: string, params: CheckCreditsParams) {
+    const { error, data } = checkCreditSchema.safeParse(params);
 
     if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
 
-    const { productId, rawAmount, reason, metadata } = data;
+    const { productId, rawAmount } = data;
 
     const [product, creditBalance] = await Promise.all([
       this.apiClient.get<Product>(`/api/products/${productId}`),
@@ -124,17 +126,22 @@ export class CreditApi {
       return ERR(new Error("Insufficient credits"));
     }
 
+    return OK(true);
+  }
+
+  async consume(customerId: string, params: ConsumeCreditParams) {
+    const { error, data } = consumeCreditSchema.safeParse(params);
+
+    if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
+
+    const { productId, rawAmount, reason, metadata } = data;
+
+    const payload = { amount: rawAmount, reason, metadata, type: "deduct" };
+
     const [response, deductError] = await tryCatchAsync(
       this.apiClient.post<CreditBalance>(
-        `/api/customers/${customerId}/credit/${params.productId}/transaction`,
-        {
-          body: JSON.stringify({
-            amount: creditsToDeduct,
-            reason,
-            metadata,
-            type: "deduct",
-          }),
-        }
+        `/api/customers/${customerId}/credit/${productId}/transaction`,
+        { body: JSON.stringify({ payload }) }
       )
     );
 
@@ -142,6 +149,6 @@ export class CreditApi {
       return ERR(new Error(`Failed to deduct credits: ${deductError.message}`));
     }
 
-    return OK({ ...response.value, creditsToDeduct });
+    return OK(response.value);
   }
 }

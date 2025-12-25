@@ -74,12 +74,12 @@ export const FullScreenModal = ({
 
   const sizeClasses = {
     small: cn(
-      "m-4 h-auto max-h-[90vh] w-full max-w-2xl rounded-lg",
+      "m-4 h-auto max-h-[90vh] w-full max-w-2xl !rounded-md",
       "sm:max-w-2xl",
       "top-1/2! left-1/2! -translate-x-1/2! -translate-y-1/2!"
     ),
     medium: cn(
-      "m-4 h-auto max-h-[90vh] w-full max-w-4xl rounded-lg",
+      "m-4 h-auto max-h-[90vh] w-full max-w-4xl !rounded-md",
       "sm:max-w-4xl",
       "top-1/2! left-1/2! -translate-x-1/2! -translate-y-1/2!"
     ),
@@ -98,7 +98,7 @@ export const FullScreenModal = ({
             {...dialog}
             className={cn(
               "gap-0 p-0",
-              "grid-rows-none!",
+              "grid-rows-none! rounded-md",
               sizeClasses[size],
               dialog.className
             )}
@@ -115,8 +115,12 @@ export const FullScreenModal = ({
                 duration,
               }}
               className={cn(
-                "bg-background flex w-full flex-col",
-                size === "full" ? "h-full" : "h-auto"
+                "bg-background flex w-full flex-col rounded-md",
+                size === "full"
+                  ? "h-full overflow-hidden"
+                  : size === "small" || size === "medium"
+                    ? "max-h-[calc(90vh-2rem)]"
+                    : "h-auto"
               )}
             >
               {/* Header */}
@@ -132,22 +136,26 @@ export const FullScreenModal = ({
               </DialogHeader>
 
               {/* Content - Scrollable */}
-              <ScrollArea
-                className={cn(
-                  size === "full" ? "flex-1" : "max-h-[calc(90vh-200px)]",
-                  scrollArea.className
-                )}
-              >
-                <div
-                  className={cn("px-6 py-6", size === "full" && "h-[200px]")}
+              {size === "full" ? (
+                <ScrollArea
+                  className={cn("min-h-0 flex-1", scrollArea.className)}
                 >
-                  {children}
-                </div>
-              </ScrollArea>
+                  <div className="px-6 py-6">{children}</div>
+                </ScrollArea>
+              ) : (
+                <ScrollArea
+                  className={cn(scrollArea.className)}
+                  style={{
+                    maxHeight: "calc(90vh - 2rem - 140px)",
+                  }}
+                >
+                  <div className="px-6 py-6">{children}</div>
+                </ScrollArea>
+              )}
 
-              {/* Footer - Sticky */}
+              {/* Footer */}
               {footer && (
-                <DialogFooter className="bg-background sticky bottom-0 z-10 shrink-0 border-t px-6 py-4">
+                <DialogFooter className="bg-background shrink-0 rounded-b-md border-t px-6 py-4">
                   {footer}
                 </DialogFooter>
               )}

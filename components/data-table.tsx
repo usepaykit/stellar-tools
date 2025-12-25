@@ -145,11 +145,12 @@ export const DataTable = <TData, TValue>({
                       e.stopPropagation();
                       action.onClick(row.original);
                     }}
-                    className={
+                    className={cn(
+                      "py-1",
                       action.variant === "destructive"
                         ? "text-destructive focus:text-destructive"
                         : undefined
-                    }
+                    )}
                   >
                     {action.label}
                   </DropdownMenuItem>
