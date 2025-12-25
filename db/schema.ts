@@ -293,6 +293,9 @@ export const subscriptions = pgTable(
       .notNull()
       .references(() => products.id),
     status: subscriptionStatusEnum("status").notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
     currentPeriodStart: timestamp("current_period_start").notNull(),
     currentPeriodEnd: timestamp("current_period_end").notNull(),
     cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
@@ -513,4 +516,5 @@ export type TeamInvite = InferSelectModel<typeof teamInvites>;
 export type Refund = InferSelectModel<typeof refunds>;
 export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
+export type Subscription = InferSelectModel<typeof subscriptions>;
 export type Auth = InferSelectModel<typeof auth>;

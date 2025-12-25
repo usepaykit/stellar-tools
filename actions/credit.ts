@@ -5,7 +5,7 @@ import {
   creditTransactions,
   db,
 } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCreditBalance = async (params: Partial<CreditBalance>) => {
@@ -17,7 +17,29 @@ export const postCreditBalance = async (params: Partial<CreditBalance>) => {
   return creditBalance;
 };
 
-export const retrieveCreditBalance = async (id: string) => {
+export const retrieveCreditBalance = async (
+  customerId: string,
+  productId: string,
+  organizationId: string
+) => {
+  const [creditBalance] = await db
+    .select()
+    .from(creditBalances)
+    .where(
+      and(
+        eq(creditBalances.customerId, customerId),
+        eq(creditBalances.productId, productId),
+        eq(creditBalances.organizationId, organizationId)
+      )
+    )
+    .limit(1);
+
+  if (!creditBalance) throw new Error("Credit balance not found");
+
+  return creditBalance;
+};
+
+export const retrieveCreditBalanceById = async (id: string) => {
   const [creditBalance] = await db
     .select()
     .from(creditBalances)
@@ -63,11 +85,19 @@ export const postCreditTransaction = async (
   return creditTransaction;
 };
 
-export const retrieveCreditTransaction = async (id: string) => {
+export const retrieveCreditTransaction = async (
+  id: string,
+  organizationId: string
+) => {
   const [creditTransaction] = await db
     .select()
     .from(creditTransactions)
-    .where(eq(creditTransactions.id, id))
+    .where(
+      and(
+        eq(creditTransactions.id, id),
+        eq(creditTransactions.organizationId, organizationId)
+      )
+    )
     .limit(1);
 
   if (!creditTransaction) throw new Error("Credit transaction not found");
