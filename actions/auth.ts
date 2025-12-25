@@ -227,7 +227,7 @@ export const forgotPassword = async (email: string) => {
     // TODO: Send email with reset link
     const resetLink = `${process.env.APP_URL}/auth/reset-password?token=${resetToken}`;
     await sendEmail(
-      email,
+      email.toLowerCase(),
       "Reset Password",
       `<a href="${resetLink}">Reset Password</a>`
     );
@@ -290,7 +290,11 @@ export const resetPassword = async (token: string, newPassword: string) => {
     ],
   };
 
-  await putAccount(account.id, { sso: updatedSso });
+  await putAccount(account.id, {
+    sso: updatedSso as {
+      values: { provider: "google" | "local"; sub: string }[];
+    },
+  });
 
   // Clear reset token from metadata
   const updatedMetadata = {
@@ -354,7 +358,11 @@ export const updatePassword = async (
     ],
   };
 
-  await putAccount(account.id, { sso: updatedSso });
+  await putAccount(account.id, {
+    sso: updatedSso as {
+      values: { provider: "google" | "local"; sub: string }[];
+    },
+  });
 
   return { success: true };
 };
@@ -415,7 +423,11 @@ export const handleGoogleOAuth = async (
             },
           ],
         };
-        await putAccount(account.id, { sso: updatedSso });
+        await putAccount(account.id, {
+          sso: updatedSso as {
+            values: { provider: "google" | "local"; sub: string }[];
+          },
+        });
       }
 
       let authRecord: Auth;

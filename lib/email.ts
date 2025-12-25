@@ -4,29 +4,26 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Send an email using Resend
- * @param to - Recipient email address
+ * @param email - Recipient email address
  * @param subject - Email subject
  * @param html - HTML content of the email
- * @param from - Sender email (optional, defaults to env variable or Resend default)
  */
-export async function sendEmail(
-  to: string,
-  subject: string,
-  html: string,
-  from?: string
-) {
+export async function sendEmail(email: string, subject: string, html: string) {
   try {
+    if (!process.env.RESEND_API_KEY) {
+      console.error("RESEND_API_KEY is not configured");
+      throw new Error("Email service not configured");
+    }
     const result = await resend.emails.send({
-      from: from || process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-      to,
+      from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+      to: email,
       subject,
       html,
     });
-
+    console.log("Email sent successfully:", result);
     return { success: true, id: result.data?.id };
   } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Failed to send email"
-    );
+    console.error("Failed to send email:", error);
+    throw new Error("Failed to send email");
   }
 }
