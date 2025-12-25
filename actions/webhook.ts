@@ -169,8 +169,7 @@ export const postWebhookLog = async (
 
 export const retrieveWebhookLogs = async (
   webhookId: string,
-  organizationId: string,
-  environment: Network
+  organizationId: string
 ) => {
   const webhookLogsResult = await db
     .select()
@@ -178,7 +177,6 @@ export const retrieveWebhookLogs = async (
     .where(
       and(
         eq(webhookLogs.webhookId, webhookId),
-        eq(webhookLogs.environment, environment),
         eq(webhookLogs.organizationId, organizationId)
       )
     );

@@ -2,8 +2,8 @@
 
 import * as React from "react";
 
-import { postRefund } from "@/actions/refund";
 import { retrievePayment } from "@/actions/payment";
+import { postRefund } from "@/actions/refund";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,11 +28,10 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import moment from "moment";
+import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-import { useCopy } from "@/hooks/use-copy";
 
 // --- Types ---
 
@@ -221,7 +221,10 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          handleCopy({ text: address, message: "Wallet address copied to clipboard" });
+          handleCopy({
+            text: address,
+            message: "Wallet address copied to clipboard",
+          });
         }}
         title="Copy wallet address"
       >
@@ -359,20 +362,22 @@ export function RefundModal({
   const createRefundMutation = useMutation({
     mutationFn: async (data: RefundFormData) => {
       const payment = await retrievePayment(data.paymentId, ORGANIZATION_ID);
+
       return await postRefund({
         paymentId: payment.id,
         organizationId: payment.organizationId,
         environment: payment.environment,
         amount: payment.amount,
         assetId: payment.assetId,
-        customerId: payment.customerId || undefined,
+        customerId: payment.customerId,
         receiverPublicKey: data.walletAddress,
         reason: data.reason,
         status: "pending",
-        // TODO: Get transaction hash from API
-        transactionHash: "",
+        transactionHash: payment.transactionHash,
         metadata: {},
       });
+
+      // todo: use sendAssetPayment from stellar core and update the status. 
     },
     onSuccess: () => {
       toast.success("Refund created successfully!");

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveWebhook } from "@/actions/webhook";
+import { retrieveWebhook, retrieveWebhookLogs } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -26,6 +26,7 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { useCopy } from "@/hooks/use-copy";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -36,9 +37,9 @@ import {
   RefreshCw,
   XCircle,
 } from "lucide-react";
+import moment from "moment";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCopy } from "@/hooks/use-copy";
 
 type WebhookLogStatus = "failed" | "succeeded";
 
@@ -312,14 +313,10 @@ export default function WebhookLogPage() {
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  const {
-    data: webhook,
-    isLoading: isLoadingWebhook,
-    // error: webhookError,
-  } = useQuery({
-    queryKey: ["webhook", webhookId, ORGANIZATION_ID],
+  const { data: webhookLogs, isLoading: isLoadingWebhookLogs } = useQuery({
+    queryKey: ["webhookLogs", webhookId, ORGANIZATION_ID],
     queryFn: async () => {
-      return await retrieveWebhook(webhookId, ORGANIZATION_ID);
+      return await retrieveWebhookLogs(webhookId, ORGANIZATION_ID);
     },
     enabled: !!webhookId,
   });
@@ -478,21 +475,12 @@ export default function WebhookLogPage() {
                   <ChevronRight className="h-4 w-4" />
                 </BreadcrumbSeparator>
                 <BreadcrumbItem>
-                  <BreadcrumbPage>
-                    {isLoadingWebhook
-                      ? "Loading..."
-                      : webhook?.name || webhookId || "Logs"}
-                  </BreadcrumbPage>
+                  <BreadcrumbPage>Logs</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-
-              </div>
-            </div>
+            <div className="flex items-center justify-between" />
 
             <div className="flex items-center justify-between gap-4">
               <UnderlineTabs
@@ -517,16 +505,7 @@ export default function WebhookLogPage() {
             </div>
 
             <div className="text-muted-foreground flex items-center justify-end text-sm">
-              <div>
-                Updated today{" "}
-                {new Date().toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: true,
-                })}{" "}
-                IST
-              </div>
+              <div>Updated today {moment().format("h:mm:ss A")} IST</div>
             </div>
 
             <div className="h-[calc(100vh-400px)] min-h-[600px]">
@@ -537,6 +516,7 @@ export default function WebhookLogPage() {
                 detailPanelWidth={500}
                 emptyMessage="No logs found"
                 className="h-full"
+                isLoading={isLoadingWebhookLogs}
               />
             </div>
           </div>
