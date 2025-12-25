@@ -212,8 +212,10 @@ export default function SettingsPage() {
     string | null
   >(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
-  const [isUpdateRoleModalOpen, setIsUpdateRoleModalOpen] = React.useState(false);
-  const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] = React.useState<TeamMember | null>(null);
+  const [isUpdateRoleModalOpen, setIsUpdateRoleModalOpen] =
+    React.useState(false);
+  const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] =
+    React.useState<TeamMember | null>(null);
 
   const profileForm = RHF.useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -332,13 +334,16 @@ export default function SettingsPage() {
     toast.success(`Cancel invite ${inviteId} functionality coming soon`);
   };
 
-  const handleUpdateRole = React.useCallback((member: TeamMember) => {
-    setSelectedMemberForRoleUpdate(member);
-    updateRoleForm.reset({
-      role: member.role,
-    });
-    setIsUpdateRoleModalOpen(true);
-  }, [updateRoleForm]);
+  const handleUpdateRole = React.useCallback(
+    (member: TeamMember) => {
+      setSelectedMemberForRoleUpdate(member);
+      updateRoleForm.reset({
+        role: member.role,
+      });
+      setIsUpdateRoleModalOpen(true);
+    },
+    [updateRoleForm]
+  );
 
   const onUpdateRoleSubmit = async (data: UpdateRoleFormData) => {
     if (!selectedMemberForRoleUpdate) return;
@@ -409,138 +414,143 @@ export default function SettingsPage() {
   }, [isInviteModalOpen, inviteMemberForm]);
 
   // Team table columns
-  const teamColumns: ColumnDef<TeamMember>[] = React.useMemo(() => [
-    {
-      accessorKey: "member",
-      header: "Member",
-      cell: ({ row }) => {
-        const member = row.original;
-        return (
-          <div className="flex items-center gap-3">
-            {member.status === "pending" ? (
-              <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
-                <Mail className="text-muted-foreground h-5 w-5" />
+  const teamColumns: ColumnDef<TeamMember>[] = React.useMemo(
+    () => [
+      {
+        accessorKey: "member",
+        header: "Member",
+        cell: ({ row }) => {
+          const member = row.original;
+          return (
+            <div className="flex items-center gap-3">
+              {member.status === "pending" ? (
+                <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
+                  <Mail className="text-muted-foreground h-5 w-5" />
+                </div>
+              ) : (
+                <Avatar>
+                  <AvatarImage
+                    src={member.avatar || undefined}
+                    className="object-cover"
+                  />
+                  <AvatarFallback>
+                    {member.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div>
+                <p className="font-medium">{member.name || member.email}</p>
               </div>
-            ) : (
-              <Avatar>
-                <AvatarImage
-                  src={member.avatar || undefined}
-                  className="object-cover"
-                />
-                <AvatarFallback>
-                  {member.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div>
-              <p className="font-medium">{member.name || member.email}</p>
             </div>
-          </div>
-        );
+          );
+        },
+        size: 250,
       },
-      size: 250,
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-      cell: ({ row }) => {
-        return (
-          <p className="text-muted-foreground text-sm">{row.original.email}</p>
-        );
-      },
-      size: 200,
-    },
-    {
-      accessorKey: "role",
-      header: "Role",
-      cell: ({ row }) => {
-        const role = row.original.role;
-        return (
-          <Badge
-            variant={
-              role === "owner"
-                ? "default"
-                : role === "admin"
-                  ? "secondary"
-                  : "outline"
-            }
-            className={
-              role === "owner"
-                ? "border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
-                : ""
-            }
-          >
-            {role.charAt(0).toUpperCase() + role.slice(1)}
-          </Badge>
-        );
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.original.status;
-        return (
-          <Badge
-            variant="outline"
-            className="border-green-200 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400"
-          >
-            <User className="mr-1 h-3 w-3" />
-            {status === "active" ? "Active" : "Pending"}
-          </Badge>
-        );
-      },
-      size: 120,
-    },
-    {
-      accessorKey: "joinedAt",
-      header: teamTab === "pending" ? "Invited" : "Joined",
-      cell: ({ row }) => {
-        const member = row.original;
-        if (member.status === "pending" && member.createdAt) {
+      {
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => {
           return (
             <p className="text-muted-foreground text-sm">
-              {moment(member.createdAt).format("MMM D, YYYY")}
+              {row.original.email}
             </p>
           );
-        }
-        if (member.status === "active") {
-          return (
-            <p className="text-muted-foreground text-sm">
-              {moment(member.joinedAt).format("MMM D, YYYY")}
-            </p>
-          );
-        }
-        return <span className="text-muted-foreground text-sm">—</span>;
+        },
+        size: 200,
       },
-      size: 150,
-    },
-    ...(teamTab === "pending"
-      ? [
-          {
-            accessorKey: "expiresAt",
-            header: "Expires",
-            cell: ({ row }) => {
-              const member = row.original;
-              if (member.status === "pending" && member.expiresAt) {
-                return (
-                  <p className="text-muted-foreground text-sm">
-                    {moment(member.expiresAt).format("MMM D, YYYY")}
-                  </p>
-                );
+      {
+        accessorKey: "role",
+        header: "Role",
+        cell: ({ row }) => {
+          const role = row.original.role;
+          return (
+            <Badge
+              variant={
+                role === "owner"
+                  ? "default"
+                  : role === "admin"
+                    ? "secondary"
+                    : "outline"
               }
-              return <span className="text-muted-foreground text-sm">—</span>;
-            },
-            size: 150,
-          } as ColumnDef<TeamMember>,
-        ]
-      : []),
-  ], [teamTab]);
+              className={
+                role === "owner"
+                  ? "border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
+                  : ""
+              }
+            >
+              {role.charAt(0).toUpperCase() + role.slice(1)}
+            </Badge>
+          );
+        },
+        size: 120,
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ row }) => {
+          const status = row.original.status;
+          return (
+            <Badge
+              variant="outline"
+              className="border-green-200 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400"
+            >
+              <User className="mr-1 h-3 w-3" />
+              {status === "active" ? "Active" : "Pending"}
+            </Badge>
+          );
+        },
+        size: 120,
+      },
+      {
+        accessorKey: "joinedAt",
+        header: teamTab === "pending" ? "Invited" : "Joined",
+        cell: ({ row }) => {
+          const member = row.original;
+          if (member.status === "pending" && member.createdAt) {
+            return (
+              <p className="text-muted-foreground text-sm">
+                {moment(member.createdAt).format("MMM D, YYYY")}
+              </p>
+            );
+          }
+          if (member.status === "active") {
+            return (
+              <p className="text-muted-foreground text-sm">
+                {moment(member.joinedAt).format("MMM D, YYYY")}
+              </p>
+            );
+          }
+          return <span className="text-muted-foreground text-sm">—</span>;
+        },
+        size: 150,
+      },
+      ...(teamTab === "pending"
+        ? [
+            {
+              accessorKey: "expiresAt",
+              header: "Expires",
+              cell: ({ row }) => {
+                const member = row.original;
+                if (member.status === "pending" && member.expiresAt) {
+                  return (
+                    <p className="text-muted-foreground text-sm">
+                      {moment(member.expiresAt).format("MMM D, YYYY")}
+                    </p>
+                  );
+                }
+                return <span className="text-muted-foreground text-sm">—</span>;
+              },
+              size: 150,
+            } as ColumnDef<TeamMember>,
+          ]
+        : []),
+    ],
+    [teamTab]
+  );
 
   // Filter data based on active tab
   const teamTableData = React.useMemo(() => {
@@ -1185,9 +1195,7 @@ export default function SettingsPage() {
             </Button>
             <Button
               type="button"
-              onClick={() =>
-                updateRoleForm.handleSubmit(onUpdateRoleSubmit)()
-              }
+              onClick={() => updateRoleForm.handleSubmit(onUpdateRoleSubmit)()}
               disabled={isSubmitting}
               className="gap-2 shadow-none"
             >

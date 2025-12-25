@@ -24,9 +24,9 @@ export const accounts = pgTable("account", {
   userName: text("user_name").notNull(),
   profile: jsonb("profile").$type<{
     first_name?: string;
-    last_name?: string; 
+    last_name?: string;
     avatar_url?: string;
-  }>(), 
+  }>(),
   phoneNumber: text("phone_number"),
   sso: jsonb("sso").$type<{
     values: Array<{ provider: AuthProvider; sub: string }>;
@@ -294,8 +294,6 @@ export const payments = pgTable("payment", {
 });
 
 export const featureEnum = pgEnum("feature", ["aisdk", "uploadthing"]);
-
-
 
 export const webhookEvent = [
   "customer.created",

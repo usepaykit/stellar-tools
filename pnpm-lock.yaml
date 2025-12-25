@@ -80,6 +80,9 @@ importers:
       '@stellar/stellar-sdk':
         specifier: ^14.4.2
         version: 14.4.2
+      '@stellartools/core':
+        specifier: file:./packages/core-adapter
+        version: link:packages/core-adapter
       '@tanstack/react-query':
         specifier: ^5.90.12
         version: 5.90.12(react@19.2.3)
@@ -192,9 +195,6 @@ importers:
         specifier: ^4.2.1
         version: 4.2.1
     devDependencies:
-      '@stellartools/core':
-        specifier: workspace:*
-        version: link:packages/core-adapter
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.18

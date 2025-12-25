@@ -1,4 +1,4 @@
-import { QueryProvider } from "@/components/providers/query-provider";
+import { QueryProvider } from "@/providers/query-provider";
 import { Toaster } from "@/components/ui/toast";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
