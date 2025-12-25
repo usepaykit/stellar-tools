@@ -1,7 +1,5 @@
 "use server";
 
-import { Stellar } from "@/core/stellar";
-import { WebhookDelivery } from "@/core/webhook-delivery";
 import {
   Checkout,
   Network,
@@ -13,6 +11,8 @@ import {
   webhookLogs,
   webhooks,
 } from "@/db";
+import { Stellar } from "@/integrations/stellar";
+import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { parseJSON } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -29,7 +29,6 @@ export const postWebhook = async (
     .insert(webhooks)
     .values({
       id: `wh_${nanoid(25)}`,
-      secretHash: `wh_sec_${nanoid(30)}`,
       isDisabled: false,
       organizationId,
       ...data,

@@ -1,11 +1,16 @@
 {
-  "name": "@stellartools/medusajs-adapter",
+  "name": "@stellartools/betterauth-adapter",
   "version": "0.0.1",
-  "description": "Stellar Tools MedusaJS Adapter",
+  "description": "Stellar Tools BetterAuth Adapter",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsup"
   },
+  "keywords": [
+    "stellar",
+    "betterauth",
+    "adapter"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
@@ -13,16 +18,8 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "keywords": [
-    "stellar",
-    "medusajs",
-    "adapter"
-  ],
   "author": "Emmanuel Odii",
   "license": "ISC",
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/usepaykit/stellar-tools.git"
@@ -31,7 +28,13 @@
     "url": "https://github.com/usepaykit/stellar-tools/issues"
   },
   "dependencies": {
-    "@medusajs/framework": "^2.12.3",
-    "@stellartools/core": "workspace:*"
+    "@better-auth/core": "^1.4.9",
+    "@stellartools/core": "workspace:*",
+    "better-auth": "^1.4.9",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   }
 }

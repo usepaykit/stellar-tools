@@ -85,3 +85,11 @@ export const updateCustomerSchema = customerSchema.partial().pick({
 export interface UpdateCustomer extends Partial<
   Pick<Customer, "email" | "name" | "phone" | "appMetadata">
 > {}
+
+export interface ListCustomers extends Partial<
+  Pick<Customer, "email" | "phone">
+> {}
+
+export const listCustomersSchema = schemaFor<ListCustomers>()(
+  z.union([z.object({ email: z.email() }), z.object({ phone: z.string() })])
+);

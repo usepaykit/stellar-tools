@@ -5,6 +5,7 @@ import { CustomerApi } from "./resources/customers";
 import { PaymentApi } from "./resources/payment";
 import { ProductApi } from "./resources/product";
 import { RefundApi } from "./resources/refund";
+import { SubscriptionApi } from "./resources/subscription";
 import { Webhook } from "./resources/webhook";
 import { StellarToolsConfig, stellarToolsConfigSchema } from "./schema/shared";
 
@@ -17,6 +18,7 @@ export class StellarTools {
   public payment: PaymentApi;
   public credit: CreditApi;
   public product: ProductApi;
+  public subscription: SubscriptionApi;
 
   constructor(config: StellarToolsConfig) {
     const { error, data } = stellarToolsConfigSchema.safeParse(config);
@@ -44,6 +46,7 @@ export class StellarTools {
     this.payment = new PaymentApi(apiClient);
     this.credit = new CreditApi(apiClient);
     this.product = new ProductApi(apiClient);
+    this.subscription = new SubscriptionApi(apiClient);
   }
 }
 
@@ -56,3 +59,4 @@ export * from "./schema/payment";
 export * from "./schema/refund";
 export * from "./schema/shared";
 export * from "./schema/credits";
+export * from "./schema/subscription";

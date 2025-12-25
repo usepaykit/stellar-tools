@@ -1,7 +1,7 @@
 "use server";
 
-import { Stellar } from "@/core/stellar";
 import { Network, Payment, db, payments } from "@/db";
+import { Stellar } from "@/integrations/stellar";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 

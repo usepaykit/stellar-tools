@@ -203,6 +203,14 @@ export const recurringPeriodEnum = pgEnum("recurring_period", [
 
 export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
+export const productTypeEnum = pgEnum("product_type", [
+  "subscription",
+  "one_time",
+  "metered",
+]);
+
+export type ProductType = (typeof productTypeEnum.enumValues)[number];
+
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -211,13 +219,11 @@ export const products = pgTable("product", {
   name: text("name").notNull(),
   description: text("description"),
   images: text("images").array(),
-  phoneNumberRequired: boolean("phone_number_required")
-    .default(false)
-    .notNull(),
   status: productStatusEnum("status").notNull(),
   assetId: text("asset_id")
     .notNull()
     .references(() => assets.id),
+  type: productTypeEnum("type").notNull(),
   billingType: billingTypeEnum("billing_type").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -265,6 +271,47 @@ export const checkouts = pgTable(
     amountOrProductCheck: check(
       "amount_or_product_check",
       sql`${table.productId} IS NOT NULL OR ${table.amount} IS NOT NULL`
+    ),
+  })
+);
+
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "active",
+  "past_due",
+  "canceled",
+  "paused",
+]);
+
+export const subscriptions = pgTable(
+  "subscription",
+  {
+    id: text("id").primaryKey(),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    productId: text("product_id")
+      .notNull()
+      .references(() => products.id),
+    status: subscriptionStatusEnum("status").notNull(),
+    currentPeriodStart: timestamp("current_period_start").notNull(),
+    currentPeriodEnd: timestamp("current_period_end").notNull(),
+    cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+    canceledAt: timestamp("canceled_at"),
+    pausedAt: timestamp("paused_at"),
+    lastPaymentId: text("last_payment_id"),
+    nextBillingDate: timestamp("next_billing_date"),
+    failedPaymentCount: integer("failed_payment_count").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    metadata: jsonb("metadata").$type<object>().default({}),
+    environment: networkEnum("network").notNull(),
+  },
+  (table) => ({
+    isSubscriptionProduct: check(
+      "is_subscription_product",
+      sql`
+      ${table.productId} IS NOT NULL AND ${products.type} = 'subscription'::product_type
+    `
     ),
   })
 );
