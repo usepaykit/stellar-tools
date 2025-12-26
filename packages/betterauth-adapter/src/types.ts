@@ -49,12 +49,7 @@ export interface StellarToolsBetterAuthOptions {
   onSubscriptionCanceled?: (data: Subscription) => Promise<void>;
 
   /**
-   * The function to call when a subscription is renewed.
+   * The function to call when a subscription is updated.
    */
-  onSubscriptionRenewed?: (data: Subscription) => Promise<void>;
-
-  /**
-   * The function to call when a subscription payment fails.
-   */
-  onSubscriptionPaymentFailed?: (data: Subscription) => Promise<void>;
+  onSubscriptionUpdated?: (data: Subscription) => Promise<void>;
 }
