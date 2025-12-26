@@ -1,7 +1,8 @@
 import { postWebhookLog } from "@/actions/webhook";
-import { Network, WebhookEvent } from "@/db";
+import { Network } from "@/db";
 import { Webhook as WebhookSchema } from "@/db/schema";
 import { Webhook } from "@stellartools/core";
+import { WebhookEvent } from "@stellartools/core";
 import { nanoid } from "nanoid";
 
 export class WebhookDelivery {

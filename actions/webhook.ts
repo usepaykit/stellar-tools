@@ -5,7 +5,6 @@ import {
   Network,
   Organization,
   Webhook,
-  WebhookEvent,
   WebhookLog,
   db,
   webhookLogs,
@@ -14,6 +13,7 @@ import {
 import { Stellar } from "@/integrations/stellar";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { parseJSON } from "@/lib/utils";
+import { WebhookEvent } from "@stellartools/core";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";

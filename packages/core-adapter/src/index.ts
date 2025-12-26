@@ -50,7 +50,7 @@ export class StellarTools {
 }
 
 export * from "./types";
-export { WebhookApi as Webhook } from "./resources/webhooks";
+export { WebhooksExternal as Webhook } from "./resources/webhooks.external";
 export { schemaFor, tryCatchAsync, validateRequiredKeys } from "./utils";
 export * from "./schema/customer";
 export * from "./schema/checkout";
