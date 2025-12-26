@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         const networkPassphrase =
             org.environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
 
-        const orgLogo = (org.metadata as { logo?: string[] })?.logo?.[0] || DEFAULT_LOGO_URL;
+        const orgLogo = org.logoUrl || DEFAULT_LOGO_URL;
         const orgUrl = `https://${orgSlug}.stellartools.io`;
         const orgSupportEmail = `${orgSlug}@stellartools.io`;
         const orgDescription =
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
         const currencies = productsWithAssets.map(({ product, asset }) => {
             const issuer = asset.issuer
             const productImage =
-                product.images?.[0] || (org.metadata as { logo?: string[] })?.logo?.[0];
+                product.images?.[0] || org.logoUrl;
 
             const currency: Record<string, unknown> = {
                 code: asset.code,
