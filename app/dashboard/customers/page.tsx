@@ -1,18 +1,28 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
+import { FullScreenModal } from "@/components/fullscreen-modal";
+import { TextField } from "@/components/input-picker";
+import { PhoneNumberPicker } from "@/components/phone-number-picker";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/toast";
+import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { truncate } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
-// Customer type definition
 type Customer = {
   id: string;
   name: string;
@@ -65,7 +75,6 @@ const mockCustomers: Customer[] = [
   },
 ];
 
-// Column definitions
 const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: "name",
@@ -210,39 +219,55 @@ const columns: ColumnDef<Customer>[] = [
   },
 ];
 
-// Filter mapping
 const filterMap: Record<number, string> = {
   0: "All",
   1: "First-time customers",
   2: "Recent customers",
 };
 
-// Filter options (numeric indices)
 const filterOptions = [0, 1, 2];
+
+const customerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.email(),
+  phoneNumber: z.object({
+    number: z.string(),
+    countryCode: z.string().min(1, "Country code is required"),
+  }),
+  metadata: z
+    .array(
+      z.object({
+        key: z.string().min(1, "Key is required"),
+        value: z.string(),
+      })
+    )
+    .default([])
+    .optional(),
+});
+
+type CustomerFormData = z.infer<typeof customerSchema>;
 
 export default function CustomersPage() {
   const [selectedFilter, setSelectedFilter] = useState<number>(0);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const router = useRouter();
 
-  // Handle row click to navigate to customer detail page
   const handleRowClick = (customer: Customer) => {
     router.push(`/dashboard/customers/${customer.id}`);
   };
 
-  // Table actions
   const tableActions: TableAction<Customer>[] = [
     {
       label: "Create invoice",
       onClick: (customer) => {
         console.log("Create invoice for:", customer);
-        // Add your create invoice logic here
+     
       },
     },
     {
       label: "Create subscription",
       onClick: (customer) => {
         console.log("Create subscription for:", customer);
-        // Add your create subscription logic here
       },
     },
   ];
@@ -252,17 +277,18 @@ export default function CustomersPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-6 p-6">
-            {/* Header Section */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold">Customers</h1>
-                <Button className="gap-2">
+                <Button
+                  className="gap-2 shadow-none"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
                   <Plus className="h-4 w-4" />
                   Add customer
                 </Button>
               </div>
 
-              {/* Filter Pills */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
                 {filterOptions.map((filterIndex) => (
                   <Button
@@ -281,7 +307,6 @@ export default function CustomersPage() {
               </div>
             </div>
 
-            {/* Data Table */}
             <DataTable
               columns={columns}
               data={mockCustomers}
@@ -292,6 +317,319 @@ export default function CustomersPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
+
+      <CustomerModal
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+      />
     </div>
+  );
+}
+
+type CustomerForModal = {
+  id?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  metadata?: Record<string, string>;
+};
+
+export function CustomerModal({
+  open,
+  onOpenChange,
+  customer,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  customer?: CustomerForModal | null;
+}) {
+  const isEditMode = !!customer;
+  const form = RHF.useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phoneNumber: { number: "", countryCode: "US" },
+      metadata: [],
+    },
+  });
+
+  const { fields, append, remove } = RHF.useFieldArray({
+    control: form.control,
+    name: "metadata",
+  });
+
+  React.useEffect(() => {
+    if (open && customer) {
+      let phoneNumber = { number: "", countryCode: "US" };
+      if (customer.phone) {
+        const phoneMatch = customer.phone.match(/\+?(\d+)\s*(.+)/);
+        if (phoneMatch) {
+          phoneNumber = {
+            countryCode: phoneMatch[1] === "1" ? "US" : phoneMatch[1],
+            number: phoneMatch[2].replace(/\D/g, ""),
+          };
+        }
+      }
+
+      const metadataArray = customer.metadata
+        ? Object.entries(customer.metadata).map(([key, value]) => ({
+            key,
+            value: value || "",
+          }))
+        : [];
+
+      form.reset({
+        name: customer.name || "",
+        email: customer.email || "",
+        phoneNumber,
+        metadata: metadataArray,
+      });
+    } else if (open && !customer) {
+      form.reset({
+        name: "",
+        email: "",
+        phoneNumber: { number: "", countryCode: "US" },
+        metadata: [],
+      });
+    }
+  }, [open, customer, form]);
+
+  const onSubmit = async (data: CustomerFormData) => {
+    try {
+      const phoneString = data.phoneNumber.number
+        ? `+${data.phoneNumber.countryCode === "US" ? "1" : ""} ${data.phoneNumber.number}`
+        : "";
+
+      const metadataRecord = (data.metadata || []).reduce((acc, item) => {
+        if (item.key) {
+          acc[item.key] = item.value || "";
+        }
+        return acc;
+      }, {} as Record<string, string>);
+
+      console.log("Creating customer:", {
+        name: data.name,
+        email: data.email || undefined,
+        phone: phoneString || undefined,
+        metadata: metadataRecord,
+      });
+
+
+      toast.success(
+        isEditMode
+          ? "Customer updated successfully"
+          : "Customer created successfully",
+        {
+          description: isEditMode
+            ? `${data.name} has been updated.`
+            : `${data.name} has been added to your customers.`,
+        } as Parameters<typeof toast.success>[1]
+      );
+
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to create customer";
+      toast.error("Failed to create customer", {
+        description: errorMessage,
+      } as Parameters<typeof toast.error>[1]);
+    }
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && !form.formState.isSubmitting) {
+      form.reset();
+    }
+    onOpenChange(newOpen);
+  };
+
+  return (
+    <FullScreenModal
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={isEditMode ? "Edit customer" : "Create customer"}
+      description={
+        isEditMode
+          ? "Update customer information"
+          : "Add a new customer to your organization"
+      }
+      size="full"
+      showCloseButton={true}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            className="shadow-none"
+            disabled={form.formState.isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={form.handleSubmit(onSubmit)}
+            className="shadow-none"
+            disabled={form.formState.isSubmitting}
+          >
+            {form.formState.isSubmitting
+              ? isEditMode
+                ? "Updating..."
+                : "Creating..."
+              : isEditMode
+                ? "Update customer"
+                : "Create customer"}
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-8 h-full">
+        <div className="flex flex-1 gap-8 overflow-hidden">
+          <div className="flex-1 space-y-6 overflow-y-auto">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Basic Information</h3>
+              <p className="text-muted-foreground text-sm">
+                Enter the customer&apos;s basic contact information.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <RHF.Controller
+                control={form.control}
+                name="name"
+                render={({ field, fieldState: { error } }) => (
+                  <TextField
+                    id="name"
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="Name"
+                    error={error?.message || null}
+                    placeholder="John Doe"
+                    className="w-full shadow-none"
+                    required
+                  />
+                )}
+              />
+
+              <RHF.Controller
+                control={form.control}
+                name="email"
+                render={({ field, fieldState: { error } }) => (
+                  <TextField
+                    id="email"
+                    type="email"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    label="Email"
+                    error={error?.message || null}
+                    placeholder="john@example.com"
+                    className="w-full shadow-none"
+                  />
+                )}
+              />
+            </div>
+
+            <RHF.Controller
+              control={form.control}
+              name="phoneNumber"
+              render={({ field, fieldState: { error } }) => (
+                <PhoneNumberPicker
+                  id="phone"
+                  value={field.value}
+                  onChange={field.onChange}
+                  label="Phone number"
+                  error={error?.message || null}
+                  groupClassName="w-full shadow-none"
+                />
+              )}
+            />
+          </div>
+
+          <Separator orientation="vertical" className="h-auto" />
+
+          <div className="flex-1 space-y-6 overflow-y-auto">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Metadata</h3>
+              <p className="text-muted-foreground text-sm">
+                Add custom key-value pairs to store additional information about this customer.
+              </p>
+            </div>
+
+            <Card className="shadow-none">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {fields.length === 0 ? (
+                    <div className="text-muted-foreground text-center py-8 text-sm">
+                      No metadata entries. Click &quot;Add metadata&quot; to add one.
+                    </div>
+                  ) : (
+                    fields.map((field, index) => (
+                      <div
+                        key={field.id}
+                        className="flex items-start gap-3 p-4 border rounded-lg"
+                      >
+                        <div className="flex-1 grid grid-cols-2 gap-3">
+                          <RHF.Controller
+                            control={form.control}
+                            name={`metadata.${index}.key`}
+                            render={({ field: fieldProps, fieldState: { error } }) => (
+                              <TextField
+                                id={`metadata-key-${index}`}
+                                value={fieldProps.value || ""}
+                                onChange={fieldProps.onChange}
+                                label="Key"
+                                error={error?.message || null}
+                                placeholder="e.g., company"
+                                className="w-full shadow-none"
+                              />
+                            )}
+                          />
+                          <RHF.Controller
+                            control={form.control}
+                            name={`metadata.${index}.value`}
+                            render={({ field: fieldProps, fieldState: { error } }) => (
+                              <TextField
+                                id={`metadata-value-${index}`}
+                                value={fieldProps.value || ""}
+                                onChange={fieldProps.onChange}
+                                label="Value"
+                                error={error?.message || null}
+                                placeholder="e.g., Acme Inc"
+                                className="w-full shadow-none"
+                              />
+                            )}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => remove(index)}
+                          className="mt-5 shrink-0 shadow-none"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => append({ key: "", value: "" })}
+                    className="w-full shadow-none"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add metadata
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </form>
+    </FullScreenModal>
   );
 }

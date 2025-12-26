@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { RefundModal } from "@/app/dashboard/transactions/page";
+import { CustomerModal } from "@/app/dashboard/customers/page";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -51,14 +52,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-// Wallet Address type definition
 type WalletAddress = {
   id: string;
   address: string;
   memo?: string;
 };
 
-// Customer type definition
 type Customer = {
   id: string;
   name: string;
@@ -69,7 +68,6 @@ type Customer = {
   businessName?: string;
 };
 
-// Payment type definition
 type Payment = {
   id: string;
   amount: number;
@@ -80,7 +78,6 @@ type Payment = {
   transactionHash?: string;
 };
 
-// Mock customer data - in real app, fetch by ID
 const getCustomerById = (id: string): Customer | null => {
   const customers: Customer[] = [
     {
@@ -182,7 +179,6 @@ const getCustomerById = (id: string): Customer | null => {
   return customers.find((c) => c.id === id) || null;
 };
 
-// Mock payments data
 const getPaymentsByCustomerId = (_customerId: string): Payment[] => {
   return [
     {
@@ -214,7 +210,6 @@ const getPaymentsByCustomerId = (_customerId: string): Payment[] => {
   ];
 };
 
-// Status badge component
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
     succeeded: {
@@ -251,7 +246,7 @@ const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   );
 };
 
-// Copy button component
+
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   const { copied, handleCopy } = useCopy();
 
@@ -284,6 +279,7 @@ export default function CustomerDetailPage() {
   const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(
     null
   );
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -415,7 +411,11 @@ export default function CustomerDetailPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Edit customer</DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setIsEditModalOpen(true)}
+                      >
+                        Edit customer
+                      </DropdownMenuItem>
                       <DropdownMenuItem>View transactions</DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive">
                         Delete customer
@@ -715,7 +715,12 @@ export default function CustomerDetailPage() {
                     <h3 className="text-lg font-semibold sm:text-xl">
                       Details
                     </h3>
-                    <Button variant="ghost" size="icon-sm" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="h-8 w-8"
+                      onClick={() => setIsEditModalOpen(true)}
+                    >
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit details</span>
                     </Button>
@@ -791,7 +796,12 @@ export default function CustomerDetailPage() {
                     <h3 className="text-lg font-semibold sm:text-xl">
                       Metadata
                     </h3>
-                    <Button variant="ghost" size="icon-sm" className="h-8 w-8">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="h-8 w-8"
+                      onClick={() => setIsEditModalOpen(true)}
+                    >
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit metadata</span>
                     </Button>
@@ -823,6 +833,23 @@ export default function CustomerDetailPage() {
           }
         }}
         initialPaymentId={selectedPaymentId || undefined}
+      />
+
+      {/* Edit Customer Modal */}
+      <CustomerModal
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        customer={
+          customer
+            ? {
+                id: customer.id,
+                name: customer.name,
+                email: customer.email,
+                phone: customer.phone,
+                metadata: {}, // TODO: Add metadata from customer data if available
+              }
+            : null
+        }
       />
     </div>
   );

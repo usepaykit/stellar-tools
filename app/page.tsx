@@ -4,7 +4,6 @@ import { AppConnectionWidget } from "@/components/landing/app-connection-wdget";
 import { HeroBackground } from "@/components/landing/hero-background";
 import HeroSection from "@/components/landing/hero-section";
 import { Header } from "@/components/ui/navbar";
-import { File, Search, Settings } from "lucide-react";
 
 export default function Home() {
   return (
