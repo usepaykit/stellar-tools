@@ -26,11 +26,15 @@ export class SubscriptionApi {
       })
     );
 
-    if (subscriptionError || !response.ok) {
+    if (subscriptionError) {
       return ERR(
-        new Error(
-          `Failed to create subscription: ${subscriptionError?.message}`
-        )
+        new Error(`Failed to create subscription: ${subscriptionError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to create subscription: ${response.error?.message}`)
       );
     }
 
@@ -42,11 +46,17 @@ export class SubscriptionApi {
       this.apiClient.get<Subscription>(`/subscriptions/${id}`)
     );
 
-    if (subscriptionError || !response.ok) {
+    if (subscriptionError) {
       return ERR(
         new Error(
-          `Failed to retrieve subscription: ${subscriptionError?.message}`
+          `Failed to retrieve subscription: ${subscriptionError.message}`
         )
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to retrieve subscription: ${response.error?.message}`)
       );
     }
 
@@ -60,9 +70,15 @@ export class SubscriptionApi {
       })
     );
 
-    if (subscriptionError || !response.ok) {
+    if (subscriptionError) {
       return ERR(
-        new Error(`Failed to list subscriptions: ${subscriptionError?.message}`)
+        new Error(`Failed to list subscriptions: ${subscriptionError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to list subscriptions: ${response.error?.message}`)
       );
     }
 
@@ -74,9 +90,15 @@ export class SubscriptionApi {
       this.apiClient.post<Subscription>(`/subscriptions/${id}/pause`)
     );
 
-    if (subscriptionError || !response.ok) {
+    if (subscriptionError) {
       return ERR(
-        new Error(`Failed to pause subscription: ${subscriptionError?.message}`)
+        new Error(`Failed to pause subscription: ${subscriptionError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to pause subscription: ${response.error?.message}`)
       );
     }
 
@@ -88,11 +110,15 @@ export class SubscriptionApi {
       this.apiClient.post<Subscription>(`/subscriptions/${id}/resume`)
     );
 
-    if (subscriptionError || !response.ok) {
+    if (subscriptionError) {
       return ERR(
-        new Error(
-          `Failed to resume subscription: ${subscriptionError?.message}`
-        )
+        new Error(`Failed to resume subscription: ${subscriptionError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to resume subscription: ${response.error?.message}`)
       );
     }
 
@@ -106,7 +132,7 @@ export class SubscriptionApi {
     const { error, data } = updateSubscriptionSchema.safeParse(params);
 
     if (error) {
-      return ERR(new Error(`Invalid parameters: ${error?.message}`));
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
     const [response, subscriptionError] = await tryCatchAsync(
@@ -115,11 +141,15 @@ export class SubscriptionApi {
       })
     );
 
-    if (subscriptionError || !response.ok) {
+    if (subscriptionError) {
       return ERR(
-        new Error(
-          `Failed to update subscription: ${subscriptionError?.message}`
-        )
+        new Error(`Failed to update subscription: ${subscriptionError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to update subscription: ${response.error?.message}`)
       );
     }
 
@@ -131,11 +161,15 @@ export class SubscriptionApi {
       this.apiClient.post<Subscription>(`/subscriptions/${id}/cancel`)
     );
 
-    if (subscriptionError || !response.ok) {
+    if (subscriptionError) {
       return ERR(
-        new Error(
-          `Failed to cancel subscription: ${subscriptionError?.message}`
-        )
+        new Error(`Failed to cancel subscription: ${subscriptionError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to cancel subscription: ${response.error?.message}`)
       );
     }
 

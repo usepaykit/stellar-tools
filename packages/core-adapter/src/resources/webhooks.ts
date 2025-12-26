@@ -6,12 +6,12 @@ import {
   createWebhookSchema,
   updateWebhookSchema,
 } from "../schema/webhooks";
-import { ERR, OK, tryCatchAsync } from "../utils";
+import { ERR, OK, ResultFP, tryCatchAsync } from "../utils";
 
 export class WebhookApi {
   constructor(private apiClient: ApiClient) {}
 
-  async create(params: CreateWebhook) {
+  async create(params: CreateWebhook): Promise<ResultFP<Webhook, Error>> {
     const { error, data } = createWebhookSchema.safeParse(params);
 
     if (error) {
@@ -22,28 +22,33 @@ export class WebhookApi {
       this.apiClient.post<Webhook>("/webhooks", { body: JSON.stringify(data) })
     );
 
-    if (webhookError) {
+    if (webhookError || !response.ok) {
       return ERR(
-        new Error(`Failed to create webhook: ${webhookError.message}`)
+        new Error(`Failed to create webhook: ${webhookError?.message}`)
       );
     }
 
     return OK(response.value);
   }
 
-  async retrieve(id: string) {
-    const [response, error] = await tryCatchAsync(
+  async retrieve(id: string): Promise<ResultFP<Webhook, Error>> {
+    const [response, webhookError] = await tryCatchAsync(
       this.apiClient.get<Webhook>(`/webhooks/${id}`)
     );
 
-    if (error) {
-      return ERR(new Error(`Failed to retrieve webhook: ${error.message}`));
+    if (webhookError || !response.ok) {
+      return ERR(
+        new Error(`Failed to retrieve webhook: ${webhookError?.message}`)
+      );
     }
 
-    return OK(response.value);
+    return OK(response.value!);
   }
 
-  async update(id: string, params: UpdateWebhook) {
+  async update(
+    id: string,
+    params: UpdateWebhook
+  ): Promise<ResultFP<Webhook, Error>> {
     const { error, data } = updateWebhookSchema.safeParse(params);
 
     if (error) {
@@ -56,23 +61,23 @@ export class WebhookApi {
       })
     );
 
-    if (webhookError) {
+    if (webhookError || !response.ok) {
       return ERR(
-        new Error(`Failed to update webhook: ${webhookError.message}`)
+        new Error(`Failed to update webhook: ${webhookError?.message}`)
       );
     }
 
     return OK(response.value);
   }
 
-  async delete(id: string) {
+  async delete(id: string): Promise<ResultFP<Webhook, Error>> {
     const [response, webhookError] = await tryCatchAsync(
       this.apiClient.delete<Webhook>(`/webhooks/${id}`)
     );
 
-    if (webhookError) {
+    if (webhookError || !response.ok) {
       return ERR(
-        new Error(`Failed to delete webhook: ${webhookError.message}`)
+        new Error(`Failed to delete webhook: ${webhookError?.message}`)
       );
     }
 

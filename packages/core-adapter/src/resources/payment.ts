@@ -4,12 +4,15 @@ import {
   RetrievePayment,
   retrievePaymentSchema,
 } from "../schema/payment";
-import { ERR, OK, tryCatchAsync } from "../utils";
+import { ERR, OK, ResultFP, tryCatchAsync } from "../utils";
 
 export class PaymentApi {
   constructor(private apiClient: ApiClient) {}
 
-  async retrieve(id: string, opts?: RetrievePayment) {
+  async retrieve(
+    id: string,
+    opts?: RetrievePayment
+  ): Promise<ResultFP<Payment, Error>> {
     const { error, data } = retrievePaymentSchema.safeParse(opts);
 
     if (error) {
@@ -25,6 +28,12 @@ export class PaymentApi {
     if (paymentError) {
       return ERR(
         new Error(`Failed to retrieve payment: ${paymentError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to retrieve payment: ${response.error?.message}`)
       );
     }
 

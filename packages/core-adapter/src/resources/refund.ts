@@ -1,11 +1,11 @@
 import { ApiClient } from "../api-client";
 import { CreateRefund, Refund, createRefundSchema } from "../schema/refund";
-import { ERR, OK, tryCatchAsync } from "../utils";
+import { ERR, OK, ResultFP, tryCatchAsync } from "../utils";
 
 export class RefundApi {
   constructor(private apiClient: ApiClient) {}
 
-  async create(params: CreateRefund) {
+  async create(params: CreateRefund): Promise<ResultFP<Refund, Error>> {
     const { error, data } = createRefundSchema.safeParse(params);
 
     if (error) {
@@ -20,6 +20,12 @@ export class RefundApi {
 
     if (refundError) {
       return ERR(new Error(`Failed to create refund: ${refundError.message}`));
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to create refund: ${response.error?.message}`)
+      );
     }
 
     return OK(response.value);
