@@ -28,23 +28,18 @@ export const retrieveOrganizations = async (
     );
 };
 
-export const retrieveOrganization = async (id: string) => {
+export const retrieveOrganization = async (
+  params: { id: string } | { slug: string }
+) => {
+  const whereClause =
+    "id" in params
+      ? eq(organizations.id, params.id)
+      : eq(organizations.slug, params.slug as string);
+
   const [organization] = await db
     .select()
     .from(organizations)
-    .where(eq(organizations.id, id))
-    .limit(1);
-
-  if (!organization) throw new Error("Organization not found");
-
-  return organization;
-};
-
-export const retrieveOrganizationBySlug = async (slug: string) => {
-  const [organization] = await db
-    .select()
-    .from(organizations)
-    .where(eq(organizations.slug, slug))
+    .where(whereClause)
     .limit(1);
 
   if (!organization) throw new Error("Organization not found");
@@ -72,5 +67,3 @@ export const deleteOrganization = async (id: string) => {
 
   return null;
 };
-
-
