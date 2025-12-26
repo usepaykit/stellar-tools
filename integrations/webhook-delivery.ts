@@ -1,8 +1,6 @@
 import { postWebhookLog } from "@/actions/webhook";
-import { Network } from "@/db";
 import { Webhook as WebhookSchema } from "@/db/schema";
-import { Webhook } from "@stellartools/core";
-import { WebhookEvent } from "@stellartools/core";
+import { Webhook, WebhookEvent } from "@stellartools/core";
 import { nanoid } from "nanoid";
 
 export class WebhookDelivery {
@@ -11,8 +9,7 @@ export class WebhookDelivery {
   deliver = async (
     webhook: WebhookSchema,
     eventType: WebhookEvent,
-    payload: Record<string, unknown>,
-    environment: Network
+    payload: Record<string, unknown>
   ) => {
     const startTime = Date.now();
 
@@ -24,7 +21,6 @@ export class WebhookDelivery {
       type: eventType,
       created: Math.floor(Date.now() / 1000),
       data: payload,
-      livemode: environment === "mainnet",
     };
 
     const signature = new Webhook().generateSignature(
@@ -55,7 +51,6 @@ export class WebhookDelivery {
         payload: webhookPayload,
         statusCode: response.status,
         errorMessage: response.ok ? null : responseText,
-        environment,
       });
 
       if (!response.ok) {
@@ -80,7 +75,6 @@ export class WebhookDelivery {
         payload: webhookPayload,
         statusCode: null,
         errorMessage,
-        environment,
       });
 
       console.error(

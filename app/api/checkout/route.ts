@@ -1,8 +1,9 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { postCustomer, retrieveCustomer } from "@/actions/customers";
+import { triggerWebhooks } from "@/actions/webhook";
 import { Checkout, Customer } from "@/db";
-import { schemaFor } from "@stellartools/core";
+import { schemaFor, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -33,11 +34,11 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  let customer: Omit<Customer, "internalMetadata"> | null = null;
+  let customer: Customer | null = null;
 
-  if (data.customerEmail) {
-    customer = await retrieveCustomer(data.customerEmail, organizationId);
-  } else {
+  if (data?.customerId) {
+    customer = await retrieveCustomer(data.customerId, organizationId);
+  } else if (data?.customerEmail) {
     customer = await postCustomer({
       email: data.customerEmail as string,
       name: data.customerEmail?.split("@")[0],
@@ -45,6 +46,12 @@ export const POST = async (req: NextRequest) => {
       environment,
       ...(data.metadata && { appMetadata: data.metadata }),
     });
+
+    await tryCatchAsync(
+      triggerWebhooks(organizationId, "customer.created", { customer })
+    );
+  } else {
+    throw new Error("Customer ID or email is required");
   }
 
   const checkout = await postCheckout({
@@ -52,8 +59,13 @@ export const POST = async (req: NextRequest) => {
     organizationId,
     environment,
     customerId: customer?.id,
-    ...(data.amount && { metadata: { ...data.metadata, amount: data.amount } }),
+    ...(data.amount && { amount: data.amount }),
+    ...(data.assetCode && { assetCode: data.assetCode }),
   });
+
+  await tryCatchAsync(
+    triggerWebhooks(organizationId, "checkout.created", { checkout })
+  );
 
   return NextResponse.json({ data: checkout });
 };
