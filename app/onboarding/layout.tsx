@@ -1,20 +1,16 @@
 import { getCurrentUser } from "@/actions/auth";
 import { redirect } from "next/navigation";
 
-export default async function DashboardLayout({
+export default async function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const user = await getCurrentUser();
 
-  if (!user) {
-    redirect("/signin");
+  if (user?.isOnboarded) {
+    return redirect("/dashboard");
   }
 
-  if (!user.isOnboarded) {
-    redirect("/onboarding");
-  }
-
-  return <>{children}</>;
+  return <div>{children}</div>;
 }

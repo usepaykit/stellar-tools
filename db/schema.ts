@@ -24,16 +24,19 @@ export const accounts = pgTable("account", {
   email: text("email").notNull().unique(),
   userName: text("user_name").notNull(),
   profile: jsonb("profile").$type<{
-    first_name?: string;
-    last_name?: string;
-    avatar_url?: string;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
   }>(),
-  sso: jsonb("sso").$type<{
-    values: Array<{ provider: AuthProvider; sub: string }>;
-  }>(),
+  sso: jsonb("sso")
+    .$type<{
+      values: Array<{ provider: AuthProvider; sub: string }>;
+    }>()
+    .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
+  isOnboarded: boolean("is_onboarded").default(false).notNull(),
 });
 
 export const auth = pgTable("auth", {
@@ -473,8 +476,8 @@ export const creditTransactions = pgTable(
   })
 );
 
-export const passwordResetTokens = pgTable(
-  "password_reset_token",
+export const passwordReset = pgTable(
+  "password_reset",
   {
     id: text("id").primaryKey(),
     accountId: text("account_id")
@@ -482,18 +485,12 @@ export const passwordResetTokens = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     token: text("token").notNull().unique(),
     expiresAt: timestamp("expires_at").notNull(),
-    isUsed: boolean("is_used").default(false).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
     usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     tokenIndex: index("password_reset_token_idx").on(table.token),
-    accountIdIndex: index("password_reset_token_account_idx").on(
-      table.accountId
-    ),
-    expiresAtIndex: index("password_reset_token_expires_idx").on(
-      table.expiresAt
-    ),
   })
 );
 
@@ -515,4 +512,4 @@ export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
 export type Subscription = InferSelectModel<typeof subscriptions>;
 export type Auth = InferSelectModel<typeof auth>;
-export type PasswordResetToken = InferSelectModel<typeof passwordResetTokens>;
+export type PasswordReset = InferSelectModel<typeof passwordReset>;

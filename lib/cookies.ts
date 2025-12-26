@@ -1,39 +1,39 @@
 import { cookies } from "next/headers";
 
-// Helper function to set auth cookies
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
+
 export const setAuthCookies = async (
-  authToken: string,
-  accountId: string,
-  expiresAt: Date
+  accessToken: string,
+  refreshToken: string
 ) => {
   const cookieStore = await cookies();
-  cookieStore.set("auth_token", authToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    expires: expiresAt,
-    path: "/",
+
+  cookieStore.set("access_token", accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 30 * 60, // 30 minutes in seconds
   });
-  cookieStore.set("account_id", accountId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    expires: expiresAt,
-    path: "/",
+
+  cookieStore.set("refresh_token", refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 30 * 24 * 60 * 60, // 30 days in seconds
   });
 };
 
-// Helper function to clear auth cookies
-export const clearAuthCookies = async () => {
-  const cookieStore = await cookies();
-  cookieStore.delete("auth_token");
-  cookieStore.delete("account_id");
-};
-    
 export const getAuthCookies = async () => {
   const cookieStore = await cookies();
   return {
-    authToken: cookieStore.get("auth_token")?.value,
-    accountId: cookieStore.get("account_id")?.value,
+    accessToken: cookieStore.get("access_token")?.value,
+    refreshToken: cookieStore.get("refresh_token")?.value,
   };
+};
+
+export const clearAuthCookies = async () => {
+  const cookieStore = await cookies();
+  cookieStore.delete("access_token");
+  cookieStore.delete("refresh_token");
 };

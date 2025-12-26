@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { googleSignin, signUp } from "@/actions/auth";
+import { accountValidator } from "@/actions/auth";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -40,28 +40,29 @@ type SignUpFormData = z.infer<typeof signUpSchema>;
 export default function SignUp() {
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect") ?? "/dashboard";
 
   const signupMutation = useMutation({
-    mutationFn: (data: { name: string; email: string; password: string }) =>
-      signUp({
-        userName: data.name,
-        email: data.email,
-        password: data.password,
-      }),
-    onSuccess: () => {
-      toast.success("Account created successfully", {
-        id: "signup-success",
-        description: "Redirecting to sign in...",
+    mutationFn: async (data: {
+      name: string;
+      email: string;
+      password: string;
+    }) => {
+      return await accountValidator(data.email.toLowerCase(), {
+        provider: "local",
+        sub: data.password,
       });
-      router.push("/dashboard");
+    },
+    onSuccess: ({ isNewUser }) => {
+      toast.success("Logged in successfully");
+      if (isNewUser) router.push("/onboarding");
+      else router.push("/dashboard");
     },
     onError: (error: Error) => {
       toast.error("Sign-up failed", {
         id: "signup-error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Unable to create account. Please try again.",
+        description: error.message,
       });
     },
   });
@@ -78,17 +79,22 @@ export default function SignUp() {
     signupMutation.mutate(data);
   };
 
-  const handleGoogleSignUp = async () => {
-    try {
-      const url = await googleSignin({
-        intent: "SIGN_UP",
-        redirect: "/dashboard",
-      });
-      router.push(url);
-    } catch {
-      toast.error("Google sign-up failed");
-    }
-  };
+  const handleGoogleSignIn = React.useCallback(async () => {
+    const authUrlDomain = "https://accounts.google.com/o/oauth2/v2/auth";
+
+    const authUrlParams = {
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      redirect_uri: `${process.env.APP_URL}/api/auth/verify-callback`,
+      response_type: "code",
+      scope: "openid profile email",
+      access_type: "offline",
+      prompt: "consent",
+      state: btoa(JSON.stringify({ intent: "SIGN_IN", redirect })),
+    };
+
+    const authUrl = `${authUrlDomain}?${new URLSearchParams(authUrlParams as Record<string, string>)}`;
+    router.push(authUrl);
+  }, [router, redirect]);
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
@@ -197,9 +203,9 @@ export default function SignUp() {
           <Button
             type="button"
             variant="ghost"
-            onClick={handleGoogleSignUp}
+            onClick={handleGoogleSignIn}
             className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
-            disabled={ signupMutation.isPending}
+            disabled={signupMutation.isPending}
           >
             <Google className="h-5 w-5" />
             <span className="text-foreground text-sm font-semibold">
@@ -301,9 +307,9 @@ export default function SignUp() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={signupMutation.isPending }
+            disabled={signupMutation.isPending}
           >
-            {signupMutation.isPending  ? (
+            {signupMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating account...

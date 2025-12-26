@@ -1,4 +1,5 @@
-import { handleGoogleOAuth } from "@/actions/auth";
+import { accountValidator } from "@/actions/auth";
+import { tryCatchSync } from "@stellartools/core";
 import { OAuth2Client } from "google-auth-library";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -10,7 +11,8 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     const errorDescription =
-      searchParams.get("error_description") || "Authentication failed";
+      searchParams.get("error_description") ?? "Authentication failed";
+
     return NextResponse.redirect(
       new URL(
         `/signin?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription)}`,
@@ -22,56 +24,61 @@ export async function GET(req: NextRequest) {
   if (!code) {
     return NextResponse.redirect(
       new URL(
-        "/signin?error=no_code&error_description=No authorization code received",
+        `/signin?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`,
         req.url
       )
     );
   }
 
-  let intent: "SIGN_IN" | "SIGN_UP" = "SIGN_IN";
-  let redirect = "/dashboard";
+  let redirect = null;
 
-  if (state) {
-    try {
-      const stateData = JSON.parse(Buffer.from(state, "base64").toString());
-      intent = stateData.intent || "SIGN_IN";
-      redirect = stateData.redirect || "/dashboard";
-    } catch {
-      // ignore invalid state
-    }
+  const [stateData] = tryCatchSync<{ redirect: string; [x: string]: any }>(() =>
+    JSON.parse(Buffer.from(state ?? "", "base64").toString())
+  );
+
+  if (stateData?.redirect) {
+    redirect = decodeURIComponent(stateData.redirect);
   }
 
-  try {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const client = new OAuth2Client(
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+    process.env.GOOGLE_CLIENT_SECRET!,
+    `${process.env.APP_URL}/api/auth/verify-callback`
+  );
 
-    if (!clientId || !clientSecret) {
-      throw new Error("Google OAuth credentials not configured");
-    }
+  const { tokens } = await client.getToken(code);
 
-    const client = new OAuth2Client(
-      clientId,
-      clientSecret,
-      `${process.env.APP_URL}/api/auth/verify-callback`
-    );
-
-    const { tokens } = await client.getToken(code);
-
-    if (!tokens.id_token) {
-      throw new Error("No ID token received from Google");
-    }
-
-    await handleGoogleOAuth(tokens.id_token, intent);
-
-    return NextResponse.redirect(new URL(redirect, req.url));
-  } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Authentication failed";
-    return NextResponse.redirect(
-      new URL(
-        `/signin?error=auth_failed&error_description=${encodeURIComponent(errorMessage)}`,
-        req.url
-      )
-    );
+  if (!tokens.id_token) {
+    throw new Error("No ID token received from Google");
   }
+
+  const ticket = await client.verifyIdToken({
+    idToken: tokens.id_token,
+    audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+  });
+
+  const payload = ticket.getPayload();
+
+  if (!payload) {
+    throw new Error("Invalid token payload");
+  }
+
+  if (payload.aud !== process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
+    throw new Error("Token audience mismatch");
+  }
+
+  if (!payload.email) {
+    throw new Error("Email not found in token");
+  }
+  const nameParts = payload.name?.split(/\s+/) || [];
+  const firstName = payload.given_name || nameParts[0] || "";
+  const lastName = payload.family_name || nameParts.slice(1).join(" ") || "";
+
+  await accountValidator(
+    payload.email,
+    { provider: "google", sub: payload.sub },
+    { firstName, lastName, avatarUrl: payload.picture }
+  );
+
+  return NextResponse.redirect(new URL(redirect ?? "/dashboard", req.url));
 }

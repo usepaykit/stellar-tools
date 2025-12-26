@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import * as React from "react";
 
-import { googleSignin, signIn } from "@/actions/auth";
+import { accountValidator } from "@/actions/auth";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/input-picker";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -38,12 +38,21 @@ type SignInFormData = z.infer<typeof signInSchema>;
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const redirect = searchParams.get("redirect") ?? "/dashboard";
 
   const signinMutation = useMutation({
-    mutationFn: (data: { email: string; password: string }) => signIn(data),
-    onSuccess: () => {
-      toast.success("Signed in successfully");
-      router.push("/dashboard");
+    mutationFn: async (data: { email: string; password: string }) => {
+      return await accountValidator(data.email, {
+        provider: "local",
+        sub: data.password,
+      });
+    },
+    onSuccess: ({ isNewUser }) => {
+      toast.success("Logged in successfully");
+      if (isNewUser) router.push("/onboarding");
+      else router.push("/dashboard");
     },
     onError: (error: Error) => {
       toast.error("Sign-in failed", {
@@ -65,17 +74,22 @@ export default function SignIn() {
     signinMutation.mutate(data);
   };
 
-  const handleGoogleSignIn = async () => {
-    try {
-      const url = await googleSignin({
-        intent: "SIGN_IN",
-        redirect: "/dashboard",
-      });
-      router.push(url);
-    } catch {
-      toast.error("Google sign-in failed");
-    }
-  };
+  const handleGoogleSignIn = React.useCallback(async () => {
+    const authUrlDomain = "https://accounts.google.com/o/oauth2/v2/auth";
+
+    const authUrlParams = {
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      redirect_uri: `${process.env.APP_URL}/api/auth/verify-callback`,
+      response_type: "code",
+      scope: "openid profile email",
+      access_type: "offline",
+      prompt: "consent",
+      state: btoa(JSON.stringify({ intent: "SIGN_IN", redirect })),
+    };
+
+    const authUrl = `${authUrlDomain}?${new URLSearchParams(authUrlParams as Record<string, string>)}`;
+    router.push(authUrl);
+  }, [router, redirect]);
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">

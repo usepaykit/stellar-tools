@@ -1,32 +1,21 @@
 "use server";
 
-import { Account, Auth, auth, db } from "@/db";
+import { Account, Auth, PasswordReset, auth, db, passwordReset } from "@/db";
+import { JWT } from "@/integrations/jwt";
+import { Resend } from "@/integrations/resend";
 import {
   clearAuthCookies,
   getAuthCookies,
   setAuthCookies,
 } from "@/lib/cookies";
-import { sendEmail } from "@/lib/email";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { OAuth2Client } from "google-auth-library";
+import moment from "moment";
 import { nanoid } from "nanoid";
 
 import { postAccount, putAccount, retrieveAccount } from "./account";
-import {
-  createPasswordResetToken,
-  markPasswordResetTokenAsUsed,
-  retrievePasswordResetToken,
-} from "./password-reset";
 
-const getGoogleClient = () => {
-  const clientId =
-    process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  if (!clientId) {
-    throw new Error("GOOGLE_CLIENT_ID is not configured");
-  }
-  return new OAuth2Client(clientId);
-};
+// -- Auth --
 
 export const postAuth = async (params: Partial<Auth>): Promise<Auth> => {
   const [response] = await db
@@ -39,12 +28,15 @@ export const postAuth = async (params: Partial<Auth>): Promise<Auth> => {
   return response;
 };
 
-export const retieveAuth = async (id: string) => {
-  const [response] = await db
-    .select()
-    .from(auth)
-    .where(eq(auth.id, id))
-    .limit(1);
+export const retrieveAuth = async (
+  params: { id: string } | { accountId: string }
+) => {
+  const whereClause =
+    "id" in params
+      ? eq(auth.id, params.id)
+      : eq(auth.accountId, params.accountId);
+
+  const [response] = await db.select().from(auth).where(whereClause).limit(1);
 
   if (!response) throw new Error("Auth not found");
 
@@ -71,425 +63,297 @@ export const deleteAuth = async (id: string) => {
   return response;
 };
 
-export const retrieveAuthByAccountId = async (accountId: string) => {
-  const [response] = await db
-    .select()
-    .from(auth)
-    .where(eq(auth.accountId, accountId))
-    .limit(1);
+// -- Password Reset --
 
-  if (!response) throw new Error("Auth not found");
+export const createPasswordResetToken = async (
+  params: Partial<PasswordReset>
+) => {
+  const [result] = await db
+    .insert(passwordReset)
+    .values({
+      ...params,
+      usedAt: null,
+      id: `pr_${nanoid(25)}`,
+      token: `pr+tok_${nanoid(64)}`,
+    } as PasswordReset)
+    .returning();
 
-  return response;
+  if (!result) throw new Error("Failed to create password reset token");
+
+  return result;
 };
 
-export const signUp = async (
-  params: Partial<Account> & { password: string }
+export const retrievePasswordReset = async (
+  params: { id: string } | { token: string }
 ) => {
-  if (!params.email) throw new Error("Email is required");
+  const whereClause =
+    "id" in params
+      ? eq(passwordReset.id, params.id)
+      : eq(passwordReset.token, params.token);
 
-  // Check if email already exists
-  const existingAccount = await retrieveAccount({ email: params.email.toLowerCase() });
-  if (existingAccount) {
-    throw new Error("Email already registered");
+  const [result] = await db
+    .select()
+    .from(passwordReset)
+    .where(whereClause)
+    .limit(1);
+
+  if (!result) throw new Error("Password reset not found");
+
+  return result;
+};
+
+export const putPasswordReset = async (
+  id: string,
+  params: Partial<PasswordReset>
+) => {
+  const [result] = await db
+    .update(passwordReset)
+    .set({ ...params, updatedAt: new Date() })
+    .where(eq(passwordReset.id, id))
+    .returning();
+
+  if (!result) throw new Error("Failed to update password reset");
+
+  return result;
+};
+
+export const deletePasswordReset = async (id: string) => {
+  const [result] = await db
+    .delete(passwordReset)
+    .where(eq(passwordReset.id, id))
+    .returning();
+
+  if (!result) throw new Error("Failed to delete password reset");
+
+  return result;
+};
+
+// -- Auth Internal --
+
+export const accountValidator = async (
+  email: string,
+  sso: Account["sso"]["values"][number],
+  profile?: Account["profile"]
+) => {
+  const { provider, sub: rawSub } = sso;
+
+  const emailAccount = await retrieveAccount({ email });
+
+  if (emailAccount) {
+    if (provider === "local") {
+      const storedHash = emailAccount.sso?.values?.find(
+        (s) => s.provider === "local"
+      )?.sub;
+
+      if (storedHash) {
+        const isValid = await bcrypt.compare(rawSub, storedHash);
+
+        if (!isValid) throw new Error("Invalid credentials");
+
+        const accessToken = await new JWT().sign(
+          { accountId: emailAccount.id, email: emailAccount.email },
+          "30m"
+        );
+
+        const refreshToken = await new JWT().sign(
+          { accountId: emailAccount.id, email: emailAccount.email },
+          "30d"
+        );
+
+        await setAuthCookies(accessToken, refreshToken);
+
+        return {
+          accountId: emailAccount.id,
+          accessToken,
+          refreshToken,
+          isNewUser: false,
+        };
+      } else {
+        // Account exists but no local auth - HASH and link it
+        const hashedSub = await bcrypt.hash(rawSub, 10);
+
+        await putAccount(emailAccount.id, {
+          sso: {
+            values: [...emailAccount.sso.values, { provider, sub: hashedSub }],
+          },
+        });
+
+        const accessToken = await new JWT().sign(
+          { accountId: emailAccount.id, email: emailAccount.email },
+          "30m"
+        );
+
+        const refreshToken = await new JWT().sign(
+          { accountId: emailAccount.id, email: emailAccount.email },
+          "30d"
+        );
+
+        await setAuthCookies(accessToken, refreshToken);
+
+        return {
+          accountId: emailAccount.id,
+          accessToken,
+          refreshToken,
+          isNewUser: false,
+        };
+      }
+    }
+
+    const hasOAuthProvider = emailAccount.sso?.values?.some(
+      (s) => s.provider === provider && s.sub === rawSub
+    );
+
+    if (!hasOAuthProvider) {
+      await putAccount(emailAccount.id, {
+        sso: {
+          values: [...emailAccount.sso.values, { provider, sub: rawSub }],
+        },
+      });
+    }
+
+    const accessToken = await new JWT().sign(
+      { accountId: emailAccount.id, email: emailAccount.email },
+      "30m"
+    );
+
+    const refreshToken = await new JWT().sign(
+      { accountId: emailAccount.id, email: emailAccount.email },
+      "30d"
+    );
+
+    await setAuthCookies(accessToken, refreshToken);
+
+    return {
+      accountId: emailAccount.id,
+      accessToken,
+      refreshToken,
+      isNewUser: false,
+    };
   }
 
-  // Hash password
-  const passwordHash = await bcrypt.hash(params.password, 10);
+  const sub = provider === "local" ? await bcrypt.hash(rawSub, 10) : rawSub;
 
-  // Extract first and last name
-  const nameParts = params.userName?.trim().split(/\s+/) || [];
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.slice(1).join(" ") || "";
-
-  // Create account using postAccount
-  const account: Account = await postAccount({
-    email: params.email.toLowerCase(),
-    userName: params.email.toLowerCase().split("@")[0],
-    profile: {
-      first_name: firstName,
-      last_name: lastName,
-    },
-    sso: {
-      values: [
-        ...(params.sso?.values || []),
-        {
-          provider: "local",
-          sub: passwordHash,
-        },
-      ],
-    },
+  const account = await postAccount({
+    email,
+    userName: email.split("@")[0],
+    sso: { values: [{ provider, sub }] },
+    profile: profile ?? null,
+    isOnboarded: profile ? true : false,
   });
-  // Create auth record using postAuth
-  const expiresAt = new Date();
-  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
-  const authRecord = await postAuth({
+  const accessToken = await new JWT().sign(
+    { accountId: account.id, email: account.email },
+    "30m"
+  );
+
+  const refreshToken = await new JWT().sign(
+    { accountId: account.id, email: account.email },
+    "30d"
+  );
+
+  await postAuth({
     accountId: account.id,
-    provider: "local",
-    accessToken: `local_${nanoid(32)}`,
-    refreshToken: `refresh_${nanoid(32)}`,
-    expiresAt,
+    provider,
+    accessToken,
+    refreshToken,
+    expiresAt: moment().add(30, "days").toDate(),
     isRevoked: false,
   });
 
-  await setAuthCookies(authRecord.accessToken, account.id, expiresAt);
+  await setAuthCookies(accessToken, refreshToken);
 
-  return { account, auth: authRecord };
-};
-
-export const signIn = async (params: { email: string; password: string }) => {
-  const account = await retrieveAccount({
-    email: params.email.toLowerCase(),
-  });
-  console.log("the account found here?---->", account);
-
-  if (!account) {
-    throw new Error("Invalid email or password");
-  }
-
-  const authRecord = await retrieveAuthByAccountId(account.id);
-
-  if (authRecord.provider !== "local") {
-    throw new Error("Invalid authentication method");
-  }
-
-  if (authRecord.isRevoked) {
-    throw new Error("Account access has been revoked");
-  }
-
-  //compare with the sso values for the matching provider
-  const isValidPassword = await bcrypt.compare(
-    params.password,
-    account.sso?.values?.find((sso) => sso.provider === "local")?.sub as string
-  );
-  if (!isValidPassword) {
-    throw new Error("Invalid email or password");
-  }
-
-  if (new Date() > authRecord.expiresAt) {
-    throw new Error("Session expired. Please sign in again.");
-  }
-  await setAuthCookies(
-    authRecord.accessToken,
-    account.id,
-    authRecord.expiresAt
-  );
-  return { account, auth: authRecord };
-};
-
-export const getCurrentUser = async () => {
-  const { authToken, accountId } = await getAuthCookies();
-
-  if (!authToken || !accountId) {
-    return null;
-  }
-
-  try {
-    const authRecord = await retrieveAuthByAccountId(accountId);
-
-    // Verify token matches and is not revoked/expired
-    if (
-      authRecord.accessToken !== authToken ||
-      authRecord.isRevoked ||
-      new Date() > authRecord.expiresAt
-    ) {
-      return null;
-    }
-
-    const account = await retrieveAccount({ id: accountId });
-    return { account, auth: authRecord };
-  } catch {
-    return null;
-  }
-};
-
-export const signOut = async () => {
-  await clearAuthCookies();
+  return {
+    accountId: account.id,
+    accessToken,
+    refreshToken,
+    isNewUser: !emailAccount,
+  };
 };
 
 export const forgotPassword = async (email: string) => {
-  try {
-    const account = await retrieveAccount({ email: email.toLowerCase() });
-    console.log("the account found here?---->", account);
-    if (!account) {
-      return { success: true };
-    }
-    const resetToken = await createPasswordResetToken(account.id, 1);
+  const account = await retrieveAccount({ email });
 
-    const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken.token}`;
-    const result = await sendEmail(
-      email.toLowerCase(),
-      "Reset Password",
-      `<a href="${resetLink}">Reset Password</a>`
-    );
-    console.log(result);
-    return { success: true };
-  } catch (error) {
-    if (error instanceof Error && error.message === "Account not found") {
-      return { success: true };
-    }
-    throw error;
-  }
+  if (!account) return { success: true };
+
+  const resetToken = await createPasswordResetToken({
+    accountId: account.id,
+    expiresAt: moment().add(1, "hours").toDate(),
+  });
+
+  const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken.token}`;
+
+  new Resend().sendEmail(
+    email,
+    "Reset Password",
+    `<a href="${resetLink}">Reset Password</a>`
+  );
+
+  return { success: true };
 };
 
 export const resetPassword = async (token: string, newPassword: string) => {
-  const resetTokenRecord = await retrievePasswordResetToken(token);
+  const resetTokenRecord = await retrievePasswordReset({ token });
 
   if (!resetTokenRecord) {
     throw new Error("Invalid or expired reset token");
   }
 
   const account = await retrieveAccount({ id: resetTokenRecord.accountId });
-  if (!account) {
-    throw new Error("Account not found");
-  }
+
+  if (!account) throw new Error("Account not found");
+
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
-  const updatedSso = {
-    values: [
-      ...(account.sso?.values?.filter((sso) => sso.provider !== "local") || []),
-      {
-        provider: "local",
-        sub: passwordHash,
-      },
-    ],
-  };
-
   await putAccount(account.id, {
-    sso: updatedSso as {
-      values: { provider: "google" | "local"; sub: string }[];
+    sso: {
+      values: [
+        ...account.sso.values.filter((s) => s.provider !== "local"),
+        { provider: "local", sub: passwordHash },
+      ],
     },
   });
 
-  await markPasswordResetTokenAsUsed(resetTokenRecord.id);
+  await putPasswordReset(resetTokenRecord.id, { usedAt: new Date() });
 
   return { success: true };
 };
 
-// Update Password - For authenticated users
-export const updatePassword = async (
-  currentPassword: string,
-  newPassword: string
-) => {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error("Not authenticated");
+export const getCurrentUser = async () => {
+  const { accessToken } = await getAuthCookies();
+
+  if (!accessToken) return null;
+
+  const payload = (await new JWT().verify(accessToken)) as {
+    accountId: string;
+    email: string;
+    iat: number;
+    exp: number;
+  };
+
+  const authRecord = await retrieveAuth({ accountId: payload.accountId });
+
+  if (authRecord.isRevoked || new Date() > authRecord.expiresAt) {
+    await clearAuthCookies();
+    return null;
   }
 
-  const account = user.account;
+  const account = await retrieveAccount({ id: payload.accountId });
+
   if (!account) {
-    throw new Error("Account not found");
-  }
-  // Verify current password
-  const currentPasswordHash = account.sso?.values?.find(
-    (sso) => sso.provider === "local"
-  )?.sub as string;
-
-  if (!currentPasswordHash) {
-    throw new Error("Password not set for this account");
+    await clearAuthCookies();
+    return null;
   }
 
-  const isValidPassword = await bcrypt.compare(
-    currentPassword,
-    currentPasswordHash
-  );
-
-  if (!isValidPassword) {
-    throw new Error("Current password is incorrect");
-  }
-
-  // Hash new password
-  const newPasswordHash = await bcrypt.hash(newPassword, 10);
-
-  // Update password in account SSO
-  const updatedSso = {
-    values: [
-      ...(account.sso?.values?.filter((sso) => sso.provider !== "local") || []),
-      {
-        provider: "local",
-        sub: newPasswordHash,
-      },
-    ],
-  };
-
-  await putAccount(account.id, {
-    sso: updatedSso as {
-      values: { provider: "google" | "local"; sub: string }[];
+  return {
+    id: account.id,
+    email: account.email,
+    userName: account.userName,
+    profile: {
+      firstName: account.profile?.firstName || null,
+      lastName: account.profile?.lastName || null,
+      avatarUrl: account.profile?.avatarUrl || null,
     },
-  });
-
-  return { success: true };
-};
-
-export const handleGoogleOAuth = async (
-  idToken: string,
-  intent: "SIGN_IN" | "SIGN_UP"
-) => {
-  try {
-    const client = getGoogleClient();
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience:
-        process.env.GOOGLE_CLIENT_ID ||
-        process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-
-    if (!payload) {
-      throw new Error("Invalid token payload");
-    }
-
-    // Verify required claims
-    if (!payload.email) {
-      throw new Error("Email not found in token");
-    }
-
-    if (!payload.email_verified) {
-      throw new Error("Email not verified");
-    }
-
-    // Verify the token is for the correct audience
-    const clientId =
-      process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (payload.aud !== clientId) {
-      throw new Error("Token audience mismatch");
-    }
-
-    const email = payload.email.toLowerCase();
-    const googleSub = payload.sub;
-
-    let account: Account | null;
-    try {
-      account = await retrieveAccount({ email });
-
-      if (!account) {
-        throw new Error("Account not found");
-      }
-
-      const hasGoogleSSO = account.sso?.values?.some(
-        (sso) => sso.provider === "google" && sso.sub === googleSub
-      );
-
-      if (!hasGoogleSSO) {
-        const updatedSso = {
-          values: [
-            ...(account.sso?.values || []),
-            {
-              provider: "google",
-              sub: googleSub,
-            },
-          ],
-        };
-        await putAccount(account.id, {
-          sso: updatedSso as {
-            values: { provider: "google" | "local"; sub: string }[];
-          },
-        });
-      }
-
-      let authRecord: Auth;
-      try {
-        authRecord = await retrieveAuthByAccountId(account.id);
-
-        if (authRecord.provider !== "google") {
-          const expiresAt = new Date();
-          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-
-          authRecord = await putAuth(authRecord.id, {
-            provider: "google",
-            accessToken: `google_${nanoid(32)}`,
-            refreshToken: `refresh_${nanoid(32)}`,
-            expiresAt,
-            isRevoked: false,
-          });
-        }
-      } catch {
-        const expiresAt = new Date();
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-
-        authRecord = await postAuth({
-          accountId: account.id,
-          provider: "google",
-          accessToken: `google_${nanoid(32)}`,
-          refreshToken: `refresh_${nanoid(32)}`,
-          expiresAt,
-          isRevoked: false,
-        });
-      }
-
-      await setAuthCookies(
-        authRecord.accessToken,
-        account.id,
-        authRecord.expiresAt
-      );
-
-      return { account, auth: authRecord };
-    } catch {
-      if (intent === "SIGN_UP") {
-        const nameParts = payload.name?.split(/\s+/) || [];
-        const firstName = payload.given_name || nameParts[0] || "";
-        const lastName =
-          payload.family_name || nameParts.slice(1).join(" ") || "";
-
-        account = await postAccount({
-          email,
-          userName: email.split("@")[0],
-          profile: {
-            first_name: firstName,
-            last_name: lastName,
-            avatar_url: payload.picture,
-          },
-          sso: {
-            values: [
-              {
-                provider: "google",
-                sub: googleSub,
-              },
-            ],
-          },
-        });
-
-        const expiresAt = new Date();
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-
-        const authRecord = await postAuth({
-          accountId: account.id,
-          provider: "google",
-          accessToken: `google_${nanoid(32)}`,
-          refreshToken: `refresh_${nanoid(32)}`,
-          expiresAt,
-          isRevoked: false,
-        });
-
-        await setAuthCookies(authRecord.accessToken, account.id, expiresAt);
-
-        return { account, auth: authRecord };
-      } else {
-        throw new Error("Account not found. Please sign up first.");
-      }
-    }
-  } catch (error) {
-    throw error instanceof Error
-      ? error
-      : new Error("Google authentication failed");
-  }
-};
-
-export const googleSignin = async (metadata: Record<string, any>) => {
-  const authUrlDomain = "https://accounts.google.com/o/oauth2/v2/auth";
-
-  const authUrlParams = {
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: `${process.env.APP_URL}/api/auth/verify-callback`,
-    response_type: "code",
-    scope: "openid profile email",
-    access_type: "offline",
-    prompt: "consent",
-    state: btoa(JSON.stringify({ ...metadata })),
+    isOnboarded: account.isOnboarded,
+    createdAt: account.createdAt,
   };
-
-  const authUrl = `${authUrlDomain}?${new URLSearchParams(authUrlParams as Record<string, string>)}`;
-  return authUrl;
 };
