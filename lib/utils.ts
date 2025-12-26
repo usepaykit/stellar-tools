@@ -38,4 +38,11 @@ export const parseJSON = <T>(str: string, schema: z.ZodSchema<T>): T => {
   return schema.parse(parsed);
 };
 
-
+export const getInitials = (name: string): string => {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};

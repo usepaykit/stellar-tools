@@ -33,9 +33,13 @@ export class CreditApi {
       )
     );
 
-    if (refundError || !response.ok) {
+    if (refundError) {
+      return ERR(new Error(`Failed to refund credits: ${refundError.message}`));
+    }
+
+    if (!response.ok) {
       return ERR(
-        new Error(`Failed to refund credits: ${refundError?.message}`)
+        new Error(`Failed to refund credits: ${response.error?.message}`)
       );
     }
 
@@ -65,10 +69,18 @@ export class CreditApi {
       }>(`/api/customers/${customerId}/credit/transactions?${params}`)
     );
 
-    if (transactionHistoryError || !response.ok) {
+    if (transactionHistoryError) {
       return ERR(
         new Error(
-          `Failed to get transaction history: ${transactionHistoryError?.message}`
+          `Failed to get transaction history: ${transactionHistoryError.message}`
+        )
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(
+          `Failed to get transaction history: ${response.error?.message}`
         )
       );
     }
@@ -86,9 +98,15 @@ export class CreditApi {
       )
     );
 
-    if (transactionError || !response.ok) {
+    if (transactionError) {
       return ERR(
-        new Error(`Failed to get transaction: ${transactionError?.message}`)
+        new Error(`Failed to get transaction: ${transactionError.message}`)
+      );
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to get transaction: ${response.error?.message}`)
       );
     }
 
@@ -113,8 +131,14 @@ export class CreditApi {
       })
     );
 
-    if (checkError || !response.ok) {
-      return ERR(new Error(`Failed to check credits: ${checkError?.message}`));
+    if (checkError) {
+      return ERR(new Error(`Failed to check credits: ${checkError.message}`));
+    }
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to check credits: ${response.error?.message}`)
+      );
     }
 
     return OK(response.value.isSufficient);
@@ -139,9 +163,13 @@ export class CreditApi {
       )
     );
 
-    if (deductError || !response.ok) {
+    if (deductError) {
+      return ERR(new Error(`Failed to deduct credits: ${deductError.message}`));
+    }
+
+    if (!response.ok) {
       return ERR(
-        new Error(`Failed to deduct credits: ${deductError?.message}`)
+        new Error(`Failed to deduct credits: ${response.error?.message}`)
       );
     }
 

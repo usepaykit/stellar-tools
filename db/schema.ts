@@ -61,6 +61,9 @@ export const organizations = pgTable("organization", {
     .references(() => accounts.id),
   name: text("name").notNull(),
   description: text("description"),
+  slug: text("slug").notNull(),
+  logoUrl: text("logo_url"),
+  phoneNumber: text("phone_number"),
   ownerAccountId: text("owner_account_id")
     .notNull()
     .references(() => accounts.id),

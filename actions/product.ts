@@ -51,6 +51,28 @@ export const retrieveProductsWithAsset = async (
   return result;
 };
 
+export const retrieveActiveProductsWithAsset = async (
+  organizationId: string,
+  environment: Network
+) => {
+  const result = await db
+    .select({
+      product: products,
+      asset: assets,
+    })
+    .from(products)
+    .innerJoin(assets, eq(products.assetId, assets.id))
+    .where(
+      and(
+        eq(products.organizationId, organizationId),
+        eq(products.environment, environment),
+        eq(products.status, "active")
+      )
+    );
+
+  return result;
+};
+
 export const retrieveProduct = async (id: string, organizationId: string) => {
   const [product] = await db
     .select()
