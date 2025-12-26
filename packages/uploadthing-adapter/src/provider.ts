@@ -3,19 +3,20 @@ import { UploadThingError, createUploadthing } from "uploadthing/server";
 import type { ExpandedRouteConfig } from "uploadthing/types";
 
 import {
-  StellarMetadata,
-  StellarUploadthingOptions,
-  stellarUploadthingOptionsSchema,
+  StellarToolsMetadata,
+  StellarToolsUploadthingOptions,
+  stellarToolsUploadthingOptionsSchema,
 } from "./schema";
 
-export class StellarUploadThingAdapter {
+export class StellarToolsUploadThingAdapter {
   private stellar: StellarTools;
-  private options: StellarUploadthingOptions;
+  private options: StellarToolsUploadthingOptions;
 
   private baseFactory = createUploadthing();
 
-  constructor(opts: StellarUploadthingOptions) {
-    const { error, data } = stellarUploadthingOptionsSchema.safeParse(opts);
+  constructor(opts: StellarToolsUploadthingOptions) {
+    const { error, data } =
+      stellarToolsUploadthingOptionsSchema.safeParse(opts);
     if (error) throw new Error(`Invalid options: ${error.message}`);
 
     this.options = data;
@@ -43,7 +44,7 @@ export class StellarUploadThingAdapter {
           files: Array<{ name: string; size: number; type: string }>;
           input: unknown;
         }) => {
-          const product = await this.stellar.product.retrieve(
+          const product = await this.stellar.products.retrieve(
             this.options.productId
           );
           if (!product.ok)
@@ -65,12 +66,26 @@ export class StellarUploadThingAdapter {
             });
           }
 
-          const result = await this.stellar.credit.consume(customerId, {
+          const rawAmount = opts.files.reduce(
+            (sum: number, f: any) => sum + f.size,
+            0
+          );
+
+          const check = await this.stellar.credits.check(customerId, {
             productId: this.options.productId,
-            rawAmount: opts.files.reduce(
-              (sum: number, f: any) => sum + f.size,
-              0
-            ),
+            rawAmount,
+          });
+
+          if (!check.ok) {
+            throw new UploadThingError({
+              code: "FORBIDDEN",
+              message: check.error?.message ?? "Insufficient credits",
+            });
+          }
+
+          const result = await this.stellar.credits.consume(customerId, {
+            productId: this.options.productId,
+            rawAmount,
             reason: "Upload started",
             metadata: { fileCount: opts.files.length },
           });
@@ -91,8 +106,8 @@ export class StellarUploadThingAdapter {
               ...userMetadata,
               __stellar: {
                 customerId,
-                requiredCredits: result.value.creditsToDeduct,
-              } satisfies StellarMetadata["__stellar"],
+                requiredCredits: rawAmount,
+              } satisfies StellarToolsMetadata["__stellar"],
             };
           } catch (err) {
             // Pass refund data through the Error object if user middleware crashes
@@ -102,7 +117,7 @@ export class StellarUploadThingAdapter {
               data: {
                 __stellar: {
                   customerId,
-                  requiredCredits: result.value.creditsToDeduct,
+                  requiredCredits: rawAmount,
                 },
               },
             });
@@ -130,7 +145,7 @@ export class StellarUploadThingAdapter {
               );
             }
 
-            await this.stellar.credit.refund(refundData.customerId, {
+            await this.stellar.credits.refund(refundData.customerId, {
               productId: this.options.productId,
               amount: refundData.requiredCredits,
               reason: "Upload failed: automatic refund",

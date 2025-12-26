@@ -13,11 +13,17 @@ export const postAccount = async (params: Partial<Account>) => {
   return account;
 };
 
-export const retrieveAccount = async (id: string) => {
+export const retrieveAccount = async (
+  payload: { id: string } | { email: string }
+) => {
   const [account] = await db
     .select()
     .from(accounts)
-    .where(eq(accounts.id, id))
+    .where(
+      "id" in payload
+        ? eq(accounts.id, payload.id)
+        : eq(accounts.email, payload.email as string)
+    )
     .limit(1);
 
   if (!account) throw new Error("Account not found");

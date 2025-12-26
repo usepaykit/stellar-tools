@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toast";
+import { QueryProvider } from "@/providers/query-provider";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -38,8 +39,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${rosemary.variable} antialiased`}
       >
-        {children}
-        <Toaster position="bottom-right" />
+        <QueryProvider>
+          {children}
+          <Toaster position="bottom-right" />
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,3 +1,4 @@
+import { WebhookEvent } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
   boolean,
@@ -14,6 +15,10 @@ import {
 
 export const networkEnum = pgEnum("network", ["testnet", "mainnet"]);
 
+export const authProviderEnum = pgEnum("auth_provider", ["google", "local"]);
+
+export type AuthProvider = (typeof authProviderEnum.enumValues)[number];
+
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -23,10 +28,24 @@ export const accounts = pgTable("account", {
     last_name?: string;
     avatar_url?: string;
   }>(),
-  phoneNumber: text("phone_number"),
   sso: jsonb("sso").$type<{
-    values: Array<{ provider: string; sub: string }>;
+    values: Array<{ provider: AuthProvider; sub: string }>;
   }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+});
+
+export const auth = pgTable("auth", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id")
+    .notNull()
+    .references(() => accounts.id),
+  provider: authProviderEnum("provider").notNull(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
@@ -139,6 +158,8 @@ export const assets = pgTable(
   })
 );
 
+export type CustomerMetadata = Record<string, string>;
+
 export const customers = pgTable(
   "customer",
   {
@@ -149,7 +170,7 @@ export const customers = pgTable(
     email: text("email"),
     name: text("name"),
     phone: text("phone"),
-    appMetadata: jsonb("app_metadata").$type<object>().default({}),
+    appMetadata: jsonb("app_metadata").$type<CustomerMetadata>().default({}),
     internalMetadata: jsonb("internal_metadata").$type<object>().default({}),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -166,10 +187,31 @@ export const billingTypeEnum = pgEnum("billing_type", [
   "metered",
 ]);
 
+export type BillingType = (typeof billingTypeEnum.enumValues)[number];
+
 export const productStatusEnum = pgEnum("product_status", [
   "active",
   "archived",
 ]);
+
+export type ProductStatus = (typeof productStatusEnum.enumValues)[number];
+
+export const recurringPeriodEnum = pgEnum("recurring_period", [
+  "day",
+  "week",
+  "month",
+  "year",
+]);
+
+export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
+
+export const productTypeEnum = pgEnum("product_type", [
+  "subscription",
+  "one_time",
+  "metered",
+]);
+
+export type ProductType = (typeof productTypeEnum.enumValues)[number];
 
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
@@ -179,18 +221,18 @@ export const products = pgTable("product", {
   name: text("name").notNull(),
   description: text("description"),
   images: text("images").array(),
-  phoneNumberRequired: boolean("phone_number_required")
-    .default(false)
-    .notNull(),
   status: productStatusEnum("status").notNull(),
   assetId: text("asset_id")
     .notNull()
     .references(() => assets.id),
+  type: productTypeEnum("type").notNull(),
   billingType: billingTypeEnum("billing_type").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
   environment: networkEnum("network").notNull(),
+  priceAmount: integer("price_amount").notNull(),
+  recurringPeriod: recurringPeriodEnum("recurring_period"),
 
   // Metered billing
   unit: text("unit"), // e.g., "tokens", "MB", "requests", "images", "minutes"
@@ -235,6 +277,39 @@ export const checkouts = pgTable(
   })
 );
 
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "active",
+  "past_due",
+  "canceled",
+  "paused",
+]);
+
+export const subscriptions = pgTable("subscription", {
+  id: text("id").primaryKey(),
+  customerId: text("customer_id")
+    .notNull()
+    .references(() => customers.id),
+  productId: text("product_id")
+    .notNull()
+    .references(() => products.id),
+  status: subscriptionStatusEnum("status").notNull(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  canceledAt: timestamp("canceled_at"),
+  pausedAt: timestamp("paused_at"),
+  lastPaymentId: text("last_payment_id"),
+  nextBillingDate: timestamp("next_billing_date"),
+  failedPaymentCount: integer("failed_payment_count").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  metadata: jsonb("metadata").$type<object>().default({}),
+  environment: networkEnum("network").notNull(),
+});
+
 export const paymentStatusEnum = pgEnum("payment_status", [
   "pending",
   "confirmed",
@@ -259,51 +334,6 @@ export const payments = pgTable("payment", {
   environment: networkEnum("network").notNull(),
 });
 
-export const featureEnum = pgEnum("feature", ["aisdk", "uploadthing"]);
-
-export const usageRecords = pgTable(
-  "usage_record",
-  {
-    id: text("id").primaryKey(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organizations.id),
-    apiKeyId: text("api_key_id")
-      .notNull()
-      .references(() => apiKeys.id),
-    customerId: text("customer_id").references(() => customers.id),
-    feature: featureEnum("feature").notNull(),
-    quantity: integer("quantity").notNull(), // Number of units consumed
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<object>().default({}),
-    environment: networkEnum("network").notNull(),
-    aisdk: jsonb("aisdk"),
-  },
-  (table) => ({
-    orgFeatureCreatedIdx: index("usage_records_org_feature_created_idx").on(
-      table.organizationId,
-      table.feature,
-      table.createdAt
-    ),
-  })
-);
-
-export const webhookEvent = [
-  "customer.created",
-  "customer.updated",
-  "customer.deleted",
-  "checkout.created",
-  "payment.pending",
-  "payment.confirmed",
-  "payment.failed",
-  "refund.created",
-  "refund.succeeded",
-  "refund.failed",
-] as const;
-
-export type WebhookEvent = (typeof webhookEvent)[number];
-
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -311,7 +341,7 @@ export const webhooks = pgTable("webhook", {
     .references(() => organizations.id),
   url: text("url").notNull(),
   secret: text("secret").notNull(),
-  events: text("events").array().notNull(),
+  events: text("events").array().$type<Array<WebhookEvent>>().notNull(),
   name: text("name").notNull(),
   description: text("description"),
   isDisabled: boolean("is_disabled").default(false).notNull(),
@@ -334,6 +364,7 @@ export const webhookLogs = pgTable("webhook_log", {
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  responseTime: integer("response_time"), // in milliseconds
   environment: networkEnum("network").notNull(),
 });
 
@@ -452,7 +483,6 @@ export type Customer = InferSelectModel<typeof customers>;
 export type Product = InferSelectModel<typeof products>;
 export type Checkout = InferSelectModel<typeof checkouts>;
 export type Payment = InferSelectModel<typeof payments>;
-export type UsageRecord = InferSelectModel<typeof usageRecords>;
 export type Webhook = InferSelectModel<typeof webhooks>;
 export type WebhookLog = InferSelectModel<typeof webhookLogs>;
 export type Network = (typeof networkEnum.enumValues)[number];
@@ -460,3 +490,5 @@ export type TeamInvite = InferSelectModel<typeof teamInvites>;
 export type Refund = InferSelectModel<typeof refunds>;
 export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
+export type Subscription = InferSelectModel<typeof subscriptions>;
+export type Auth = InferSelectModel<typeof auth>;

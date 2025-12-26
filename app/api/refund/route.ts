@@ -3,8 +3,8 @@ import { retrieveAsset } from "@/actions/asset";
 import { retrieveOrganization } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
-import { Stellar } from "@/core/stellar";
 import { Refund } from "@/db";
+import { Stellar } from "@/integrations/stellar";
 import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -50,7 +50,10 @@ export const POST = async (req: NextRequest) => {
 
   if (payment.environment !== environment) {
     return NextResponse.json(
-      { error: "Payment environment does not match organization environment" },
+      {
+        error:
+          "Invalid state, Hint: The payment and organization environments does not match",
+      },
       { status: 400 }
     );
   }

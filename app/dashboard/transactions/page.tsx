@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { retrievePayment } from "@/actions/payment";
+import { postRefund } from "@/actions/refund";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -11,8 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -24,6 +28,7 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
+import moment from "moment";
 import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -202,13 +207,7 @@ const StatusBadge = ({ status }: { status: TransactionStatus }) => {
 // --- Copy Wallet Address Component ---
 
 const CopyWalletAddress = ({ address }: { address: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, handleCopy } = useCopy();
 
   const displayAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
 
@@ -222,11 +221,18 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          handleCopy();
+          handleCopy({
+            text: address,
+            message: "Wallet address copied to clipboard",
+          });
         }}
         title="Copy wallet address"
       >
-        <Copy className={cn("h-3 w-3", copied && "text-green-600")} />
+        {copied ? (
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+        ) : (
+          <Copy className="text-muted-foreground h-4 w-4" />
+        )}
       </Button>
     </div>
   );
@@ -285,12 +291,7 @@ const columns: ColumnDef<Transaction>[] = [
       const date = row.original.date;
       return (
         <div className="text-muted-foreground text-sm">
-          {date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
+          {moment(date).format("MMM D, h:mm A")}
         </div>
       );
     },
@@ -302,14 +303,7 @@ const columns: ColumnDef<Transaction>[] = [
       const refundedDate = row.original.refundedDate;
       return (
         <div className="text-muted-foreground text-sm">
-          {refundedDate
-            ? refundedDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })
-            : "—"}
+          {refundedDate ? moment(refundedDate).format("MMM D, h:mm A") : "—"}
         </div>
       );
     },
@@ -333,6 +327,10 @@ const refundSchema = z.object({
 
 type RefundFormData = z.infer<typeof refundSchema>;
 
+// TODO: Get organizationId from context/session
+// For now using placeholder value - this should be obtained from user session or context
+const ORGANIZATION_ID = "org_placeholder";
+
 // --- Refund Modal Component ---
 
 export function RefundModal({
@@ -344,7 +342,7 @@ export function RefundModal({
   onOpenChange: (open: boolean) => void;
   initialPaymentId?: string;
 }) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const queryClient = useQueryClient();
 
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
@@ -355,28 +353,52 @@ export function RefundModal({
     },
   });
 
-  // Update form when initialPaymentId changes
   React.useEffect(() => {
     if (initialPaymentId) {
       form.setValue("paymentId", initialPaymentId);
     }
   }, [initialPaymentId, form]);
 
-  const onSubmit = async (data: RefundFormData) => {
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Refund data:", data);
+  const createRefundMutation = useMutation({
+    mutationFn: async (data: RefundFormData) => {
+      const payment = await retrievePayment(data.paymentId, ORGANIZATION_ID);
+
+      return await postRefund({
+        paymentId: payment.id,
+        organizationId: payment.organizationId,
+        environment: payment.environment,
+        amount: payment.amount,
+        assetId: payment.assetId,
+        customerId: payment.customerId,
+        receiverPublicKey: data.walletAddress,
+        reason: data.reason,
+        status: "pending",
+        transactionHash: payment.transactionHash,
+        metadata: {},
+      });
+
+      // todo: use sendAssetPayment from stellar core and update the status.
+    },
+    onSuccess: () => {
       toast.success("Refund created successfully!");
       form.reset();
       onOpenChange(false);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to create refund");
-    } finally {
-      setIsSubmitting(false);
-    }
+      queryClient.invalidateQueries({
+        queryKey: ["refunds", ORGANIZATION_ID],
+      });
+    },
+    onError: (error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+      toast.error("Failed to create refund", {
+        id: "refund-error",
+        description: errorMessage,
+      });
+    },
+  });
+
+  const onSubmit = async (data: RefundFormData) => {
+    createRefundMutation.mutate(data);
   };
 
   return (
@@ -390,12 +412,17 @@ export function RefundModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
+            disabled={createRefundMutation.isPending}
           >
             Cancel
           </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={createRefundMutation.isPending}
+          >
+            {createRefundMutation.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
             Create refund
           </Button>
         </div>

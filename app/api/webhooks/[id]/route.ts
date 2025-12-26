@@ -1,7 +1,7 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { deleteWebhook, putWebhook, retrieveWebhook } from "@/actions/webhook";
 import { Webhook } from "@/db";
-import { schemaFor } from "@stellartools/core";
+import { WebhookEvent, schemaFor, webhookEvent } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -27,7 +27,11 @@ export const GET = async (
 const putWebhookSchema = schemaFor<Partial<Webhook>>()(
   z.object({
     url: z.string().optional(),
-    events: z.array(z.string()).optional(),
+    events: z
+      .array(
+        z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))
+      )
+      .optional(),
     isDisabled: z.boolean().default(false).optional(),
     name: z.string().optional(),
     description: z.string().optional(),

@@ -2,7 +2,10 @@
 
 import * as React from "react";
 
-import { ImageTransformer, type MimeType } from "@/core/image-transformer";
+import {
+  ImageTransformer,
+  type MimeType,
+} from "@/integrations/image-transformer";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import { ImagePlus, Loader2, Pencil } from "lucide-react";

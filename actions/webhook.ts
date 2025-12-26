@@ -1,20 +1,20 @@
 "use server";
 
-import { Stellar } from "@/core/stellar";
-import { WebhookDelivery } from "@/core/webhook-delivery";
 import {
   Checkout,
   Network,
   Organization,
   Webhook,
-  WebhookEvent,
   WebhookLog,
   db,
   webhookLogs,
   webhooks,
 } from "@/db";
+import { Stellar } from "@/integrations/stellar";
+import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { parseJSON } from "@/lib/utils";
-import { and, eq } from "drizzle-orm";
+import { WebhookEvent } from "@stellartools/core";
+import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
@@ -29,7 +29,6 @@ export const postWebhook = async (
     .insert(webhooks)
     .values({
       id: `wh_${nanoid(25)}`,
-      secretHash: `wh_sec_${nanoid(30)}`,
       isDisabled: false,
       organizationId,
       ...data,
@@ -58,6 +57,57 @@ export const retrieveWebhooks = async (
   if (!webhooksResult.length) throw new Error("Failed to retrieve webhooks");
 
   return webhooksResult;
+};
+
+export const getWebhooksWithAnalytics = async (
+  organizationId: string,
+  environment: Network
+) => {
+  const result = await db
+    .select({
+      id: webhooks.id,
+      organizationId: webhooks.organizationId,
+      url: webhooks.url,
+      secret: webhooks.secret,
+      events: webhooks.events,
+      name: webhooks.name,
+      description: webhooks.description,
+      isDisabled: webhooks.isDisabled,
+      createdAt: webhooks.createdAt,
+      updatedAt: webhooks.updatedAt,
+      environment: webhooks.environment,
+      logsCount: sql<number>`cast(count(${webhookLogs.id}) as integer)`.as(
+        "logs_count"
+      ),
+      errorCount:
+        sql<number>`cast(count(${webhookLogs.id}) filter (where ${webhookLogs.statusCode} >= 400 or ${webhookLogs.errorMessage} is not null) as integer)`.as(
+          "error_count"
+        ),
+      responseTime: sql<number[]>`
+        array_agg(${webhookLogs.responseTime} order by ${webhookLogs.createdAt} desc) 
+        filter (where ${webhookLogs.responseTime} is not null)
+      `.as("response_time"),
+    })
+    .from(webhooks)
+    .leftJoin(webhookLogs, eq(webhookLogs.webhookId, webhooks.id))
+    .where(
+      and(
+        eq(webhooks.organizationId, organizationId),
+        eq(webhooks.environment, environment)
+      )
+    )
+    .groupBy(webhooks.id);
+
+  if (!result.length) throw new Error("Failed to retrieve webhooks");
+
+  return result.map((webhook) => ({
+    ...webhook,
+    errorRate:
+      webhook.logsCount > 0
+        ? Math.round((webhook.errorCount / webhook.logsCount) * 100)
+        : 0,
+    responseTime: webhook.responseTime ?? [],
+  }));
 };
 
 export const retrieveWebhook = async (id: string, organizationId: string) => {
@@ -118,8 +168,7 @@ export const postWebhookLog = async (
 
 export const retrieveWebhookLogs = async (
   webhookId: string,
-  organizationId: string,
-  environment: Network
+  organizationId: string
 ) => {
   const webhookLogsResult = await db
     .select()
@@ -127,7 +176,6 @@ export const retrieveWebhookLogs = async (
     .where(
       and(
         eq(webhookLogs.webhookId, webhookId),
-        eq(webhookLogs.environment, environment),
         eq(webhookLogs.organizationId, organizationId)
       )
     );

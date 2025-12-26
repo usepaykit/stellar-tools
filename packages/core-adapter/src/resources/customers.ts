@@ -2,8 +2,10 @@ import { ApiClient } from "../api-client";
 import {
   CreateCustomer,
   Customer,
+  ListCustomers,
   UpdateCustomer,
   createCustomerSchema,
+  listCustomersSchema,
   updateCustomerSchema,
 } from "../schema/customer";
 import { ERR, OK, tryCatchAsync } from "../utils";
@@ -31,6 +33,28 @@ export class CustomerApi {
     if (customerError) {
       return ERR(
         new Error(`Failed to create customer: ${customerError.message}`)
+      );
+    }
+
+    return OK(response.value);
+  }
+
+  async list(params: ListCustomers) {
+    const { error, data } = listCustomersSchema.safeParse(params);
+
+    if (error) {
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
+    }
+
+    const [response, customerError] = await tryCatchAsync(
+      this.apiClient.get<Customer>(`/customers`, {
+        body: JSON.stringify({ ...data, organization: "xxx" }), // todo: resolve by organization from ApiKey
+      })
+    );
+
+    if (customerError) {
+      return ERR(
+        new Error(`Failed to list customers: ${customerError.message}`)
       );
     }
 

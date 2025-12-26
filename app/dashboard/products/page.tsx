@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { postProduct, retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -31,7 +32,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { Network, RecurringPeriod } from "@/db";
+import { Product as ProductSchema } from "@/db";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
 import {
   Archive,
@@ -50,27 +54,26 @@ import {
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
-type Product = {
-  id: string;
-  name: string;
+interface Product extends Pick<
+  ProductSchema,
+  "id" | "name" | "status" | "createdAt" | "updatedAt"
+> {
   pricing: {
-    amount: string;
+    amount: number;
     asset: string;
     isRecurring?: boolean;
-    period?: string;
+    period: RecurringPeriod | undefined;
   };
-  status: "active" | "archived";
-  createdAt: Date;
-  updatedAt: Date;
-};
+}
 
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one-time", "recurring", "metered"]),
+  billingCycle: z.enum(["one_time", "recurring", "metered"]),
   recurringInterval: z.number().min(1).optional(),
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   price: z.object({
@@ -93,53 +96,10 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "35",
-    pricing: { amount: "35.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-12-11"),
-    updatedAt: new Date("2024-12-11"),
-  },
-  {
-    id: "2",
-    name: "Mailboxes",
-    pricing: {
-      amount: "160.00",
-      asset: "USD",
-      isRecurring: true,
-      period: "month",
-    },
-    status: "active",
-    createdAt: new Date("2024-11-21"),
-    updatedAt: new Date("2024-11-21"),
-  },
-  {
-    id: "3",
-    name: "Domains",
-    pricing: { amount: "95.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-19"),
-    updatedAt: new Date("2024-11-19"),
-  },
-  {
-    id: "4",
-    name: "Mailboxes-Harry",
-    pricing: { amount: "361.40", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-17"),
-    updatedAt: new Date("2024-11-17"),
-  },
-  {
-    id: "5",
-    name: "21",
-    pricing: { amount: "21.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-10"),
-    updatedAt: new Date("2024-11-10"),
-  },
-];
+// TODO: Get organizationId and environment from context/session
+// For now using placeholder values - these should be obtained from user session or context
+const ORGANIZATION_ID = "org_placeholder";
+const ENVIRONMENT: Network = "testnet";
 
 const SortableHeader = ({
   column,
@@ -227,8 +187,7 @@ const columns: ColumnDef<Product>[] = [
       );
     },
     sortingFn: (rowA, rowB) =>
-      parseFloat(rowA.original.pricing.amount) -
-      parseFloat(rowB.original.pricing.amount),
+      rowA.original.pricing.amount - rowB.original.pricing.amount,
   },
   {
     accessorKey: "createdAt",
@@ -258,13 +217,35 @@ function ProductsPageContent() {
     null
   );
 
+  const { data: products, isLoading } = useQuery({
+    queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
+    queryFn: () => retrieveProductsWithAsset(ORGANIZATION_ID, ENVIRONMENT),
+    select: (productsData) => {
+      return productsData.map(({ product, asset }) => {
+        return {
+          id: product.id,
+          name: product.name,
+          pricing: {
+            amount: product.priceAmount,
+            asset: asset.code,
+            isRecurring: product.billingType === "recurring",
+            period: product.recurringPeriod!,
+          },
+          status: product.status,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+        };
+      });
+    },
+  });
+
   const stats = React.useMemo(
     () => ({
-      all: mockProducts.length,
-      active: mockProducts.filter((p) => p.status === "active").length,
-      archived: mockProducts.filter((p) => p.status === "archived").length,
+      all: products?.length ?? 0,
+      active: products?.filter((p) => p.status === "active").length ?? 0,
+      archived: products?.filter((p) => p.status === "archived").length ?? 0,
     }),
-    []
+    [products]
   );
 
   const handleModalChange = React.useCallback(
@@ -368,9 +349,10 @@ function ProductsPageContent() {
             <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
-                data={mockProducts}
+                data={products!}
                 actions={tableActions}
                 enableBulkSelect
+                isLoading={isLoading}
               />
             </div>
 
@@ -385,8 +367,6 @@ function ProductsPageContent() {
     </div>
   );
 }
-
-// --- Main Page Component ---
 
 export default function ProductsPage() {
   return (
@@ -407,9 +387,9 @@ function ProductsModal({
   onOpenChange: (value: boolean) => void;
   editingProduct?: Product | null;
 }) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
   const isEditMode = !!editingProduct;
+  const queryClient = useQueryClient();
 
   const form = RHF.useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -427,31 +407,19 @@ function ProductsModal({
     },
   });
 
-  // Reset form when modal opens/closes or editingProduct changes
   React.useEffect(() => {
     if (open && editingProduct) {
-      // Pre-populate form with product data
       form.reset({
         name: editingProduct.name,
-        description: "",
-        images: [],
-        billingCycle: editingProduct.pricing.isRecurring
-          ? "recurring"
-          : "one-time",
-        recurringPeriod:
-          (editingProduct.pricing.period as
-            | "day"
-            | "week"
-            | "month"
-            | "year") || "month",
+        ...(editingProduct.pricing.isRecurring && {
+          recurringPeriod: editingProduct.pricing.period,
+        }),
         price: {
-          amount: editingProduct.pricing.amount,
+          amount: editingProduct.pricing.amount.toString(),
           asset: editingProduct.pricing.asset,
         },
-        phoneNumberEnabled: false,
       });
     } else if (open && !editingProduct) {
-      // Reset to defaults for create mode
       form.reset({
         name: "",
         description: "",
@@ -464,19 +432,70 @@ function ProductsModal({
     }
   }, [open, editingProduct, form]);
 
-  const watched = form.watch();
-  const total = parseFloat(watched.price?.amount) || 0;
+  const createProductMutation = useMutation({
+    mutationFn: async (data: ProductFormData) => {
+      const metadata: Record<string, any> = {
+        priceAmount: data.price.amount,
+      };
+
+      if (data.recurringPeriod) {
+        metadata.recurringPeriod = data.recurringPeriod;
+      }
+
+      const images: Array<string> = []; // todo: upload images to storage and get the url
+
+      const productData = {
+        name: data.name,
+        description: data.description,
+        images,
+        billingType: data.billingCycle,
+        assetId: data.price.asset,
+        phoneNumberRequired: data.phoneNumberEnabled,
+        status: "active" as const,
+        organizationId: ORGANIZATION_ID,
+        environment: ENVIRONMENT,
+        metadata,
+        priceAmount: parseFloat(data.price.amount),
+        recurringPeriod: data.recurringPeriod,
+
+        // Meter
+        unit: data.unit,
+        unitDivisor: data.unitDivisor,
+        unitsPerCredit: data.unitsPerCredit,
+        creditsGranted: data.creditsGranted,
+      };
+
+      return await postProduct(productData);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch products
+      queryClient.invalidateQueries({
+        queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
+      });
+      toast.success(
+        isEditMode ? "Product updated successfully!" : "Product created!"
+      );
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      toast.error(
+        isEditMode ? "Failed to update product" : "Failed to create product",
+        {
+          description:
+            error instanceof Error
+              ? error.message
+              : "An unexpected error occurred",
+        } as Parameters<typeof toast.error>[1]
+      );
+    },
+  });
+
+  const watched = useWatch({ control: form.control });
+  const total = parseFloat(watched.price?.amount || "0") || 0;
 
   const onSubmit = async (data: ProductFormData) => {
-    setIsSubmitting(true);
-    console.log({ data, isEditMode, editingProduct });
-    await new Promise((r) => setTimeout(r, 1000)); // Simulate API
-    toast.success(
-      isEditMode ? "Product updated successfully!" : "Product created!"
-    );
-    form.reset();
-    onOpenChange(false);
-    setIsSubmitting(false);
+    createProductMutation.mutate(data);
   };
 
   return (
@@ -490,15 +509,15 @@ function ProductsModal({
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={createProductMutation.isPending}
             >
               Cancel
             </Button>
             <Button
               onClick={form.handleSubmit(onSubmit)}
-              disabled={isSubmitting}
+              disabled={createProductMutation.isPending}
             >
-              {isSubmitting && (
+              {createProductMutation.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}{" "}
               {isEditMode ? "Update product" : "Add product"}
@@ -586,8 +605,8 @@ function ProductsModal({
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="one-time" id="one-time" />
-                      <Label htmlFor="one-time" className="font-normal">
+                      <RadioGroupItem value="one_time" id="one_time" />
+                      <Label htmlFor="one_time" className="font-normal">
                         One-off
                       </Label>
                     </div>
@@ -780,7 +799,7 @@ function ProductsModal({
                       Total Price
                     </span>
                     <span className="font-bold">
-                      {total.toFixed(2)} {watched.price.asset}
+                      {total.toFixed(2)} {watched.price?.asset || "XLM"}
                     </span>
                   </div>
                   {watched.billingCycle === "recurring" && (
