@@ -3,9 +3,10 @@ import { retrieveAsset } from "@/actions/asset";
 import { retrieveOrganization } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
+import { triggerWebhooks } from "@/actions/webhook";
 import { Refund } from "@/db";
 import { Stellar } from "@/integrations/stellar";
-import { schemaFor } from "@stellartools/core";
+import { schemaFor, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -49,13 +50,7 @@ export const POST = async (req: NextRequest) => {
   }
 
   if (payment.environment !== environment) {
-    return NextResponse.json(
-      {
-        error:
-          "Invalid state, Hint: The payment and organization environments does not match",
-      },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid state" }, { status: 400 });
   }
 
   const stellarAccount = organization?.stellarAccounts?.[environment];
@@ -84,6 +79,13 @@ export const POST = async (req: NextRequest) => {
   );
 
   if (refundResult.error) {
+    await tryCatchAsync(
+      triggerWebhooks(organizationId, "refund.failed", {
+        refund: data,
+        error: refundResult.error,
+      })
+    );
+
     return NextResponse.json({ error: refundResult.error }, { status: 500 });
   }
 
@@ -93,6 +95,10 @@ export const POST = async (req: NextRequest) => {
     organizationId,
     environment,
   });
+
+  await tryCatchAsync(
+    triggerWebhooks(organizationId, "refund.succeeded", { refund })
+  );
 
   return NextResponse.json({ data: refund });
 };

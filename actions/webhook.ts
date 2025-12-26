@@ -28,10 +28,10 @@ export const postWebhook = async (
   const [webhook] = await db
     .insert(webhooks)
     .values({
+      ...data,
       id: `wh_${nanoid(25)}`,
       isDisabled: false,
       organizationId,
-      ...data,
     } as Webhook)
     .returning();
 
@@ -245,8 +245,7 @@ export const deleteWebhookLog = async (id: string, organizationId: string) => {
 export const triggerWebhooks = async (
   organizationId: string,
   eventType: WebhookEvent,
-  payload: Record<string, unknown>,
-  environment: Network
+  payload: Record<string, unknown>
 ) => {
   const orgWebhooks = await db
     .select()
@@ -254,7 +253,6 @@ export const triggerWebhooks = async (
     .where(
       and(
         eq(webhooks.organizationId, organizationId),
-        eq(webhooks.environment, environment),
         eq(webhooks.isDisabled, false)
       )
     );
@@ -272,7 +270,7 @@ export const triggerWebhooks = async (
 
   const results = await Promise.allSettled(
     subscribedWebhooks.map((webhook) =>
-      new WebhookDelivery().deliver(webhook, eventType, payload, environment)
+      new WebhookDelivery().deliver(webhook, eventType, payload)
     )
   );
 
@@ -326,12 +324,10 @@ export const processStellarWebhook = async (
           }),
         ]);
 
-        await triggerWebhooks(
-          organization.id,
-          "payment.confirmed",
-          { payment_id: tx.hash, checkout_id: checkout.id },
-          environment
-        );
+        await triggerWebhooks(organization.id, "payment.confirmed", {
+          payment_id: tx.hash,
+          checkout_id: checkout.id,
+        });
       }
 
       return { data: { checkout } };

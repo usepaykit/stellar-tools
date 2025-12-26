@@ -171,7 +171,6 @@ export const customers = pgTable(
     name: text("name"),
     phone: text("phone"),
     appMetadata: jsonb("app_metadata").$type<CustomerMetadata>().default({}),
-    internalMetadata: jsonb("internal_metadata").$type<object>().default({}),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),

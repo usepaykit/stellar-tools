@@ -11,13 +11,15 @@ import {
   creditTransactionHistorySchema,
   creditTransactionSchema,
 } from "../schema/credits";
-import { Product } from "../schema/product";
-import { ERR, OK, tryCatchAsync } from "../utils";
+import { ERR, OK, ResultFP, tryCatchAsync } from "../utils";
 
 export class CreditApi {
   constructor(private apiClient: ApiClient) {}
 
-  async refund(customerId: string, params: CreditTransactionParams) {
+  async refund(
+    customerId: string,
+    params: CreditTransactionParams
+  ): Promise<ResultFP<CreditBalance, Error>> {
     const { error, data } = creditTransactionSchema.safeParse(params);
 
     if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
@@ -31,8 +33,10 @@ export class CreditApi {
       )
     );
 
-    if (refundError) {
-      return ERR(new Error(`Failed to refund credits: ${refundError.message}`));
+    if (refundError || !response.ok) {
+      return ERR(
+        new Error(`Failed to refund credits: ${refundError?.message}`)
+      );
     }
 
     return OK(response.value);
@@ -41,7 +45,7 @@ export class CreditApi {
   async getTransactions(
     customerId: string,
     options?: CreditTransactionHistoryParams
-  ) {
+  ): Promise<ResultFP<Array<CreditTransaction>, Error>> {
     const { error, data } = creditTransactionHistorySchema.safeParse(options);
 
     if (error) {
@@ -61,75 +65,65 @@ export class CreditApi {
       }>(`/api/customers/${customerId}/credit/transactions?${params}`)
     );
 
-    if (transactionHistoryError) {
+    if (transactionHistoryError || !response.ok) {
       return ERR(
         new Error(
-          `Failed to get transaction history: ${transactionHistoryError.message}`
+          `Failed to get transaction history: ${transactionHistoryError?.message}`
         )
       );
     }
 
-    return OK(response.value!.data);
+    return OK(response.value.data);
   }
 
-  async getTransaction(transactionId: string, customerId: string) {
+  async getTransaction(
+    transactionId: string,
+    customerId: string
+  ): Promise<ResultFP<CreditTransaction, Error>> {
     const [response, transactionError] = await tryCatchAsync(
       this.apiClient.get<CreditTransaction>(
         `/api/customers/${customerId}/credit/transactions/${transactionId}`
       )
     );
 
-    if (transactionError) {
+    if (transactionError || !response.ok) {
       return ERR(
-        new Error(`Failed to get transaction: ${transactionError.message}`)
+        new Error(`Failed to get transaction: ${transactionError?.message}`)
       );
     }
 
     return OK(response.value);
   }
 
-  async check(customerId: string, params: CheckCreditsParams) {
+  async check(
+    customerId: string,
+    params: CheckCreditsParams
+  ): Promise<ResultFP<boolean, Error>> {
     const { error, data } = checkCreditSchema.safeParse(params);
 
     if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
 
     const { productId, rawAmount } = data;
 
-    const [product, creditBalance] = await Promise.all([
-      this.apiClient.get<Product>(`/api/products/${productId}`),
-      this.apiClient.get<CreditBalance>(
-        `/api/customers/${customerId}/credits/${productId}`
-      ),
-    ]);
-
-    if (product.error || creditBalance.error) {
-      return ERR(
-        new Error("Failed to retrieve product config or credit balance")
-      );
-    }
-
-    /**
-     * Calculate actual credits
-     * If divisor is 1024 and rawAmount is bytes, result is KB
-     * If divisor is null, we treat rawAmount as the unit itself
-     */
-    const units = product.value.unitDivisor
-      ? rawAmount / product.value.unitDivisor
-      : rawAmount;
-
-    // result = units / unitsPerCredit (e.g., 1000 tokens / 10 tokens per credit = 100 credits)
-    const creditsToDeduct = Math.ceil(
-      units / (product.value.unitsPerCredit || 1)
+    const [response, checkError] = await tryCatchAsync(
+      this.apiClient.get<{
+        isSufficient: boolean;
+      }>(`/api/customers/${customerId}/credit/${productId}/transaction`, {
+        body: JSON.stringify({ rawAmount, dryRun: true }),
+      })
     );
 
-    if (creditsToDeduct > creditBalance.value.balance) {
-      return ERR(new Error("Insufficient credits"));
+    if (checkError || !response.ok) {
+      return ERR(new Error(`Failed to check credits: ${checkError?.message}`));
     }
 
-    return OK(true);
+    return OK(response.value.isSufficient);
   }
 
-  async consume(customerId: string, params: ConsumeCreditParams) {
+  async consume(
+    customerId: string,
+    params: ConsumeCreditParams
+  ): Promise<ResultFP<CreditBalance, Error>> {
     const { error, data } = consumeCreditSchema.safeParse(params);
 
     if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
@@ -145,8 +139,10 @@ export class CreditApi {
       )
     );
 
-    if (deductError) {
-      return ERR(new Error(`Failed to deduct credits: ${deductError.message}`));
+    if (deductError || !response.ok) {
+      return ERR(
+        new Error(`Failed to deduct credits: ${deductError?.message}`)
+      );
     }
 
     return OK(response.value);
