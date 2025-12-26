@@ -15,7 +15,7 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const organization = await retrieveOrganization(organizationId);
+  const organization = await retrieveOrganization({ id: organizationId });
 
   const stellarAccount = organization?.stellarAccounts?.[environment];
 

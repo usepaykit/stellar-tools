@@ -37,7 +37,7 @@ export const POST = async (req: NextRequest) => {
 
   const [payment, organization, asset] = await Promise.all([
     retrievePayment(data.paymentId, organizationId),
-    retrieveOrganization(organizationId),
+    retrieveOrganization({ id: organizationId }),
     retrieveAsset(data.assetId),
   ]);
 
