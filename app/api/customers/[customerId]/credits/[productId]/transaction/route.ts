@@ -5,6 +5,7 @@ import {
   retrieveCreditBalance,
 } from "@/actions/credit";
 import { retrieveProduct } from "@/actions/product";
+import { calculateCredits } from "@/lib/credit-calculator";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -13,29 +14,26 @@ const transactionSchema = z.object({
   type: z.enum(["deduct", "refund", "grant"]),
   reason: z.string().optional(),
   metadata: z.record(z.string(), z.any()).optional(),
+  dryRun: z.boolean().optional(), // for credit checks only.
 });
 
 export const POST = async (
   req: NextRequest,
   context: { params: Promise<{ customerId: string; productId: string }> }
 ) => {
-  const { customerId, productId } = await context.params;
-
-  const apiKey = req.headers.get("x-api-key");
-
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
-  }
-
-  const { error, data } = transactionSchema.safeParse(await req.json());
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
-
-  const { organizationId } = await resolveApiKey(apiKey);
-
   try {
+    const { customerId, productId } = await context.params;
+
+    const apiKey = req.headers.get("x-api-key");
+
+    if (!apiKey) throw new Error("API key is required");
+
+    const { error, data } = transactionSchema.safeParse(await req.json());
+
+    if (error) throw new Error(`Invalid parameters: ${error.message}`);
+
+    const { organizationId } = await resolveApiKey(apiKey);
+
     const product = await retrieveProduct(productId, organizationId);
 
     const creditBalance = await retrieveCreditBalance(
@@ -44,19 +42,19 @@ export const POST = async (
       organizationId
     );
 
-    if (!creditBalance) {
-      return NextResponse.json(
-        { error: "Credit balance not found" },
-        { status: 404 }
-      );
+    if (!creditBalance) throw new Error("Invalid Meter Configuration");
+
+    const creditsToProcess = calculateCredits({
+      rawAmount: data.amount,
+      unitDivisor: product.unitDivisor,
+      unitsPerCredit: product.unitsPerCredit,
+    });
+
+    if (data.dryRun) {
+      return NextResponse.json({
+        isSufficient: creditsToProcess <= creditBalance.balance,
+      });
     }
-
-    // Calculate credits based on product config
-    const units = product.unitDivisor
-      ? data.amount / product.unitDivisor
-      : data.amount;
-
-    const creditsToProcess = Math.ceil(units / (product.unitsPerCredit || 1));
 
     const balanceBefore = creditBalance.balance;
     let balanceAfter = balanceBefore;
@@ -66,10 +64,7 @@ export const POST = async (
     switch (data.type) {
       case "deduct":
         if (balanceBefore < creditsToProcess) {
-          return NextResponse.json(
-            { error: "Insufficient credits" },
-            { status: 400 }
-          );
+          throw new Error("Insufficient credits");
         }
         balanceAfter = balanceBefore - creditsToProcess;
         newConsumed = creditBalance.consumed + creditsToProcess;

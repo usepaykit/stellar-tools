@@ -182,12 +182,6 @@ export interface CheckCreditsParams {
    * The raw amount of the credit action.
    */
   rawAmount: number;
-
-  /**
-  /**
-   * The metadata of the credit action.
-   */
-  metadata?: Record<string, unknown>;
 }
 
 export const checkCreditSchema = schemaFor<CheckCreditsParams>()(
@@ -207,12 +201,13 @@ export interface ConsumeCreditParams {
   /**
    * The reason of the credit action.
    */
-  reason: string;
+  reason: "deduct" | "refund" | "grant";
 
   /**
    * The raw amount of the credit action.
    */
   rawAmount: number;
+
   /**
    * The metadata of the credit action.
    */
@@ -222,7 +217,7 @@ export interface ConsumeCreditParams {
 export const consumeCreditSchema = schemaFor<ConsumeCreditParams>()(
   z.object({
     productId: z.string(),
-    reason: z.string(),
+    reason: z.enum(["deduct", "refund", "grant"]),
     rawAmount: z.number(),
     metadata: z.record(z.string(), z.any()).optional(),
   })
