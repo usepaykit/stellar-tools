@@ -121,14 +121,14 @@ const teamInviteSchema = z.object({
     .optional(),
 });
 
-export default function CreateOrganization() {
+function CreateOrganizationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const stepParam = searchParams.get("step");
-  
+
   // Check if profile step should be shown (only for email/password signups)
   const shouldShowProfile = stepParam === "profile";
-  
+
   const [step, setStep] = React.useState<"profile" | "organization" | "team">(
     shouldShowProfile ? "profile" : "organization"
   );
@@ -332,7 +332,7 @@ export default function CreateOrganization() {
                     control={profileForm.control}
                     name="profilePicture"
                     render={({ field, fieldState: { error } }) => (
-                      <div className="space-y-2 mb-15">
+                      <div className="mb-15 space-y-2">
                         <Label className="text-sm font-medium">
                           Profile Picture
                         </Label>
@@ -346,10 +346,15 @@ export default function CreateOrganization() {
                           onFilesRejected={handleProfilePictureRejected}
                           label="Drag & drop your profile picture here, or click to select"
                           description="PNG, JPG up to 5MB"
-                          
                           disabled={isSubmitting}
                           dropzoneAccept={{
-                            "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"],
+                            "image/*": [
+                              ".png",
+                              ".jpg",
+                              ".jpeg",
+                              ".gif",
+                              ".webp",
+                            ],
                           }}
                           dropzoneMaxSize={5 * 1024 * 1024}
                           dropzoneMultiple={false}
@@ -360,7 +365,6 @@ export default function CreateOrganization() {
                             {error.message}
                           </p>
                         )}
-                    
                       </div>
                     )}
                   />
@@ -872,5 +876,13 @@ export default function CreateOrganization() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function CreateOrganization() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <CreateOrganizationContent />
+    </React.Suspense>
   );
 }
