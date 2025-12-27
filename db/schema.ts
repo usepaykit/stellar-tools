@@ -185,13 +185,6 @@ export const customers = pgTable(
   })
 );
 
-export const billingTypeEnum = pgEnum("billing_type", [
-  "one_time",
-  "recurring",
-  "metered",
-]);
-
-export type BillingType = (typeof billingTypeEnum.enumValues)[number];
 
 export const productStatusEnum = pgEnum("product_status", [
   "active",
@@ -230,7 +223,6 @@ export const products = pgTable("product", {
     .notNull()
     .references(() => assets.id),
   type: productTypeEnum("type").notNull(),
-  billingType: billingTypeEnum("billing_type").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),
