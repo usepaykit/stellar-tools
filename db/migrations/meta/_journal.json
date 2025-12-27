@@ -8,6 +8,13 @@
       "when": 1766737619411,
       "tag": "0000_nappy_naoko",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766825711407,
+      "tag": "0001_fresh_ultimo",
+      "breakpoints": true
     }
   ]
 }

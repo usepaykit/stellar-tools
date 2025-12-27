@@ -3,7 +3,7 @@ import { z } from "zod";
 import { schemaFor } from "../utils";
 import { Environment, environmentSchema } from "./shared";
 
-const billingTypeEnum = z.enum(["one_time", "recurring", "metered"]);
+const billingTypeEnum = z.enum(["one_time", "subscription", "metered"]);
 
 type BillingType = z.infer<typeof billingTypeEnum>;
 

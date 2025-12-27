@@ -73,7 +73,7 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one_time", "recurring", "metered"]),
+  billingCycle: z.enum(["one_time", "subscription", "metered"]),
   recurringInterval: z.number().min(1).optional(),
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   price: z.object({
@@ -228,7 +228,7 @@ function ProductsPageContent() {
           pricing: {
             amount: product.priceAmount,
             asset: asset.code,
-            isRecurring: product.billingType === "recurring",
+            isRecurring: product.type === "subscription",
             period: product.recurringPeriod!,
           },
           status: product.status,
@@ -397,7 +397,7 @@ function ProductsModal({
       name: "",
       description: "",
       images: [],
-      billingCycle: "recurring",
+      billingCycle: "subscription",
       recurringPeriod: "month",
       price: { amount: "", asset: "XLM" },
       phoneNumberEnabled: false,
@@ -424,7 +424,7 @@ function ProductsModal({
         name: "",
         description: "",
         images: [],
-        billingCycle: "recurring",
+        billingCycle: "subscription",
         recurringPeriod: "month",
         price: { amount: "", asset: "XLM" },
         phoneNumberEnabled: false,
@@ -711,7 +711,7 @@ function ProductsModal({
                   )}
                 />
 
-                {watched.billingCycle == "recurring" && (
+                {watched.billingCycle == "subscription" && (
                   <RHF.Controller
                     control={form.control}
                     name="recurringPeriod"
@@ -802,7 +802,7 @@ function ProductsModal({
                       {total.toFixed(2)} {watched.price?.asset || "XLM"}
                     </span>
                   </div>
-                  {watched.billingCycle === "recurring" && (
+                  {watched.billingCycle === "subscription" && (
                     <p className="text-muted-foreground mt-1 text-right text-xs">
                       Billed every {watched.recurringPeriod}
                     </p>
