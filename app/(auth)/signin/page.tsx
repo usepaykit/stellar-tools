@@ -79,7 +79,7 @@ export default function SignIn() {
 
     const authUrlParams = {
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-      redirect_uri: `${process.env.APP_URL}/api/auth/verify-callback`,
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-callback`,
       response_type: "code",
       scope: "openid profile email",
       access_type: "offline",
@@ -190,7 +190,7 @@ export default function SignIn() {
             type="button"
             variant="ghost"
             onClick={handleGoogleSignIn}
-            className="hover:bg-muted flex w-full items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
+            className="hover:bg-muted flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-10 py-2.5 shadow-none transition-colors"
             disabled={signinMutation.isPending}
           >
             <Google className="h-5 w-5" />

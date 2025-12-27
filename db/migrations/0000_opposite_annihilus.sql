@@ -3,7 +3,6 @@ CREATE TYPE "public"."auth_provider" AS ENUM('google', 'local');--> statement-br
 CREATE TYPE "public"."billing_type" AS ENUM('one_time', 'recurring', 'metered');--> statement-breakpoint
 CREATE TYPE "public"."checkout_status" AS ENUM('open', 'completed', 'expired', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."credit_transaction_type" AS ENUM('deduct', 'refund', 'grant');--> statement-breakpoint
-CREATE TYPE "public"."feature" AS ENUM('aisdk', 'uploadthing');--> statement-breakpoint
 CREATE TYPE "public"."network" AS ENUM('testnet', 'mainnet');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('pending', 'confirmed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."product_status" AS ENUM('active', 'archived');--> statement-breakpoint
@@ -18,10 +17,11 @@ CREATE TABLE "account" (
 	"email" text NOT NULL,
 	"user_name" text NOT NULL,
 	"profile" jsonb,
-	"sso" jsonb,
+	"sso" jsonb NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"is_onboarded" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "account_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
@@ -121,10 +121,10 @@ CREATE TABLE "customer" (
 	"name" text,
 	"phone" text,
 	"app_metadata" jsonb DEFAULT '{}'::jsonb,
-	"internal_metadata" jsonb DEFAULT '{}'::jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"network" "network" NOT NULL,
+	"wallet_addresses" jsonb,
 	CONSTRAINT "customer_organization_id_email_unique" UNIQUE("organization_id","email")
 );
 --> statement-breakpoint
@@ -133,6 +133,9 @@ CREATE TABLE "organization" (
 	"account_id" text NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
+	"slug" text NOT NULL,
+	"logo_url" text,
+	"phone_number" text,
 	"owner_account_id" text NOT NULL,
 	"settings" jsonb NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -140,6 +143,17 @@ CREATE TABLE "organization" (
 	"metadata" jsonb DEFAULT '{}'::jsonb,
 	"network" "network" NOT NULL,
 	"stellar_account" jsonb
+);
+--> statement-breakpoint
+CREATE TABLE "password_reset" (
+	"id" text PRIMARY KEY NOT NULL,
+	"account_id" text NOT NULL,
+	"token" text NOT NULL,
+	"expires_at" timestamp NOT NULL,
+	"used_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "password_reset_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
 CREATE TABLE "payment" (
@@ -173,6 +187,7 @@ CREATE TABLE "product" (
 	"network" "network" NOT NULL,
 	"price_amount" integer NOT NULL,
 	"recurring_period" "recurring_period",
+	"is_archived" boolean DEFAULT false NOT NULL,
 	"unit" text,
 	"unit_divisor" integer,
 	"units_per_credit" integer DEFAULT 1,
@@ -285,6 +300,7 @@ ALTER TABLE "credit_transaction" ADD CONSTRAINT "credit_transaction_balance_id_c
 ALTER TABLE "customer" ADD CONSTRAINT "customer_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization" ADD CONSTRAINT "organization_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."account"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization" ADD CONSTRAINT "organization_owner_account_id_account_id_fk" FOREIGN KEY ("owner_account_id") REFERENCES "public"."account"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "password_reset" ADD CONSTRAINT "password_reset_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."account"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_checkout_id_checkout_id_fk" FOREIGN KEY ("checkout_id") REFERENCES "public"."checkout"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -307,4 +323,5 @@ ALTER TABLE "webhook" ADD CONSTRAINT "webhook_organization_id_organization_id_fk
 CREATE INDEX "credit_balance_customer_idx" ON "credit_balance" USING btree ("customer_id","organization_id");--> statement-breakpoint
 CREATE INDEX "credit_tx_customer_idx" ON "credit_transaction" USING btree ("customer_id","product_id");--> statement-breakpoint
 CREATE INDEX "credit_tx_balance_idx" ON "credit_transaction" USING btree ("balance_id");--> statement-breakpoint
-CREATE INDEX "credit_tx_created_at_idx" ON "credit_transaction" USING btree ("created_at");
+CREATE INDEX "credit_tx_created_at_idx" ON "credit_transaction" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "password_reset_token_idx" ON "password_reset" USING btree ("token");

@@ -130,126 +130,65 @@ export const deletePasswordReset = async (id: string) => {
 
 // -- Auth Internal --
 
+const generateAndSetSession = async (account: {
+  id: string;
+  email: string;
+}) => {
+  const payload = { accountId: account.id, email: account.email };
+
+  const accessToken = await new JWT().sign(payload, "30m");
+  const refreshToken = await new JWT().sign(payload, "30d");
+
+  await setAuthCookies(accessToken, refreshToken);
+
+  return { accessToken, refreshToken };
+};
+
 export const accountValidator = async (
   email: string,
   sso: Account["sso"]["values"][number],
-  profile?: Account["profile"]
+  profile?: Account["profile"],
+  sessionMetadata?: Record<string, unknown>
 ) => {
   const { provider, sub: rawSub } = sso;
+  let account = await retrieveAccount({ email });
+  const isNewUser = !account;
 
-  const emailAccount = await retrieveAccount({ email });
+  if (!account) {
+    const sub = provider === "local" ? await bcrypt.hash(rawSub, 10) : rawSub;
 
-  if (emailAccount) {
+    account = await postAccount({
+      email,
+      userName: email.split("@")[0],
+      sso: { values: [{ provider, sub }] },
+      profile: profile ?? null,
+      isOnboarded: !!profile,
+    });
+  } else {
+    const existingSso = account.sso?.values?.find(
+      (s) => s.provider === provider
+    );
+
     if (provider === "local") {
-      const storedHash = emailAccount.sso?.values?.find(
-        (s) => s.provider === "local"
-      )?.sub;
-
-      if (storedHash) {
-        const isValid = await bcrypt.compare(rawSub, storedHash);
-
+      if (existingSso) {
+        const isValid = await bcrypt.compare(rawSub, existingSso.sub);
         if (!isValid) throw new Error("Invalid credentials");
-
-        const accessToken = await new JWT().sign(
-          { accountId: emailAccount.id, email: emailAccount.email },
-          "30m"
-        );
-
-        const refreshToken = await new JWT().sign(
-          { accountId: emailAccount.id, email: emailAccount.email },
-          "30d"
-        );
-
-        await setAuthCookies(accessToken, refreshToken);
-
-        return {
-          accountId: emailAccount.id,
-          accessToken,
-          refreshToken,
-          isNewUser: false,
-        };
       } else {
-        // Account exists but no local auth - HASH and link it
         const hashedSub = await bcrypt.hash(rawSub, 10);
-
-        await putAccount(emailAccount.id, {
+        await putAccount(account.id, {
           sso: {
-            values: [...emailAccount.sso.values, { provider, sub: hashedSub }],
+            values: [...account.sso.values, { provider, sub: hashedSub }],
           },
         });
-
-        const accessToken = await new JWT().sign(
-          { accountId: emailAccount.id, email: emailAccount.email },
-          "30m"
-        );
-
-        const refreshToken = await new JWT().sign(
-          { accountId: emailAccount.id, email: emailAccount.email },
-          "30d"
-        );
-
-        await setAuthCookies(accessToken, refreshToken);
-
-        return {
-          accountId: emailAccount.id,
-          accessToken,
-          refreshToken,
-          isNewUser: false,
-        };
       }
-    }
-
-    const hasOAuthProvider = emailAccount.sso?.values?.some(
-      (s) => s.provider === provider && s.sub === rawSub
-    );
-
-    if (!hasOAuthProvider) {
-      await putAccount(emailAccount.id, {
-        sso: {
-          values: [...emailAccount.sso.values, { provider, sub: rawSub }],
-        },
+    } else if (!existingSso) {
+      await putAccount(account.id, {
+        sso: { values: [...account.sso.values, { provider, sub: rawSub }] },
       });
     }
-
-    const accessToken = await new JWT().sign(
-      { accountId: emailAccount.id, email: emailAccount.email },
-      "30m"
-    );
-
-    const refreshToken = await new JWT().sign(
-      { accountId: emailAccount.id, email: emailAccount.email },
-      "30d"
-    );
-
-    await setAuthCookies(accessToken, refreshToken);
-
-    return {
-      accountId: emailAccount.id,
-      accessToken,
-      refreshToken,
-      isNewUser: false,
-    };
   }
 
-  const sub = provider === "local" ? await bcrypt.hash(rawSub, 10) : rawSub;
-
-  const account = await postAccount({
-    email,
-    userName: email.split("@")[0],
-    sso: { values: [{ provider, sub }] },
-    profile: profile ?? null,
-    isOnboarded: profile ? true : false,
-  });
-
-  const accessToken = await new JWT().sign(
-    { accountId: account.id, email: account.email },
-    "30m"
-  );
-
-  const refreshToken = await new JWT().sign(
-    { accountId: account.id, email: account.email },
-    "30d"
-  );
+  const { accessToken, refreshToken } = await generateAndSetSession(account);
 
   await postAuth({
     accountId: account.id,
@@ -258,18 +197,16 @@ export const accountValidator = async (
     refreshToken,
     expiresAt: moment().add(30, "days").toDate(),
     isRevoked: false,
+    ...(sessionMetadata && { metadata: sessionMetadata }),
   });
-
-  await setAuthCookies(accessToken, refreshToken);
 
   return {
     accountId: account.id,
     accessToken,
     refreshToken,
-    isNewUser: !emailAccount,
+    isNewUser,
   };
 };
-
 export const forgotPassword = async (email: string) => {
   const account = await retrieveAccount({ email });
 
