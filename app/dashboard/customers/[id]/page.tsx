@@ -1,11 +1,14 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 
 import { CustomerModal } from "@/app/dashboard/customers/page";
 import { RefundModal } from "@/app/dashboard/transactions/page";
+import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -66,6 +69,7 @@ type Customer = {
   walletAddresses: WalletAddress[];
   createdAt: Date;
   businessName?: string;
+  metadata?: Record<string, string>;
 };
 
 type Payment = {
@@ -98,6 +102,11 @@ const getCustomerById = (id: string): Customer | null => {
         },
       ],
       createdAt: new Date("2024-12-18T14:56:00"),
+      metadata: {
+        company: "BricxLabs",
+        industry: "Technology",
+        source: "Website",
+      },
     },
     {
       id: "2",
@@ -279,6 +288,7 @@ export default function CustomerDetailPage() {
     null
   );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isMetadataModalOpen, setIsMetadataModalOpen] = useState(false);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -799,22 +809,44 @@ export default function CustomerDetailPage() {
                       variant="ghost"
                       size="icon-sm"
                       className="h-8 w-8"
-                      onClick={() => setIsEditModalOpen(true)}
+                      onClick={() => setIsMetadataModalOpen(true)}
                     >
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit metadata</span>
                     </Button>
                   </div>
-                  <div className="border-muted-foreground/20 hover:border-muted-foreground/30 flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors">
-                    <div className="space-y-1 text-center">
-                      <div className="text-muted-foreground text-sm font-medium">
-                        No metadata
+                  {customer.metadata &&
+                  Object.keys(customer.metadata).length > 0 ? (
+                    <div
+                      className="border-muted-foreground/20 hover:border-muted-foreground/30 cursor-pointer rounded-lg border-2 border-dashed p-4 transition-colors"
+                      onClick={() => setIsMetadataModalOpen(true)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-sm font-medium">
+                            {Object.keys(customer.metadata).length} metadata
+                            {Object.keys(customer.metadata).length !== 1
+                              ? " fields"
+                              : " field"}
+                          </div>
+                          <p className="text-muted-foreground/70 mt-1 text-xs">
+                            Click to view and edit metadata
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-muted-foreground/70 text-xs">
-                        Add custom metadata to track additional information
-                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="border-muted-foreground/20 hover:border-muted-foreground/30 flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors">
+                      <div className="space-y-1 text-center">
+                        <div className="text-muted-foreground text-sm font-medium">
+                          No metadata
+                        </div>
+                        <p className="text-muted-foreground/70 text-xs">
+                          Add custom metadata to track additional information
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -845,11 +877,77 @@ export default function CustomerDetailPage() {
                 name: customer.name,
                 email: customer.email,
                 phone: customer.phone,
-                metadata: {}, // TODO: Add metadata from customer data if available
+                metadata: customer.metadata || {},
               }
             : null
         }
       />
+
+      {/* Metadata Modal */}
+      <MetadataModal
+        open={isMetadataModalOpen}
+        onOpenChange={setIsMetadataModalOpen}
+        metadata={customer.metadata || {}}
+        customerName={customer.name}
+      />
     </div>
   );
 }
+
+const MetadataModal = React.memo(
+  ({
+    open,
+    onOpenChange,
+    metadata,
+    customerName,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    metadata: Record<string, string>;
+    customerName: string;
+  }) => {
+    const metadataJson = React.useMemo(() => {
+      return JSON.stringify(metadata, null, 2);
+    }, [metadata]);
+
+    return (
+      <FullScreenModal
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Customer Metadata"
+        description={`Metadata for ${customerName}`}
+        size="full"
+        showCloseButton={true}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="shadow-none"
+            >
+              Close
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <p className="text-muted-foreground text-sm">
+              View and manage custom metadata associated with this customer.
+            </p>
+          </div>
+          <CodeBlock
+            language="json"
+            filename="metadata.json"
+            showCopyButton={true}
+            maxHeight="none"
+            className="w-full"
+          >
+            {metadataJson || "{}"}
+          </CodeBlock>
+        </div>
+      </FullScreenModal>
+    );
+  }
+);
+MetadataModal.displayName = "MetadataModal";
