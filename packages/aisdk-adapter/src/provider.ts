@@ -52,8 +52,8 @@ export class StellarToolsAISDK {
         await this.stellar.credits.consume(this.customerId, {
           productId: this.productId,
           rawAmount: tokens,
-          reason: "generateText",
-          metadata: { operation: "generateText" },
+          reason: "deduct",
+          metadata: { operation: "generateText", source: "aisdk-adapter" },
         });
 
         if (originalOnFinish) await originalOnFinish(event);
@@ -64,8 +64,8 @@ export class StellarToolsAISDK {
       await this.stellar.credits.consume(this.customerId, {
         productId: this.productId,
         rawAmount: result.usage.totalTokens ?? 0,
-        reason: "generateText",
-        metadata: { operation: "generateText" },
+        reason: "deduct",
+        metadata: { operation: "generateText", source: "aisdk-adapter" },
       });
     }
 
@@ -95,8 +95,8 @@ export class StellarToolsAISDK {
         await this.stellar.credits.consume(this.customerId, {
           productId: this.productId,
           rawAmount: tokens,
-          reason: "streamText",
-          metadata: { operation: "streamText" },
+          reason: "deduct",
+          metadata: { operation: "streamText", source: "aisdk-adapter" },
         });
 
         if (originalOnFinish) await originalOnFinish(event);
@@ -124,8 +124,8 @@ export class StellarToolsAISDK {
       await this.stellar.credits.consume(this.customerId, {
         productId: this.productId,
         rawAmount: result.usage.totalTokens ?? 0,
-        reason: "generateObject",
-        metadata: { operation: "generateObject" },
+        reason: "deduct",
+        metadata: { operation: "generateObject", source: "aisdk-adapter" },
       });
     }
 
@@ -155,8 +155,8 @@ export class StellarToolsAISDK {
         await this.stellar.credits.consume(this.customerId, {
           productId: this.productId,
           rawAmount: tokens,
-          reason: "streamObject",
-          metadata: { operation: "streamObject" },
+          reason: "deduct",
+          metadata: { operation: "streamObject", source: "aisdk-adapter" },
         });
 
         if (originalOnFinish) await originalOnFinish(event);

@@ -626,17 +626,7 @@ export default function CustomerDetailPage() {
       <CustomerModal
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
-        customer={
-          customer
-            ? {
-                id: customer.id,
-                name: customer.name!,
-                email: customer.email!,
-                phone: customer.phone!,
-                metadata: customer.appMetadata || {},
-              }
-            : null
-        }
+        customer={customer ?? null}
       />
 
       {/* Delete Customer Modal */}
