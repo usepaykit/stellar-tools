@@ -646,7 +646,7 @@ function TransactionsPageContent() {
             </div>
 
             {/* Data Table or Empty State */}
-            {filteredTransactions.length === 0 ? (
+            {filteredTransactions.length == 0 ? (
               <div className="border-border/50 flex min-h-[400px] flex-col items-center justify-center rounded-lg border p-12">
                 <div className="flex flex-col items-center gap-4 text-center">
                   <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full">
