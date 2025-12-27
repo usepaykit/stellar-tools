@@ -1,14 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
 
 import { CustomerModal } from "@/app/dashboard/customers/page";
 import { RefundModal } from "@/app/dashboard/transactions/page";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -279,42 +277,35 @@ export default function CustomerDetailPage() {
   const customerId = params?.id as string;
   const customer = getCustomerById(customerId);
   const payments = getPaymentsByCustomerId(customerId);
-  const [selectedPayments, setSelectedPayments] = useState<Set<string>>(
+  const [selectedPayments, setSelectedPayments] = React.useState<Set<string>>(
     new Set()
   );
-  const [hiddenWallets, setHiddenWallets] = useState<Set<string>>(new Set());
-  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
-  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(
-    null
+  const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(
+    new Set()
   );
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isMetadataModalOpen, setIsMetadataModalOpen] = useState(false);
+  const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
+  const [selectedPaymentId, setSelectedPaymentId] = React.useState<
+    string | null
+  >(null);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
 
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedPayments(new Set(payments.map((p) => p.id)));
-    } else {
-      setSelectedPayments(new Set());
-    }
+    setSelectedPayments(
+      checked ? new Set(payments.map((p) => p.id)) : new Set()
+    );
   };
 
   const handleSelectPayment = (paymentId: string, checked: boolean) => {
     const newSelected = new Set(selectedPayments);
-    if (checked) {
-      newSelected.add(paymentId);
-    } else {
-      newSelected.delete(paymentId);
-    }
+    if (checked) newSelected.add(paymentId);
+    else newSelected.delete(paymentId);
     setSelectedPayments(newSelected);
   };
 
   const handleToggleWalletVisibility = (walletId: string) => {
     const newHidden = new Set(hiddenWallets);
-    if (newHidden.has(walletId)) {
-      newHidden.delete(walletId);
-    } else {
-      newHidden.add(walletId);
-    }
+    if (newHidden.has(walletId)) newHidden.delete(walletId);
+    else newHidden.add(walletId);
     setHiddenWallets(newHidden);
   };
 
@@ -809,32 +800,23 @@ export default function CustomerDetailPage() {
                       variant="ghost"
                       size="icon-sm"
                       className="h-8 w-8"
-                      onClick={() => setIsMetadataModalOpen(true)}
+                      onClick={() => setIsEditModalOpen(true)}
                     >
                       <Edit className="h-4 w-4" />
                       <span className="sr-only">Edit metadata</span>
                     </Button>
                   </div>
+
                   {customer.metadata &&
                   Object.keys(customer.metadata).length > 0 ? (
-                    <div
-                      className="border-muted-foreground/20 hover:border-muted-foreground/30 cursor-pointer rounded-lg border-2 border-dashed p-4 transition-colors"
-                      onClick={() => setIsMetadataModalOpen(true)}
+                    <CodeBlock
+                      language="json"
+                      showCopyButton={true}
+                      maxHeight="none"
+                      className="w-full"
                     >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-sm font-medium">
-                            {Object.keys(customer.metadata).length} metadata
-                            {Object.keys(customer.metadata).length !== 1
-                              ? " fields"
-                              : " field"}
-                          </div>
-                          <p className="text-muted-foreground/70 mt-1 text-xs">
-                            Click to view and edit metadata
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                      {JSON.stringify(customer.metadata, null, 2)}
+                    </CodeBlock>
                   ) : (
                     <div className="border-muted-foreground/20 hover:border-muted-foreground/30 flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors">
                       <div className="space-y-1 text-center">
@@ -882,72 +864,15 @@ export default function CustomerDetailPage() {
             : null
         }
       />
-
-      {/* Metadata Modal */}
-      <MetadataModal
-        open={isMetadataModalOpen}
-        onOpenChange={setIsMetadataModalOpen}
-        metadata={customer.metadata || {}}
-        customerName={customer.name}
-      />
+      <CodeBlock
+        language="json"
+        filename="metadata.json"
+        showCopyButton={true}
+        maxHeight="none"
+        className="w-full"
+      >
+        {JSON.stringify(customer?.metadata || {}, null, 2)}
+      </CodeBlock>
     </div>
   );
 }
-
-const MetadataModal = React.memo(
-  ({
-    open,
-    onOpenChange,
-    metadata,
-    customerName,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    metadata: Record<string, string>;
-    customerName: string;
-  }) => {
-    const metadataJson = React.useMemo(() => {
-      return JSON.stringify(metadata, null, 2);
-    }, [metadata]);
-
-    return (
-      <FullScreenModal
-        open={open}
-        onOpenChange={onOpenChange}
-        title="Customer Metadata"
-        description={`Metadata for ${customerName}`}
-        size="full"
-        showCloseButton={true}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="shadow-none"
-            >
-              Close
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <p className="text-muted-foreground text-sm">
-              View and manage custom metadata associated with this customer.
-            </p>
-          </div>
-          <CodeBlock
-            language="json"
-            filename="metadata.json"
-            showCopyButton={true}
-            maxHeight="none"
-            className="w-full"
-          >
-            {metadataJson || "{}"}
-          </CodeBlock>
-        </div>
-      </FullScreenModal>
-    );
-  }
-);
-MetadataModal.displayName = "MetadataModal";
