@@ -10,6 +10,7 @@ import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextField } from "@/components/input-picker";
 import {
+  PhoneNumber,
   PhoneNumberPicker,
   phoneNumberFromString,
   phoneNumberToString,
@@ -484,16 +485,23 @@ export function CustomerModal({
             <RHF.Controller
               control={form.control}
               name="phoneNumber"
-              render={({ field, fieldState: { error } }) => (
-                <PhoneNumberPicker
-                  id="phone"
-                  value={field.value}
-                  onChange={field.onChange}
-                  label="Phone number"
-                  error={error?.message}
-                  groupClassName="w-full shadow-none"
-                />
-              )}
+              render={({ field, fieldState: { error } }) => {
+                const phoneValue: PhoneNumber = {
+                  number: field.value?.number || "",
+                  countryCode: field.value?.countryCode || "US",
+                };
+
+                return (
+                  <PhoneNumberPicker
+                    id="phone"
+                    value={phoneValue}
+                    onChange={field.onChange}
+                    label="Phone number"
+                    error={(error as any)?.number?.message}
+                    groupClassName="w-full shadow-none"
+                  />
+                );
+              }}
             />
           </div>
 

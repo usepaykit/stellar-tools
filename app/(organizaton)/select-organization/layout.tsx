@@ -8,7 +8,7 @@ export default async function SelectOrganizationLayout({
 }: React.PropsWithChildren) {
   const user = await getCurrentUser();
 
-  if (!user) redirect("/auth/signin");
+  if (!user) redirect("/signin");
 
   return <>{children}</>;
 }

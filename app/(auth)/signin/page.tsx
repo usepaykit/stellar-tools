@@ -54,7 +54,7 @@ export default function SignIn() {
     },
     onSuccess: () => {
       toast.success("Logged in successfully");
-      router.push("/dashboard/select-organization");
+      router.push("/select-organization");
     },
     onError: (error: Error) => {
       toast.error("Sign-in failed", {

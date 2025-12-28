@@ -8,6 +8,7 @@ import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextAreaField, TextField } from "@/components/input-picker";
 import {
+  PhoneNumber,
   PhoneNumberPicker,
   phoneNumberFromString,
 } from "@/components/phone-number-picker";
@@ -792,19 +793,24 @@ export default function SettingsPage() {
                       <RHF.Controller
                         control={organizationForm.control}
                         name="phoneNumber"
-                        render={({ field, fieldState: { error } }) => (
-                          <PhoneNumberPicker
-                            id="organization-phone-number"
-                            label="Phone Number"
-                            value={
-                              field.value || { number: "", countryCode: "US" }
-                            }
-                            onChange={field.onChange}
-                            error={error?.message || null}
-                            disabled={isSubmitting}
-                            groupClassName="w-full shadow-none"
-                          />
-                        )}
+                        render={({ field, fieldState: { error } }) => {
+                          const phoneValue: PhoneNumber = {
+                            number: field.value?.number || "",
+                            countryCode: field.value?.countryCode || "US",
+                          };
+
+                          return (
+                            <PhoneNumberPicker
+                              id="organization-phone-number"
+                              label="Phone Number"
+                              value={phoneValue}
+                              onChange={field.onChange}
+                              error={(error as any)?.number?.message}
+                              disabled={isSubmitting}
+                              groupClassName="w-full shadow-none"
+                            />
+                          );
+                        }}
                       />
 
                       <RHF.Controller

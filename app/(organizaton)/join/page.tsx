@@ -105,7 +105,7 @@ function JoinTeamPageContent() {
             </p>
           </div>
           <Button
-            onClick={() => router.push("/auth/signin")}
+            onClick={() => router.push("/signin")}
             className="w-full shadow-none"
           >
             Sign In

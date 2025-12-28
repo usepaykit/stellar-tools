@@ -13,7 +13,10 @@ import {
 } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextAreaField, TextField } from "@/components/input-picker";
-import { PhoneNumberPicker } from "@/components/phone-number-picker";
+import {
+  PhoneNumber,
+  PhoneNumberPicker,
+} from "@/components/phone-number-picker";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -31,6 +34,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FileRejection } from "react-dropzone";
 import * as RHF from "react-hook-form";
+import { useHotkeys } from "react-hotkeys-hook";
 import { z } from "zod";
 
 export default function SelectOrganizationPage() {
@@ -166,46 +170,27 @@ const LoadingSkeleton = () => {
 // -- CREATE ORGANIZATION  --
 
 const createOrganizationSchema = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name must be less than 100 characters")
-    .trim(),
-  phoneNumber: z
-    .object({
-      number: z.string(),
-      countryCode: z.string(),
-    })
-    .optional()
-    .nullable(),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters")
-    .optional(),
-  physicalAddress: z
-    .string()
-    .max(500, "Address must be less than 500 characters")
-    .optional()
-    .or(z.literal("")),
-  supportEmail: z.email().optional(),
+  name: z.string().min(1, "Name is required"),
+  phoneNumber: z.object({
+    number: z.string(),
+    countryCode: z.string(),
+  }),
+  description: z.string().optional(),
+  physicalAddress: z.string().optional(),
+  supportEmail: z.email(),
   twitterHandle: z
     .string()
-    .regex(/^@?[a-zA-Z0-9_]{1,15}$/, "Please enter a valid Twitter handle")
-    .optional()
-    .or(z.literal("")),
+    .regex(/^@?[a-zA-Z0-9_]{1,15}$/, "Please enter a valid Twitter handle"),
   githubHandle: z
     .string()
     .regex(
       /^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/,
       "Please enter a valid GitHub username"
-    )
-    .optional(),
-  logo: z
-    .array(z.any())
-    .max(1, "Only one logo can be uploaded")
-    .default([])
-    .optional(),
+    ),
+  logo: z.custom<FileWithPreview[]>((val) => {
+    if (!Array.isArray(val)) return false;
+    return val.every((item) => item instanceof File);
+  }),
 });
 
 type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
@@ -226,7 +211,7 @@ const CreateOrganizationModal = ({
     resolver: zodResolver(createOrganizationSchema),
     defaultValues: {
       name: "",
-      phoneNumber: null,
+      phoneNumber: { number: "", countryCode: "US" },
       description: "",
       logo: [],
     },
@@ -268,10 +253,6 @@ const CreateOrganizationModal = ({
     },
   });
 
-  const onSubmit = (data: CreateOrganizationFormData) => {
-    createOrgMutation.mutate(data);
-  };
-
   const handleLogoChange = (files: FileWithPreview[]) => {
     form.setValue("logo", files);
   };
@@ -282,6 +263,20 @@ const CreateOrganizationModal = ({
       toast.error(firstError.message || "Failed to upload logo");
     }
   };
+
+  useHotkeys(
+    "mod+enter",
+    (e) => {
+      e.preventDefault();
+      form.handleSubmit((data) => createOrgMutation.mutateAsync(data))();
+    },
+    {
+      enabled: open && !createOrgMutation.isPending,
+      enableOnFormTags: ["input", "textarea"],
+    },
+    [open, createOrgMutation.isPending, form]
+  );
+
   return (
     <FullScreenModal
       open={open}
@@ -307,7 +302,9 @@ const CreateOrganizationModal = ({
             )}
             <Button
               type="button"
-              onClick={() => form.handleSubmit(onSubmit)}
+              onClick={() =>
+                form.handleSubmit((data) => createOrgMutation.mutateAsync(data))
+              }
               disabled={createOrgMutation.isPending}
               className="gap-2"
             >
@@ -325,7 +322,9 @@ const CreateOrganizationModal = ({
       }
     >
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit((data) =>
+          createOrgMutation.mutateAsync(data)
+        )}
         className="grid h-full w-full gap-8 lg:grid-cols-2"
         noValidate
       >
@@ -407,17 +406,24 @@ const CreateOrganizationModal = ({
               <RHF.Controller
                 control={form.control}
                 name="phoneNumber"
-                render={({ field, fieldState: { error } }) => (
-                  <PhoneNumberPicker
-                    id={field.name}
-                    label="Phone Number"
-                    value={field.value || { number: "", countryCode: "US" }}
-                    onChange={field.onChange}
-                    error={error?.message}
-                    disabled={createOrgMutation.isPending}
-                    groupClassName="w-full shadow-none"
-                  />
-                )}
+                render={({ field, fieldState: { error } }) => {
+                  const phoneValue: PhoneNumber = {
+                    number: field.value?.number || "",
+                    countryCode: field.value?.countryCode || "US",
+                  };
+
+                  return (
+                    <PhoneNumberPicker
+                      id={field.name}
+                      label="Phone Number"
+                      value={phoneValue}
+                      onChange={field.onChange}
+                      error={(error as any)?.number?.message}
+                      disabled={createOrgMutation.isPending}
+                      groupClassName="w-full shadow-none"
+                    />
+                  );
+                }}
               />
 
               <RHF.Controller

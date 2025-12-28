@@ -4,7 +4,10 @@ import * as React from "react";
 
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextField } from "@/components/input-picker";
-import { PhoneNumberPicker } from "@/components/phone-number-picker";
+import {
+  PhoneNumber,
+  PhoneNumberPicker,
+} from "@/components/phone-number-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -201,16 +204,23 @@ export default function CheckoutPage() {
                   <RHF.Controller
                     control={form.control}
                     name="phoneNumber"
-                    render={({ field, fieldState: { error } }) => (
-                      <PhoneNumberPicker
-                        id="phone"
-                        value={field.value}
-                        onChange={field.onChange}
-                        label="Phone number"
-                        error={error?.message || null}
-                        groupClassName="w-full shadow-none"
-                      />
-                    )}
+                    render={({ field, fieldState: { error } }) => {
+                      const phoneValue: PhoneNumber = {
+                        number: field.value?.number || "",
+                        countryCode: field.value?.countryCode || "US",
+                      };
+
+                      return (
+                        <PhoneNumberPicker
+                          id="phone"
+                          value={phoneValue}
+                          onChange={field.onChange}
+                          label="Phone number"
+                          error={(error as any)?.number?.message}
+                          groupClassName="w-full shadow-none"
+                        />
+                      );
+                    }}
                   />
 
                   <div className="space-y-6">

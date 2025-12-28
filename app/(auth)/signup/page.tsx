@@ -64,7 +64,7 @@ export default function SignUp() {
     },
     onSuccess: () => {
       toast.success("Account created successfully");
-      router.push("/dashboard/select-organization");
+      router.push("/select-organization");
     },
     onError: (error: Error) => {
       toast.error("Sign-up failed", {
