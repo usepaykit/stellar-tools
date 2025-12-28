@@ -56,9 +56,9 @@ export async function GET(request: Request) {
 
       if (issuer) currency.issuer = issuer;
 
-      if (product.billingType === "metered") {
+      if (product.type === "metered") {
         currency.conditions = `Metered billing: ${product.creditsGranted} credits included, expires in ${product.creditExpiryDays} days`;
-      } else if (product.billingType === "recurring") {
+      } else if (product.type === "subscription") {
         currency.conditions = "Recurring subscription";
       }
 

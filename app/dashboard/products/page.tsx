@@ -72,7 +72,7 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one_time", "recurring", "metered"]),
+  type: z.enum(["one_time", "subscription", "metered"]),
   recurringInterval: z.number().min(1).optional(),
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   price: z.object({
@@ -220,7 +220,7 @@ function ProductsPageContent() {
           pricing: {
             amount: product.priceAmount,
             asset: asset.code,
-            isRecurring: product.billingType === "recurring",
+            isRecurring: product.type === "subscription",
             period: product.recurringPeriod!,
           },
           status: product.status,
@@ -389,7 +389,7 @@ function ProductsModal({
       name: "",
       description: "",
       images: [],
-      billingCycle: "recurring",
+      type: "one_time",
       recurringPeriod: "month",
       price: { amount: "", asset: "XLM" },
       unitDivisor: 1,
@@ -415,7 +415,7 @@ function ProductsModal({
         name: "",
         description: "",
         images: [],
-        billingCycle: "recurring",
+        type: "one_time",
         recurringPeriod: "month",
         price: { amount: "", asset: "XLM" },
       });
@@ -438,7 +438,7 @@ function ProductsModal({
         name: data.name,
         description: data.description ?? null,
         images,
-        billingType: data.billingCycle,
+        type: data.type,
         assetId: data.price.asset,
         status: "active" as const,
         metadata,
@@ -454,7 +454,6 @@ function ProductsModal({
         createdAt: new Date(),
         updatedAt: new Date(),
         isArchived: false,
-        type: "one_time", // todo: fix from silas pr.
       };
 
       return await postProduct(productData);
@@ -583,7 +582,7 @@ function ProductsModal({
               </div>
               <RHF.Controller
                 control={form.control}
-                name="billingCycle"
+                name="type"
                 render={({ field }) => (
                   <RadioGroup
                     onValueChange={field.onChange}
@@ -612,7 +611,7 @@ function ProductsModal({
                 )}
               />
 
-              {watched.billingCycle === "metered" && (
+              {watched.type === "metered" && (
                 <div className="space-y-4 rounded-lg border p-4">
                   <div className="space-y-1">
                     <h4 className="text-sm font-semibold">
@@ -703,7 +702,7 @@ function ProductsModal({
                   )}
                 />
 
-                {watched.billingCycle == "recurring" && (
+                {watched.type == "subscription" && (
                   <RHF.Controller
                     control={form.control}
                     name="recurringPeriod"
@@ -766,7 +765,7 @@ function ProductsModal({
                       {total.toFixed(2)} {watched.price?.asset || "XLM"}
                     </span>
                   </div>
-                  {watched.billingCycle === "recurring" && (
+                  {watched.type === "subscription" && (
                     <p className="text-muted-foreground mt-1 text-right text-xs">
                       Billed every {watched.recurringPeriod}
                     </p>

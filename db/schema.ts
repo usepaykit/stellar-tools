@@ -19,6 +19,11 @@ export const authProviderEnum = pgEnum("auth_provider", ["google", "local"]);
 
 export type AuthProvider = (typeof authProviderEnum.enumValues)[number];
 
+export type AccountSSOOption = {
+  provider: AuthProvider;
+  sub: string;
+};
+
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -27,11 +32,7 @@ export const accounts = pgTable("account", {
     lastName?: string;
     avatarUrl?: string;
   }>(),
-  sso: jsonb("sso")
-    .$type<{
-      values: Array<{ provider: AuthProvider; sub: string }>;
-    }>()
-    .notNull(),
+  sso: jsonb("sso").$type<{ values: Array<AccountSSOOption> }>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>(),
@@ -61,7 +62,9 @@ export const organizations = pgTable("organization", {
   description: text("description"),
   logoUrl: text("logo_url"),
   phoneNumber: text("phone_number"),
-  settings: jsonb("settings").$type<object | null>(),
+  address: text("address"),
+  socialLinks: jsonb("social_links").$type<object>().default({}),
+  settings: jsonb("settings").$type<object>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object | null>(),
@@ -185,14 +188,6 @@ export const customers = pgTable(
   })
 );
 
-export const billingTypeEnum = pgEnum("billing_type", [
-  "one_time",
-  "recurring",
-  "metered",
-]);
-
-export type BillingType = (typeof billingTypeEnum.enumValues)[number];
-
 export const productStatusEnum = pgEnum("product_status", [
   "active",
   "archived",
@@ -230,7 +225,6 @@ export const products = pgTable("product", {
     .notNull()
     .references(() => assets.id),
   type: productTypeEnum("type").notNull(),
-  billingType: billingTypeEnum("billing_type").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object>().default({}),

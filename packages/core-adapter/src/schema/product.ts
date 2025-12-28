@@ -3,9 +3,9 @@ import { z } from "zod";
 import { schemaFor } from "../utils";
 import { Environment, environmentSchema } from "./shared";
 
-const billingTypeEnum = z.enum(["one_time", "recurring", "metered"]);
+export const productTypeEnum = z.enum(["one_time", "subscription", "metered"]);
 
-type BillingType = z.infer<typeof billingTypeEnum>;
+type ProductType = z.infer<typeof productTypeEnum>;
 
 const productStatusEnum = z.enum(["active", "archived"]);
 
@@ -55,7 +55,7 @@ export interface Product {
   /**
    * The billing type of the product.
    */
-  billingType: BillingType;
+  type: ProductType;
 
   /**
    * The created at timestamp for the product.
@@ -103,7 +103,7 @@ export const productSchema = schemaFor<Product>()(
     phoneNumberRequired: z.boolean(),
     status: productStatusEnum,
     assetId: z.string(),
-    billingType: billingTypeEnum,
+    type: productTypeEnum,
     createdAt: z.string(),
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}),
