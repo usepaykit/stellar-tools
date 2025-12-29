@@ -1,10 +1,11 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { ArrowRight, Link, Zap } from "lucide-react";
-import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight, Link, Zap } from "lucide-react";
+import Image from "next/image";
 
 interface TimelineItem {
   id: number;
@@ -27,13 +28,11 @@ export default function RadialOrbitalTimeline({
   const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>(
     {}
   );
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [viewMode, setViewMode] = useState<"orbital">("orbital");
+  const [viewMode, _setViewMode] = useState<"orbital">("orbital");
   const [rotationAngle, setRotationAngle] = useState<number>(0);
   const [autoRotate, setAutoRotate] = useState<boolean>(true);
   const [pulseEffect, setPulseEffect] = useState<Record<number, boolean>>({});
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [centerOffset, setCenterOffset] = useState<{ x: number; y: number }>({
+  const [centerOffset, _setCenterOffset] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
   });
@@ -156,26 +155,26 @@ export default function RadialOrbitalTimeline({
 
   return (
     <div
-      className="w-full min-h-[600px] flex flex-col items-center justify-center bg-background overflow-hidden"
+      className="bg-background flex min-h-[600px] w-full flex-col items-center justify-center overflow-hidden"
       ref={containerRef}
       onClick={handleContainerClick}
     >
-      <div className="relative w-full max-w-4xl h-full flex items-center justify-center">
+      <div className="relative flex h-full w-full max-w-4xl items-center justify-center">
         <div
-          className="absolute w-full h-full flex items-center justify-center"
+          className="absolute flex h-full w-full items-center justify-center"
           ref={orbitRef}
           style={{
             perspective: "1000px",
             transform: `translate(${centerOffset.x}px, ${centerOffset.y}px)`,
           }}
         >
-          <div className="absolute w-20 h-20 rounded-full bg-card/80 backdrop-blur-md animate-pulse flex items-center justify-center z-10 border-2 border-primary/30 shadow-lg">
-            <div className="absolute w-24 h-24 rounded-full border border-primary/20 animate-ping opacity-70"></div>
+          <div className="bg-card/80 border-primary/30 absolute z-10 flex h-20 w-20 animate-pulse items-center justify-center rounded-full border-2 shadow-lg backdrop-blur-md">
+            <div className="border-primary/20 absolute h-24 w-24 animate-ping rounded-full border opacity-70"></div>
             <div
-              className="absolute w-28 h-28 rounded-full border border-primary/10 animate-ping opacity-50"
+              className="border-primary/10 absolute h-28 w-28 animate-ping rounded-full border opacity-50"
               style={{ animationDelay: "0.5s" }}
             ></div>
-            <div className="relative w-12 h-12 rounded-lg overflow-hidden">
+            <div className="relative h-12 w-12 overflow-hidden rounded-lg">
               <Image
                 src="/images/logo-light.png"
                 alt="Stellar Tools"
@@ -188,12 +187,12 @@ export default function RadialOrbitalTimeline({
                 alt="Stellar Tools"
                 width={48}
                 height={48}
-                className="h-full w-full object-contain hidden dark:block"
+                className="hidden h-full w-full object-contain dark:block"
               />
             </div>
           </div>
 
-          <div className="absolute w-96 h-96 rounded-full border border-border"></div>
+          <div className="border-border absolute h-96 w-96 rounded-full border"></div>
 
           {timelineData.map((item, index) => {
             const position = calculateNodePosition(index, timelineData.length);
@@ -213,7 +212,7 @@ export default function RadialOrbitalTimeline({
                 ref={(el) => {
                   nodeRefs.current[item.id] = el;
                 }}
-                className="absolute transition-all duration-700 cursor-pointer"
+                className="absolute cursor-pointer transition-all duration-700"
                 style={nodeStyle}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -221,7 +220,7 @@ export default function RadialOrbitalTimeline({
                 }}
               >
                 <div
-                  className={`absolute rounded-full -inset-1 ${
+                  className={`absolute -inset-1 rounded-full ${
                     isPulsing ? "animate-pulse duration-1000" : ""
                   }`}
                   style={{
@@ -234,44 +233,34 @@ export default function RadialOrbitalTimeline({
                 ></div>
 
                 <div
-                  className={`
-                  w-12 h-12 rounded-lg flex items-center justify-center bg-card border-2 overflow-hidden
-                  ${
+                  className={`bg-card flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border-2 ${
                     isExpanded
-                      ? "border-primary shadow-lg shadow-primary/30"
+                      ? "border-primary shadow-primary/30 shadow-lg"
                       : isRelated
-                      ? "border-primary/50 animate-pulse"
-                      : "border-border"
-                  }
-                  transition-all duration-300 transform
-                  ${isExpanded ? "scale-150" : ""}
-                `}
+                        ? "border-primary/50 animate-pulse"
+                        : "border-border"
+                  } transform transition-all duration-300 ${isExpanded ? "scale-150" : ""} `}
                 >
                   <Image
                     src={item.logo}
                     alt={item.title}
                     width={32}
                     height={32}
-                    className="w-full h-full object-contain p-1"
+                    className="h-full w-full object-contain p-1"
                   />
                 </div>
 
                 <div
-                  className={`
-                  absolute top-14 whitespace-nowrap
-                  text-xs font-semibold tracking-wider
-                  transition-all duration-300
-                  ${isExpanded ? "text-foreground scale-125" : "text-muted-foreground"}
-                `}
+                  className={`absolute top-14 text-xs font-semibold tracking-wider whitespace-nowrap transition-all duration-300 ${isExpanded ? "text-foreground scale-125" : "text-muted-foreground"} `}
                 >
                   {item.title}
                 </div>
 
                 {isExpanded && (
-                  <Card className="absolute top-24 left-1/2 -translate-x-1/2 w-72 bg-card backdrop-blur-lg border-border shadow-xl overflow-visible">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-px h-3 bg-border"></div>
+                  <Card className="bg-card border-border absolute top-24 left-1/2 w-72 -translate-x-1/2 overflow-visible shadow-xl backdrop-blur-lg">
+                    <div className="bg-border absolute -top-3 left-1/2 h-3 w-px -translate-x-1/2"></div>
                     <CardHeader className="pb-2">
-                      <div className="flex justify-between items-center">
+                      <div className="flex items-center justify-between">
                         <Badge
                           className={`px-2 text-xs ${getStatusStyles(
                             item.status
@@ -280,52 +269,55 @@ export default function RadialOrbitalTimeline({
                           {item.status === "available"
                             ? "AVAILABLE"
                             : item.status === "beta"
-                            ? "BETA"
-                            : "COMING SOON"}
+                              ? "BETA"
+                              : "COMING SOON"}
                         </Badge>
-                        <span className="text-xs font-mono text-muted-foreground">
+                        <span className="text-muted-foreground font-mono text-xs">
                           {item.category}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="bg-muted flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
                           <Image
                             src={item.logo}
                             alt={item.title}
                             width={24}
                             height={24}
-                            className="w-full h-full object-contain p-1"
+                            className="h-full w-full object-contain p-1"
                           />
                         </div>
-                        <CardTitle className="text-sm">
-                          {item.title}
-                        </CardTitle>
+                        <CardTitle className="text-sm">{item.title}</CardTitle>
                       </div>
                     </CardHeader>
-                    <CardContent className="text-xs text-muted-foreground">
+                    <CardContent className="text-muted-foreground text-xs">
                       <p>{item.description}</p>
 
-                      <div className="mt-4 pt-3 border-t border-border">
-                        <div className="flex justify-between items-center text-xs mb-1">
-                          <span className="flex items-center text-foreground">
-                            <Zap size={10} className="mr-1 text-primary" />
+                      <div className="border-border mt-4 border-t pt-3">
+                        <div className="mb-1 flex items-center justify-between text-xs">
+                          <span className="text-foreground flex items-center">
+                            <Zap size={10} className="text-primary mr-1" />
                             Adoption Rate
                           </span>
-                          <span className="font-mono text-foreground">{item.adoption}%</span>
+                          <span className="text-foreground font-mono">
+                            {item.adoption}%
+                          </span>
                         </div>
-                        <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                        <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
                           <div
-                            className="h-full bg-primary"
+                            className="bg-primary h-full"
                             style={{ width: `${item.adoption}%` }}
                           ></div>
                         </div>
                       </div>
 
                       {item.relatedIds.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-border">
-                          <div className="flex items-center mb-2">
-                            <Link size={10} className="text-muted-foreground mr-1" />
-                            <h4 className="text-xs uppercase tracking-wider font-medium text-muted-foreground">
+                        <div className="border-border mt-4 border-t pt-3">
+                          <div className="mb-2 flex items-center">
+                            <Link
+                              size={10}
+                              className="text-muted-foreground mr-1"
+                            />
+                            <h4 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                               Related Integrations
                             </h4>
                           </div>
@@ -339,7 +331,7 @@ export default function RadialOrbitalTimeline({
                                   key={relatedId}
                                   variant="outline"
                                   size="sm"
-                                  className="flex items-center h-6 px-2 py-0 text-xs rounded border-border bg-transparent hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
+                                  className="border-border hover:bg-muted text-muted-foreground hover:text-foreground flex h-6 items-center rounded bg-transparent px-2 py-0 text-xs transition-all"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     toggleItem(relatedId);
@@ -348,7 +340,7 @@ export default function RadialOrbitalTimeline({
                                   {relatedItem?.title}
                                   <ArrowRight
                                     size={8}
-                                    className="ml-1 text-muted-foreground"
+                                    className="text-muted-foreground ml-1"
                                   />
                                 </Button>
                               );

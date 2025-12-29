@@ -24,9 +24,9 @@ const rosemary = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Stellar Tools - Bring Stellar Payments to Every Platform",
+  title: "StellarTools | Stripe for Stellar",
   description:
-    "Unified adapters for BetterAuth, Medusa, Shopify, Clerk, Convex, Trigger.dev, WordPress, AI SDKs, and more—make crypto-native payments seamless for your users.",
+    "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
 };
 
 export default function RootLayout({

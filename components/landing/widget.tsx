@@ -1,11 +1,11 @@
 import React from "react";
+import { useEffect, useRef, useState } from "react";
+
 import { cn } from "@/lib/utils";
 import createGlobe from "cobe";
-import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Play, Code2 } from "lucide-react";
+import { Code2, Play } from "lucide-react";
 import Image from "next/image";
-
 
 export default function WidgetSection() {
   const features = [
@@ -14,8 +14,7 @@ export default function WidgetSection() {
       description:
         "Monitor all your payments, subscriptions, and credit transactions in one unified dashboard with live updates.",
       skeleton: <SkeletonOne />,
-      className:
-        "col-span-1 lg:col-span-4 border-b lg:border-r border-border",
+      className: "col-span-1 lg:col-span-4 border-b lg:border-r border-border",
     },
     {
       title: "Platform Integrations",
@@ -29,8 +28,7 @@ export default function WidgetSection() {
       description:
         "Get started in minutes with comprehensive guides, code examples, and interactive API documentation.",
       skeleton: <SkeletonThree />,
-      className:
-        "col-span-1 lg:col-span-3 lg:border-r border-border",
+      className: "col-span-1 lg:col-span-3 lg:border-r border-border",
     },
     {
       title: "Global Stellar Network",
@@ -41,25 +39,25 @@ export default function WidgetSection() {
     },
   ];
   return (
-    <div className="relative z-20 py-10 lg:py-40 max-w-7xl mx-auto">
+    <div className="relative z-20 mx-auto max-w-7xl py-10 lg:py-40">
       <div className="px-8">
-        <h4 className="text-3xl lg:text-5xl lg:leading-tight max-w-5xl mx-auto text-center tracking-tight font-medium text-foreground">
-          Everything you need to accept crypto payments
+        <h4 className="text-foreground mx-auto max-w-5xl text-center text-3xl font-medium tracking-tight lg:text-5xl lg:leading-tight">
+          Flexible Payment Infrastructure
         </h4>
 
-        <p className="text-sm lg:text-base  max-w-2xl  my-4 mx-auto text-muted-foreground text-center font-normal">
-          From metered billing to subscriptions, from one-time payments to credit systems—Stellar Tools provides
-          all the APIs and integrations you need to bring crypto-native payments to your platform.
+        <p className="text-muted-foreground mx-auto my-4 max-w-2xl text-center text-sm font-normal lg:text-base">
+          Metered billing, subscriptions, one-time payments, and credit systems.
+          All the APIs you need for crypto payments.
         </p>
       </div>
 
-      <div className="relative ">
-        <div className="grid grid-cols-1 lg:grid-cols-6 mt-12 xl:border rounded-md border-border">
+      <div className="relative">
+        <div className="border-border mt-12 grid grid-cols-1 rounded-md lg:grid-cols-6 xl:border">
           {features.map((feature) => (
             <FeatureCard key={feature.title} className={feature.className}>
               <FeatureTitle>{feature.title}</FeatureTitle>
               <FeatureDescription>{feature.description}</FeatureDescription>
-              <div className=" h-full w-full">{feature.skeleton}</div>
+              <div className="h-full w-full">{feature.skeleton}</div>
             </FeatureCard>
           ))}
         </div>
@@ -76,7 +74,7 @@ const FeatureCard = ({
   className?: string;
 }) => {
   return (
-    <div className={cn(`p-4 sm:p-8 relative overflow-hidden`, className)}>
+    <div className={cn(`relative overflow-hidden p-4 sm:p-8`, className)}>
       {children}
     </div>
   );
@@ -84,7 +82,7 @@ const FeatureCard = ({
 
 const FeatureTitle = ({ children }: { children?: React.ReactNode }) => {
   return (
-    <p className=" max-w-5xl mx-auto text-left tracking-tight text-foreground text-xl md:text-2xl md:leading-snug">
+    <p className="text-foreground mx-auto max-w-5xl text-left text-xl tracking-tight md:text-2xl md:leading-snug">
       {children}
     </p>
   );
@@ -94,9 +92,9 @@ const FeatureDescription = ({ children }: { children?: React.ReactNode }) => {
   return (
     <p
       className={cn(
-        "text-sm md:text-base  max-w-4xl text-left mx-auto",
+        "mx-auto max-w-4xl text-left text-sm md:text-base",
         "text-muted-foreground text-center font-normal",
-        "text-left max-w-sm mx-0 md:text-sm my-2"
+        "mx-0 my-2 max-w-sm text-left md:text-sm"
       )}
     >
       {children}
@@ -106,55 +104,55 @@ const FeatureDescription = ({ children }: { children?: React.ReactNode }) => {
 
 export const SkeletonOne = () => {
   return (
-    <div className="relative flex py-8 px-2 gap-10 h-full">
-      <div className="w-full p-5 mx-auto bg-card shadow-2xl group h-full rounded-lg border border-border">
-        <div className="flex flex-1 w-full h-full flex-col space-y-3">
+    <div className="relative flex h-full gap-10 px-2 py-8">
+      <div className="bg-card group border-border mx-auto h-full w-full rounded-lg border p-5 shadow-2xl">
+        <div className="flex h-full w-full flex-1 flex-col space-y-3">
           {/* Mock Dashboard UI */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-4 w-32 bg-muted rounded"></div>
-            <div className="h-4 w-20 bg-muted rounded"></div>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="bg-muted h-4 w-32 rounded"></div>
+            <div className="bg-muted h-4 w-20 rounded"></div>
           </div>
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="h-16 bg-muted/50 rounded"></div>
-            <div className="h-16 bg-muted/50 rounded"></div>
-            <div className="h-16 bg-muted/50 rounded"></div>
+          <div className="mb-4 grid grid-cols-3 gap-3">
+            <div className="bg-muted/50 h-16 rounded"></div>
+            <div className="bg-muted/50 h-16 rounded"></div>
+            <div className="bg-muted/50 h-16 rounded"></div>
           </div>
-          <div className="h-32 bg-muted/30 rounded"></div>
-          <div className="flex gap-2 mt-2">
-            <div className="h-2 w-full bg-primary/20 rounded"></div>
-            <div className="h-2 w-full bg-primary/30 rounded"></div>
-            <div className="h-2 w-full bg-primary/40 rounded"></div>
+          <div className="bg-muted/30 h-32 rounded"></div>
+          <div className="mt-2 flex gap-2">
+            <div className="bg-primary/20 h-2 w-full rounded"></div>
+            <div className="bg-primary/30 h-2 w-full rounded"></div>
+            <div className="bg-primary/40 h-2 w-full rounded"></div>
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-0 z-40 inset-x-0 h-60 bg-gradient-to-t from-background via-background to-transparent w-full pointer-events-none" />
-      <div className="absolute top-0 z-40 inset-x-0 h-60 bg-gradient-to-b from-background via-transparent to-transparent w-full pointer-events-none" />
+      <div className="from-background via-background pointer-events-none absolute inset-x-0 bottom-0 z-40 h-60 w-full bg-gradient-to-t to-transparent" />
+      <div className="from-background pointer-events-none absolute inset-x-0 top-0 z-40 h-60 w-full bg-gradient-to-b via-transparent to-transparent" />
     </div>
   );
 };
 
 export const SkeletonThree = () => {
   return (
-    <div className="relative flex gap-10 h-full group/image">
-      <div className="w-full mx-auto bg-card border border-border rounded-lg group h-full p-6">
-        <div className="flex flex-1 w-full h-full flex-col space-y-3 relative">
+    <div className="group/image relative flex h-full gap-10">
+      <div className="bg-card border-border group mx-auto h-full w-full rounded-lg border p-6">
+        <div className="relative flex h-full w-full flex-1 flex-col space-y-3">
           {/* Code block mockup */}
-          <div className="flex items-center gap-2 mb-3">
-            <Code2 className="h-4 w-4 text-muted-foreground" />
-            <div className="h-3 w-24 bg-muted rounded"></div>
+          <div className="mb-3 flex items-center gap-2">
+            <Code2 className="text-muted-foreground h-4 w-4" />
+            <div className="bg-muted h-3 w-24 rounded"></div>
           </div>
           <div className="space-y-2">
-            <div className="h-3 w-full bg-muted/50 rounded"></div>
-            <div className="h-3 w-3/4 bg-muted/50 rounded"></div>
-            <div className="h-3 w-full bg-primary/20 rounded"></div>
-            <div className="h-3 w-5/6 bg-muted/50 rounded"></div>
-            <div className="h-3 w-full bg-primary/20 rounded"></div>
-            <div className="h-3 w-4/5 bg-muted/50 rounded"></div>
+            <div className="bg-muted/50 h-3 w-full rounded"></div>
+            <div className="bg-muted/50 h-3 w-3/4 rounded"></div>
+            <div className="bg-primary/20 h-3 w-full rounded"></div>
+            <div className="bg-muted/50 h-3 w-5/6 rounded"></div>
+            <div className="bg-primary/20 h-3 w-full rounded"></div>
+            <div className="bg-muted/50 h-3 w-4/5 rounded"></div>
           </div>
           <div className="mt-4 flex items-center gap-2">
-            <Play className="h-5 w-5 text-primary" />
-            <div className="h-2 w-16 bg-primary/30 rounded"></div>
+            <Play className="text-primary h-5 w-5" />
+            <div className="bg-primary/30 h-2 w-16 rounded"></div>
           </div>
         </div>
       </div>
@@ -169,42 +167,46 @@ const generateRotations = (count: number): number[] =>
 export const SkeletonTwo = () => {
   // Platform integration logos with actual images - separate arrays for each row
   const topRowPlatforms = [
-    { 
-      name: "BetterAuth", 
+    {
+      name: "BetterAuth",
       logo: "/images/integrations/better-auth.png",
     },
-    { 
-      name: "Medusa", 
+    {
+      name: "Medusa",
       logo: "/images/integrations/medusa.svg",
     },
-    { 
-      name: "AI SDK", 
+    {
+      name: "AI SDK",
       logo: "/images/integrations/aisdk.jpg",
     },
-    { 
-      name: "UploadThing", 
+    {
+      name: "UploadThing",
       logo: "/images/integrations/uploadthing.png",
     },
   ];
 
   const bottomRowPlatforms = [
-    { 
-      name: "Shopify", 
+    {
+      name: "Shopify",
       logo: "/images/integrations/shopify.png",
     },
-    { 
-      name: "PayloadCMS", 
+    {
+      name: "PayloadCMS",
       logo: "/images/integrations/payloadcms.png",
     },
-    { 
-      name: "Clerk", 
+    {
+      name: "Clerk",
       logo: "/images/integrations/clerk.png",
     },
   ];
 
   // Generate rotations once using useState with lazy initializer to avoid calling Math.random during render
-  const [firstRowRotations] = useState(() => generateRotations(topRowPlatforms.length));
-  const [secondRowRotations] = useState(() => generateRotations(bottomRowPlatforms.length));
+  const [firstRowRotations] = useState(() =>
+    generateRotations(topRowPlatforms.length)
+  );
+  const [secondRowRotations] = useState(() =>
+    generateRotations(bottomRowPlatforms.length)
+  );
 
   const cardVariants = {
     whileHover: {
@@ -219,8 +221,8 @@ export const SkeletonTwo = () => {
     },
   };
   return (
-    <div className="relative flex flex-col items-start p-8 gap-10 h-full overflow-hidden">
-      <div className="flex flex-row -ml-20">
+    <div className="relative flex h-full flex-col items-start gap-10 overflow-hidden p-8">
+      <div className="-ml-20 flex flex-row">
         {topRowPlatforms.map((platform, idx) => (
           <motion.div
             variants={cardVariants}
@@ -230,18 +232,18 @@ export const SkeletonTwo = () => {
             }}
             whileHover="whileHover"
             whileTap="whileTap"
-            className="rounded-xl -mr-4 mt-4 p-3 bg-card border border-border shrink-0 overflow-hidden shadow-sm"
+            className="bg-card border-border mt-4 -mr-4 shrink-0 overflow-hidden rounded-xl border p-3 shadow-sm"
           >
-            <div className="h-16 w-16 md:h-24 md:w-24 flex items-center justify-center bg-background rounded-lg p-2">
+            <div className="bg-background flex h-16 w-16 items-center justify-center rounded-lg p-2 md:h-24 md:w-24">
               <Image
                 src={platform.logo}
                 alt={platform.name}
                 width={80}
                 height={80}
-                className="h-full w-full object-contain rounded"
+                className="h-full w-full rounded object-contain"
               />
             </div>
-            <p className="text-xs md:text-sm font-medium mt-2 text-foreground text-center">
+            <p className="text-foreground mt-2 text-center text-xs font-medium md:text-sm">
               {platform.name}
             </p>
           </motion.div>
@@ -257,34 +259,34 @@ export const SkeletonTwo = () => {
             variants={cardVariants}
             whileHover="whileHover"
             whileTap="whileTap"
-            className="rounded-xl -mr-4 mt-4 p-3 bg-card border border-border shrink-0 overflow-hidden shadow-sm"
+            className="bg-card border-border mt-4 -mr-4 shrink-0 overflow-hidden rounded-xl border p-3 shadow-sm"
           >
-            <div className="h-16 w-16 md:h-24 md:w-24 flex items-center justify-center bg-background rounded-lg p-2">
+            <div className="bg-background flex h-16 w-16 items-center justify-center rounded-lg p-2 md:h-24 md:w-24">
               <Image
                 src={platform.logo}
                 alt={platform.name}
                 width={80}
                 height={80}
-                className="h-full w-full object-contain rounded"
+                className="h-full w-full rounded object-contain"
               />
             </div>
-            <p className="text-xs md:text-sm font-medium mt-2 text-foreground text-center">
+            <p className="text-foreground mt-2 text-center text-xs font-medium md:text-sm">
               {platform.name}
             </p>
           </motion.div>
         ))}
       </div>
 
-      <div className="absolute left-0 z-100 inset-y-0 w-20 bg-gradient-to-r from-background to-transparent  h-full pointer-events-none" />
-      <div className="absolute right-0 z-100 inset-y-0 w-20 bg-gradient-to-l from-background  to-transparent h-full pointer-events-none" />
+      <div className="from-background pointer-events-none absolute inset-y-0 left-0 z-100 h-full w-20 bg-gradient-to-r to-transparent" />
+      <div className="from-background pointer-events-none absolute inset-y-0 right-0 z-100 h-full w-20 bg-gradient-to-l to-transparent" />
     </div>
   );
 };
 
 export const SkeletonFour = () => {
   return (
-    <div className="h-60 md:h-60  flex flex-col items-center relative bg-transparent mt-10">
-      <Globe className="absolute -right-10 md:-right-10 -bottom-80 md:-bottom-72" />
+    <div className="relative mt-10 flex h-60 flex-col items-center bg-transparent md:h-60">
+      <Globe className="absolute -right-10 -bottom-80 md:-right-10 md:-bottom-72" />
     </div>
   );
 };
@@ -317,7 +319,7 @@ export const Globe = ({ className }: { className?: string }) => {
         { location: [51.5074, -0.1278], size: 0.06 }, // London
         { location: [35.6762, 139.6503], size: 0.05 }, // Tokyo
         { location: [-33.8688, 151.2093], size: 0.04 }, // Sydney
-        { location: [52.5200, 13.4050], size: 0.04 }, // Berlin
+        { location: [52.52, 13.405], size: 0.04 }, // Berlin
       ],
       onRender: (state) => {
         // Called on every animation frame.

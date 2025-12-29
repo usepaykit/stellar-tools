@@ -57,7 +57,6 @@ export const POST = async (req: NextRequest) => {
         { customer },
         organizationId,
         environment
-        
       )
     );
   } else {

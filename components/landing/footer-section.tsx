@@ -1,7 +1,8 @@
 import React from "react";
+
+import { Github, Heart, Twitter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Github, Twitter, Heart } from "lucide-react";
 
 export default function FooterSection() {
   const currentYear = new Date().getFullYear();
@@ -28,14 +29,14 @@ export default function FooterSection() {
   };
 
   return (
-    <footer className="relative border-t border-border bg-background">
+    <footer className="border-border bg-background relative border-t">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
         <div className="py-12 lg:py-16">
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
             {/* Brand Section */}
             <div className="lg:col-span-4">
-              <Link href="/" className="flex items-center gap-2 mb-4">
+              <Link href="/" className="mb-4 flex items-center gap-2">
                 <div className="relative h-10 w-10">
                   <Image
                     src="/images/logo-light.png"
@@ -49,17 +50,16 @@ export default function FooterSection() {
                     alt="Stellar Tools"
                     width={40}
                     height={40}
-                    className="h-full w-full object-contain hidden dark:block"
+                    className="hidden h-full w-full object-contain dark:block"
                   />
                 </div>
-                <span className="font-rosemary text-xl font-semibold text-foreground">
+                <span className="font-rosemary text-foreground text-xl font-semibold">
                   Stellar Tools
                 </span>
               </Link>
               <p className="text-muted-foreground mb-6 max-w-sm text-sm leading-relaxed">
-                Bring Stellar Payments to Every Platform Instantly. Unified adapters
-                for BetterAuth, Medusa, Shopify, and more—make crypto-native payments
-                seamless for your users.
+                Drop-in payment adapters for your stack. Accept fast, low-cost
+                crypto payments in minutes.
               </p>
               <div className="flex items-center gap-4">
                 <a
@@ -85,7 +85,7 @@ export default function FooterSection() {
 
             {/* Product Links */}
             <div className="lg:col-span-2">
-              <h3 className="text-sm font-semibold text-foreground mb-4">
+              <h3 className="text-foreground mb-4 text-sm font-semibold">
                 Product
               </h3>
               <ul className="space-y-3">
@@ -104,7 +104,7 @@ export default function FooterSection() {
 
             {/* Resources Links */}
             <div className="lg:col-span-2">
-              <h3 className="text-sm font-semibold text-foreground mb-4">
+              <h3 className="text-foreground mb-4 text-sm font-semibold">
                 Resources
               </h3>
               <ul className="space-y-3">
@@ -123,7 +123,7 @@ export default function FooterSection() {
 
             {/* Company Links */}
             <div className="lg:col-span-2">
-              <h3 className="text-sm font-semibold text-foreground mb-4">
+              <h3 className="text-foreground mb-4 text-sm font-semibold">
                 Company
               </h3>
               <ul className="space-y-3">
@@ -142,7 +142,7 @@ export default function FooterSection() {
 
             {/* CTA Section */}
             <div className="lg:col-span-2">
-              <h3 className="text-sm font-semibold text-foreground mb-4">
+              <h3 className="text-foreground mb-4 text-sm font-semibold">
                 Get Started
               </h3>
               <p className="text-muted-foreground mb-4 text-sm">
@@ -150,7 +150,7 @@ export default function FooterSection() {
               </p>
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors"
               >
                 Sign Up Free
               </Link>
@@ -159,20 +159,24 @@ export default function FooterSection() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-border py-6">
+        <div className="border-border border-t py-6">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>© {currentYear} Stellar Tools. All rights reserved.</span>
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
+              <span>© {currentYear} StellarTools. All rights reserved.</span>
             </div>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Link
+              href="https://usepaykit.dev"
+              target="_blank"
+              className="text-muted-foreground flex items-center gap-1 text-sm"
+            >
               <span>Made with</span>
               <Heart className="h-4 w-4 fill-red-500 text-red-500" />
               <span>by</span>
-              <span className="font-semibold text-foreground">Stellar</span>
-            </div>
+              <span className="text-foreground font-semibold">Paykit</span>
+            </Link>
           </div>
         </div>
-    </div>
+      </div>
     </footer>
   );
 }

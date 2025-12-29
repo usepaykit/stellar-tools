@@ -1,13 +1,12 @@
 "use client";
 
-
+import { AppConnectionWidget } from "@/components/landing/app-connection-wdget";
+import FeaturesSection from "@/components/landing/features-section";
+import FooterSection from "@/components/landing/footer-section";
 import { HeroBackground } from "@/components/landing/hero-background";
 import HeroSection from "@/components/landing/hero-section";
-import { Header } from "@/components/ui/navbar";
-import FeaturesSection from "@/components/landing/features-section";
 import WidgetSection from "@/components/landing/widget";
-import FooterSection from "@/components/landing/footer-section";
-import { AppConnectionWidget } from "@/components/landing/app-connection-wdget";
+import { Header } from "@/components/ui/navbar";
 
 export default function Home() {
   return (
