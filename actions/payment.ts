@@ -4,9 +4,11 @@ import {
   Network,
   Payment,
   assets,
+  checkouts,
   customers,
   db,
   payments,
+  products,
   refunds,
 } from "@/db";
 import { Stellar } from "@/integrations/stellar";
@@ -16,16 +18,16 @@ import { nanoid } from "nanoid";
 import { resolveOrgContext } from "./organization";
 
 export const postPayment = async (
+  params: Omit<Payment, "id" | "organizationId" | "environment">,
   orgId?: string,
-  env?: Network,
-  params?: Omit<Payment, "id" | "organizationId" | "environment">
+  env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [payment] = await db
     .insert(payments)
     .values({
-      ...(params as Payment),
+      ...params,
       id: `pay_${nanoid(25)}`,
       organizationId,
       environment,
@@ -101,7 +103,9 @@ export const retrievePaymentsWithDetails = async (
     })
     .from(payments)
     .leftJoin(customers, eq(payments.customerId, customers.id))
-    .innerJoin(assets, eq(payments.assetId, assets.id))
+    .leftJoin(checkouts, eq(payments.checkoutId, checkouts.id))
+    .leftJoin(products, eq(checkouts.productId, products.id))
+    .leftJoin(assets, eq(products.assetId, assets.id))
     .leftJoin(refunds, eq(payments.id, refunds.paymentId))
     .where(
       and(

@@ -72,9 +72,14 @@ export const PUT = async (
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const { organizationId } = await resolveApiKey(apiKey);
+    const { organizationId, environment } = await resolveApiKey(apiKey);
 
-    const subscription = await putSubscription(id, organizationId, data);
+    const subscription = await putSubscription(
+      id,
+      data,
+      organizationId,
+      environment
+    );
 
     return NextResponse.json({ data: subscription });
   } catch (error: unknown) {

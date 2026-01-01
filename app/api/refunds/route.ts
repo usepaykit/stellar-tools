@@ -94,12 +94,22 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: refundResult.error }, { status: 500 });
   }
 
-  const refund = await postRefund({
-    ...data,
-    transactionHash: refundResult.data?.hash,
+  const refund = await postRefund(
+    {
+      ...data,
+      status: "pending",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      receiverPublicKey: data.publicKey,
+      metadata: data.metadata ?? {},
+      customerId: data.customerId,
+      paymentId: data.paymentId,
+      amount: data.amount,
+      reason: data.reason ?? null,
+    },
     organizationId,
-    environment,
-  });
+    environment
+  );
 
   await tryCatchAsync(
     triggerWebhooks("refund.succeeded", { refund }, organizationId, environment)

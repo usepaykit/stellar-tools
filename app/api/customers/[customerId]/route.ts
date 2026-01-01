@@ -25,7 +25,7 @@ export const GET = async (
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
   const customer = await retrieveCustomer(
-    customerId,
+    { id: customerId },
     organizationId,
     environment
   );

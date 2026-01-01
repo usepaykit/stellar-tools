@@ -57,7 +57,6 @@ import {
   XCircle,
 } from "lucide-react";
 import moment from "moment";
-import { nanoid } from "nanoid";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -193,7 +192,7 @@ export default function CustomerDetailPage() {
 
   const { data: customer, isLoading: _customerLoading } = useQuery({
     queryKey: ["customer", customerId],
-    queryFn: () => retrieveCustomer(customerId),
+    queryFn: () => retrieveCustomer({ id: customerId }),
   });
 
   const handleToggleWalletVisibility = (walletId: string) => {
@@ -262,7 +261,7 @@ export default function CustomerDetailPage() {
               <div className="py-12 text-center">
                 <h1 className="mb-2 text-2xl font-bold">Customer not found</h1>
                 <p className="text-muted-foreground mb-4">
-                  The customer you&’re looking for doesn&’t exist.
+                  The customer you’re looking for doesn’t exist.
                 </p>
                 <Button onClick={() => router.push("/dashboard/customers")}>
                   Back to Customers
@@ -514,13 +513,10 @@ export default function CustomerDetailPage() {
                           Customer ID
                         </div>
                         <div className="font-mono text-sm break-all">
-                          cus_{customer.id}
+                          {customer.id}
                         </div>
                       </div>
-                      <CopyButton
-                        text={`cus_${customer.id}`}
-                        label="Copy customer ID"
-                      />
+                      <CopyButton text={customer.id} label="Copy customer ID" />
                     </div>
 
                     <Separator />
@@ -752,18 +748,17 @@ function CheckoutModal({
         .add(data.expiresAt.time, "hours")
         .toDate();
 
-      const paymentUrl = `${process.env.NEXT_PUBLIC_CHECKOUT_BASE_HOST}/pay/${nanoid(52)}`;
-
       return await postCheckout({
         customerId,
         productId: data.productId,
         description: data.description || null,
         status: "open",
         expiresAt,
-        paymentUrl,
         createdAt: new Date(),
         updatedAt: new Date(),
         metadata: {},
+        amount: null,
+        assetCode: null,
       });
     },
     onSuccess: () => {

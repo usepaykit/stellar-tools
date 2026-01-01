@@ -35,7 +35,7 @@ export const accounts = pgTable("account", {
   sso: jsonb("sso").$type<{ values: Array<AccountSSOOption> }>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>(),
+  metadata: jsonb("metadata").$type<object | null>(),
 });
 
 export const auth = pgTable("auth", {
@@ -50,7 +50,7 @@ export const auth = pgTable("auth", {
   isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
+  metadata: jsonb("metadata").$type<object | null>(),
 });
 
 export const organizations = pgTable("organization", {
@@ -63,8 +63,8 @@ export const organizations = pgTable("organization", {
   logoUrl: text("logo_url"),
   phoneNumber: text("phone_number"),
   address: text("address"),
-  socialLinks: jsonb("social_links").$type<object>().default({}),
-  settings: jsonb("settings").$type<object | null>().notNull(),
+  socialLinks: jsonb("social_links").$type<object | null>(),
+  settings: jsonb("settings").$type<object | null>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object | null>(),
@@ -96,7 +96,7 @@ export const teamMembers = pgTable(
     role: roleEnum("role").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<object>().default({}),
+    metadata: jsonb("metadata").$type<object | null>(),
   },
   (table) => ({
     uniqueOrgAccount: unique().on(table.organizationId, table.accountId),
@@ -119,7 +119,7 @@ export const teamInvites = pgTable("team_invite", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
+  metadata: jsonb("metadata").$type<object | null>(),
 });
 
 export const apiKeys = pgTable("api_key", {
@@ -134,7 +134,7 @@ export const apiKeys = pgTable("api_key", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   lastUsedAt: timestamp("last_used_at"),
-  metadata: jsonb("metadata").$type<object>().default({}),
+  metadata: jsonb("metadata").$type<object | null>(),
   environment: networkEnum("network").notNull(),
 });
 
@@ -149,7 +149,7 @@ export const assets = pgTable(
     network: networkEnum("network").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<object>().default({}),
+    metadata: jsonb("metadata").$type<object | null>(),
   },
   (table) => ({
     uniqueCodeIssuerNetwork: unique().on(
@@ -177,7 +177,7 @@ export const customers = pgTable(
     email: text("email"),
     name: text("name"),
     phone: text("phone"),
-    appMetadata: jsonb("app_metadata").$type<CustomerMetadata>().default({}),
+    appMetadata: jsonb("app_metadata").$type<CustomerMetadata | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),
@@ -227,7 +227,7 @@ export const products = pgTable("product", {
   type: productTypeEnum("type").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
+  metadata: jsonb("metadata").$type<object | null>(),
   environment: networkEnum("network").notNull(),
   priceAmount: integer("price_amount").notNull(),
   recurringPeriod: recurringPeriodEnum("recurring_period"),
@@ -254,19 +254,17 @@ export const checkouts = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organizations.id),
-    apiKeyId: text("api_key_id").references(() => apiKeys.id),
     customerId: text("customer_id").references(() => customers.id),
     productId: text("product_id").references(() => products.id),
     amount: integer("amount"),
-    assetId: text("asset_id").references(() => assets.id),
     description: text("description"),
     status: checkoutStatusEnum("status").notNull(),
-    paymentUrl: text("payment_url").notNull(),
     expiresAt: timestamp("expires_at").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<object>().default({}),
+    metadata: jsonb("metadata").$type<object | null>(),
     environment: networkEnum("network").notNull(),
+    assetCode: text("asset_code"),
   },
   (table) => ({
     amountOrProductCheck: check(
@@ -305,7 +303,7 @@ export const subscriptions = pgTable("subscription", {
   failedPaymentCount: integer("failed_payment_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<object>().default({}),
+  metadata: jsonb("metadata").$type<object | null>(),
   environment: networkEnum("network").notNull(),
 });
 
@@ -322,9 +320,6 @@ export const payments = pgTable("payment", {
     .references(() => organizations.id),
   checkoutId: text("checkout_id").references(() => checkouts.id),
   customerId: text("customer_id").references(() => customers.id),
-  assetId: text("asset_id")
-    .notNull()
-    .references(() => assets.id),
   amount: integer("amount").notNull(),
   transactionHash: text("tx_hash").notNull().unique(),
   status: paymentStatusEnum("status").notNull(),
@@ -388,23 +383,17 @@ export const refunds = pgTable(
       .notNull()
       .references(() => payments.id),
     customerId: text("customer_id").references(() => customers.id),
-    assetId: text("asset_id").references(() => assets.id),
     amount: integer("amount").notNull(),
-    transactionHash: text("tx_hash").notNull().unique(),
     reason: text("reason"),
     status: refundStatusEnum("status").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),
-    metadata: jsonb("metadata").$type<object>().default({}),
+    metadata: jsonb("metadata").$type<object | null>(),
     receiverPublicKey: text("receiver_public_key").notNull(),
   },
   (table) => ({
-    uniquePaymentCustomerAsset: unique().on(
-      table.paymentId,
-      table.customerId,
-      table.assetId
-    ),
+    uniquePaymentCustomer: unique().on(table.paymentId, table.customerId),
   })
 );
 
@@ -418,7 +407,7 @@ export const creditBalances = pgTable(
     customerId: text("customer_id").references(() => customers.id),
     productId: text("product_id").references(() => products.id),
     environment: networkEnum("network").notNull(),
-    metadata: jsonb("metadata").$type<object>(),
+    metadata: jsonb("metadata").$type<object | null>(),
     balance: integer("balance").notNull().default(0),
     consumed: integer("consumed").notNull().default(0),
     granted: integer("granted").notNull().default(0),
@@ -463,7 +452,7 @@ export const creditTransactions = pgTable(
     balanceAfter: integer("balance_after").notNull(),
     reason: text("reason"),
     type: creditTransactionTypeEnum("type").notNull(),
-    metadata: jsonb("metadata"),
+    metadata: jsonb("metadata").$type<object | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

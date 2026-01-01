@@ -6,10 +6,16 @@ import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
-export const postCheckout = async (params: Partial<Checkout>) => {
+export const postCheckout = async (
+  params: Omit<Checkout, "id" | "organizationId" | "environment">,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [checkout] = await db
     .insert(checkouts)
-    .values({ id: `cz_${nanoid(25)}`, ...params } as Checkout)
+    .values({ id: `cz_${nanoid(25)}`, organizationId, environment, ...params })
     .returning();
 
   return checkout;

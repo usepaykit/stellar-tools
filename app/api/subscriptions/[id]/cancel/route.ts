@@ -14,13 +14,18 @@ export const POST = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
   try {
-    const subscription = await putSubscription(id, organizationId, {
-      status: "canceled",
-      canceledAt: new Date(),
-    });
+    const subscription = await putSubscription(
+      id,
+      {
+        status: "canceled",
+        canceledAt: new Date(),
+      },
+      organizationId,
+      environment
+    );
 
     return NextResponse.json({ data: subscription });
   } catch (error: unknown) {

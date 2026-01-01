@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 
-import { retrieveCustomers } from "@/actions/customers";
+import { retrieveCustomers, upsertCustomer } from "@/actions/customers";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -357,12 +357,16 @@ export function CustomerModal({
         {} as Record<string, string>
       );
 
-      console.log("Creating customer:", {
+      await upsertCustomer({
         name: data.name,
-        email: data.email || undefined,
-        phone: phoneString || undefined,
-        metadata: metadataRecord,
-      });
+        email: data.email,
+        phone: phoneString,
+        appMetadata: metadataRecord,
+        environment: "testnet",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        walletAddresses: null,
+      } as Customer);
 
       toast.success(
         isEditMode
@@ -442,7 +446,7 @@ export function CustomerModal({
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">
-                Enter the customer&’s basic contact information.
+                Enter the customer’s basic contact information.
               </p>
             </div>
 

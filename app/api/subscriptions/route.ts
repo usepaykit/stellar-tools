@@ -34,9 +34,28 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    const { environment } = await resolveApiKey(apiKey);
+    const { environment, organizationId } = await resolveApiKey(apiKey);
 
-    const subscription = await postSubscription({ ...data, environment });
+    const subscription = await postSubscription(
+      {
+        customerId: data.customerId,
+        productId: data.productId,
+        currentPeriodStart: data.currentPeriodStart,
+        currentPeriodEnd: data.currentPeriodEnd,
+        status: data.status,
+        metadata: data.metadata ?? {},
+        cancelAtPeriodEnd: false,
+        failedPaymentCount: 0,
+        canceledAt: null,
+        pausedAt: null,
+        lastPaymentId: null,
+        nextBillingDate: data.nextBillingDate ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      organizationId,
+      environment
+    );
 
     return NextResponse.json({ data: subscription });
   } catch (error: unknown) {

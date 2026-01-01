@@ -1,16 +1,17 @@
 "use server";
 
 import { Customer, Network, customers, db } from "@/db";
-import { and, eq } from "drizzle-orm";
+import { SQL, and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
-export const postCustomer = async (params: Omit<Customer, "id">) => {
-  const { organizationId, environment } = await resolveOrgContext(
-    params.organizationId,
-    params.environment
-  );
+export const postCustomer = async (
+  params: Omit<Customer, "id" | "organizationId" | "environment">,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [customer] = await db
     .insert(customers)
@@ -25,6 +26,28 @@ export const postCustomer = async (params: Omit<Customer, "id">) => {
   if (!customer) throw new Error("Customer not created");
 
   return customer;
+};
+
+export const upsertCustomer = async (
+  params: Partial<Customer>,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const customer = await retrieveCustomer(
+    {
+      ...(params.email ? { email: params.email as string } : {}),
+      ...(params.phone ? { phone: params.phone as string } : {}),
+      ...(params.id ? { id: params.id } : {}),
+    } as unknown as any,
+    organizationId,
+    environment
+  );
+
+  if (customer) {
+    throw new Error("customer exists");
+  }
 };
 
 export const retrieveCustomers = async (orgId?: string, env?: Network) => {
@@ -42,18 +65,35 @@ export const retrieveCustomers = async (orgId?: string, env?: Network) => {
 };
 
 export const retrieveCustomer = async (
-  id: string,
+  params: { id: string } | { email: string } | { phone: string } | undefined,
   orgId?: string,
   env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  let whereClause: SQL<unknown>;
+
+  if (!params) {
+    throw new Error("Invalid customer identifier");
+  }
+
+  if ("id" in params) {
+    whereClause = eq(customers.id, params.id);
+  } else if ("email" in params) {
+    whereClause = eq(customers.email, params.email);
+  } else if ("phone" in params) {
+    whereClause =
+      sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
+  } else {
+    throw new Error("Invalid customer identifier");
+  }
 
   const [customer] = await db
     .select()
     .from(customers)
     .where(
       and(
-        eq(customers.id, id),
+        whereClause,
         eq(customers.organizationId, organizationId),
         eq(customers.environment, environment)
       )

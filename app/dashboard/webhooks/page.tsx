@@ -393,7 +393,7 @@ function WebhooksPageContent() {
                         </Badge>
                       </div>
                       <p className="text-muted-foreground/80 mx-auto max-w-md text-sm">
-                        We&’re building a comprehensive overview dashboard that
+                        We’re building a comprehensive overview dashboard that
                         will give you insights into your webhook performance,
                         analytics, and real-time monitoring.
                       </p>

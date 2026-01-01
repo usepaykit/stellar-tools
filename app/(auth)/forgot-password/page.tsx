@@ -154,7 +154,7 @@ export default function ForgotPassword() {
           <div className="w-full space-y-2 text-center">
             <h2 className="f text-3xl tracking-tighter">Reset your password</h2>
             <p className="text-muted-foreground text-sm">
-              Enter your email address and we&’ll send you a link to reset your
+              Enter your email address and we’ll send you a link to reset your
               password.
             </p>
           </div>

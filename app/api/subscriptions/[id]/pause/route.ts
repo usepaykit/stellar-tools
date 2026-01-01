@@ -18,12 +18,14 @@ export const POST = async (
       );
     }
 
-    const { organizationId } = await resolveApiKey(apiKey);
+    const { organizationId, environment } = await resolveApiKey(apiKey);
 
-    const subscription = await putSubscription(id, organizationId, {
-      status: "paused",
-      pausedAt: new Date(),
-    });
+    const subscription = await putSubscription(
+      id,
+      { status: "paused", pausedAt: new Date() },
+      organizationId,
+      environment
+    );
 
     return NextResponse.json({ data: subscription });
   } catch (error: unknown) {

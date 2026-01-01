@@ -4,6 +4,7 @@ import { postCustomer, retrieveCustomer } from "@/actions/customers";
 import { triggerWebhooks } from "@/actions/webhook";
 import { Checkout, Customer } from "@/db";
 import { schemaFor, tryCatchAsync } from "@stellartools/core";
+import moment from "moment";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -11,7 +12,7 @@ const postCheckoutSchema = schemaFor<
   Partial<Checkout> & { customerEmail?: string; amount?: number }
 >()(
   z.object({
-    priceId: z.string().optional(),
+    productId: z.string().optional(),
     amount: z.number().optional(),
     assetCode: z.string().optional(),
     description: z.string().optional(),
@@ -37,19 +38,25 @@ export const POST = async (req: NextRequest) => {
   let customer: Customer | null = null;
 
   if (data?.customerId) {
-    customer = await retrieveCustomer(data.customerId, organizationId);
-  } else if (data?.customerEmail) {
-    customer = await postCustomer({
-      email: data.customerEmail as string,
-      name: data.customerEmail?.split("@")[0],
+    customer = await retrieveCustomer(
+      { id: data.customerId },
       organizationId,
-      environment,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      phone: null,
-      walletAddresses: null,
-      appMetadata: data?.metadata ?? null,
-    });
+      environment
+    );
+  } else if (data?.customerEmail) {
+    customer = await postCustomer(
+      {
+        email: data.customerEmail as string,
+        name: data.customerEmail?.split("@")[0],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        phone: null,
+        walletAddresses: null,
+        appMetadata: data?.metadata ?? null,
+      },
+      organizationId,
+      environment
+    );
 
     await tryCatchAsync(
       triggerWebhooks(
@@ -63,14 +70,22 @@ export const POST = async (req: NextRequest) => {
     throw new Error("Customer ID or email is required");
   }
 
-  const checkout = await postCheckout({
-    ...data,
+  const checkout = await postCheckout(
+    {
+      customerId: customer?.id,
+      status: "open",
+      expiresAt: moment().add(1, "day").toDate(),
+      metadata: data?.metadata ?? {},
+      amount: data.amount ?? null,
+      description: data.description ?? null,
+      assetCode: data.assetCode ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      productId: data.productId ?? null,
+    },
     organizationId,
-    environment,
-    customerId: customer?.id,
-    ...(data.amount && { amount: data.amount }),
-    ...(data.assetCode && { assetCode: data.assetCode }),
-  });
+    environment
+  );
 
   await tryCatchAsync(
     triggerWebhooks(

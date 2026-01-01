@@ -405,7 +405,7 @@ function ApiKeyModal({
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
               <strong className="text-foreground">Important:</strong> Make sure
-              to copy your API key now. You won&’t be able to see it again!
+              to copy your API key now. You won’t be able to see it again!
             </p>
           </div>
           <div className="space-y-2">

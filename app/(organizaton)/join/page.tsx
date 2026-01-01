@@ -74,10 +74,10 @@ function JoinTeamPageContent() {
           </div>
           <div className="space-y-2 text-center">
             <h1 className="text-foreground text-2xl font-semibold">
-              You&’re all set!
+              You’re all set!
             </h1>
             <p className="text-muted-foreground text-sm">
-              You&’ve successfully joined {mockInvitation.organizationName}
+              You’ve successfully joined {mockInvitation.organizationName}
             </p>
             <p className="text-muted-foreground mt-2 text-xs">
               Redirecting to dashboard...
@@ -133,7 +133,7 @@ function JoinTeamPageContent() {
               </Avatar>
             </div>
             <div className="space-y-2">
-              <h2 className="text-xl">You&’ve been invited!</h2>
+              <h2 className="text-xl">You’ve been invited!</h2>
               <CardDescription>
                 <span className="font-semibold">
                   {mockInvitation.inviterName}
@@ -183,7 +183,7 @@ function JoinTeamPageContent() {
         {!hideSignup && (
           <div className="w-full text-center">
             <p className="text-muted-foreground text-xs">
-              Don&’t have an account?{" "}
+              Don’t have an account?{" "}
               <button
                 onClick={() => {
                   const signupUrl = token

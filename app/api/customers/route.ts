@@ -29,14 +29,16 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const customer = await postCustomer({
-    ...data,
+  const customer = await postCustomer(
+    {
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      walletAddresses: null,
+    },
     organizationId,
-    environment,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    walletAddresses: null,
-  });
+    environment
+  );
 
   await tryCatchAsync(
     triggerWebhooks(

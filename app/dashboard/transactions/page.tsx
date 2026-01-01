@@ -251,19 +251,21 @@ export function RefundModal({
     mutationFn: async (data: RefundFormData) => {
       const payment = await retrievePayment(data.paymentId);
 
-      return await postRefund({
-        paymentId: payment.id,
-        organizationId: payment.organizationId,
-        environment: payment.environment,
-        amount: payment.amount,
-        assetId: payment.assetId,
-        customerId: payment.customerId,
-        receiverPublicKey: data.walletAddress,
-        reason: data.reason,
-        status: "pending",
-        transactionHash: payment.transactionHash,
-        metadata: {},
-      });
+      return await postRefund(
+        {
+          paymentId: payment.id,
+          amount: payment.amount,
+          customerId: payment.customerId,
+          receiverPublicKey: data.walletAddress,
+          reason: data.reason,
+          status: "pending",
+          metadata: {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        payment.organizationId,
+        payment.environment
+      );
 
       // todo: use sendAssetPayment from stellar core and update the status.
     },
@@ -538,7 +540,7 @@ function TransactionsPageContent() {
                 data={filteredTransactions.map((it) => ({
                   id: it.id,
                   amount: it.amount.toString(),
-                  asset: it.assetCode,
+                  asset: it.assetCode ?? "",
                   paymentMethod: {
                     type: "wallet" as const,
                     address: it.transactionHash,

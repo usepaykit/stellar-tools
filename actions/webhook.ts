@@ -385,16 +385,19 @@ export const processStellarWebhook = async (
           organization.id,
           environment
         ),
-        postPayment(organization.id, environment, {
-          checkoutId: checkout.id,
-          customerId: checkout.customerId,
-          amount: amount * 10_000_000, // XLM to stroops
-          transactionHash: tx.hash,
-          status: "confirmed",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          assetId: (checkout.assetId ?? undefined) as string,
-        }),
+        postPayment(
+          {
+            checkoutId: checkout.id,
+            customerId: checkout.customerId,
+            amount: amount * 10_000_000, // XLM to stroops
+            transactionHash: tx.hash,
+            status: "confirmed",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          organization.id,
+          environment
+        ),
       ]);
 
       await triggerWebhooks(
