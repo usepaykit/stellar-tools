@@ -17,16 +17,16 @@ export default async function DashboardLayout({
 
   if (!currentOrg) redirect("/select-organization");
 
-  const isTestMode = currentOrg?.environment === "testnet";
+  const environment = currentOrg.environment;
 
   return (
     <>
-      <EnvironmentToggle currentEnvironment={"mainnet"} />
+      <EnvironmentToggle currentEnvironment={environment} />
 
       <div
         className={cn(
           "transition-all duration-300",
-          isTestMode ? "pt-[52px]" : ""
+          environment === "testnet" ? "pt-[52px]" : ""
         )}
       >
         {children}

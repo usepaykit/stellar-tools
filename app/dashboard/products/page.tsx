@@ -13,6 +13,7 @@ import {
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   NumberPicker,
+  RadioGroupPicker,
   SelectPicker,
   TextAreaField,
   TextField,
@@ -23,7 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/toast";
 import { RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
@@ -578,31 +578,21 @@ function ProductsModal({
               <RHF.Controller
                 control={form.control}
                 name="type"
-                render={({ field }) => (
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="recurring" id="recurring" />
-                      <Label htmlFor="recurring" className="font-normal">
-                        Recurring
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="one_time" id="one_time" />
-                      <Label htmlFor="one_time" className="font-normal">
-                        One-off
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="metered" id="metered" />
-                      <Label htmlFor="metered" className="font-normal">
-                        Metered (Credits)
-                      </Label>
-                    </div>
-                  </RadioGroup>
+                render={({ field, fieldState: { error } }) => (
+                  <RadioGroupPicker
+                    id="type"
+                    value={field.value}
+                    onChange={field.onChange}
+                    items={[
+                      { value: "recurring", label: "Recurring" },
+                      { value: "one_time", label: "One-off" },
+                      { value: "metered", label: "Metered (Credits)" },
+                    ]}
+                    error={error?.message}
+                    label={null}
+                    helpText={null}
+                    itemLayout="horizontal"
+                  />
                 )}
               />
 
@@ -685,14 +675,14 @@ function ProductsModal({
                 <RHF.Controller
                   control={form.control}
                   name="price"
-                  render={({ field }) => (
+                  render={({ field, fieldState: { error } }) => (
                     <PricePicker
                       id="price"
                       className="flex-1"
                       value={field.value}
                       onChange={field.onChange}
                       assets={["XLM", "USDC"]}
-                      error={form.formState.errors.price?.amount?.message}
+                      error={error?.message}
                     />
                   )}
                 />
@@ -701,12 +691,11 @@ function ProductsModal({
                   <RHF.Controller
                     name="recurringPeriod"
                     control={form.control}
-                    render={({ field }) => (
+                    render={({ field, fieldState: { error } }) => (
                       <SelectPicker
                         id={field.name}
                         value={field.value as string}
                         onChange={field.onChange}
-                        trigger={undefined}
                         triggerValuePlaceholder="Select recurring period"
                         triggerClassName="mt-2.5 h-12 w-[150px]"
                         items={[
@@ -715,6 +704,7 @@ function ProductsModal({
                           { value: "month", label: "Monthly" },
                           { value: "year", label: "Yearly" },
                         ]}
+                        error={error?.message}
                       />
                     )}
                   />

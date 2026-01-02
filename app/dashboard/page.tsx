@@ -235,7 +235,6 @@ export default function DashboardPage() {
                   value={dateRange}
                   onChange={setDateRange}
                   triggerValuePlaceholder="Select date range"
-                  trigger={undefined}
                   triggerClassName="w-[180px]"
                   isLoading={true}
                   items={[

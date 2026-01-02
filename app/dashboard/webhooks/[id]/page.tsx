@@ -148,7 +148,11 @@ export default function WebhookLogPage() {
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  const { data: webhookLogs, isLoading: isLoadingWebhookLogs } = useOrgQuery(
+  const {
+    data: webhookLogs,
+    isLoading: isLoadingWebhookLogs,
+    refetch: refetchWebhookLogs,
+  } = useOrgQuery(
     ["webhookLogs", webhookId],
     () => retrieveWebhookLogs(webhookId),
     {
@@ -268,16 +272,9 @@ export default function WebhookLogPage() {
 
               <LogDetailItem
                 label="Origin date"
-                value={
-                  log.createdAt.toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  }) + " IST"
-                }
+                value={moment(log.createdAt)
+                  .utc()
+                  .format("MMM D, YYYY, h:mm A [GMT]")}
               />
 
               <LogDetailItem label="Source" value="Automatic" />
@@ -357,7 +354,12 @@ export default function WebhookLogPage() {
                   </UnderlineTabsTrigger>
                 </UnderlineTabsList>
               </UnderlineTabs>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-2"
+                onClick={() => refetchWebhookLogs()}
+              >
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>

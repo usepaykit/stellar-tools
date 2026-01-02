@@ -190,7 +190,7 @@ export default function CustomerDetailPage() {
     () => retrievePayments(undefined, { customerId }, undefined)
   );
 
-  const { data: customer, isLoading: _customerLoading } = useOrgQuery(
+  const { data: customer, isLoading: customerLoading } = useOrgQuery(
     ["customer", customerId],
     () => retrieveCustomer({ id: customerId })
   );
@@ -251,6 +251,10 @@ export default function CustomerDetailPage() {
     ],
     []
   );
+
+  if (customerLoading) {
+    return <div>Loading...</div>;
+  }
 
   if (!customer) {
     return (
@@ -856,7 +860,6 @@ function CheckoutModal({
                 onChange={field.onChange}
                 items={products ?? []}
                 isLoading={isLoadingProducts}
-                trigger={<></>}
                 triggerValuePlaceholder="Select a product"
                 triggerClassName="w-full shadow-none"
                 label="Product"

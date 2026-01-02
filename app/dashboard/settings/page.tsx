@@ -1081,7 +1081,6 @@ export default function SettingsPage() {
                   id={field.name}
                   value={field.value as string}
                   onChange={field.onChange}
-                  trigger={undefined}
                   triggerValuePlaceholder="Select a role"
                   triggerClassName="w-full"
                   items={[
@@ -1182,7 +1181,6 @@ export default function SettingsPage() {
                 id={field.name}
                 value={field.value as string}
                 onChange={field.onChange}
-                trigger={undefined}
                 triggerValuePlaceholder="Select a role"
                 triggerClassName="w-full"
                 items={[
