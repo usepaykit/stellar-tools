@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Controller, useForm } from "react-hook-form";
@@ -24,20 +23,10 @@ export default function ForgotPassword() {
   const forgotpasswordMutation = useMutation({
     mutationFn: (email: string) => forgotPassword(email),
     onSuccess: () => {
-      toast.success("Password reset link sent", {
-        id: "forgot-password-success",
-        description:
-          "Check your email for instructions to reset your password.",
-      });
+      toast.success("Password reset link sent");
     },
-    onError: (error) => {
-      toast.error("Failed to send reset link", {
-        id: "forgot-password-error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Unable to send password reset link. Please try again.",
-      });
+    onError: () => {
+      toast.error("Failed to send reset link");
     },
   });
   const form = useForm<ForgotPasswordFormData>({
@@ -180,15 +169,11 @@ export default function ForgotPassword() {
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
             disabled={forgotpasswordMutation.isPending}
+            isLoading={forgotpasswordMutation.isPending}
           >
-            {forgotpasswordMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending reset link...
-              </>
-            ) : (
-              "Send reset link"
-            )}
+            {forgotpasswordMutation.isPending
+              ? "Sending reset link..."
+              : "Send reset link"}
           </Button>
 
           <div className="my-6 w-full">

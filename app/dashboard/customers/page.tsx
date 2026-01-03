@@ -20,10 +20,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer } from "@/db";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
@@ -296,6 +297,8 @@ export function CustomerModal({
   onOpenChange: (open: boolean) => void;
   customer?: Partial<Customer> | null;
 }) {
+  const invalidateOrgQuery = useInvalidateOrgQuery();
+
   const isEditMode = !!customer;
   const form = RHF.useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -341,8 +344,8 @@ export function CustomerModal({
     }
   }, [open, customer, form]);
 
-  const onSubmit = async (data: CustomerFormData) => {
-    try {
+  const upsertCustomerMutation = useMutation({
+    mutationFn: async (data: CustomerFormData) => {
       const phoneString = data.phoneNumber.number
         ? phoneNumberToString(data.phoneNumber)
         : "";
@@ -357,7 +360,7 @@ export function CustomerModal({
         {} as Record<string, string>
       );
 
-      await upsertCustomer({
+      return await upsertCustomer({
         name: data.name,
         email: data.email,
         phone: phoneString,
@@ -367,34 +370,36 @@ export function CustomerModal({
         updatedAt: new Date(),
         walletAddresses: null,
       } as Customer);
+    },
+    onSuccess: (customer) => {
+      invalidateOrgQuery(
+        isEditMode ? ["customers", customer?.id] : ["customers"]
+      );
 
       toast.success(
         isEditMode
           ? "Customer updated successfully"
-          : "Customer created successfully",
-        {
-          description: isEditMode
-            ? `${data.name} has been updated.`
-            : `${data.name} has been added to your customers.`,
-        } as Parameters<typeof toast.success>[1]
+          : "Customer created successfully"
       );
-
       form.reset();
       onOpenChange(false);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to create customer";
-      toast.error("Failed to create customer", {
-        description: errorMessage,
-      } as Parameters<typeof toast.error>[1]);
-    }
-  };
+    },
+    onError: () => {
+      toast.error(
+        isEditMode ? "Failed to update customer" : "Failed to create customer"
+      );
+    },
+  });
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen && !form.formState.isSubmitting) {
       form.reset();
     }
     onOpenChange(newOpen);
+  };
+
+  const onSubmit = (data: CustomerFormData) => {
+    upsertCustomerMutation.mutate(data);
   };
 
   return (
@@ -421,18 +426,13 @@ export function CustomerModal({
             Cancel
           </Button>
           <Button
+            isLoading={upsertCustomerMutation.isPending}
             type="button"
             onClick={form.handleSubmit(onSubmit)}
-            className="shadow-none"
-            disabled={form.formState.isSubmitting}
+            className="gap-2 shadow-none"
+            disabled={upsertCustomerMutation.isPending}
           >
-            {form.formState.isSubmitting
-              ? isEditMode
-                ? "Updating..."
-                : "Creating..."
-              : isEditMode
-                ? "Update customer"
-                : "Create customer"}
+            {isEditMode ? "Update customer" : "Create customer"}
           </Button>
         </div>
       }

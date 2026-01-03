@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -56,11 +56,8 @@ export default function SignIn() {
       toast.success("Logged in successfully");
       router.push("/select-organization");
     },
-    onError: (error: Error) => {
-      toast.error("Sign-in failed", {
-        id: "signin-err",
-        description: error.message,
-      });
+    onError: () => {
+      toast.error("Sign-in failed");
     },
   });
   const form = useForm<SignInFormData>({
@@ -306,15 +303,9 @@ export default function SignIn() {
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
             disabled={signinMutation.isPending}
+            isLoading={signinMutation.isPending}
           >
-            {signinMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              "Sign in"
-            )}
+            {signinMutation.isPending ? "Signing in..." : "Sign in"}
           </Button>
 
           <div className="my-6 w-full">

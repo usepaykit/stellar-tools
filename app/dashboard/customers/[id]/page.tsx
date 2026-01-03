@@ -38,10 +38,10 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -52,7 +52,6 @@ import {
   Edit,
   Eye,
   EyeOff,
-  Loader2,
   MoreHorizontal,
   Plus,
   XCircle,
@@ -212,9 +211,7 @@ export default function CustomerDetailPage() {
       router.push("/dashboard/customers");
     } catch (error) {
       console.error("Failed to delete customer:", error);
-      toast.error("Failed to delete customer", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      toast.error("Failed to delete customer");
     } finally {
       setIsDeleting(false);
     }
@@ -720,7 +717,7 @@ function CheckoutModal({
   customerId: string;
   customerName: string;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const form = RHF.useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -768,24 +765,13 @@ function CheckoutModal({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["payments", customerId],
-      });
-      toast.success("Checkout created successfully", {
-        description: `Checkout session for ${customerName} has been created.`,
-      } as Parameters<typeof toast.success>[1]);
+      invalidateOrgQuery(["payments", customerId]);
+      toast.success("Checkout created successfully");
       form.reset();
       onOpenChange(false);
     },
-    onError: (error) => {
-      console.error("Failed to create checkout:", error);
-      toast.error("Failed to create checkout", {
-        id: "create-checkout-error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      });
+    onError: () => {
+      toast.error("Failed to create checkout");
     },
   });
 
@@ -822,16 +808,12 @@ function CheckoutModal({
               type="button"
               onClick={form.handleSubmit(onSubmit)}
               disabled={createCheckoutMutation.isPending || isLoadingProducts}
+              isLoading={createCheckoutMutation.isPending}
               className="gap-2"
             >
-              {createCheckoutMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Checkout"
-              )}
+              {createCheckoutMutation.isPending
+                ? "Creating..."
+                : "Create Checkout"}
             </Button>
           </div>
         </div>

@@ -6,15 +6,10 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
+import { TextAreaField, TextField } from "@/components/input-picker";
 import {
-  SelectPicker,
-  TextAreaField,
-  TextField,
-} from "@/components/input-picker";
-import {
-  PhoneNumber,
+  type PhoneNumber,
   PhoneNumberPicker,
-  phoneNumberFromString,
 } from "@/components/phone-number-picker";
 import { TagInputPicker } from "@/components/tag-input-picker";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,6 +30,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import {
   UnderlineTabs,
@@ -42,6 +45,7 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { roleEnum } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { cn, getInitials } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,7 +53,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import {
   Calendar,
   Camera,
-  Check,
   ChevronRight,
   Copy,
   ExternalLink,
@@ -70,6 +73,7 @@ const mockUser = {
   id: "user_123",
   name: "Prince Ajuzie",
   email: "princeajuzie1@gmail.com",
+  phoneNumber: { number: "1234567890", countryCode: "US" } as PhoneNumber,
   avatar: null,
   joinedAt: new Date("2024-12-01"),
 };
@@ -77,8 +81,8 @@ const mockUser = {
 const mockOrganization = {
   id: "org_123",
   name: "Acme Inc",
+  slug: "acme-inc",
   description: "A leading payment processing company",
-  phoneNumber: "+1 (123) 456-7890",
   logo: null,
   createdAt: new Date("2024-01-15"),
 };
@@ -147,6 +151,13 @@ const profileSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(100, "Name must be less than 100 characters")
     .trim(),
+  phoneNumber: z
+    .object({
+      number: z.string(),
+      countryCode: z.string(),
+    })
+    .optional()
+    .nullable(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -158,31 +169,38 @@ const organizationSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(100, "Name must be less than 100 characters")
     .trim(),
+  slug: z
+    .string()
+    .min(1)
+    .min(2)
+    .max(50)
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug can only contain lowercase letters, numbers, and hyphens"
+    )
+    .refine(
+      (slug) => !slug.startsWith("-") && !slug.endsWith("-"),
+      "Slug cannot start or end with a hyphen"
+    )
+    .trim(),
   description: z
     .string()
     .max(500, "Description must be less than 500 characters")
     .optional()
     .or(z.literal("")),
-  phoneNumber: z
-    .object({
-      number: z.string(),
-      countryCode: z.string(),
-    })
-    .optional()
-    .nullable(),
 });
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
 const inviteMemberSchema = z.object({
-  emails: z.array(z.string().email()).min(1, "At least one email is required"),
-  role: z.enum(["owner", "admin", "developer", "viewer"]),
+  emails: z.array(z.email()).min(1, "At least one email is required"),
+  role: z.enum(roleEnum.enumValues),
 });
 
 type InviteMemberFormData = z.infer<typeof inviteMemberSchema>;
 
 const updateRoleSchema = z.object({
-  role: z.enum(["owner", "admin", "developer", "viewer"]),
+  role: z.enum(roleEnum.enumValues),
 });
 
 type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;
@@ -204,12 +222,13 @@ export default function SettingsPage() {
     React.useState<TeamMember | null>(null);
   const [inviteLink, setInviteLink] = React.useState<string | null>(null);
 
-  const { handleCopy, copied } = useCopy();
+  const { handleCopy } = useCopy();
 
   const profileForm = RHF.useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: mockUser.name,
+      phoneNumber: mockUser.phoneNumber || { number: "", countryCode: "US" },
     },
   });
 
@@ -217,8 +236,8 @@ export default function SettingsPage() {
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       name: mockOrganization.name,
+      slug: mockOrganization.slug,
       description: mockOrganization.description || "",
-      phoneNumber: phoneNumberFromString(mockOrganization.phoneNumber),
     },
   });
 
@@ -328,17 +347,13 @@ export default function SettingsPage() {
         email: selectedMemberForRoleUpdate.email,
         newRole: data.role,
       });
-      toast.success("Role updated successfully", {
-        description: `${selectedMemberForRoleUpdate.email}'s role has been updated to ${data.role}`,
-      } as Parameters<typeof toast.success>[1]);
+      toast.success("Role updated successfully");
       updateRoleForm.reset();
       setIsUpdateRoleModalOpen(false);
       setSelectedMemberForRoleUpdate(null);
     } catch (error) {
       console.error("Failed to update role:", error);
-      toast.error("Failed to update role", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      toast.error("Failed to update role");
     } finally {
       setIsSubmitting(false);
     }
@@ -359,18 +374,15 @@ export default function SettingsPage() {
       const link = `${window.location.origin}/join/${nanoid(25)}`;
       setInviteLink(link);
 
-      toast.success("Invitation created successfully", {
-        description: `Share the link with ${data.emails.length === 1 ? data.emails[0] : `${data.emails.length} people`}`,
-      } as Parameters<typeof toast.success>[1]);
+      const emailCount = data.emails.length;
+      toast.success(
+        `Invitation created successfully for ${emailCount} ${emailCount === 1 ? "person" : "people"}`
+      );
 
-      // Don't close modal yet - show the link
-      // Optionally switch to pending tab
       setTeamTab("pending");
     } catch (error) {
       console.error("Failed to send invitation:", error);
-      toast.error("Failed to create invitation", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      toast.error("Failed to create invitation");
     } finally {
       setIsSubmitting(false);
     }
@@ -679,6 +691,24 @@ export default function SettingsPage() {
                         )}
                       />
 
+                      <RHF.Controller
+                        control={profileForm.control}
+                        name="phoneNumber"
+                        render={({ field, fieldState: { error } }) => (
+                          <PhoneNumberPicker
+                            id="phone-number"
+                            label="Phone Number"
+                            value={
+                              field.value || { number: "", countryCode: "US" }
+                            }
+                            onChange={field.onChange}
+                            error={error?.message || null}
+                            disabled={isSubmitting}
+                            groupClassName="w-full shadow-none"
+                          />
+                        )}
+                      />
+
                       <div className="space-y-2">
                         <TextField
                           id="email"
@@ -775,8 +805,7 @@ export default function SettingsPage() {
                   <CardHeader>
                     <CardTitle>Organization Details</CardTitle>
                     <CardDescription>
-                      Update your organization name, phone number, and
-                      description
+                      Update your organization name, slug, and description
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -788,29 +817,6 @@ export default function SettingsPage() {
                     >
                       <RHF.Controller
                         control={organizationForm.control}
-                        name="phoneNumber"
-                        render={({ field, fieldState: { error } }) => {
-                          const phoneValue: PhoneNumber = {
-                            number: field.value?.number || "",
-                            countryCode: field.value?.countryCode || "US",
-                          };
-
-                          return (
-                            <PhoneNumberPicker
-                              id="organization-phone-number"
-                              label="Phone Number"
-                              value={phoneValue}
-                              onChange={field.onChange}
-                              error={(error as any)?.number?.message}
-                              disabled={isSubmitting}
-                              groupClassName="w-full shadow-none"
-                            />
-                          );
-                        }}
-                      />
-
-                      <RHF.Controller
-                        control={organizationForm.control}
                         name="name"
                         render={({ field, fieldState: { error } }) => (
                           <TextField
@@ -819,6 +825,25 @@ export default function SettingsPage() {
                             label="Organization Name"
                             error={error?.message || null}
                             className="w-full shadow-none"
+                          />
+                        )}
+                      />
+
+                      <RHF.Controller
+                        control={organizationForm.control}
+                        name="slug"
+                        render={({ field, fieldState: { error } }) => (
+                          <TextField
+                            {...field}
+                            id="organization-slug"
+                            label="Organization Slug"
+                            value={field.value}
+                            onChange={() => {}} // Disabled - read-only
+                            placeholder="acme-inc"
+                            error={error?.message || null}
+                            className="font-mono text-sm shadow-none"
+                            disabled
+                            helpText="This will be used for your subdomain and cannot be changed later."
                           />
                         )}
                       />
@@ -1057,47 +1082,50 @@ export default function SettingsPage() {
             <RHF.Controller
               control={inviteMemberForm.control}
               name="emails"
-              render={({ field, fieldState: { error } }) => {
-                console.log({ error });
-                return (
-                  <TagInputPicker
-                    {...field}
-                    placeholder="colleague@example.com"
-                    className="w-full shadow-none"
-                    label="Email Addresses"
-                    helpText="Press Enter or comma to add multiple emails"
-                    id="invite-emails"
-                    error={error?.message || null}
-                  />
-                );
-              }}
+              render={({ field, fieldState: { error } }) => (
+                <TagInputPicker
+                  {...field}
+                  id="invite-emails"
+                  label="Email Addresses"
+                  placeholder="colleague@example.com"
+                  helpText="Press Enter or comma to add multiple emails"
+                  error={error?.message}
+                  className="w-full"
+                />
+              )}
             />
 
             <RHF.Controller
               control={inviteMemberForm.control}
               name="role"
               render={({ field, fieldState: { error } }) => (
-                <SelectPicker
-                  id={field.name}
-                  value={field.value as string}
-                  onChange={field.onChange}
-                  triggerValuePlaceholder="Select a role"
-                  triggerClassName="w-full"
-                  items={[
-                    { value: "viewer", label: "Viewer" },
-                    { value: "developer", label: "Developer" },
-                    { value: "admin", label: "Admin" },
-                    { value: "owner", label: "Owner" },
-                  ]}
-                  error={error?.message}
-                  label="Role"
-                  helpText="Choose the permission level for this team member"
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="invite-role">Role</Label>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="invite-role" className="w-full">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="developer">Developer</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {error && (
+                    <p className="text-destructive text-sm" role="alert">
+                      {error.message}
+                    </p>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    Choose the permission level for this team member
+                  </p>
+                </div>
               )}
             />
           </form>
         ) : (
-          <div className="grid w-full grid-cols-[1fr_auto] items-end gap-2">
+          <div className="flex w-full gap-2 space-y-2">
             <TextField
               id="invite-link"
               label="Invitation Link"
@@ -1105,11 +1133,11 @@ export default function SettingsPage() {
               onChange={() => {}}
               disabled
               error={null}
-              className="w-full shadow-none"
+              className="w-full flex-1 shadow-none outline-2"
             />
             <Button
               type="button"
-              size="icon"
+              size="sm"
               variant="ghost"
               onClick={() =>
                 handleCopy({
@@ -1117,13 +1145,9 @@ export default function SettingsPage() {
                   message: "Copied to clipboard",
                 })
               }
-              className="hover:bg-muted-foreground/10 cursor-pointer"
+              className="hover:bg-muted-foreground/10 h-8 w-8 shrink-0 p-0"
             >
-              {copied ? (
-                <Check className="h-4 w-4 text-green-600" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
+              <Copy className="h-4 w-4" />
             </Button>
           </div>
         )}
@@ -1177,22 +1201,28 @@ export default function SettingsPage() {
             control={updateRoleForm.control}
             name="role"
             render={({ field, fieldState: { error } }) => (
-              <SelectPicker
-                id={field.name}
-                value={field.value as string}
-                onChange={field.onChange}
-                triggerValuePlaceholder="Select a role"
-                triggerClassName="w-full"
-                items={[
-                  { value: "viewer", label: "Viewer" },
-                  { value: "developer", label: "Developer" },
-                  { value: "admin", label: "Admin" },
-                  { value: "owner", label: "Owner" },
-                ]}
-                error={error?.message}
-                label="Role"
-                helpText="Choose the permission level for this team member"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="update-role">Role</Label>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="update-role" className="w-full">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="developer">Developer</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="owner">Owner</SelectItem>
+                  </SelectContent>
+                </Select>
+                {error && (
+                  <p className="text-destructive text-sm" role="alert">
+                    {error.message}
+                  </p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  Choose the permission level for this team member
+                </p>
+              </div>
             )}
           />
         </form>

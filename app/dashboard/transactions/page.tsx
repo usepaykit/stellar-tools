@@ -17,16 +17,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
   Copy,
   Download,
-  Loader2,
   Plus,
   Settings,
   Wallet,
@@ -231,7 +230,7 @@ export function RefundModal({
   onOpenChange: (open: boolean) => void;
   initialPaymentId?: string;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
@@ -274,17 +273,10 @@ export function RefundModal({
       toast.success("Refund created successfully!");
       form.reset();
       onOpenChange(false);
-      queryClient.invalidateQueries({
-        queryKey: ["refunds"],
-      });
+      invalidateOrgQuery(["refunds"]);
     },
-    onError: (error) => {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error("Failed to create refund", {
-        id: "refund-error",
-        description: errorMessage,
-      });
+    onError: () => {
+      toast.error("Failed to create refund");
     },
   });
 
@@ -310,11 +302,9 @@ export function RefundModal({
           <Button
             onClick={form.handleSubmit(onSubmit)}
             disabled={createRefundMutation.isPending}
+            isLoading={createRefundMutation.isPending}
           >
-            {createRefundMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Create refund
+            {createRefundMutation.isPending ? "Creating..." : "Create refund"}
           </Button>
         </div>
       }

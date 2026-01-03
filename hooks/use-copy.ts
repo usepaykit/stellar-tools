@@ -15,9 +15,7 @@ export function useCopy() {
   }) => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success(message, {
-      id: "copy-message",
-    });
+    toast.success(message);
     setTimeout(() => setCopied(false), 2000);
   };
 

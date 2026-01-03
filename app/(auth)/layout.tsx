@@ -8,9 +8,7 @@ export default async function AuthLayout({
 }) {
   const user = await getCurrentUser();
 
-  if (user) {
-    redirect("/dashboard");
-  }
+  if (user) redirect("/dashboard");
 
   return <div>{children}</div>;
 }

@@ -20,11 +20,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { Webhook as WebhookSchema } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { WebhookEvent } from "@stellartools/core";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Activity,
@@ -37,7 +37,6 @@ import {
   Clock,
   Copy,
   Info,
-  Loader2,
   Plus,
   Sparkles,
   TrendingUp,
@@ -624,7 +623,7 @@ interface WebhooksModalProps {
 
 function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
-  const queryClient = useQueryClient();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
   const [webhookSecret, setWebhookSecret] = React.useState<string>("");
   const { copied, handleCopy } = useCopy();
 
@@ -671,25 +670,14 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
         secret: webhookSecret,
       });
     },
-    onSuccess: (webhook) => {
-      // Invalidate and refetch webhooks
-      queryClient.invalidateQueries({
-        queryKey: ["webhooks"],
-      });
-      toast.success("Webhook destination created successfully", {
-        description: `${webhook.name} is now configured to receive events.`,
-      } as Parameters<typeof toast.success>[1]);
+    onSuccess: () => {
+      invalidateOrgQuery(["webhooks"]);
+      toast.success("Webhook destination created successfully");
       form.reset();
       onOpenChange(false);
     },
-    onError: (error) => {
-      console.error("Failed to create webhook destination:", error);
-      toast.error("Failed to create webhook destination", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      } as Parameters<typeof toast.error>[1]);
+    onError: () => {
+      toast.error("Failed to create webhook destination");
     },
   });
 
@@ -740,15 +728,9 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
           onClick={() => form.handleSubmit(onSubmit)()}
           className="gap-2"
           disabled={createWebhookMutation.isPending}
+          isLoading={createWebhookMutation.isPending}
         >
-          {createWebhookMutation.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            "Create destination"
-          )}
+          Create destination
         </Button>
       </div>
     </div>

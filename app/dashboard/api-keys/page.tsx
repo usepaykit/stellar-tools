@@ -21,18 +21,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  ChevronRight,
-  Copy,
-  ExternalLink,
-  Info,
-  Loader2,
-  Plus,
-} from "lucide-react";
+import { ChevronRight, Copy, ExternalLink, Info, Plus } from "lucide-react";
 import { nanoid } from "nanoid";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
@@ -52,7 +45,6 @@ type ApiKeyFormData = z.infer<typeof apiKeySchema>;
 export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
-  const queryClient = useQueryClient();
 
   const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () =>
     retrieveApiKeys()
@@ -267,7 +259,6 @@ export default function ApiKeysPage() {
         onOpenChange={setIsModalOpen}
         createdApiKey={createdApiKey}
         onApiKeyCreated={setCreatedApiKey}
-        queryClient={queryClient}
       />
     </div>
   );
@@ -280,15 +271,16 @@ function ApiKeyModal({
   onOpenChange,
   createdApiKey,
   onApiKeyCreated,
-  queryClient,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   createdApiKey: string | null;
   onApiKeyCreated: (key: string | null) => void;
-  queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const { handleCopy } = useCopy();
+
+  const invalidateOrgQuery = useInvalidateOrgQuery();
+
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
@@ -321,21 +313,12 @@ function ApiKeyModal({
       });
     },
     onSuccess: (apiKey) => {
-      queryClient.invalidateQueries({
-        queryKey: ["apiKeys"],
-      });
+      invalidateOrgQuery(["apiKeys"]);
       onApiKeyCreated(apiKey.token);
-      toast.success("API key created", {
-        description: `Your key "${apiKey.name}" has been created successfully.`,
-      } as Parameters<typeof toast.success>[1]);
+      toast.success("API key created");
     },
-    onError: (error) => {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error("Failed to create API key", {
-        id: "create-api-key-error",
-        description: errorMessage,
-      });
+    onError: () => {
+      toast.error("Failed to create API key");
     },
   });
 
@@ -385,15 +368,9 @@ function ApiKeyModal({
                   createApiKeyMutation.mutate(data);
                 })}
                 disabled={createApiKeyMutation.isPending}
+                isLoading={createApiKeyMutation.isPending}
               >
-                {createApiKeyMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create key"
-                )}
+                {createApiKeyMutation.isPending ? "Creating..." : "Create key"}
               </Button>
             </>
           )}

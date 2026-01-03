@@ -72,7 +72,7 @@ export const POST = async (req: NextRequest) => {
 
   const checkout = await postCheckout(
     {
-      customerId: customer?.id,
+      customerId: customer?.id ?? null,
       status: "open",
       expiresAt: moment().add(1, "day").toDate(),
       metadata: data?.metadata ?? {},

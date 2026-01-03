@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { getInitials } from "@/lib/utils";
-import { Check, Loader2, Mail } from "lucide-react";
+import { Check, Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const mockInvitation = {
@@ -45,9 +45,7 @@ function JoinTeamPageContent() {
         organization: mockInvitation.organizationName,
       });
 
-      toast.success("Successfully joined the team!", {
-        description: `Welcome to ${mockInvitation.organizationName}`,
-      } as Parameters<typeof toast.success>[1]);
+      toast.success("Successfully joined the team!");
 
       setIsAccepted(true);
 
@@ -55,10 +53,9 @@ function JoinTeamPageContent() {
         router.push("/dashboard");
       }, 2000);
     } catch (error) {
-      console.error("Failed to join team:", error);
-      toast.error("Failed to join team", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+      toast.error("Failed to join team", { description: errorMessage });
       setIsSubmitting(false);
     }
   };
@@ -166,15 +163,9 @@ function JoinTeamPageContent() {
                 onClick={onSubmit}
                 className="w-full shadow-none"
                 disabled={isSubmitting}
+                isLoading={isSubmitting}
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Joining...
-                  </>
-                ) : (
-                  "Accept Invitation"
-                )}
+                {isSubmitting ? "Joining..." : "Accept Invitation"}
               </Button>
             </div>
           </CardContent>

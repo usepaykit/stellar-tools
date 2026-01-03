@@ -1,9 +1,25 @@
 "use client";
 
 import { getCurrentOrganization } from "@/actions/organization";
-import { QueryKey, UseQueryOptions, useQuery } from "@tanstack/react-query";
+import {
+  QueryKey,
+  UseQueryOptions,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 type OrgQueryKey = [string, ...any[]];
+
+export function useOrgContext() {
+  const { data: orgContext, isLoading: isLoadingOrgContext } = useQuery({
+    queryKey: ["org-context"],
+    queryFn: () => getCurrentOrganization(),
+    staleTime: Infinity,
+    retry: 1,
+  });
+
+  return { data: orgContext, isLoading: isLoadingOrgContext };
+}
 
 export function useOrgQuery<
   TQueryFnData = unknown,
@@ -17,12 +33,7 @@ export function useOrgQuery<
     "queryKey" | "queryFn"
   >
 ) {
-  const { data: orgContext, isLoading: isLoadingOrgContext } = useQuery({
-    queryKey: ["org-context"],
-    queryFn: () => getCurrentOrganization(),
-    staleTime: Infinity,
-    retry: 1,
-  });
+  const { data: orgContext, isLoading: isLoadingOrgContext } = useOrgContext();
 
   const organizationId = orgContext?.id;
   const environment = orgContext?.environment;
@@ -49,5 +60,22 @@ export function useOrgQuery<
     ...result,
     isLoading: isLoadingOrgContext || result.isLoading,
     isPending: isLoadingOrgContext || result.isPending,
+  };
+}
+
+export function useInvalidateOrgQuery() {
+  const queryClient = useQueryClient();
+  const { data: orgContext } = useOrgContext();
+
+  return (baseQueryKey: OrgQueryKey) => {
+    const organizationId = orgContext?.id;
+    const environment = orgContext?.environment;
+
+    const queryKey: QueryKey =
+      organizationId && environment
+        ? [...baseQueryKey, organizationId, environment]
+        : baseQueryKey;
+
+    return queryClient.invalidateQueries({ queryKey });
   };
 }

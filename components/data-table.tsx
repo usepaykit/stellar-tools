@@ -167,6 +167,7 @@ export const DataTable = <TData, TValue>({
     }
 
     return cols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [columns, enableBulkSelect, actions]);
 
   const reactTable = useReactTable({

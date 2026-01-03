@@ -187,11 +187,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         router.refresh();
       } catch (error) {
         console.error("Failed to switch organization:", error);
-        toast.error("Failed to switch organization", {
-          id: "switch-org-error",
-          description:
-            error instanceof Error ? error.message : "Please try again",
-        });
+        toast.error("Failed to switch organization");
       } finally {
         setIsSwitching(false);
       }

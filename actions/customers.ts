@@ -30,19 +30,40 @@ export const upsertCustomer = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const customer = await retrieveCustomer(
-    (() => {
-      if (params.id) return { id: params.id };
-      if (params.email) return { email: params.email };
-      if (params.phone) return { phone: params.phone };
-      return undefined;
-    })(),
-    organizationId,
-    environment
-  );
+  let whereClause: SQL<unknown>;
+
+  if (!params) {
+    throw new Error("Invalid customer identifier");
+  }
+
+  if (params?.id) {
+    whereClause = eq(customers.id, params.id);
+  } else if (params?.email) {
+    whereClause = eq(customers.email, params.email);
+  } else if (params?.phone) {
+    whereClause =
+      sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
+  } else {
+    throw new Error("Invalid customer identifier");
+  }
+
+  const [customer] = await db
+    .select()
+    .from(customers)
+    .where(
+      and(
+        whereClause,
+        eq(customers.organizationId, organizationId),
+        eq(customers.environment, environment)
+      )
+    )
+    .limit(1);
 
   if (customer) {
-    throw new Error("customer exists");
+    await putCustomer(customer.id, params, organizationId, environment);
+    return customer;
+  } else {
+    return await postCustomer(params as Customer, organizationId, environment);
   }
 };
 

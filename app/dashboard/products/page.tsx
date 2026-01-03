@@ -27,9 +27,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
 import {
   Archive,
@@ -38,7 +38,6 @@ import {
   ArrowUpDown,
   Download,
   HelpCircle,
-  Loader2,
   Package,
   Plus,
   RefreshCw,
@@ -378,7 +377,7 @@ function ProductsModal({
 }) {
   const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
   const isEditMode = !!editingProduct;
-  const queryClient = useQueryClient();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const form = RHF.useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -441,7 +440,6 @@ function ProductsModal({
         metadata,
         priceAmount: parseFloat(data.price.amount),
         recurringPeriod: data.recurringPeriod ?? null,
-
         unit: data.unit ?? null,
         unitDivisor: data.unitDivisor ?? null,
         unitsPerCredit: data.unitsPerCredit ?? null,
@@ -454,25 +452,16 @@ function ProductsModal({
       return await postProduct(productData);
     },
     onSuccess: () => {
-      // Invalidate and refetch products
-      queryClient.invalidateQueries({
-        queryKey: ["products"],
-      });
+      invalidateOrgQuery(["products"]);
       toast.success(
         isEditMode ? "Product updated successfully!" : "Product created!"
       );
       form.reset();
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: () => {
       toast.error(
-        isEditMode ? "Failed to update product" : "Failed to create product",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "An unexpected error occurred",
-        } as Parameters<typeof toast.error>[1]
+        isEditMode ? "Failed to update product" : "Failed to create product"
       );
     },
   });
@@ -502,10 +491,8 @@ function ProductsModal({
             <Button
               onClick={form.handleSubmit(onSubmit)}
               disabled={createProductMutation.isPending}
+              isLoading={createProductMutation.isPending}
             >
-              {createProductMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}{" "}
               {isEditMode ? "Update product" : "Add product"}
             </Button>
           </div>

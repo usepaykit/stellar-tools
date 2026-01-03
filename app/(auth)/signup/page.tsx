@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -66,11 +66,8 @@ export default function SignUp() {
       toast.success("Account created successfully");
       router.push("/select-organization");
     },
-    onError: (error: Error) => {
-      toast.error("Sign-up failed", {
-        id: "signup-error",
-        description: error.message,
-      });
+    onError: () => {
+      toast.error("Sign-up failed");
     },
   });
   const form = useForm<SignUpFormData>({
@@ -315,15 +312,9 @@ export default function SignUp() {
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
             disabled={signupMutation.isPending}
+            isLoading={signupMutation.isPending}
           >
-            {signupMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
-              </>
-            ) : (
-              "Sign up"
-            )}
+            {signupMutation.isPending ? "Creating account..." : "Sign up"}
           </Button>
 
           <div className="my-6 w-full">

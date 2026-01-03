@@ -12,7 +12,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -49,29 +50,20 @@ export default function UpdatePassword() {
     },
   });
 
-  const onSubmit = async (data: UpdatePasswordFormData) => {
-    if (!token) {
-      toast.error("Invalid reset link", {
-        id: "invalid-reset-link",
-        description: "The password reset link is invalid or expired.",
-      });
-      return;
-    }
+  const { mutateAsync: resetPasswordAction, isPending } = useMutation({
+    mutationFn: async (data: UpdatePasswordFormData) => {
+      if (!token) throw new Error("Invalid reset link");
 
-    try {
-      await resetPassword(token, data.newPassword);
-      toast.success("Password updated successfully", {
-        id: "password-updated-successfully",
-        description: "Your password has been changed successfully.",
-      });
+      return await resetPassword(token, data.newPassword);
+    },
+    onSuccess: () => {
+      toast.success("Password updated successfully");
       router.push("/signin");
-    } catch {
-      toast.error("Failed to update password", {
-        id: "failed-to-update-password",
-        description: "Unable to update password. Please try again.",
-      });
-    }
-  };
+    },
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
@@ -159,7 +151,7 @@ export default function UpdatePassword() {
 
       <div className="bg-background relative flex flex-col justify-center">
         <form
-          onSubmit={form.handleSubmit(onSubmit)}
+          onSubmit={form.handleSubmit((data) => resetPasswordAction(data))}
           className="mx-auto flex w-full max-w-md flex-col items-center justify-center space-y-4 px-6 py-12"
         >
           <div className="w-full space-y-2 text-center">
@@ -278,16 +270,10 @@ export default function UpdatePassword() {
           <Button
             type="submit"
             className="w-full rounded-md font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg focus:ring-4"
-            disabled={form.formState.isSubmitting || !token}
+            disabled={isPending}
+            isLoading={isPending}
           >
-            {form.formState.isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating password...
-              </>
-            ) : (
-              "Update password"
-            )}
+            {isPending ? "Updating password..." : "Update password"}
           </Button>
 
           <div className="my-6 w-full">

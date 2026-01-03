@@ -30,7 +30,7 @@ import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Building2, ChevronRight, Loader2, Plus, Users } from "lucide-react";
+import { Building2, ChevronRight, Plus, Users } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FileRejection } from "react-dropzone";
@@ -248,11 +248,8 @@ const CreateOrganizationModal = ({
       onOpenChange(false);
       router.push("/dashboard");
     },
-    onError: (error: Error) => {
-      toast.error("Failed to create organization", {
-        id: "create-org-error",
-        description: error.message,
-      } as Parameters<typeof toast.error>[1]);
+    onError: () => {
+      toast.error("Failed to create organization");
     },
   });
 
@@ -309,16 +306,12 @@ const CreateOrganizationModal = ({
                 form.handleSubmit((data) => createOrgMutation.mutateAsync(data))
               }
               disabled={createOrgMutation.isPending}
+              isLoading={createOrgMutation.isPending}
               className="gap-2"
             >
-              {createOrgMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Organization"
-              )}
+              {createOrgMutation.isPending
+                ? "Creating..."
+                : "Create Organization"}
             </Button>
           </div>
         </div>

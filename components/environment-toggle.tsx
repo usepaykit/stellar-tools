@@ -36,12 +36,8 @@ export function EnvironmentToggle({
           `Switched to ${checked ? "Live" : "Test"} mode successfully`
         );
         router.refresh();
-      } catch (error) {
-        toast.error("Failed to switch environment", {
-          id: "switch-environment-error",
-          description:
-            error instanceof Error ? error.message : "Please try again",
-        });
+      } catch {
+        toast.error("Failed to switch environment");
       } finally {
         setIsPending(false);
       }
