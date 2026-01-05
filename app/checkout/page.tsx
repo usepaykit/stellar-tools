@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextField } from "@/components/input-picker";
+import { TextField } from "@/components/text-field";
 import {
   PhoneNumber,
   PhoneNumberPicker,

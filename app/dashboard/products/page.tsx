@@ -18,7 +18,7 @@ import {
 } from "@/components/text-field";
 
 import { NumberPicker } from "@/components/number-picker";
-import { SelectPicker } from "@/components/SelectPicker";
+import { SelectPicker } from "@/components/select-picker";
 import { RadioGroupPicker } from "@/components/radio-group-picker";
 import { MarkdownPicker } from "@/components/markdown-picker";
 import { PricePicker } from "@/components/price-picker";

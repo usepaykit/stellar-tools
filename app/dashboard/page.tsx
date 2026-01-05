@@ -5,7 +5,7 @@ import React from "react";
 import { AreaChart } from "@/components/area-chart";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { SelectPicker } from "@/components/SelectPicker";
+import { SelectPicker } from "@/components/select-picker";
 import { LineChart } from "@/components/line-chart";
 import { Button } from "@/components/ui/button";
 import {

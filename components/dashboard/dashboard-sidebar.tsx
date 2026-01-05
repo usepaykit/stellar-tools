@@ -58,6 +58,7 @@ import {
   Settings2,
   Sparkles,
   Users,
+  Wallet,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -79,6 +80,7 @@ const navMain = [
     url: "/dashboard/transactions",
     icon: Receipt,
   },
+
   {
     title: "Customers",
     url: "/dashboard/customers",
@@ -90,10 +92,16 @@ const navMain = [
     icon: Repeat,
   },
   {
+    title: "Payout",
+    url: "/dashboard/payout",
+    icon: Wallet,
+  },
+  {
     title: "Usage",
     url: "/dashboard/usage",
     icon: Activity,
   },
+
   {
     title: "Settings",
     url: "/dashboard/settings",
