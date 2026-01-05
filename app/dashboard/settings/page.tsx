@@ -6,7 +6,7 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/input-picker";
+import { TextAreaField, TextField } from "@/components/TextField";
 import {
   type PhoneNumber,
   PhoneNumberPicker,
