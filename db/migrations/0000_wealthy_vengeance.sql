@@ -32,7 +32,7 @@ CREATE TABLE "api_key" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"last_used_at" timestamp,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"metadata" jsonb,
 	"network" "network" NOT NULL,
 	CONSTRAINT "api_key_token_unique" UNIQUE("token")
 );
@@ -44,7 +44,7 @@ CREATE TABLE "asset" (
 	"network" "network" NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"metadata" jsonb,
 	CONSTRAINT "asset_code_issuer_network_unique" UNIQUE("code","issuer","network")
 );
 --> statement-breakpoint
@@ -58,25 +58,23 @@ CREATE TABLE "auth" (
 	"is_revoked" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb
+	"metadata" jsonb
 );
 --> statement-breakpoint
 CREATE TABLE "checkout" (
 	"id" text PRIMARY KEY NOT NULL,
 	"organization_id" text NOT NULL,
-	"api_key_id" text,
 	"customer_id" text,
 	"product_id" text,
 	"amount" integer,
-	"asset_id" text,
 	"description" text,
 	"status" "checkout_status" NOT NULL,
-	"payment_url" text NOT NULL,
 	"expires_at" timestamp NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"metadata" jsonb,
 	"network" "network" NOT NULL,
+	"asset_code" text,
 	CONSTRAINT "amount_or_product_check" CHECK ("checkout"."product_id" IS NOT NULL OR "checkout"."amount" IS NOT NULL)
 );
 --> statement-breakpoint
@@ -118,7 +116,7 @@ CREATE TABLE "customer" (
 	"email" text,
 	"name" text,
 	"phone" text,
-	"app_metadata" jsonb DEFAULT '{}'::jsonb,
+	"app_metadata" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"network" "network" NOT NULL,
@@ -134,8 +132,8 @@ CREATE TABLE "organization" (
 	"logo_url" text,
 	"phone_number" text,
 	"address" text,
-	"social_links" jsonb DEFAULT '{}'::jsonb,
-	"settings" jsonb NOT NULL,
+	"social_links" jsonb,
+	"settings" jsonb,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"metadata" jsonb,
@@ -158,7 +156,6 @@ CREATE TABLE "payment" (
 	"organization_id" text NOT NULL,
 	"checkout_id" text,
 	"customer_id" text,
-	"asset_id" text NOT NULL,
 	"amount" integer NOT NULL,
 	"tx_hash" text NOT NULL,
 	"status" "payment_status" NOT NULL,
@@ -179,11 +176,10 @@ CREATE TABLE "product" (
 	"type" "product_type" NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"metadata" jsonb,
 	"network" "network" NOT NULL,
 	"price_amount" integer NOT NULL,
 	"recurring_period" "recurring_period",
-	"is_archived" boolean DEFAULT false NOT NULL,
 	"unit" text,
 	"unit_divisor" integer,
 	"units_per_credit" integer DEFAULT 1,
@@ -196,18 +192,15 @@ CREATE TABLE "refund" (
 	"organization_id" text NOT NULL,
 	"payment_id" text NOT NULL,
 	"customer_id" text,
-	"asset_id" text,
 	"amount" integer NOT NULL,
-	"tx_hash" text NOT NULL,
 	"reason" text,
 	"status" "refund_status" NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"network" "network" NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"metadata" jsonb,
 	"receiver_public_key" text NOT NULL,
-	CONSTRAINT "refund_tx_hash_unique" UNIQUE("tx_hash"),
-	CONSTRAINT "refund_payment_id_customer_id_asset_id_unique" UNIQUE("payment_id","customer_id","asset_id")
+	CONSTRAINT "refund_payment_id_customer_id_unique" UNIQUE("payment_id","customer_id")
 );
 --> statement-breakpoint
 CREATE TABLE "subscription" (
@@ -226,7 +219,7 @@ CREATE TABLE "subscription" (
 	"failed_payment_count" integer DEFAULT 0,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"metadata" jsonb,
 	"network" "network" NOT NULL
 );
 --> statement-breakpoint
@@ -238,7 +231,8 @@ CREATE TABLE "team_invite" (
 	"expires_at" timestamp NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb
+	"metadata" jsonb,
+	"network" "network" NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "team_member" (
@@ -248,7 +242,7 @@ CREATE TABLE "team_member" (
 	"role" "role" NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	"metadata" jsonb DEFAULT '{}'::jsonb,
+	"metadata" jsonb,
 	CONSTRAINT "team_member_organization_id_account_id_unique" UNIQUE("organization_id","account_id")
 );
 --> statement-breakpoint
@@ -287,10 +281,8 @@ CREATE TABLE "webhook" (
 ALTER TABLE "api_key" ADD CONSTRAINT "api_key_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "auth" ADD CONSTRAINT "auth_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."account"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "checkout" ADD CONSTRAINT "checkout_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "checkout" ADD CONSTRAINT "checkout_api_key_id_api_key_id_fk" FOREIGN KEY ("api_key_id") REFERENCES "public"."api_key"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "checkout" ADD CONSTRAINT "checkout_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "checkout" ADD CONSTRAINT "checkout_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "checkout" ADD CONSTRAINT "checkout_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "credit_balance" ADD CONSTRAINT "credit_balance_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "credit_balance" ADD CONSTRAINT "credit_balance_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "credit_balance" ADD CONSTRAINT "credit_balance_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -304,13 +296,11 @@ ALTER TABLE "password_reset" ADD CONSTRAINT "password_reset_account_id_account_i
 ALTER TABLE "payment" ADD CONSTRAINT "payment_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_checkout_id_checkout_id_fk" FOREIGN KEY ("checkout_id") REFERENCES "public"."checkout"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "payment" ADD CONSTRAINT "payment_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product" ADD CONSTRAINT "product_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product" ADD CONSTRAINT "product_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "refund" ADD CONSTRAINT "refund_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "refund" ADD CONSTRAINT "refund_payment_id_payment_id_fk" FOREIGN KEY ("payment_id") REFERENCES "public"."payment"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "refund" ADD CONSTRAINT "refund_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "refund" ADD CONSTRAINT "refund_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscription" ADD CONSTRAINT "subscription_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscription" ADD CONSTRAINT "subscription_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscription" ADD CONSTRAINT "subscription_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
