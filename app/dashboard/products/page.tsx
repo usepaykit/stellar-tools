@@ -12,12 +12,14 @@ import {
 } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
-  NumberPicker,
-  RadioGroupPicker,
-  SelectPicker,
+
   TextAreaField,
   TextField,
-} from "@/components/input-picker";
+} from "@/components/text-field";
+
+import { NumberPicker } from "@/components/number-picker";
+import { SelectPicker } from "@/components/SelectPicker";
+import { RadioGroupPicker } from "@/components/radio-group-picker";
 import { MarkdownPicker } from "@/components/markdown-picker";
 import { PricePicker } from "@/components/price-picker";
 import { Badge } from "@/components/ui/badge";
