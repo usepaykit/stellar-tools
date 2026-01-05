@@ -44,7 +44,6 @@ type Payout = {
   memo?: string;
 };
 
-
 const mockPayouts: Payout[] = [
   {
     id: "1",
@@ -89,7 +88,6 @@ const mockPayouts: Payout[] = [
   },
 ];
 
-
 const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const variants = {
     pending: {
@@ -129,8 +127,8 @@ const PayoutMethodDisplay = ({
 }) => {
   return (
     <div className="flex items-center gap-2">
-      <Wallet className="h-4 w-4 text-muted-foreground" />
-      <span className="text-sm font-mono">
+      <Wallet className="text-muted-foreground h-4 w-4" />
+      <span className="font-mono text-sm">
         {method.address.slice(0, 8)}...{method.address.slice(-4)}
       </span>
     </div>
@@ -142,7 +140,7 @@ const columns: ColumnDef<Payout>[] = [
     accessorKey: "date",
     header: () => (
       <div className="flex items-center gap-2">
-        <Calendar className="h-4 w-4 text-muted-foreground" />
+        <Calendar className="text-muted-foreground h-4 w-4" />
         <span>Date</span>
       </div>
     ),
@@ -156,7 +154,7 @@ const columns: ColumnDef<Payout>[] = [
     accessorKey: "payoutMethod",
     header: () => (
       <div className="flex items-center gap-2">
-        <Wallet className="h-4 w-4 text-muted-foreground" />
+        <Wallet className="text-muted-foreground h-4 w-4" />
         <span>Payout method</span>
       </div>
     ),
@@ -168,7 +166,7 @@ const columns: ColumnDef<Payout>[] = [
     accessorKey: "status",
     header: () => (
       <div className="flex items-center gap-2">
-        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+        <CheckCircle2 className="text-muted-foreground h-4 w-4" />
         <span>Status</span>
       </div>
     ),
@@ -180,7 +178,7 @@ const columns: ColumnDef<Payout>[] = [
     accessorKey: "amount",
     header: () => (
       <div className="flex items-center gap-2">
-        <Coins className="h-4 w-4 text-muted-foreground" />
+        <Coins className="text-muted-foreground h-4 w-4" />
         <span>Amount</span>
       </div>
     ),
@@ -192,21 +190,18 @@ const columns: ColumnDef<Payout>[] = [
   },
 ];
 
-
 const requestPayoutSchema = z
   .object({
     paymentMethod: z.enum(["wallet", "bank"]),
     amount: z.number().optional(),
-    walletAddress: z.string().optional(),
+    walletAddress: z.string(),
     memo: z.string().optional(),
   })
   .refine(
     (data) => {
       if (data.paymentMethod === "wallet") {
         return (
-          data.amount !== undefined &&
-          !isNaN(data.amount) &&
-          data.amount > 0
+          data.amount !== undefined && !isNaN(data.amount) && data.amount > 0
         );
       }
       return true;
@@ -215,25 +210,9 @@ const requestPayoutSchema = z
       message: "Amount must be greater than 0",
       path: ["amount"],
     }
-  )
-  .refine(
-    (data) => {
-      if (data.paymentMethod === "wallet") {
-        return (
-          data.walletAddress !== undefined &&
-          data.walletAddress.trim().length > 0
-        );
-      }
-      return true;
-    },
-    {
-      message: "Wallet address is required",
-      path: ["walletAddress"],
-    }
   );
 
 type RequestPayoutFormData = z.infer<typeof requestPayoutSchema>;
-
 
 function RequestPayoutModal({
   open,
@@ -255,21 +234,6 @@ function RequestPayoutModal({
   const paymentMethod = RHF.useWatch({
     control: form.control,
     name: "paymentMethod",
-  });
-
-  const amount = RHF.useWatch({
-    control: form.control,
-    name: "amount",
-  });
-
-  const walletAddress = RHF.useWatch({
-    control: form.control,
-    name: "walletAddress",
-  });
-
-  const memo = RHF.useWatch({
-    control: form.control,
-    name: "memo",
   });
 
   React.useEffect(() => {
@@ -322,14 +286,16 @@ function RequestPayoutModal({
             onClick={form.handleSubmit(onSubmit)}
             disabled={requestPayoutMutation.isPending}
           >
-            {requestPayoutMutation.isPending ? "Submitting..." : "Request Payout"}
+            {requestPayoutMutation.isPending
+              ? "Submitting..."
+              : "Request Payout"}
           </Button>
         </div>
       }
     >
       <div className="space-y-6">
         <div>
-          <h3 className="text-sm font-semibold mb-1">Payment Method</h3>
+          <h3 className="mb-1 text-sm font-semibold">Payment Method</h3>
           <p className="text-muted-foreground text-xs">
             Choose how you want to receive your payout
           </p>
@@ -341,7 +307,7 @@ function RequestPayoutModal({
             type="button"
             variant={paymentMethod === "wallet" ? "default" : "outline"}
             className={cn(
-              "flex items-center gap-2 h-auto py-3 px-4",
+              "flex h-auto items-center gap-2 px-4 py-3",
               paymentMethod === "wallet" && "bg-primary text-primary-foreground"
             )}
             onClick={() => {
@@ -352,7 +318,7 @@ function RequestPayoutModal({
             <Wallet className="h-4 w-4" />
             <span>Wallet Address</span>
             {paymentMethod === "wallet" && (
-              <CheckCircle2 className="h-4 w-4 ml-1" />
+              <CheckCircle2 className="ml-1 h-4 w-4" />
             )}
           </Button>
 
@@ -361,14 +327,14 @@ function RequestPayoutModal({
             type="button"
             variant="outline"
             disabled
-            className="flex items-center gap-2 h-auto py-3 px-4 opacity-60"
+            className="flex h-auto items-center gap-2 px-4 py-3 opacity-60"
             onClick={() => {
               toast.info("Local bank payouts coming soon!");
             }}
           >
             <Banknote className="h-4 w-4" />
             <span>Local Bank</span>
-            <Badge variant="outline" className="text-xs px-1.5 py-0 h-4 ml-1">
+            <Badge variant="outline" className="ml-1 h-4 px-1.5 py-0 text-xs">
               Soon
             </Badge>
           </Button>
@@ -376,38 +342,53 @@ function RequestPayoutModal({
 
         {/* Wallet Form Fields - Only show when wallet is selected */}
         {paymentMethod === "wallet" && (
-          <div className="space-y-5 border-t pt-6 max-w-2xl">
-            <NumberPicker
-              id="amount"
-              value={amount}
-              onChange={(value) => {
-                form.setValue("amount", value, { shouldValidate: true });
-              }}
-              label="Amount"
-              allowDecimal={true}
-              error={form.formState.errors.amount?.message}
-              placeholder="0.00"
-              className="shadow-none"
+          <div className="max-w-2xl space-y-5 border-t pt-6">
+            <RHF.Controller
+              control={form.control}
+              name="amount"
+              render={({ field, fieldState: { error } }) => (
+                <NumberPicker
+                  id="amount"
+                  value={field.value}
+                  onChange={field.onChange}
+                  label="Amount"
+                  allowDecimal={true}
+                  error={error?.message}
+                  placeholder="0.00"
+                  className="shadow-none"
+                />
+              )}
             />
 
-            <TextField
-              id="walletAddress"
-              value={walletAddress || ""}
-              onChange={(value) => form.setValue("walletAddress", value)}
-              label="Wallet Address"
-              error={form.formState.errors.walletAddress?.message}
-              placeholder="GABCDEF1234567890..."
-              className="shadow-none"
+            <RHF.Controller
+              control={form.control}
+              name="walletAddress"
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  id="walletAddress"
+                  label="Wallet Address"
+                  error={error?.message}
+                  placeholder="GABCDEF1234567890..."
+                  className="shadow-none"
+                />
+              )}
             />
 
-            <TextField
-              id="memo"
-              value={memo || ""}
-              onChange={(value) => form.setValue("memo", value)}
-              label="Memo (Optional)"
-              error={form.formState.errors.memo?.message}
-              placeholder="Add a memo for this payout"
-              className="shadow-none"
+            <RHF.Controller
+              control={form.control}
+              name="memo"
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  id={field.name}
+                  value={field.value as string}
+                  label="Memo (Optional)"
+                  error={error?.message}
+                  placeholder="Add a memo for this payout"
+                  className="shadow-none"
+                />
+              )}
             />
           </div>
         )}
@@ -453,14 +434,12 @@ export default function PayoutPage() {
             </Button>
           </div>
 
-              <DataTable
-                className="border-x-0"
-                columns={columns}
-                data={mockPayouts}
-                actions={tableActions}
-              />
-     
-     
+          <DataTable
+            className="border-x-0"
+            columns={columns}
+            data={mockPayouts}
+            actions={tableActions}
+          />
 
           <div className="text-muted-foreground text-sm">
             {mockPayouts.length} result{mockPayouts.length !== 1 ? "s" : ""}
@@ -475,4 +454,3 @@ export default function PayoutPage() {
     </DashboardSidebar>
   );
 }
-
