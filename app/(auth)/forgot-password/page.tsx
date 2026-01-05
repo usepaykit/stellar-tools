@@ -3,7 +3,7 @@
 import React from "react";
 
 import { forgotPassword } from "@/actions/auth";
-import { TextField } from "@/components/input-picker";
+import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";

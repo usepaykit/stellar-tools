@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
+import {RadioGroup, RadioGroupItem} from "@/components/ui/radio-group";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
@@ -11,13 +11,13 @@ type HelpTextProps = React.ComponentProps<"p">;
 interface RadioGroupPickerProps
   extends
     Omit<
-      React.ComponentProps<typeof RadioGroupPrimitive.RadioGroup>,
+      React.ComponentProps<typeof RadioGroup>,
       "value" | "onChange"
     >,
     MixinProps<
       "item",
       Omit<
-        React.ComponentProps<typeof RadioGroupPrimitive.RadioGroupItem>,
+        React.ComponentProps<typeof RadioGroupItem>,
         "children" | "value" | "itemRef" | "ref" | "type"
       >
     >,
@@ -69,7 +69,7 @@ export const RadioGroupPicker = ({
         </p>
       )}
 
-      <RadioGroupPrimitive.RadioGroup
+      <RadioGroup
         {...rest}
         value={value}
         onValueChange={onChange}
@@ -82,7 +82,7 @@ export const RadioGroupPicker = ({
         >
           {items.map((item) => (
             <div key={item.value} className="flex items-center space-x-2">
-              <RadioGroupPrimitive.RadioGroupItem
+              <RadioGroupItem
                 {...itemProps}
                 id={item.value}
                 type="button"
@@ -95,7 +95,7 @@ export const RadioGroupPicker = ({
             </div>
           ))}
         </div>
-      </RadioGroupPrimitive.RadioGroup>
+      </RadioGroup>
 
       {error && (
         <p

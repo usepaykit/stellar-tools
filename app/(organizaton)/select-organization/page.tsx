@@ -12,7 +12,7 @@ import {
   type FileWithPreview,
 } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/input-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import {
   PhoneNumber,
   PhoneNumberPicker,

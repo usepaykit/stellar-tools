@@ -16,8 +16,8 @@ import { FullScreenModal } from "@/components/fullscreen-modal";
 import {  
   TextAreaField,
 } from "@/components/text-field";
-import { DateTimePicker } from "@/components/Date-picker";
-import { SelectPicker } from "@/components/SelectPicker";
+import { DateTimePicker } from "@/components/date-picker";
+import { SelectPicker } from "@/components/select-picker";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
