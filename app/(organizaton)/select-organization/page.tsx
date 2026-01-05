@@ -26,10 +26,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Building2, ChevronRight, Plus, Users } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -46,10 +45,12 @@ export default function SelectOrganizationPage() {
     showCreate ? true : false
   );
 
-  const { data: organizations, isLoading } = useOrgQuery(
-    ["organizations"],
-    () => retrieveOrganizations()
-  );
+  const { data: organizations, isLoading, error } = useQuery({
+    queryKey: ["organizations"],
+    queryFn: () => retrieveOrganizations(),
+  });
+
+  console.log({ organizations, isLoading, error });
 
   const hasOrganizations = !!(organizations && organizations.length > 0);
 
