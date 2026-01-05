@@ -6,12 +6,12 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/text-field";
 import {
   type PhoneNumber,
   PhoneNumberPicker,
 } from "@/components/phone-number-picker";
 import { TagInputPicker } from "@/components/tag-input-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -45,7 +45,7 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
-import { roleEnum } from "@/db";
+import { roles } from "@/constant/schema.client";
 import { useCopy } from "@/hooks/use-copy";
 import { cn, getInitials } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -194,13 +194,13 @@ type OrganizationFormData = z.infer<typeof organizationSchema>;
 
 const inviteMemberSchema = z.object({
   emails: z.array(z.email()).min(1, "At least one email is required"),
-  role: z.enum(roleEnum.enumValues),
+  role: z.enum(roles),
 });
 
 type InviteMemberFormData = z.infer<typeof inviteMemberSchema>;
 
 const updateRoleSchema = z.object({
-  role: z.enum(roleEnum.enumValues),
+  role: z.enum(roles),
 });
 
 type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;

@@ -1,3 +1,4 @@
+import { checkoutStatus, roles } from "@/constant/schema.client";
 import { WebhookEvent } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
@@ -76,12 +77,7 @@ export const organizations = pgTable("organization", {
   }>(),
 });
 
-export const roleEnum = pgEnum("role", [
-  "owner",
-  "admin",
-  "developer",
-  "viewer",
-]);
+const roleEnum = pgEnum("role", roles);
 
 export const teamMembers = pgTable(
   "team_member",
@@ -241,12 +237,7 @@ export const products = pgTable("product", {
   creditExpiryDays: integer("credit_expiry_days"),
 });
 
-export const checkoutStatusEnum = pgEnum("checkout_status", [
-  "open",
-  "completed",
-  "expired",
-  "failed",
-]);
+const checkoutStatusEnum = pgEnum("checkout_status", checkoutStatus);
 
 export const checkouts = pgTable(
   "checkout",

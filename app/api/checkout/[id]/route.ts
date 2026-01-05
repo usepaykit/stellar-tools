@@ -4,7 +4,8 @@ import {
   putCheckout,
   retrieveCheckout,
 } from "@/actions/checkout";
-import { Checkout, checkoutStatusEnum } from "@/db";
+import { checkoutStatus } from "@/constant/schema.client";
+import { Checkout } from "@/db";
 import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -30,7 +31,7 @@ export const GET = async (
 
 const putCheckoutSchema = schemaFor<Partial<Checkout>>()(
   z.object({
-    status: z.enum(checkoutStatusEnum.enumValues),
+    status: z.enum(checkoutStatus),
     metadata: z.record(z.string(), z.any()).default({}),
   })
 );
