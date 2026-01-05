@@ -15,11 +15,11 @@ import {
 
   TextAreaField,
   TextField,
-} from "@/components/TextField";
+} from "@/components/text-field";
 
-import { NumberPicker } from "@/components/NumberPicker";
+import { NumberPicker } from "@/components/number-picker";
 import { SelectPicker } from "@/components/SelectPicker";
-import { RadioGroupPicker } from "@/components/RadioGroupPicker";
+import { RadioGroupPicker } from "@/components/radio-group-picker";
 import { MarkdownPicker } from "@/components/markdown-picker";
 import { PricePicker } from "@/components/price-picker";
 import { Badge } from "@/components/ui/badge";

@@ -9,7 +9,7 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Curl, TypeScript } from "@/components/icon";
-import { TextAreaField, TextField } from "@/components/TextField";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { LineChart } from "@/components/line-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
