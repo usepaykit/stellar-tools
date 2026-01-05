@@ -1,20 +1,14 @@
 import { ApiClient } from "../api-client";
 import { Product } from "../schema/product";
-import { ERR, OK, ResultFP, tryCatchAsync } from "../utils";
+import { ERR, OK, Result } from "../utils";
 
 export class ProductApi {
   constructor(private readonly apiClient: ApiClient) {}
 
-  async retrieve(productId: string): Promise<ResultFP<Product, Error>> {
-    const [response, productError] = await tryCatchAsync(
-      this.apiClient.get<Product>(`/api/products/${productId}`)
+  async retrieve(productId: string): Promise<Result<Product, Error>> {
+    const response = await this.apiClient.get<Product>(
+      `/api/products/${productId}`
     );
-
-    if (productError) {
-      return ERR(
-        new Error(`Failed to retrieve product: ${productError.message}`)
-      );
-    }
 
     if (!response.ok) {
       return ERR(
@@ -22,6 +16,6 @@ export class ProductApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 }

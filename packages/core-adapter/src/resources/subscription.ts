@@ -6,31 +6,23 @@ import {
   createSubscriptionSchema,
   updateSubscriptionSchema,
 } from "../schema/subscription";
-import { ERR, OK, ResultFP, tryCatchAsync } from "../utils";
+import { ERR, OK, Result } from "../utils";
 
 export class SubscriptionApi {
   constructor(private apiClient: ApiClient) {}
 
   async create(
     params: CreateSubscription
-  ): Promise<ResultFP<Subscription, Error>> {
+  ): Promise<Result<Subscription, Error>> {
     const { error, data } = createSubscriptionSchema.safeParse(params);
 
     if (error) {
       return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    const [response, subscriptionError] = await tryCatchAsync(
-      this.apiClient.post<Subscription>("/subscriptions", {
-        body: JSON.stringify(data),
-      })
-    );
-
-    if (subscriptionError) {
-      return ERR(
-        new Error(`Failed to create subscription: ${subscriptionError.message}`)
-      );
-    }
+    const response = await this.apiClient.post<Subscription>("/subscriptions", {
+      body: JSON.stringify(data),
+    });
 
     if (!response.ok) {
       return ERR(
@@ -38,21 +30,13 @@ export class SubscriptionApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 
-  async retrieve(id: string): Promise<ResultFP<Subscription, Error>> {
-    const [response, subscriptionError] = await tryCatchAsync(
-      this.apiClient.get<Subscription>(`/subscriptions/${id}`)
+  async retrieve(id: string): Promise<Result<Subscription, Error>> {
+    const response = await this.apiClient.get<Subscription>(
+      `/subscriptions/${id}`
     );
-
-    if (subscriptionError) {
-      return ERR(
-        new Error(
-          `Failed to retrieve subscription: ${subscriptionError.message}`
-        )
-      );
-    }
 
     if (!response.ok) {
       return ERR(
@@ -60,21 +44,14 @@ export class SubscriptionApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 
-  async list(customerId: string): Promise<ResultFP<Subscription[], Error>> {
-    const [response, subscriptionError] = await tryCatchAsync(
-      this.apiClient.get<Subscription[]>(`/subscriptions`, {
-        body: JSON.stringify({ customerId }),
-      })
+  async list(customerId: string): Promise<Result<Subscription[], Error>> {
+    const response = await this.apiClient.get<Array<Subscription>>(
+      `/subscriptions`,
+      { body: JSON.stringify({ customerId }) }
     );
-
-    if (subscriptionError) {
-      return ERR(
-        new Error(`Failed to list subscriptions: ${subscriptionError.message}`)
-      );
-    }
 
     if (!response.ok) {
       return ERR(
@@ -82,19 +59,13 @@ export class SubscriptionApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 
-  async pause(id: string): Promise<ResultFP<Subscription, Error>> {
-    const [response, subscriptionError] = await tryCatchAsync(
-      this.apiClient.post<Subscription>(`/subscriptions/${id}/pause`)
+  async pause(id: string): Promise<Result<Subscription, Error>> {
+    const response = await this.apiClient.post<Subscription>(
+      `/subscriptions/${id}/pause`
     );
-
-    if (subscriptionError) {
-      return ERR(
-        new Error(`Failed to pause subscription: ${subscriptionError.message}`)
-      );
-    }
 
     if (!response.ok) {
       return ERR(
@@ -102,19 +73,13 @@ export class SubscriptionApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 
-  async resume(id: string): Promise<ResultFP<Subscription, Error>> {
-    const [response, subscriptionError] = await tryCatchAsync(
-      this.apiClient.post<Subscription>(`/subscriptions/${id}/resume`)
+  async resume(id: string): Promise<Result<Subscription, Error>> {
+    const response = await this.apiClient.post<Subscription>(
+      `/subscriptions/${id}/resume`
     );
-
-    if (subscriptionError) {
-      return ERR(
-        new Error(`Failed to resume subscription: ${subscriptionError.message}`)
-      );
-    }
 
     if (!response.ok) {
       return ERR(
@@ -122,30 +87,23 @@ export class SubscriptionApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 
   async update(
     id: string,
     params: UpdateSubscription
-  ): Promise<ResultFP<Subscription, Error>> {
+  ): Promise<Result<Subscription, Error>> {
     const { error, data } = updateSubscriptionSchema.safeParse(params);
 
     if (error) {
       return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    const [response, subscriptionError] = await tryCatchAsync(
-      this.apiClient.put<Subscription>(`/subscriptions/${id}`, {
-        body: JSON.stringify(data),
-      })
+    const response = await this.apiClient.put<Subscription>(
+      `/subscriptions/${id}`,
+      { body: JSON.stringify(data) }
     );
-
-    if (subscriptionError) {
-      return ERR(
-        new Error(`Failed to update subscription: ${subscriptionError.message}`)
-      );
-    }
 
     if (!response.ok) {
       return ERR(
@@ -153,19 +111,13 @@ export class SubscriptionApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 
-  async cancel(id: string): Promise<ResultFP<Subscription, Error>> {
-    const [response, subscriptionError] = await tryCatchAsync(
-      this.apiClient.post<Subscription>(`/subscriptions/${id}/cancel`)
+  async cancel(id: string): Promise<Result<Subscription, Error>> {
+    const response = await this.apiClient.post<Subscription>(
+      `/subscriptions/${id}/cancel`
     );
-
-    if (subscriptionError) {
-      return ERR(
-        new Error(`Failed to cancel subscription: ${subscriptionError.message}`)
-      );
-    }
 
     if (!response.ok) {
       return ERR(
@@ -173,6 +125,6 @@ export class SubscriptionApi {
       );
     }
 
-    return OK(response.value);
+    return OK(response.value.data);
   }
 }

@@ -1,6 +1,6 @@
 import { postWebhookLog } from "@/actions/webhook";
 import { Webhook as WebhookSchema } from "@/db/schema";
-import { Webhook, WebhookEvent } from "@stellartools/core";
+import { ApiClient, WebhookEvent, WebhookSigner } from "@stellartools/core";
 import { nanoid } from "nanoid";
 
 export class WebhookDelivery {
@@ -12,8 +12,8 @@ export class WebhookDelivery {
     payload: Record<string, unknown>
   ) => {
     const startTime = Date.now();
-
-    const webhookEventId = `wh+evt_${nanoid(25)}`;
+    const webhookEventId = `wh+evt_${nanoid(52)}`;
+    const requestId = `wh+req_${nanoid(52)}`;
 
     const webhookPayload = {
       id: webhookEventId,
@@ -23,26 +23,36 @@ export class WebhookDelivery {
       data: payload,
     };
 
-    const signature = new Webhook().generateSignature(
+    const signature = new WebhookSigner().generateSignature(
       JSON.stringify(webhookPayload),
       webhook.secret
     );
 
     try {
-      const response = await fetch(webhook.url, {
-        method: "POST",
+      const apiClient = new ApiClient({
+        baseUrl: webhook.url,
         headers: {
           "Content-Type": "application/json",
           "User-Agent": "StellarTools-Webhooks/1.0",
           "X-Stellar-Signature": signature,
           "X-Stellar-Event": eventType,
         },
+        retryOptions: { max: 3, baseDelay: 1000, debug: false },
+        timeout: 15000,
+      });
+
+      const result = await apiClient.post(webhook.url, {
         body: JSON.stringify(webhookPayload),
-        signal: AbortSignal.timeout(30000), // 30 second timeout
+        requestId,
       });
 
       const duration = Date.now() - startTime;
-      const responseText = await response.text().catch(() => "");
+
+      const response = result?.value;
+      const statusCode = response?.status ?? null;
+      const responseText = response?.text ?? null;
+      const responseData = response?.data ?? null;
+      const isSuccess = response?.ok ?? false;
 
       await postWebhookLog(
         webhook.id,
@@ -50,10 +60,10 @@ export class WebhookDelivery {
           id: webhookEventId,
           eventType,
           request: webhookPayload,
-          statusCode: response.status,
-          errorMessage: response.ok ? null : responseText,
+          statusCode,
+          errorMessage: isSuccess ? null : responseText,
           responseTime: duration,
-          response: response.json(),
+          response: responseData,
           description: `Webhook delivery to ${webhook.url}`,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -64,14 +74,14 @@ export class WebhookDelivery {
         webhook.environment
       );
 
-      if (!response.ok) {
+      if (!isSuccess) {
         throw new Error(
-          `Webhook delivery failed: ${response.status} - ${responseText}`
+          `Webhook delivery failed: ${statusCode} - ${responseText}`
         );
       }
 
       console.log(
-        `✅ Webhook delivered to ${webhook.url} in ${duration}ms (${response.status})`
+        `✅ Webhook delivered to ${webhook.url} in ${duration}ms (${statusCode})`
       );
 
       return { success: true, webhookId: webhook.id };

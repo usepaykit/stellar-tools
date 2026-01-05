@@ -50,7 +50,8 @@ export class StellarTools {
 }
 
 export * from "./types";
-export { WebhooksExternal as Webhook } from "./resources/webhooks.external";
+export { WebhookSigner } from "./resources/webhooks";
+export { ApiClient };
 export {
   schemaFor,
   tryCatchAsync,
