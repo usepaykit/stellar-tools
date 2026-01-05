@@ -6,8 +6,6 @@ import { postCheckout } from "@/actions/checkout";
 import { retrieveCustomer } from "@/actions/customers";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
-import { CustomerModal } from "@/app/dashboard/customers/page";
-import { RefundModal } from "@/app/dashboard/transactions/page";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -62,6 +60,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
+
+import { RefundModal } from "../../transactions/page";
+import { CustomerModal } from "../page";
 
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {

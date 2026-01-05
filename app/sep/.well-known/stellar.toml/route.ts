@@ -1,7 +1,9 @@
-import { retrieveOrganization } from "@/actions/organization";
-import { retrieveActiveProductsWithAsset } from "@/actions/product";
-import { Network } from "@/db";
 import TOML from "@iarna/toml";
+import { NextRequest, NextResponse } from "next/server";
+
+import { retrieveOrganization } from "../../../../actions/organization";
+import { retrieveActiveProductsWithAsset } from "../../../../actions/product";
+import { Network } from "../../../../db";
 
 const DEFAULT_LOGO_URL = "https://stellartools.io/default-logo.png";
 const PLATFORM_WEB_AUTH_ENDPOINT = "https://api.stellartools.io/auth";
@@ -11,27 +13,31 @@ const PLATFORM_OFFICIAL_EMAIL = "support@stellartools.io";
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
 
-const ENVIRONMENT: Network = "mainnet";
-
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const host = request.headers.get("host") || "";
   const orgId = host.split(".")[0];
 
+  const searchParams = request.nextUrl.searchParams;
+  const environment = (searchParams.get("environment") ?? "mainnet") as Network;
+
   if (!orgId) {
-    return new Response("Organization not found", { status: 404 });
+    return NextResponse.json(
+      { error: "Organization not found" },
+      { status: 404 }
+    );
   }
 
   try {
     const org = await retrieveOrganization(orgId);
-    const stellarAccount = org.stellarAccounts?.[ENVIRONMENT];
+    const stellarAccount = org.stellarAccounts?.[environment];
 
     const productsWithAssets = await retrieveActiveProductsWithAsset(
       org.id,
-      ENVIRONMENT
+      environment
     );
 
     const networkPassphrase =
-      ENVIRONMENT === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
+      environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
 
     const orgLogo = org.logoUrl || DEFAULT_LOGO_URL;
     const orgUrl = `https://${orgId}.stellartools.io`;
@@ -88,7 +94,7 @@ export async function GET(request: Request) {
       tomlData as Parameters<typeof TOML.stringify>[0]
     );
 
-    return new Response(tomlString, {
+    return NextResponse.json(tomlString, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
         "Access-Control-Allow-Origin": "*",
@@ -97,9 +103,15 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Organization not found") {
-      return new Response("Organization not found", { status: 404 });
+      return NextResponse.json(
+        { error: "Organization not found" },
+        { status: 404 }
+      );
     }
 
-    return new Response("Internal server error", { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
