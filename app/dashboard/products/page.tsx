@@ -13,11 +13,11 @@ import {
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   RadioGroupPicker,
-  SelectPicker,
   TextAreaField,
   TextField,
 } from "@/components/input-picker";
 import { NumberPicker } from "@/components/NumberPicker";
+import { SelectPicker } from "@/components/SelectPicker";
 import { MarkdownPicker } from "@/components/markdown-picker";
 import { PricePicker } from "@/components/price-picker";
 import { Badge } from "@/components/ui/badge";
