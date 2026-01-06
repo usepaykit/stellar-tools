@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -38,9 +38,22 @@ type UpdatePasswordFormData = z.infer<typeof updatePasswordSchema>;
 export default function UpdatePassword() {
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+  const [dismissedError, setDismissedError] = React.useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const error = searchParams.get("error");
+  const errorDescription = searchParams.get("error_description");
+
+  React.useEffect(() => {
+    if (dismissedError && error) {
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.delete("error");
+      newSearchParams.delete("error_description");
+      router.replace(`/reset-password?${newSearchParams.toString()}`);
+      setDismissedError(false);
+    }
+  }, [dismissedError, error, router, searchParams]);
 
   const form = useForm<UpdatePasswordFormData>({
     resolver: zodResolver(updatePasswordSchema),
@@ -168,6 +181,35 @@ export default function UpdatePassword() {
               </p>
             )}
           </div>
+
+          {error && !dismissedError && (
+            <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <h3 className="text-destructive text-sm font-semibold">
+                    Authentication Error
+                  </h3>
+                  <p className="text-destructive/90 text-sm">
+                    {errorDescription ||
+                      (error === "access_denied"
+                        ? "Access was denied. Please try again."
+                        : error === "no_code"
+                          ? "No authorization code received. Please try again."
+                          : "An error occurred during authentication. Please try again.")}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDismissedError(true)}
+                  className="text-destructive/70 hover:text-destructive shrink-0 transition-colors"
+                  aria-label="Dismiss error"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="w-full space-y-2">
             <Label htmlFor="newPassword" className="text-sm font-semibold">
