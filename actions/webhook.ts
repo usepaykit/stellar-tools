@@ -1,38 +1,41 @@
 "use server";
 
-import { Stellar } from "@/core/stellar";
-import { WebhookDelivery } from "@/core/webhook-delivery";
 import {
-  Checkout,
   Network,
   Organization,
   Webhook,
-  WebhookEvent,
   WebhookLog,
   db,
   webhookLogs,
   webhooks,
 } from "@/db";
+import { Stellar } from "@/integrations/stellar";
+import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { parseJSON } from "@/lib/utils";
-import { and, eq } from "drizzle-orm";
+import { WebhookEvent } from "@stellartools/core";
+import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
-import { putCheckout } from "./checkout";
+import { putCheckout, retrieveCheckout } from "./checkout";
+import { resolveOrgContext } from "./organization";
 import { postPayment } from "./payment";
 
 export const postWebhook = async (
-  organizationId: string,
-  data: Partial<Webhook>
+  orgId?: string,
+  env?: Network,
+  data?: Omit<Webhook, "id" | "organizationId" | "environment">
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [webhook] = await db
     .insert(webhooks)
     .values({
+      ...data,
       id: `wh_${nanoid(25)}`,
-      secretHash: `wh_sec_${nanoid(30)}`,
       isDisabled: false,
       organizationId,
-      ...data,
+      environment,
     } as Webhook)
     .returning();
 
@@ -41,10 +44,9 @@ export const postWebhook = async (
   return webhook as Webhook;
 };
 
-export const retrieveWebhooks = async (
-  organizationId: string,
-  environment: Network
-) => {
+export const retrieveWebhooks = async (orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const webhooksResult = await db
     .select()
     .from(webhooks)
@@ -60,12 +62,75 @@ export const retrieveWebhooks = async (
   return webhooksResult;
 };
 
-export const retrieveWebhook = async (id: string, organizationId: string) => {
+export const getWebhooksWithAnalytics = async (
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const result = await db
+    .select({
+      id: webhooks.id,
+      organizationId: webhooks.organizationId,
+      url: webhooks.url,
+      secret: webhooks.secret,
+      events: webhooks.events,
+      name: webhooks.name,
+      description: webhooks.description,
+      isDisabled: webhooks.isDisabled,
+      createdAt: webhooks.createdAt,
+      updatedAt: webhooks.updatedAt,
+      environment: webhooks.environment,
+      logsCount: sql<number>`cast(count(${webhookLogs.id}) as integer)`.as(
+        "logs_count"
+      ),
+      errorCount:
+        sql<number>`cast(count(${webhookLogs.id}) filter (where ${webhookLogs.statusCode} >= 400 or ${webhookLogs.errorMessage} is not null) as integer)`.as(
+          "error_count"
+        ),
+      responseTime: sql<number[]>`
+        array_agg(${webhookLogs.responseTime} order by ${webhookLogs.createdAt} desc) 
+        filter (where ${webhookLogs.responseTime} is not null)
+      `.as("response_time"),
+    })
+    .from(webhooks)
+    .leftJoin(webhookLogs, eq(webhookLogs.webhookId, webhooks.id))
+    .where(
+      and(
+        eq(webhooks.organizationId, organizationId),
+        eq(webhooks.environment, environment)
+      )
+    )
+    .groupBy(webhooks.id);
+
+  if (!result.length) throw new Error("Failed to retrieve webhooks");
+
+  return result.map((webhook) => ({
+    ...webhook,
+    errorRate:
+      webhook.logsCount > 0
+        ? Math.round((webhook.errorCount / webhook.logsCount) * 100)
+        : 0,
+    responseTime: webhook.responseTime ?? [],
+  }));
+};
+
+export const retrieveWebhook = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [webhook] = await db
     .select()
     .from(webhooks)
     .where(
-      and(eq(webhooks.id, id), eq(webhooks.organizationId, organizationId))
+      and(
+        eq(webhooks.id, id),
+        eq(webhooks.organizationId, organizationId),
+        eq(webhooks.environment, environment)
+      )
     );
 
   if (!webhook) throw new Error("Failed to retrieve webhook");
@@ -75,14 +140,21 @@ export const retrieveWebhook = async (id: string, organizationId: string) => {
 
 export const putWebhook = async (
   id: string,
-  organizationId: string,
-  data: Partial<Webhook>
+  data: Partial<Webhook>,
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [webhook] = await db
     .update(webhooks)
     .set({ ...data, updatedAt: new Date() })
     .where(
-      and(eq(webhooks.id, id), eq(webhooks.organizationId, organizationId))
+      and(
+        eq(webhooks.id, id),
+        eq(webhooks.organizationId, organizationId),
+        eq(webhooks.environment, environment)
+      )
     )
     .returning();
 
@@ -91,11 +163,21 @@ export const putWebhook = async (
   return webhook;
 };
 
-export const deleteWebhook = async (id: string, organizationId: string) => {
+export const deleteWebhook = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   await db
     .delete(webhooks)
     .where(
-      and(eq(webhooks.id, id), eq(webhooks.organizationId, organizationId))
+      and(
+        eq(webhooks.id, id),
+        eq(webhooks.organizationId, organizationId),
+        eq(webhooks.environment, environment)
+      )
     )
     .returning();
 
@@ -104,11 +186,15 @@ export const deleteWebhook = async (id: string, organizationId: string) => {
 
 export const postWebhookLog = async (
   webhookId: string,
-  params: Partial<WebhookLog>
+  params: Omit<WebhookLog, "organizationId" | "environment" | "webhookId">,
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [webhookLog] = await db
     .insert(webhookLogs)
-    .values({ webhookId, ...params } as WebhookLog)
+    .values({ ...params, webhookId, organizationId, environment } as WebhookLog)
     .returning();
 
   if (!webhookLog) throw new Error("Failed to create webhook log");
@@ -118,17 +204,19 @@ export const postWebhookLog = async (
 
 export const retrieveWebhookLogs = async (
   webhookId: string,
-  organizationId: string,
-  environment: Network
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const webhookLogsResult = await db
     .select()
     .from(webhookLogs)
     .where(
       and(
         eq(webhookLogs.webhookId, webhookId),
-        eq(webhookLogs.environment, environment),
-        eq(webhookLogs.organizationId, organizationId)
+        eq(webhookLogs.organizationId, organizationId),
+        eq(webhookLogs.environment, environment)
       )
     );
 
@@ -140,15 +228,19 @@ export const retrieveWebhookLogs = async (
 
 export const retrieveWebhookLog = async (
   id: string,
-  organizationId: string
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [webhookLog] = await db
     .select()
     .from(webhookLogs)
     .where(
       and(
         eq(webhookLogs.id, id),
-        eq(webhookLogs.organizationId, organizationId)
+        eq(webhookLogs.organizationId, organizationId),
+        eq(webhookLogs.environment, environment)
       )
     );
 
@@ -159,16 +251,20 @@ export const retrieveWebhookLog = async (
 
 export const putWebhookLog = async (
   id: string,
-  organizationId: string,
-  data: Partial<WebhookLog>
+  data: Partial<WebhookLog>,
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [webhookLog] = await db
     .update(webhookLogs)
     .set({ ...data, updatedAt: new Date() })
     .where(
       and(
         eq(webhookLogs.id, id),
-        eq(webhookLogs.organizationId, organizationId)
+        eq(webhookLogs.organizationId, organizationId),
+        eq(webhookLogs.environment, environment)
       )
     )
     .returning();
@@ -178,13 +274,20 @@ export const putWebhookLog = async (
   return webhookLog;
 };
 
-export const deleteWebhookLog = async (id: string, organizationId: string) => {
+export const deleteWebhookLog = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   await db
     .delete(webhookLogs)
     .where(
       and(
         eq(webhookLogs.id, id),
-        eq(webhookLogs.organizationId, organizationId)
+        eq(webhookLogs.organizationId, organizationId),
+        eq(webhookLogs.environment, environment)
       )
     )
     .returning();
@@ -195,41 +298,38 @@ export const deleteWebhookLog = async (id: string, organizationId: string) => {
 // -- WEBHOOK INTERNALS --
 
 export const triggerWebhooks = async (
-  organizationId: string,
   eventType: WebhookEvent,
   payload: Record<string, unknown>,
-  environment: Network
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const orgWebhooks = await db
     .select()
     .from(webhooks)
     .where(
       and(
         eq(webhooks.organizationId, organizationId),
-        eq(webhooks.environment, environment),
-        eq(webhooks.isDisabled, false)
+        eq(webhooks.isDisabled, false),
+        eq(webhooks.environment, environment)
       )
     );
 
   const subscribedWebhooks = orgWebhooks.filter((webhook) =>
-    webhook.events.includes(eventType as unknown as string)
+    webhook.events.includes(eventType)
   );
 
   if (subscribedWebhooks.length === 0) {
     console.log(
-      `No webhooks subscribed to ${eventType} for org ${organizationId}`
+      `No webhooks subscribed to ${eventType} for org ${organizationId} in environment ${environment}`
     );
     return { success: true, delivered: 0 };
   }
 
   const results = await Promise.allSettled(
     subscribedWebhooks.map((webhook) =>
-      new WebhookDelivery().deliver(
-        webhook,
-        eventType as unknown as string,
-        payload,
-        environment
-      )
+      new WebhookDelivery().deliver(webhook, eventType, payload)
     )
   );
 
@@ -249,7 +349,7 @@ export const processStellarWebhook = async (
   environment: Network,
   stellarAccount: NonNullable<Organization["stellarAccounts"]>[Network],
   organization: Organization,
-  checkout?: Checkout
+  checkoutId: string
 ) => {
   const stellar = new Stellar(environment);
 
@@ -267,33 +367,50 @@ export const processStellarWebhook = async (
         z.object({ amount: z.number(), checkoutId: z.string() })
       );
 
-      if (checkout) {
-        await Promise.all([
-          putCheckout(checkout.id, organization.id, {
-            status: "completed",
-          }),
-          postPayment({
-            organizationId: organization.id,
+      const checkout = await retrieveCheckout(
+        checkoutId,
+        organization.id,
+        environment
+      );
+
+      if (!checkout) {
+        console.error(`Checkout ${checkoutId} not found`);
+        return { error: "Checkout not found" };
+      }
+
+      await Promise.all([
+        putCheckout(
+          checkout.id,
+          { status: "completed", updatedAt: new Date() },
+          organization.id,
+          environment
+        ),
+        postPayment(
+          {
             checkoutId: checkout.id,
             customerId: checkout.customerId,
             amount: amount * 10_000_000, // XLM to stroops
             transactionHash: tx.hash,
             status: "confirmed",
-            environment,
-          }),
-        ]);
-
-        await triggerWebhooks(
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
           organization.id,
-          "payment.confirmed" as unknown as WebhookEvent,
-          { payment_id: tx.hash, checkout_id: checkout.id },
           environment
-        );
-      }
+        ),
+      ]);
 
-      return { data: { checkout } };
+      await triggerWebhooks(
+        "payment.confirmed",
+        {
+          payment_id: tx.hash,
+          checkout_id: checkout.id,
+        },
+        organization.id,
+        environment
+      );
+
+      return { success: true };
     },
   });
-
-  return { data: { checkout } };
 };

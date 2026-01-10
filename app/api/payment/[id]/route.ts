@@ -23,7 +23,7 @@ export const GET = async (
 
   const { verifyOnChain } = getSchema.parse(await req.json());
 
-  const payment = await retrievePayment(id, organizationId);
+  const payment = await retrievePayment(id, organizationId, environment);
 
   if (verifyOnChain && payment.status === "pending") {
     await refreshTxStatus(

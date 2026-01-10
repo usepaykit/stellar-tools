@@ -13,19 +13,15 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { ColumnDef } from "@tanstack/react-table";
-import {
-  ChevronRight,
-  Package,
-  Search,
-} from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { ColumnDef } from "@tanstack/react-table";
+import { ChevronRight, Package, Search } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type UsageRecord = {
   id: string;
@@ -155,13 +151,15 @@ const columns: ColumnDef<UsageRecord>[] = [
       return (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="font-medium">{record.consumed.toLocaleString()}</span>
+            <span className="font-medium">
+              {record.consumed.toLocaleString()}
+            </span>
             <span className="text-muted-foreground text-sm">
               / {record.granted.toLocaleString()}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="bg-muted h-2 flex-1 rounded-full overflow-hidden">
+            <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
               <div
                 className="bg-primary h-full transition-all"
                 style={{ width: `${Math.min(usagePercentage, 100)}%` }}
@@ -183,13 +181,12 @@ const columns: ColumnDef<UsageRecord>[] = [
       const customer = row.original.customer;
       if (!customer) return <span className="text-muted-foreground">N/A</span>;
       return (
-        <Link
-          href={`/dashboard/customers/${row.original.customerId}`}
-          className="flex flex-col gap-1 hover:text-primary transition-colors"
-        >
+        <div className="flex flex-col gap-1">
           <span className="font-medium">{customer.name}</span>
-          <span className="text-muted-foreground text-sm">{customer.email}</span>
-        </Link>
+          <span className="text-muted-foreground text-sm">
+            {customer.email}
+          </span>
+        </div>
       );
     },
     enableSorting: false,
@@ -261,7 +258,9 @@ export default function UsagePage() {
     {
       label: "View Payment",
       onClick: (record) => {
-        router.push(`/dashboard/transactions?customer=${record.customerId}`);
+        router.push(
+          `/dashboard/transactions?customer=${record.customerId}&paymentId=x`
+        );
       },
     },
     {
@@ -298,7 +297,7 @@ export default function UsagePage() {
 
             {/* Header */}
             <div className="flex items-center justify-between">
-    <div>
+              <div>
                 <h1 className="text-3xl font-bold tracking-tight">Usage</h1>
                 <p className="text-muted-foreground mt-1.5 text-sm">
                   Monitor metered billing and usage records
@@ -326,7 +325,6 @@ export default function UsagePage() {
               columns={columns}
               data={filteredRecords}
               actions={tableActions}
-
               onRowClick={(row) => {
                 // Navigate to customer page
                 router.push(`/dashboard/usage/${row.id}`);

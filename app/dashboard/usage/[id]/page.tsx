@@ -6,31 +6,34 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import {
-    LogDetailItem,
-    LogDetailSection,
-    LogPicker,
+  LogDetailItem,
+  LogDetailSection,
+  LogPicker,
 } from "@/components/log-picker";
 import { Badge } from "@/components/ui/badge";
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   UnderlineTabs,
+  UnderlineTabsList,
+  UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { useCopy } from "@/hooks/use-copy";
 import { ColumnDef } from "@tanstack/react-table";
 import {
-    ChevronRight,
-    Copy,
-    RefreshCw,
-    TrendingDown,
-    TrendingUp
+  CheckCircle2,
+  ChevronRight,
+  Copy,
+  RefreshCw,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -187,12 +190,14 @@ const StatusBadge = ({ status }: { status: UsageRecordStatus }) => {
       icon: TrendingUp,
     },
     consumed: {
-      className: "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+      className:
+        "border-blue-500/20 bg-blue-500/10 text-blue-700 dark:text-blue-400",
       label: "Consumed",
       icon: TrendingDown,
     },
     revoked: {
-      className: "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400",
+      className:
+        "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400",
       label: "Revoked",
       icon: TrendingDown,
     },
@@ -210,24 +215,18 @@ const StatusBadge = ({ status }: { status: UsageRecordStatus }) => {
 };
 
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, handleCopy } = useCopy();
 
   return (
     <Button
       variant="ghost"
       size="icon-sm"
       className="h-8 w-8"
-      onClick={handleCopy}
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
       {copied ? (
-        <Copy className="h-4 w-4 text-green-600" />
+        <CheckCircle2 className="h-4 w-4 text-green-600" />
       ) : (
         <Copy className="h-4 w-4" />
       )}
@@ -241,7 +240,17 @@ const columns: ColumnDef<UsageRecord>[] = [
     header: "Status",
     cell: ({ row }) => {
       const record = row.original;
-      return <StatusBadge status={record.status} />;
+      return (
+        <div className="flex w-full items-center justify-between">
+          <StatusBadge status={record.status} />
+          <div className="flex flex-col items-end">
+            <span className={`text-foreground font-normal`}>
+              {record.amount > 0 ? "+" : ""}
+              {record.amount.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      );
     },
     enableSorting: false,
   },
@@ -251,9 +260,7 @@ const columns: ColumnDef<UsageRecord>[] = [
     cell: ({ row }) => {
       const reason = row.original.reason;
       return (
-        <span className="text-sm text-muted-foreground">
-          {reason || "—"}
-        </span>
+        <span className="text-muted-foreground text-sm">{reason || "—"}</span>
       );
     },
     enableSorting: false,
@@ -264,9 +271,7 @@ const columns: ColumnDef<UsageRecord>[] = [
     cell: ({ row }) => {
       const balance = row.original.balanceAfter;
       return (
-        <span className="text-sm font-medium">
-          {balance.toLocaleString()}
-        </span>
+        <span className="text-sm font-medium">{balance.toLocaleString()}</span>
       );
     },
     enableSorting: true,
@@ -416,12 +421,17 @@ export default function UsageDetailPage() {
                         </Link>
                       }
                     />
-                    <CopyButton text={record.customerId} label="Copy customer ID" />
+                    <CopyButton
+                      text={record.customerId}
+                      label="Copy customer ID"
+                    />
                   </div>
                   <LogDetailItem label="Email" value={record.customer.email} />
                 </>
               ) : (
-                <p className="text-muted-foreground text-sm">No customer data</p>
+                <p className="text-muted-foreground text-sm">
+                  No customer data
+                </p>
               )}
             </div>
           </LogDetailSection>
@@ -477,7 +487,11 @@ export default function UsageDetailPage() {
           {/* Metadata Section */}
           {record.metadata && (
             <LogDetailSection title="Metadata">
-              <CodeBlock language="json" showCopyButton={true} maxHeight="300px">
+              <CodeBlock
+                language="json"
+                showCopyButton={true}
+                maxHeight="300px"
+              >
                 {formatJSON(record.metadata)}
               </CodeBlock>
             </LogDetailSection>
@@ -567,24 +581,23 @@ export default function UsageDetailPage() {
 
             {/* Filters */}
             <div className="flex items-center justify-between gap-4">
-              {/* @ts-expect-error - MixinProps type definition issue, component works correctly */}
               <UnderlineTabs
                 value={statusFilter}
                 onValueChange={setStatusFilter}
                 className="w-auto"
               >
-                <UnderlineTabs.List>
-                  <UnderlineTabs.Trigger value="all">All</UnderlineTabs.Trigger>
-                  <UnderlineTabs.Trigger value="granted">
+                <UnderlineTabsList>
+                  <UnderlineTabsTrigger value="all">All</UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="granted">
                     Granted
-                  </UnderlineTabs.Trigger>
-                  <UnderlineTabs.Trigger value="consumed">
+                  </UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="consumed">
                     Consumed
-                  </UnderlineTabs.Trigger>
-                  <UnderlineTabs.Trigger value="revoked">
+                  </UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="revoked">
                     Revoked
-                  </UnderlineTabs.Trigger>
-                </UnderlineTabs.List>
+                  </UnderlineTabsTrigger>
+                </UnderlineTabsList>
               </UnderlineTabs>
               <Button variant="outline" size="sm" className="gap-2">
                 <RefreshCw className="h-4 w-4" />

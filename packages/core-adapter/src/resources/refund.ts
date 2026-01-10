@@ -1,27 +1,27 @@
 import { ApiClient } from "../api-client";
 import { CreateRefund, Refund, createRefundSchema } from "../schema/refund";
-import { tryCatchAsync } from "../utils";
+import { ERR, OK, Result } from "../utils";
 
 export class RefundApi {
   constructor(private apiClient: ApiClient) {}
 
-  create = async (params: CreateRefund) => {
+  async create(params: CreateRefund): Promise<Result<Refund, Error>> {
     const { error, data } = createRefundSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    const [response, refundError] = await tryCatchAsync(
-      this.apiClient.post<Refund>("/refunds", {
-        body: JSON.stringify(data),
-      })
-    );
+    const response = await this.apiClient.post<Refund>("/refunds", {
+      body: JSON.stringify(data),
+    });
 
-    if (refundError) {
-      throw new Error(`Failed to create refund: ${refundError.message}`);
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to create refund: ${response.error?.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value.data);
+  }
 }

@@ -2,28 +2,37 @@
 
 import * as React from "react";
 
+import {
+  retrievePayment,
+  retrievePaymentsWithDetails,
+} from "@/actions/payment";
+import { postRefund } from "@/actions/refund";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/input-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { useCopy } from "@/hooks/use-copy";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
   Copy,
   Download,
-  Loader2,
   Plus,
   Settings,
   Wallet,
   XCircle,
 } from "lucide-react";
+import moment from "moment";
+import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
@@ -48,117 +57,6 @@ type Transaction = {
   refundedDate?: Date;
   status: TransactionStatus;
 };
-
-// --- Mock Data ---
-
-const mockTransactions: Transaction[] = [
-  {
-    id: "tx_1",
-    amount: "6.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8V",
-    customer: {
-      email: "abramson@theleadgenerationguys.com",
-    },
-    date: new Date("2024-12-22T16:52:00"),
-    status: "succeeded",
-  },
-  {
-    id: "tx_2",
-    amount: "9.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8W",
-    customer: {
-      email: "customer@example.com",
-    },
-    date: new Date("2024-12-22T15:30:00"),
-    status: "succeeded",
-  },
-  {
-    id: "tx_3",
-    amount: "12.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8X",
-    customer: {
-      email: "user@example.com",
-    },
-    date: new Date("2024-12-22T14:15:00"),
-    status: "succeeded",
-  },
-  {
-    id: "tx_4",
-    amount: "3.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8Y",
-    customer: {
-      email: "chris@1secondleads.com",
-    },
-    date: new Date("2024-12-21T10:20:00"),
-    status: "failed",
-  },
-  {
-    id: "tx_5",
-    amount: "8400.00",
-    asset: "INR",
-    paymentMethod: {
-      type: "wallet",
-      address: "GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8Z",
-    customer: {
-      email: "yogi@branale.com",
-    },
-    date: new Date("2024-12-20T09:45:00"),
-    status: "failed",
-  },
-  {
-    id: "tx_6",
-    amount: "15.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs9A",
-    customer: {
-      email: "refund@example.com",
-    },
-    date: new Date("2024-12-19T12:00:00"),
-    refundedDate: new Date("2024-12-20T10:00:00"),
-    status: "refunded",
-  },
-  {
-    id: "tx_8",
-    amount: "8.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs9C",
-    customer: {
-      email: "customer2@example.com",
-    },
-    date: new Date("2024-12-17T13:20:00"),
-    status: "succeeded",
-  },
-];
 
 // --- Status Badge Component ---
 
@@ -201,13 +99,7 @@ const StatusBadge = ({ status }: { status: TransactionStatus }) => {
 // --- Copy Wallet Address Component ---
 
 const CopyWalletAddress = ({ address }: { address: string }) => {
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const { copied, handleCopy } = useCopy();
 
   const displayAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
 
@@ -221,11 +113,18 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          handleCopy();
+          handleCopy({
+            text: address,
+            message: "Wallet address copied to clipboard",
+          });
         }}
         title="Copy wallet address"
       >
-        <Copy className={cn("h-3 w-3", copied && "text-green-600")} />
+        {copied ? (
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+        ) : (
+          <Copy className="text-muted-foreground h-4 w-4" />
+        )}
       </Button>
     </div>
   );
@@ -284,12 +183,7 @@ const columns: ColumnDef<Transaction>[] = [
       const date = row.original.date;
       return (
         <div className="text-muted-foreground text-sm">
-          {date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-          })}
+          {moment(date).format("MMM D, h:mm A")}
         </div>
       );
     },
@@ -301,14 +195,7 @@ const columns: ColumnDef<Transaction>[] = [
       const refundedDate = row.original.refundedDate;
       return (
         <div className="text-muted-foreground text-sm">
-          {refundedDate
-            ? refundedDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })
-            : "—"}
+          {refundedDate ? moment(refundedDate).format("MMM D, h:mm A") : "—"}
         </div>
       );
     },
@@ -343,39 +230,58 @@ export function RefundModal({
   onOpenChange: (open: boolean) => void;
   initialPaymentId?: string;
 }) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
     defaultValues: {
-      paymentId: initialPaymentId || "",
+      paymentId: initialPaymentId,
       walletAddress: "",
       reason: "",
     },
   });
 
-  // Update form when initialPaymentId changes
   React.useEffect(() => {
     if (initialPaymentId) {
       form.setValue("paymentId", initialPaymentId);
     }
   }, [initialPaymentId, form]);
 
-  const onSubmit = async (data: RefundFormData) => {
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Refund data:", data);
+  const createRefundMutation = useMutation({
+    mutationFn: async (data: RefundFormData) => {
+      const payment = await retrievePayment(data.paymentId);
+
+      return await postRefund(
+        {
+          paymentId: payment.id,
+          amount: payment.amount,
+          customerId: payment.customerId,
+          receiverPublicKey: data.walletAddress,
+          reason: data.reason,
+          status: "pending",
+          metadata: {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        payment.organizationId,
+        payment.environment
+      );
+
+      // todo: use sendAssetPayment from stellar core and update the status.
+    },
+    onSuccess: () => {
       toast.success("Refund created successfully!");
       form.reset();
       onOpenChange(false);
-    } catch (error) {
-      console.error(error);
+      invalidateOrgQuery(["refunds"]);
+    },
+    onError: () => {
       toast.error("Failed to create refund");
-    } finally {
-      setIsSubmitting(false);
-    }
+    },
+  });
+
+  const onSubmit = async (data: RefundFormData) => {
+    createRefundMutation.mutate(data);
   };
 
   return (
@@ -389,13 +295,16 @@ export function RefundModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
+            disabled={createRefundMutation.isPending}
           >
             Cancel
           </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create refund
+          <Button
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={createRefundMutation.isPending}
+            isLoading={createRefundMutation.isPending}
+          >
+            {createRefundMutation.isPending ? "Creating..." : "Create refund"}
           </Button>
         </div>
       }
@@ -412,6 +321,7 @@ export function RefundModal({
               error={error?.message}
               placeholder="Enter payment ID"
               className="shadow-none"
+              disabled={!!initialPaymentId}
             />
           )}
         />
@@ -455,31 +365,56 @@ export function RefundModal({
 
 type TabType = "all" | TransactionStatus;
 
-export default function TransactionsPage() {
+function TransactionsPageContent() {
+  const searchParams = useSearchParams();
+  const customerId = searchParams.get("customer");
+  const paymentId = searchParams.get("paymentId");
+
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
+
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
 
-  // Calculate statistics
+  const [selectedPaymentId, setSelectedPaymentId] = React.useState<
+    string | null
+  >(null);
+
+  const { data: payments, isLoading } = useOrgQuery(["payments"], () =>
+    retrievePaymentsWithDetails()
+  );
+
   const stats = React.useMemo(() => {
-    const all = mockTransactions.length;
-    const succeeded = mockTransactions.filter(
-      (t) => t.status === "succeeded"
-    ).length;
-    const refunded = mockTransactions.filter(
-      (t) => t.status === "refunded"
-    ).length;
-    const failed = mockTransactions.filter((t) => t.status === "failed").length;
-
-    return { all, succeeded, refunded, failed };
-  }, []);
-
-  // Filter transactions based on active tab
-  const filteredTransactions = React.useMemo(() => {
-    if (activeTab === "all") {
-      return mockTransactions;
+    if (!payments?.length) {
+      return { all: 0, succeeded: 0, refunded: 0, failed: 0 };
     }
-    return mockTransactions.filter((t) => t.status === activeTab);
-  }, [activeTab]);
+
+    return payments.reduce(
+      (acc, p) => ({
+        ...acc,
+        all: acc.all + 1,
+        succeeded: acc.succeeded + (p.status === "confirmed" ? 1 : 0),
+        refunded: acc.refunded + (p.refundStatus === "succeeded" ? 1 : 0),
+        failed: acc.failed + (p.status === "failed" ? 1 : 0),
+      }),
+      { all: 0, succeeded: 0, refunded: 0, failed: 0 }
+    );
+  }, [payments]);
+
+  const filteredTransactions = React.useMemo(() => {
+    if (!payments?.length) return [];
+
+    return payments.filter((p) => {
+      if (customerId && p.customerEmail !== customerId) return false;
+
+      if (paymentId) {
+        const matchesId = p.id === paymentId || p.checkoutId === paymentId;
+        if (!matchesId) return false;
+      }
+
+      if (activeTab === "all") return true;
+      if (activeTab === "refunded") return p.refundStatus === "succeeded";
+      return p.status === activeTab;
+    });
+  }, [payments, activeTab, customerId, paymentId]);
 
   const tableActions: TableAction<Transaction>[] = [
     {
@@ -488,7 +423,10 @@ export default function TransactionsPage() {
     },
     {
       label: "Refund",
-      onClick: (transaction) => console.log("Refund", transaction),
+      onClick: (transaction) => {
+        setSelectedPaymentId(transaction.description);
+        setIsRefundModalOpen(true);
+      },
     },
     {
       label: "Delete",
@@ -509,7 +447,6 @@ export default function TransactionsPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-8 p-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">
@@ -519,7 +456,10 @@ export default function TransactionsPage() {
               <div className="flex items-center gap-2">
                 <Button
                   className="gap-2 shadow-sm"
-                  onClick={() => setIsRefundModalOpen(true)}
+                  onClick={() => {
+                    setSelectedPaymentId(null);
+                    setIsRefundModalOpen(true);
+                  }}
                 >
                   <Plus className="h-4 w-4" />
                   Create refund
@@ -527,7 +467,6 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="border-border flex items-center gap-1 border-b">
               {tabs.map((tab) => (
                 <button
@@ -541,11 +480,6 @@ export default function TransactionsPage() {
                   )}
                 >
                   {tab.label}
-                  {tab.count > 0 && (
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      ({tab.count})
-                    </span>
-                  )}
                   {activeTab === tab.id && (
                     <div className="bg-primary absolute right-0 bottom-0 left-0 h-0.5" />
                   )}
@@ -553,7 +487,6 @@ export default function TransactionsPage() {
               ))}
             </div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               {tabs.map((tab) => (
                 <Card
@@ -578,7 +511,6 @@ export default function TransactionsPage() {
               ))}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="gap-2">
@@ -592,24 +524,54 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {/* Data Table */}
             <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
-                data={filteredTransactions}
+                data={filteredTransactions.map((it) => ({
+                  id: it.id,
+                  amount: it.amount.toString(),
+                  asset: it.assetCode ?? "",
+                  paymentMethod: {
+                    type: "wallet" as const,
+                    address: it.transactionHash,
+                  },
+                  description: it.checkoutId || it.id,
+                  customer: {
+                    email: it.customerEmail!,
+                  },
+                  date: it.createdAt,
+                  status: (it.refundStatus === "succeeded"
+                    ? "refunded"
+                    : it.status === "confirmed"
+                      ? "succeeded"
+                      : it.status) as TransactionStatus,
+                  refundedDate: it.refundedAt ?? undefined,
+                }))}
                 enableBulkSelect={true}
                 actions={tableActions}
+                isLoading={isLoading}
               />
             </div>
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      {/* Refund Modal */}
       <RefundModal
         open={isRefundModalOpen}
-        onOpenChange={setIsRefundModalOpen}
+        onOpenChange={(open) => {
+          setIsRefundModalOpen(open);
+          if (!open) setSelectedPaymentId(null);
+        }}
+        initialPaymentId={selectedPaymentId ?? undefined}
       />
     </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <TransactionsPageContent />
+    </React.Suspense>
   );
 }

@@ -1,7 +1,7 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { deleteWebhook, putWebhook, retrieveWebhook } from "@/actions/webhook";
 import { Webhook } from "@/db";
-import { schemaFor } from "@stellartools/core";
+import { WebhookEvent, schemaFor, webhookEvent } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -17,9 +17,9 @@ export const GET = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const webhook = await retrieveWebhook(id, organizationId);
+  const webhook = await retrieveWebhook(id, organizationId, environment);
 
   return NextResponse.json({ data: webhook });
 };
@@ -27,7 +27,11 @@ export const GET = async (
 const putWebhookSchema = schemaFor<Partial<Webhook>>()(
   z.object({
     url: z.string().optional(),
-    events: z.array(z.string()).optional(),
+    events: z
+      .array(
+        z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))
+      )
+      .optional(),
     isDisabled: z.boolean().default(false).optional(),
     name: z.string().optional(),
     description: z.string().optional(),
@@ -50,9 +54,9 @@ export const PUT = async (
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const webhook = await putWebhook(id, organizationId, data);
+  const webhook = await putWebhook(id, data, organizationId, environment);
 
   return NextResponse.json({ data: webhook });
 };
@@ -69,9 +73,9 @@ export const DELETE = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  await deleteWebhook(id, organizationId);
+  await deleteWebhook(id, organizationId, environment);
 
   return NextResponse.json({ data: null });
 };

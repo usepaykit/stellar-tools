@@ -6,6 +6,7 @@ import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FileSearch, X } from "lucide-react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 interface LogPickerProps<TData, TValue> extends React.ComponentProps<
   typeof DataTable<TData, TValue>
@@ -45,6 +46,8 @@ export function LogPicker<TData, TValue>({
     // Delay removal until animation completes
     setTimeout(() => setSelectedRow(null), 200);
   }, []);
+
+  useHotkeys("esc", () => handleClose(), [handleClose]);
 
   if (data.length === 0) {
     return (

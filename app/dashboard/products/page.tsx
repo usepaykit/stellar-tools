@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { postProduct, retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -11,26 +12,26 @@ import {
 } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
-  NumberPicker,
+
   TextAreaField,
   TextField,
-} from "@/components/input-picker";
+} from "@/components/text-field";
+
+import { NumberPicker } from "@/components/number-picker";
+import { SelectPicker } from "@/components/select-picker";
+import { RadioGroupPicker } from "@/components/radio-group-picker";
+import { MarkdownPicker } from "@/components/markdown-picker";
 import { PricePicker } from "@/components/price-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { RecurringPeriod } from "@/db";
+import { Product as ProductSchema } from "@/db";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
 import {
   Archive,
@@ -38,7 +39,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Download,
-  Loader2,
+  HelpCircle,
   Package,
   Plus,
   RefreshCw,
@@ -48,29 +49,26 @@ import {
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
-// --- Types & Schema ---
-
-type Product = {
-  id: string;
-  name: string;
+interface Product extends Pick<
+  ProductSchema,
+  "id" | "name" | "status" | "createdAt" | "updatedAt"
+> {
   pricing: {
-    amount: string;
+    amount: number;
     asset: string;
     isRecurring?: boolean;
-    period?: string;
+    period: RecurringPeriod | undefined;
   };
-  status: "active" | "archived";
-  createdAt: Date;
-  updatedAt: Date;
-};
+}
 
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one-time", "recurring", "metered"]),
+  type: z.enum(["one_time", "subscription", "metered"]),
   recurringInterval: z.number().min(1).optional(),
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   price: z.object({
@@ -83,67 +81,13 @@ const productSchema = z.object({
       ),
     asset: z.string().min(1, "Asset is required"),
   }),
-  phoneNumberEnabled: z.boolean(),
-
-  unit: z.string().optional(), // Freeform text
+  unit: z.string().optional(),
   unitsPerCredit: z.number().min(1).default(1).optional(),
-  creditsGranted: z.number().min(1).optional(),
-  creditExpiryDays: z.number().min(1).optional(),
+  unitDivisor: z.number().min(1).optional(),
+  creditsGranted: z.number().min(0).optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
-
-// --- Mock Data ---
-
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "35",
-    pricing: { amount: "35.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-12-11"),
-    updatedAt: new Date("2024-12-11"),
-  },
-  {
-    id: "2",
-    name: "Mailboxes",
-    pricing: {
-      amount: "160.00",
-      asset: "USD",
-      isRecurring: true,
-      period: "month",
-    },
-    status: "active",
-    createdAt: new Date("2024-11-21"),
-    updatedAt: new Date("2024-11-21"),
-  },
-  {
-    id: "3",
-    name: "Domains",
-    pricing: { amount: "95.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-19"),
-    updatedAt: new Date("2024-11-19"),
-  },
-  {
-    id: "4",
-    name: "Mailboxes-Harry",
-    pricing: { amount: "361.40", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-17"),
-    updatedAt: new Date("2024-11-17"),
-  },
-  {
-    id: "5",
-    name: "21",
-    pricing: { amount: "21.00", asset: "USD" },
-    status: "active",
-    createdAt: new Date("2024-11-10"),
-    updatedAt: new Date("2024-11-10"),
-  },
-];
-
-// --- Sub-Components ---
 
 const SortableHeader = ({
   column,
@@ -199,8 +143,6 @@ const StatCard = ({
   </Card>
 );
 
-// --- Table Columns ---
-
 const columns: ColumnDef<Product>[] = [
   {
     accessorKey: "name",
@@ -233,8 +175,7 @@ const columns: ColumnDef<Product>[] = [
       );
     },
     sortingFn: (rowA, rowB) =>
-      parseFloat(rowA.original.pricing.amount) -
-      parseFloat(rowB.original.pricing.amount),
+      rowA.original.pricing.amount - rowB.original.pricing.amount,
   },
   {
     accessorKey: "createdAt",
@@ -256,35 +197,51 @@ function ProductsPageContent() {
   const [isModalOpen, setIsModalOpen] = React.useState(
     searchParams.get("active") === "true"
   );
+  const [editingProduct, setEditingProduct] = React.useState<Product | null>(
+    null
+  );
 
   const [selectedStatus, setSelectedStatus] = React.useState<string | null>(
     null
   );
 
-  const stats = React.useMemo(
-    () => ({
-      all: mockProducts.length,
-      active: mockProducts.filter((p) => p.status === "active").length,
-      archived: mockProducts.filter((p) => p.status === "archived").length,
-    }),
-    []
+  const { data: products, isLoading } = useOrgQuery(
+    ["products"],
+    () => retrieveProductsWithAsset(),
+    {
+      select: (productsData) => {
+        return productsData.map(({ product, asset }) => {
+          return {
+            id: product.id,
+            name: product.name,
+            pricing: {
+              amount: product.priceAmount,
+              asset: asset.code,
+              isRecurring: product.type === "subscription",
+              period: product.recurringPeriod!,
+            },
+            status: product.status,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+          };
+        });
+      },
+    }
   );
 
-  const tableActions: TableAction<Product>[] = [
-    { label: "Edit", onClick: (p) => console.log("Edit", p) },
-    {
-      label: "Archive",
-      onClick: (p) => console.log("Archive", p),
-      variant: "destructive",
-    },
-  ];
+  const stats = React.useMemo(
+    () => ({
+      all: products?.length ?? 0,
+      active: products?.filter((p) => p.status === "active").length ?? 0,
+      archived: products?.filter((p) => p.status === "archived").length ?? 0,
+    }),
+    [products]
+  );
 
   const handleModalChange = React.useCallback(
     (value: boolean) => {
-      console.log({ value });
       const params = new URLSearchParams(searchParams.toString());
 
-      console.log({ params });
       if (value) {
         params.set("active", "true");
         router.replace(
@@ -295,11 +252,27 @@ function ProductsPageContent() {
         router.replace(
           `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
         );
+        setEditingProduct(null);
       }
       setIsModalOpen(value);
     },
     [searchParams, router]
   );
+
+  const tableActions: TableAction<Product>[] = [
+    {
+      label: "Edit",
+      onClick: (p) => {
+        setEditingProduct(p);
+        handleModalChange(true);
+      },
+    },
+    {
+      label: "Archive",
+      onClick: (p) => console.log("Archive", p),
+      variant: "destructive",
+    },
+  ];
 
   return (
     <div className="w-full">
@@ -316,7 +289,10 @@ function ProductsPageContent() {
                 </p>
               </div>
               <Button
-                onClick={() => handleModalChange(true)}
+                onClick={() => {
+                  setEditingProduct(null);
+                  handleModalChange(true);
+                }}
                 className="gap-2 shadow-sm"
               >
                 <Plus className="h-4 w-4" /> Create product
@@ -363,15 +339,17 @@ function ProductsPageContent() {
             <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
-                data={mockProducts}
+                data={products!}
                 actions={tableActions}
                 enableBulkSelect
+                isLoading={isLoading}
               />
             </div>
 
             <ProductsModal
               open={isModalOpen}
               onOpenChange={handleModalChange}
+              editingProduct={editingProduct}
             />
           </div>
         </DashboardSidebarInset>
@@ -379,8 +357,6 @@ function ProductsPageContent() {
     </div>
   );
 }
-
-// --- Main Page Component ---
 
 export default function ProductsPage() {
   return (
@@ -395,332 +371,441 @@ export default function ProductsPage() {
 function ProductsModal({
   open,
   onOpenChange,
+  editingProduct,
 }: {
   open: boolean;
   onOpenChange: (value: boolean) => void;
+  editingProduct?: Product | null;
 }) {
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
+  const isEditMode = !!editingProduct;
+  const invalidateOrgQuery = useInvalidateOrgQuery();
+
   const form = RHF.useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
       description: "",
       images: [],
-      billingCycle: "recurring",
+      type: "one_time",
       recurringPeriod: "month",
       price: { amount: "", asset: "XLM" },
-      phoneNumberEnabled: false,
+      unitDivisor: 1,
+      unitsPerCredit: 1,
+      creditsGranted: 0,
     },
   });
 
-  const watched = form.watch();
-  const total = parseFloat(watched.price?.amount) || 0;
+  React.useEffect(() => {
+    if (open && editingProduct) {
+      form.reset({
+        name: editingProduct.name,
+        ...(editingProduct.pricing.isRecurring && {
+          recurringPeriod: editingProduct.pricing.period,
+        }),
+        price: {
+          amount: editingProduct.pricing.amount.toString(),
+          asset: editingProduct.pricing.asset,
+        },
+      });
+    } else if (open && !editingProduct) {
+      form.reset({
+        name: "",
+        description: "",
+        images: [],
+        type: "one_time",
+        recurringPeriod: "month",
+        price: { amount: "", asset: "XLM" },
+      });
+    }
+  }, [open, editingProduct, form]);
+
+  const createProductMutation = useMutation({
+    mutationFn: async (data: ProductFormData) => {
+      const metadata: Record<string, any> = {
+        priceAmount: data.price.amount,
+      };
+
+      if (data.recurringPeriod) {
+        metadata.recurringPeriod = data.recurringPeriod;
+      }
+
+      const images: Array<string> = []; // todo: upload images to storage and get the url
+
+      const productData: Parameters<typeof postProduct>[0] = {
+        name: data.name,
+        description: data.description ?? null,
+        images,
+        type: data.type,
+        assetId: data.price.asset,
+        status: "active" as const,
+        metadata,
+        priceAmount: parseFloat(data.price.amount),
+        recurringPeriod: data.recurringPeriod ?? null,
+        unit: data.unit ?? null,
+        unitDivisor: data.unitDivisor ?? null,
+        unitsPerCredit: data.unitsPerCredit ?? null,
+        creditsGranted: data.creditsGranted ?? null,
+        creditExpiryDays: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      return await postProduct(productData);
+    },
+    onSuccess: () => {
+      invalidateOrgQuery(["products"]);
+      toast.success(
+        isEditMode ? "Product updated successfully!" : "Product created!"
+      );
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast.error(
+        isEditMode ? "Failed to update product" : "Failed to create product"
+      );
+    },
+  });
+
+  const watched = useWatch({ control: form.control });
+  const total = parseFloat(watched.price?.amount || "0") || 0;
 
   const onSubmit = async (data: ProductFormData) => {
-    setIsSubmitting(true);
-    console.log({ data });
-    await new Promise((r) => setTimeout(r, 1000)); // Simulate API
-    toast.success("Product created!");
-    form.reset();
-    onOpenChange(false);
-    setIsSubmitting(false);
+    createProductMutation.mutate(data);
   };
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Add a product"
-      footer={
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{" "}
-            Add product
-          </Button>
-        </div>
-      }
-    >
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="space-y-6">
-          <RHF.Controller
-            control={form.control}
-            name="name"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                id="name"
-                label="Name"
-                error={error?.message}
-                placeholder="e.g. Premium Subscription"
-                className="shadow-none"
-              />
-            )}
-          />
-
-          <RHF.Controller
-            control={form.control}
-            name="description"
-            render={({ field, fieldState: { error } }) => (
-              <TextAreaField
-                {...field}
-                value={field.value as string}
-                id="description"
-                label="Description"
-                error={error?.message}
-                placeholder="Describe your product..."
-                className="shadow-none"
-              />
-            )}
-          />
-
-          <RHF.Controller
-            control={form.control}
-            name="images"
-            render={({ field }) => (
-              <FileUploadPicker
-                value={field.value}
-                onFilesChange={field.onChange}
-                dropzoneMultiple={false}
-                dropzoneAccept={{
-                  "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-                }}
-              />
-            )}
-          />
-
-          <div className="space-y-4 pt-4">
-            <Label className="font-medium">Pricing Model</Label>
+    <>
+      <FullScreenModal
+        open={open}
+        onOpenChange={onOpenChange}
+        title={isEditMode ? "Edit product" : "Add a product"}
+        footer={
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={createProductMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={createProductMutation.isPending}
+              isLoading={createProductMutation.isPending}
+            >
+              {isEditMode ? "Update product" : "Add product"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <div className="space-y-6">
             <RHF.Controller
               control={form.control}
-              name="billingCycle"
-              render={({ field }) => (
-                <RadioGroup
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="recurring" id="recurring" />
-                    <Label htmlFor="recurring" className="font-normal">
-                      Recurring
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="one-time" id="one-time" />
-                    <Label htmlFor="one-time" className="font-normal">
-                      One-off
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="metered" id="metered" />
-                    <Label htmlFor="metered" className="font-normal">
-                      Metered (Credits)
-                    </Label>
-                  </div>
-                </RadioGroup>
+              name="name"
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  {...field}
+                  id="name"
+                  label="Name"
+                  error={error?.message}
+                  placeholder="e.g. Premium Subscription"
+                  className="shadow-none"
+                />
               )}
             />
 
-            {watched.billingCycle === "metered" && (
-              <div className="space-y-4 rounded-lg border p-4">
-                <div className="space-y-1">
-                  <h4 className="text-sm font-semibold">
-                    Credit Configuration
-                  </h4>
-                </div>
-
-                <RHF.Controller
-                  control={form.control}
-                  name="unit"
-                  render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
-                      {...field}
-                      value={field.value || 0}
-                      id="unit"
-                      label="Unit Type"
-                      placeholder="e.g., tokens, MB, requests, images"
-                      helpText="What does 1 credit represent?"
-                      error={error?.message}
-                    />
-                  )}
+            <RHF.Controller
+              control={form.control}
+              name="description"
+              render={({ field, fieldState: { error } }) => (
+                <TextAreaField
+                  {...field}
+                  value={field.value as string}
+                  id="description"
+                  label="Description"
+                  error={error?.message}
+                  placeholder="Describe your product..."
+                  className="shadow-none"
                 />
+              )}
+            />
 
-                <RHF.Controller
-                  control={form.control}
-                  name="unitsPerCredit"
-                  render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
-                      {...field}
-                      value={field.value || 0}
-                      id="unitsPerCredit"
-                      label="Units per Credit"
-                      helpText="How many units equal 1 credit?"
-                      error={error?.message}
-                    />
-                  )}
+            <RHF.Controller
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FileUploadPicker
+                  value={field.value}
+                  onFilesChange={field.onChange}
+                  enableTransformation
+                  targetFormat="image/png"
+                  dropzoneMultiple={false}
+                  dropzoneAccept={{
+                    "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+                  }}
                 />
+              )}
+            />
 
-                <RHF.Controller
-                  control={form.control}
-                  name="creditsGranted"
-                  render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
-                      {...field}
-                      value={field.value || 0}
-                      id="creditsGranted"
-                      label="Credits Granted"
-                      placeholder="e.g., 10000"
-                      helpText={
-                        watched.unit && watched.unitsPerCredit
-                          ? `= ${(watched.creditsGranted || 0) * watched.unitsPerCredit} ${watched.unit}`
-                          : "Total credits included in this product"
-                      }
-                      error={error?.message}
-                    />
-                  )}
-                />
-
-                <RHF.Controller
-                  control={form.control}
-                  name="creditExpiryDays"
-                  render={({ field, fieldState: { error } }) => (
-                    <NumberPicker
-                      {...field}
-                      value={field.value || 0}
-                      id="creditExpiryDays"
-                      label="Expiry (days)"
-                      helpText="Credits expire after X days"
-                      error={error?.message}
-                    />
-                  )}
-                />
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium">Pricing Model</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto gap-1.5 px-2 py-1 text-xs"
+                  onClick={() => setIsLearnMoreOpen(true)}
+                >
+                  <HelpCircle className="h-3.5 w-3.5" />
+                  Learn about metered billing
+                </Button>
               </div>
-            )}
-
-            <div className="flex gap-2">
               <RHF.Controller
                 control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <PricePicker
-                    id="price"
-                    className="flex-1"
+                name="type"
+                render={({ field, fieldState: { error } }) => (
+                  <RadioGroupPicker
+                    id="type"
                     value={field.value}
                     onChange={field.onChange}
-                    assets={["XLM", "USDC"]}
-                    error={form.formState.errors.price?.amount?.message}
+                    items={[
+                      { value: "recurring", label: "Recurring" },
+                      { value: "one_time", label: "One-off" },
+                      { value: "metered", label: "Metered (Credits)" },
+                    ]}
+                    error={error?.message}
+                    label={null}
+                    helpText={null}
+                    itemLayout="horizontal"
                   />
                 )}
               />
 
-              {watched.billingCycle == "recurring" && (
+              {watched.type === "metered" && (
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold">
+                      Credit Configuration
+                    </h4>
+                    <p className="text-muted-foreground text-xs">
+                      Define how usage is measured and converted to credits
+                    </p>
+                  </div>
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="unit"
+                    render={({ field, fieldState: { error } }) => (
+                      <TextField
+                        {...field}
+                        value={field.value || ""}
+                        id="unit"
+                        label="Unit Label"
+                        placeholder="e.g., tokens, MB, requests, minutes"
+                        helpText="Display name for your unit (can be anything)"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="unitDivisor"
+                    render={({ field, fieldState: { error } }) => (
+                      <NumberPicker
+                        {...field}
+                        value={field.value || 1}
+                        id="unitDivisor"
+                        label="Unit Divisor"
+                        helpText="Converts raw data (e.g., bytes) to your unit"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="unitsPerCredit"
+                    render={({ field, fieldState: { error } }) => (
+                      <NumberPicker
+                        {...field}
+                        value={field.value || 1}
+                        id="unitsPerCredit"
+                        label="Units per Credit"
+                        helpText="How many units equal 1 credit?"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+
+                  <RHF.Controller
+                    control={form.control}
+                    name="creditsGranted"
+                    render={({ field, fieldState: { error } }) => (
+                      <NumberPicker
+                        {...field}
+                        value={field.value || 0}
+                        id="creditsGranted"
+                        label="Credits Granted"
+                        placeholder="e.g., 1000"
+                        helpText="Initial credits included with this product"
+                        error={error?.message}
+                      />
+                    )}
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2">
                 <RHF.Controller
                   control={form.control}
-                  name="recurringPeriod"
-                  render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <SelectTrigger className="mt-2.5 h-12 w-[150px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="day">Daily</SelectItem>
-                        <SelectItem value="week">Weekly</SelectItem>
-                        <SelectItem value="month">Monthly</SelectItem>
-                        <SelectItem value="year">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  name="price"
+                  render={({ field, fieldState: { error } }) => (
+                    <PricePicker
+                      id="price"
+                      className="flex-1"
+                      value={field.value}
+                      onChange={field.onChange}
+                      assets={["XLM", "USDC"]}
+                      error={error?.message}
+                    />
                   )}
                 />
-              )}
+
+                {watched.type == "subscription" && (
+                  <RHF.Controller
+                    name="recurringPeriod"
+                    control={form.control}
+                    render={({ field, fieldState: { error } }) => (
+                      <SelectPicker
+                        id={field.name}
+                        value={field.value as string}
+                        onChange={field.onChange}
+                        triggerValuePlaceholder="Select recurring period"
+                        triggerClassName="mt-2.5 h-12 w-[150px]"
+                        items={[
+                          { value: "day", label: "Daily" },
+                          { value: "week", label: "Weekly" },
+                          { value: "month", label: "Monthly" },
+                          { value: "year", label: "Yearly" },
+                        ]}
+                        error={error?.message}
+                      />
+                    )}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t pt-4">
-            <RHF.Controller
-              control={form.control}
-              name="phoneNumberEnabled"
-              render={({ field }) => (
-                <div className="flex w-full items-center justify-between space-x-2">
-                  <div className="space-y-0.5">
-                    <Label
-                      htmlFor="phoneNumberEnabled"
-                      className="flex flex-col items-start gap-1"
-                    >
-                      Require phone number
-                      <p className="text-muted-foreground text-xs">
-                        Customers must provide a phone number
-                      </p>
-                    </Label>
-                  </div>
+          <div className="hidden lg:block">
+            <Card className="bg-muted/30 sticky top-6 shadow-none">
+              <CardContent className="space-y-6 p-6">
+                <h3 className="text-lg font-semibold">Preview</h3>
 
-                  <Switch
-                    id="phoneNumberEnabled"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
+                {watched.images?.[0] && (
+                  <div className="relative aspect-video overflow-hidden rounded-lg border">
+                    <Image
+                      src={
+                        watched.images[0].preview ||
+                        URL.createObjectURL(watched.images[0])
+                      }
+                      alt="Preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <h4 className="text-base font-bold">
+                    {watched.name || "Product Name"}
+                  </h4>
+                  <p className="text-muted-foreground line-clamp-2 text-sm">
+                    {watched.description || "No description provided."}
+                  </p>
                 </div>
-              )}
-            />
+
+                <div className="border-t pt-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">
+                      Total Price
+                    </span>
+                    <span className="font-bold">
+                      {total.toFixed(2)} {watched.price?.asset || "XLM"}
+                    </span>
+                  </div>
+                  {watched.type === "subscription" && (
+                    <p className="text-muted-foreground mt-1 text-right text-xs">
+                      Billed every {watched.recurringPeriod}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
+      </FullScreenModal>
 
-        <div className="hidden lg:block">
-          <Card className="bg-muted/30 sticky top-6 shadow-none">
-            <CardContent className="space-y-6 p-6">
-              <h3 className="text-lg font-semibold">Preview</h3>
+      <FullScreenModal
+        open={isLearnMoreOpen}
+        onOpenChange={setIsLearnMoreOpen}
+        title="Understanding Metered Billing"
+        size="full"
+        footer={
+          <Button onClick={() => setIsLearnMoreOpen(false)}>Got it</Button>
+        }
+      >
+        <MarkdownPicker
+          content={
+            /* html */ `
+## What is metered billing?
 
-              {watched.images?.[0] && (
-                <div className="relative aspect-video overflow-hidden rounded-lg border">
-                  <Image
-                    src={
-                      watched.images[0].preview ||
-                      URL.createObjectURL(watched.images[0])
-                    }
-                    alt="Preview"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
+Metered billing charges customers based on their actual usage. Think pay-as-you-go: upload storage, API calls, AI tokens, processing time, anything measurable.
 
-              <div className="space-y-1">
-                <h4 className="text-base font-bold">
-                  {watched.name || "Product Name"}
-                </h4>
-                <p className="text-muted-foreground line-clamp-2 text-sm">
-                  {watched.description || "No description provided."}
-                </p>
-              </div>
+---
 
-              <div className="border-t pt-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground font-medium">
-                    Total Price
-                  </span>
-                  <span className="font-bold">
-                    {total.toFixed(2)} {watched.price.asset}
-                  </span>
-                </div>
-                {watched.billingCycle === "recurring" && (
-                  <p className="text-muted-foreground mt-1 text-right text-xs">
-                    Billed every {watched.recurringPeriod}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </FullScreenModal>
+## Unit Label
+
+A human-friendly name for what you're measuring. This can be anything: "tokens", "megabytes", "API calls", "minutes", "images", whatever makes sense for your service.
+
+**Example:** "MB" for file storage, "tokens" for AI usage
+
+---
+
+## Unit Divisor
+
+Converts raw measurements into your chosen unit. For example, if you're measuring file storage and raw data comes in bytes, set this to 1,048,576 to convert bytes to megabytes.
+
+**Common divisors:**
+- File count: 1 (or leave as default)
+- Kilobytes: 1,024
+- Megabytes: 1,048,576
+- Gigabytes: 1,073,741,824
+
+---
+
+## Units per Credit
+
+How many units equal one credit. If you set this to 10, then every 10 units costs 1 credit.
+
+**Example:** Set to 5 means uploading 50MB costs 10 credits (50 / 5)
+
+---
+
+## Credits Granted
+
+The number of credits customers get when they purchase this product. They'll spend these credits as they use your service.
+
+**Example:** Grant 1,000 credits = 5,000 units if unitsPerCredit is 5
+`
+          }
+        />
+      </FullScreenModal>
+    </>
   );
 }

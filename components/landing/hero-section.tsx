@@ -9,14 +9,14 @@ export default function HeroSection() {
   return (
     <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pt-40 lg:pb-32">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-4xl">
           <div className="mb-12 text-center">
-            <h1 className="mb-6 text-4xl leading-tight font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-              Bring Stellar Payments to Every Platform Instantly
+            <h1 className="mb-2 text-4xl leading-tight font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+              Stripe for Stellar
             </h1>
             <p className="text-muted-foreground mb-8 text-lg leading-8 sm:text-xl">
-              Stellar SDK adapters for BetterAuth, Medusa, Shopify, and many
-              more to make crypto-native payments seamless for your users.
+              Drop-in payment adapters for your stack. Accept fast, low-cost
+              crypto payments in minutes.
             </p>
           </div>
 

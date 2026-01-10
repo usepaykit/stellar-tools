@@ -2,11 +2,13 @@ import { ApiClient } from "../api-client";
 import {
   CreateCustomer,
   Customer,
+  ListCustomers,
   UpdateCustomer,
   createCustomerSchema,
+  listCustomersSchema,
   updateCustomerSchema,
 } from "../schema/customer";
-import { tryCatchAsync } from "../utils";
+import { ERR, OK, Result } from "../utils";
 
 export class CustomerApi {
   private apiClient: ApiClient;
@@ -15,67 +17,90 @@ export class CustomerApi {
     this.apiClient = apiClient;
   }
 
-  create = async (params: CreateCustomer) => {
+  async create(params: CreateCustomer): Promise<Result<Customer, Error>> {
     const { error, data } = createCustomerSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    const [response, customerError] = await tryCatchAsync(
-      this.apiClient.post<Customer>("/customers", {
-        body: JSON.stringify(data),
-      })
-    );
+    const response = await this.apiClient.post<Customer>("/customers", {
+      body: JSON.stringify(data),
+    });
 
-    if (customerError) {
-      throw new Error(`Failed to create customer: ${customerError.message}`);
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to create customer: ${response.error?.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value.data);
+  }
 
-  retrieve = async (id: string) => {
-    const [response, error] = await tryCatchAsync(
-      this.apiClient.get<Customer>(`/customers/${id}`)
-    );
+  async list(params: ListCustomers): Promise<Result<Array<Customer>, Error>> {
+    const { error, data } = listCustomersSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Failed to retrieve customer: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    return response;
-  };
+    const response = await this.apiClient.get<Array<Customer>>(`/customers`, {
+      body: JSON.stringify({ ...data, organization: "xxx" }), // todo: resolve by organization from ApiKey
+    });
 
-  update = async (id: string, params: UpdateCustomer) => {
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to list customers: ${response.error?.message}`)
+      );
+    }
+
+    return OK(response.value.data);
+  }
+
+  async retrieve(id: string): Promise<Result<Customer, Error>> {
+    const response = await this.apiClient.get<Customer>(`/customers/${id}`);
+
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to retrieve customer: ${response.error?.message}`)
+      );
+    }
+
+    return OK(response.value.data);
+  }
+
+  async update(
+    id: string,
+    params: UpdateCustomer
+  ): Promise<Result<Customer, Error>> {
     const { error, data } = updateCustomerSchema.safeParse(params);
 
     if (error) {
-      throw new Error(`Invalid parameters: ${error.message}`);
+      return ERR(new Error(`Invalid parameters: ${error.message}`));
     }
 
-    const [response, customerError] = await tryCatchAsync(
-      this.apiClient.put<Customer>(`/customers/${id}`, {
-        body: JSON.stringify(data),
-      })
-    );
+    const response = await this.apiClient.put<Customer>(`/customers/${id}`, {
+      body: JSON.stringify(data),
+    });
 
-    if (customerError) {
-      throw new Error(`Failed to update customer: ${customerError.message}`);
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to update customer: ${response.error?.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value.data);
+  }
 
-  delete = async (id: string) => {
-    const [response, error] = await tryCatchAsync(
-      this.apiClient.delete<Customer>(`/customers/${id}`)
-    );
+  async delete(id: string): Promise<Result<Customer, Error>> {
+    const response = await this.apiClient.delete<Customer>(`/customers/${id}`);
 
-    if (error) {
-      throw new Error(`Failed to delete customer: ${error.message}`);
+    if (!response.ok) {
+      return ERR(
+        new Error(`Failed to delete customer: ${response.error?.message}`)
+      );
     }
 
-    return response;
-  };
+    return OK(response.value.data);
+  }
 }

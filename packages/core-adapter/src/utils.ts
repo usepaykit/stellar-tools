@@ -5,11 +5,11 @@ type Success<T> = [T, undefined];
 
 type Failure<E = Error> = [undefined, E];
 
-export type Result<T, E = Error> = Success<T> | Failure<E>;
+type TryCatchResult<T, E = Error> = Success<T> | Failure<E>;
 
 export async function tryCatchAsync<T, E = Error>(
   promise: Promise<T>
-): Promise<Result<T, E>> {
+): Promise<TryCatchResult<T, E>> {
   try {
     const data = await promise;
     return [data as T, undefined];
@@ -18,7 +18,7 @@ export async function tryCatchAsync<T, E = Error>(
   }
 }
 
-export function tryCatchSync<T, E = Error>(fn: () => T): Result<T, E> {
+export function tryCatchSync<T, E = Error>(fn: () => T): TryCatchResult<T, E> {
   try {
     const data = fn();
     return [data, undefined];
@@ -27,13 +27,13 @@ export function tryCatchSync<T, E = Error>(fn: () => T): Result<T, E> {
   }
 }
 
-export type ResultFP<T, E = unknown> =
+export type Result<T, E = unknown> =
   | { ok: true; value: T; error?: never }
   | { ok: false; value?: never; error: E };
 
-export const OK = <V>(value: V): ResultFP<V, never> => ({ ok: true, value });
+export const OK = <V>(value: V): Result<V, never> => ({ ok: true, value });
 
-export const ERR = <E>(error: E): ResultFP<never, E> => ({
+export const ERR = <E>(error: E): Result<never, E> => ({
   ok: false,
   error,
 });

@@ -1,4 +1,4 @@
-const medusaJSCodeSample = `
+const medusaJSCodeSample = /* ts */ `
 import { loadEnv, defineConfig } from "@medusajs/framework/utils";
 
 loadEnv(process.env.NODE_ENV || "development", process.cwd());
@@ -10,10 +10,10 @@ module.exports = defineConfig({
       options: {
         providers: [
           {
-            resolve: "@stellar-tools/medusajs",
+            resolve: "@stellartools/medusajs-adapter",
             id: "stellar",
             debug: true,
-            webhookSecret: process.env.STELLAR_WEBHOOK_SECRET,
+            webhookSecret: process.env.STELLAR_TOOLS_WEBHOOK_SECRET!,
           },
         ],
       },
@@ -22,63 +22,91 @@ module.exports = defineConfig({
 });
 `;
 
-const shopifyCodeSample = `
-import { StellarApp } from "@stellar-tools/shopify";
+const aiSdkCodeExample = /* ts */ `
+import { createStellarToolsAISDK } from "@stellartools/aisdk-adapter";
+import { openai } from "@ai-sdk/openai";
 
-export default StellarApp({
-  apiKey: process.env.STELLAR_API_KEY,
-  network: "testnet",
-  webhooks: {
-    payment: "/api/webhooks/stellar"
-  }
+const ai = createStellarToolsAISDK({
+  apiKey: process.env.STELLAR_TOOLS_API_KEY!,
+  customerId: "cus_erkiopiokpikopo",
+  productId: "pr_jkwheihiuhcuihewe",
 });
+
+const result = await ai.generateText({
+  model: openai("gpt-4o"),
+  prompt: "Hello, how are you?",
+});
+
+export default result;
 `;
 
-const betterAuthCodeSample = `
+const betterAuthCodeSample = /* ts */ `
 import { betterAuth } from "better-auth"
-import { stellarTools } from "@stellar-tools/better-auth";
+import { stellarTools } from "@stellartools/betterauth-adapter";
 import { Server } from "@stellar/stellar-sdk";
 
 const client = new Server("https://horizon-testnet.stellar.org");
 
 export const auth = betterAuth({
-  plugins: [stellarTools({ client, apiKey: process.env.STELLAR_TOOLS_API_KEY })]
+  plugins: [
+    stellarTools({ 
+     apiKey: process.env.STELLAR_TOOLS_API_KEY!,
+     createCustomerOnSignUp: true, 
+     creditLowThreshold: 10,
+     onCustomerCreated: async (customer) => {
+      console.log("Customer created", customer);
+    },
+    onCheckoutComplete: async (checkout) => {
+      console.log("Checkout completed", checkout);
+    },
+    onCreditsLow: async (creditBalance) => {
+      console.log("Credits low", creditBalance);
+    }
+  }),
+  ]
 });
 
 export default auth;`;
 
-const UploadThingCodeSample = `
-import { withStellarBilling } from "@stellartools/uploadthing"
+const UploadThingCodeSample = /* ts */ `
+import { createStellarUploadthing } from "@stellartools/uploadthing-adapter"
 
-export const uploadRouter = {
-  paidUpload: withStellarBilling({
-    pricePerUpload: 0.2,
-    currency: "XLM",
-  })(
-    f({ image: { maxFileSize: "8MB" } })
-      .middleware(async ({ req }) => {
-        return { userId: req.user.id }
-      })
-      .onUploadComplete(async ({ file }) => {
-        // normal logic
-      })
-  )
+const f = createStellarUploadthing({
+  apiKey: process.env.STELLAR_TOOLS_API_KEY!,
+  productId: "pr_jkwheihiuhcuihewe",
+});
+
+export const fileRouter = {
+  image: f({ image: { maxFileSize: "8MB" } }).
+  .middleware(async ({ req }) => {
+    return { userId: req.user.id }
+  })
+  .onUploadComplete(async ({ file }) => {
+    // your logic here
+  })
 }
 `;
 
 export const Heroproviders = [
   {
+    id: "aisdk",
+    name: "AI SDK",
+    logo: "/images/integrations/aisdk.jpg",
+    filename: "lib/ai.ts",
+    code: aiSdkCodeExample,
+  },
+  {
     id: "betterauth",
     name: "BetterAuth",
     logo: "/images/integrations/better-auth.png",
-    filename: "auth.ts",
+    filename: "lib/auth.ts",
     code: betterAuthCodeSample,
   },
   {
     id: "uploadthing",
     name: "UploadThing",
     logo: "/images/integrations/uploadthing.png",
-    filename: "uploadthing.ts",
+    filename: "api/uploadthing/core.ts",
     code: UploadThingCodeSample,
   },
   {
@@ -87,12 +115,5 @@ export const Heroproviders = [
     logo: "/images/integrations/medusa.jpeg",
     filename: "medusa-config.ts",
     code: medusaJSCodeSample,
-  },
-  {
-    id: "shopify",
-    name: "Shopify",
-    logo: "/images/integrations/shopify.png",
-    filename: "app.ts",
-    code: shopifyCodeSample,
   },
 ];

@@ -1,0 +1,40 @@
+{
+  "name": "@stellartools/uploadthing-adapter",
+  "version": "0.0.1",
+  "description": "Stellar Tools UploadThing Adapter",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [
+    "stellar",
+    "tools",
+    "uploadthing",
+    "adapter"
+  ],
+  "author": "Emmanuel Odii",
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usepaykit/stellar-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/usepaykit/stellar-tools/issues"
+  },
+  "dependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "uploadthing": "^7.7.4",
+    "@stellartools/core": "workspace:*"
+  }
+}

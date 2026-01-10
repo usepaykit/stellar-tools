@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useCopy } from "@/hooks/use-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
@@ -51,18 +52,15 @@ export function CodeBlock({
 }: CodeBlockProps) {
   const mounted = useMounted();
   const { resolvedTheme } = useTheme();
-  const [copied, setCopied] = React.useState(false);
+  const { copied, handleCopy } = useCopy();
 
-  // Normalize language
   const lang = language.toLowerCase();
   const isShell = ["bash", "sh", "shell", "zsh"].includes(lang);
 
-  // Copy Logic
   const copyToClipboard = React.useCallback(async () => {
     if (!children) return;
-    await navigator.clipboard.writeText(children);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    await handleCopy({ text: children, message: "Copied to clipboard" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [children]);
 
   const syntaxTheme = React.useMemo(() => {
@@ -95,6 +93,22 @@ export function CodeBlock({
     };
   }, [resolvedTheme, isShell]);
 
+  // Shell blocks usually don't need a filename header unless explicitly provided
+  const showHeader = !isShell || filename;
+
+  const hasMaxHeight = maxHeight && maxHeight !== "none";
+
+  const scrollAreaHeight = React.useMemo(() => {
+    if (!hasMaxHeight) return undefined;
+    try {
+      const maxHeightValue = parseInt(maxHeight.replace("px", ""));
+      const headerHeight = showHeader ? 40 : 0; // Approximate header height
+      return `${maxHeightValue - headerHeight}px`;
+    } catch {
+      return maxHeight;
+    }
+  }, [hasMaxHeight, maxHeight, showHeader]);
+
   if (!mounted) {
     return (
       <div
@@ -105,11 +119,6 @@ export function CodeBlock({
       />
     );
   }
-
-  // Shell blocks usually don't need a filename header unless explicitly provided
-  const showHeader = !isShell || filename;
-
-  const hasMaxHeight = maxHeight && maxHeight !== "none";
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -122,7 +131,7 @@ export function CodeBlock({
       >
         {/* Header Section - Sticky */}
         {showHeader && (
-          <div className="bg-muted/50 sticky top-0 z-10 flex items-center justify-between border-b px-3 py-2 backdrop-blur-sm">
+          <div className="bg-muted/50 sticky top-0 z-10 flex shrink-0 items-center justify-between border-b px-3 py-2 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               {logo && (
                 <Image
@@ -148,8 +157,8 @@ export function CodeBlock({
 
         {/* Code Content with ScrollArea */}
         {hasMaxHeight ? (
-          <ScrollArea className="min-h-0 flex-1">
-            <div className={`max-h-[${maxHeight}]`}>
+          <div className="flex">
+            <ScrollArea style={{ height: scrollAreaHeight }} className="flex-1">
               <SyntaxHighlighter
                 language={lang}
                 style={syntaxTheme}
@@ -162,8 +171,8 @@ export function CodeBlock({
               >
                 {children.trim()}
               </SyntaxHighlighter>
-            </div>
-          </ScrollArea>
+            </ScrollArea>
+          </div>
         ) : (
           <div className="relative w-full overflow-x-auto">
             <SyntaxHighlighter
