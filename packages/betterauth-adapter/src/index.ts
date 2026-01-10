@@ -63,13 +63,13 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
 
                 if (existingCustomer.ok) {
                   await ctx.context.internalAdapter.updateUser(user.id, {
-                    stellarCustomerId: existingCustomer.value!.id,
+                    stellarCustomerId: existingCustomer.value[0].id,
                   });
 
-                  await options.onCustomerCreated?.(existingCustomer.value!);
+                  await options.onCustomerCreated?.(existingCustomer.value[0]);
 
                   ctx.context.logger.info(
-                    `Linked existing Stellar customer ${existingCustomer.value!.id} to user ${user.id}`
+                    `Linked existing Stellar customer ${existingCustomer.value[0].id} to user ${user.id}`
                   );
 
                   return;
@@ -84,13 +84,13 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
 
                 if (newCustomer.ok) {
                   await ctx.context.internalAdapter.updateUser(user.id, {
-                    stellarCustomerId: newCustomer.value!.id,
+                    stellarCustomerId: newCustomer.value.id,
                   });
 
-                  await options.onCustomerCreated?.(newCustomer.value!);
+                  await options.onCustomerCreated?.(newCustomer.value);
 
                   ctx.context.logger.info(
-                    `Created new Stellar customer ${newCustomer.value!.id} for user ${user.id}`
+                    `Created new Stellar customer ${newCustomer.value.id} for user ${user.id}`
                   );
                 } else {
                   ctx.context.logger.error(

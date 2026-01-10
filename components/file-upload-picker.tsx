@@ -16,22 +16,26 @@ import {
   useDropzone,
 } from "react-dropzone";
 
+type LabelProps = React.ComponentProps<"p">;
+type ErrorProps = React.ComponentProps<"p">;
+
 export interface FileWithPreview extends File {
   preview: string;
 }
 
-interface FileUploadPickerProps extends MixinProps<
-  "dropzone",
-  Omit<DropzoneOptions, "onDrop">
-> {
+interface FileUploadPickerProps
+  extends
+    MixinProps<"dropzone", Omit<DropzoneOptions, "onDrop">>,
+    MixinProps<"label", Omit<LabelProps, "children">>,
+    MixinProps<"error", Omit<ErrorProps, "children">> {
   id?: string;
   value?: FileWithPreview[];
   onFilesChange?: (files: FileWithPreview[]) => void;
   onFilesRejected?: (rejections: FileRejection[]) => void;
-  label?: string;
   description?: string;
   className?: string;
   disabled?: boolean;
+  placeholder?: string;
   /**
    * Enable automatic image transformation for web-compatible formats
    * @default false
@@ -42,6 +46,8 @@ interface FileUploadPickerProps extends MixinProps<
    * @default "image/png"
    */
   targetFormat?: MimeType;
+  label?: LabelProps["children"];
+  error?: ErrorProps["children"];
 }
 
 export const FileUploadPicker = React.forwardRef<
@@ -53,18 +59,24 @@ export const FileUploadPicker = React.forwardRef<
       value = [],
       onFilesChange,
       onFilesRejected,
-      label = "Drag & drop an image here, or click to select",
+      placeholder = "Drag & drop an image here, or click to select",
       description,
       className,
       id,
       disabled = false,
       enableTransformation = false,
       targetFormat = "image/png",
+      label,
+      error,
       ...mixinProps
     },
     ref
   ) => {
-    const { dropzone } = splitProps(mixinProps, "dropzone");
+    const {
+      dropzone,
+      label: labelProps,
+      error: errorProps,
+    } = splitProps(mixinProps, "dropzone", "label", "error");
     const [isTransforming, setIsTransforming] = React.useState(false);
 
     const onDrop = React.useCallback(
@@ -144,6 +156,15 @@ export const FileUploadPicker = React.forwardRef<
 
     return (
       <div className={cn("w-full", className)}>
+        {label && (
+          <p
+            {...labelProps}
+            className={cn("text-sm font-medium", labelProps.className)}
+          >
+            {label}
+          </p>
+        )}
+
         <div
           {...getRootProps()}
           className={cn(
@@ -189,7 +210,7 @@ export const FileUploadPicker = React.forwardRef<
                 <ImagePlus className="text-muted-foreground h-6 w-6" />
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium">{label}</p>
+                <p className="text-sm font-medium">{placeholder}</p>
                 {description && (
                   <p className="text-muted-foreground text-xs">{description}</p>
                 )}
@@ -197,6 +218,16 @@ export const FileUploadPicker = React.forwardRef<
             </div>
           )}
         </div>
+
+        {error && (
+          <p
+            {...errorProps}
+            className={cn("text-destructive text-sm", errorProps.className)}
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
       </div>
     );
   }

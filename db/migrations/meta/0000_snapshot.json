@@ -1,5 +1,5 @@
 {
-  "id": "465fea86-0043-45b7-bd0f-f30a4305af35",
+  "id": "117d6876-3971-4ae1-acf6-16c802e9c06d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -20,12 +20,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "user_name": {
-          "name": "user_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "profile": {
           "name": "profile",
           "type": "jsonb",
@@ -36,7 +30,7 @@
           "name": "sso",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -56,8 +50,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         }
       },
       "indexes": {},
@@ -141,8 +134,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         },
         "network": {
           "name": "network",
@@ -230,8 +222,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         }
       },
       "indexes": {},
@@ -318,8 +309,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         }
       },
       "indexes": {},
@@ -360,12 +350,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "api_key_id": {
-          "name": "api_key_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "customer_id": {
           "name": "customer_id",
           "type": "text",
@@ -397,12 +381,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "payment_url": {
-          "name": "payment_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "expires_at": {
           "name": "expires_at",
           "type": "timestamp",
@@ -427,8 +405,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         },
         "network": {
           "name": "network",
@@ -436,6 +413,12 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "asset_code": {
+          "name": "asset_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -446,19 +429,6 @@
           "tableTo": "organization",
           "columnsFrom": [
             "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "checkout_api_key_id_api_key_id_fk": {
-          "name": "checkout_api_key_id_api_key_id_fk",
-          "tableFrom": "checkout",
-          "tableTo": "api_key",
-          "columnsFrom": [
-            "api_key_id"
           ],
           "columnsTo": [
             "id"
@@ -905,15 +875,7 @@
           "name": "app_metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
-        "internal_metadata": {
-          "name": "internal_metadata",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -935,6 +897,12 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "wallet_addresses": {
+          "name": "wallet_addresses",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -996,17 +964,35 @@
           "primaryKey": false,
           "notNull": false
         },
-        "owner_account_id": {
-          "name": "owner_account_id",
+        "logo_url": {
+          "name": "logo_url",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "phone_number": {
+          "name": "phone_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "social_links": {
+          "name": "social_links",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "settings": {
           "name": "settings",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1026,15 +1012,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
-        "network": {
-          "name": "network",
-          "type": "network",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "stellar_account": {
           "name": "stellar_account",
@@ -1057,23 +1035,105 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "organization_owner_account_id_account_id_fk": {
-          "name": "organization_owner_account_id_account_id_fk",
-          "tableFrom": "organization",
-          "tableTo": "account",
-          "columnsFrom": [
-            "owner_account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.password_reset": {
+      "name": "password_reset",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "password_reset_token_idx": {
+          "name": "password_reset_token_idx",
+          "columns": [
+            {
+              "expression": "token",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "password_reset_account_id_account_id_fk": {
+          "name": "password_reset_account_id_account_id_fk",
+          "tableFrom": "password_reset",
+          "tableTo": "account",
+          "columnsFrom": [
+            "account_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "password_reset_token_unique": {
+          "name": "password_reset_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1105,12 +1165,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "asset_id": {
-          "name": "asset_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
         },
         "amount": {
           "name": "amount",
@@ -1193,19 +1247,6 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "payment_asset_id_asset_id_fk": {
-          "name": "payment_asset_id_asset_id_fk",
-          "tableFrom": "payment",
-          "tableTo": "asset",
-          "columnsFrom": [
-            "asset_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1276,13 +1317,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "billing_type": {
-          "name": "billing_type",
-          "type": "billing_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1301,8 +1335,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         },
         "network": {
           "name": "network",
@@ -1419,21 +1452,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "asset_id": {
-          "name": "asset_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "amount": {
           "name": "amount",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tx_hash": {
-          "name": "tx_hash",
-          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -1475,8 +1496,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         },
         "receiver_public_key": {
           "name": "receiver_public_key",
@@ -1525,37 +1545,16 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "refund_asset_id_asset_id_fk": {
-          "name": "refund_asset_id_asset_id_fk",
-          "tableFrom": "refund",
-          "tableTo": "asset",
-          "columnsFrom": [
-            "asset_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "refund_tx_hash_unique": {
-          "name": "refund_tx_hash_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "tx_hash"
-          ]
-        },
-        "refund_payment_id_customer_id_asset_id_unique": {
-          "name": "refund_payment_id_customer_id_asset_id_unique",
+        "refund_payment_id_customer_id_unique": {
+          "name": "refund_payment_id_customer_id_unique",
           "nullsNotDistinct": false,
           "columns": [
             "payment_id",
-            "customer_id",
-            "asset_id"
+            "customer_id"
           ]
         }
       },
@@ -1666,8 +1665,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         },
         "network": {
           "name": "network",
@@ -1778,8 +1776,14 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
+        },
+        "network": {
+          "name": "network",
+          "type": "network",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
@@ -1851,8 +1855,7 @@
           "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
+          "notNull": false
         }
       },
       "indexes": {},
@@ -1927,8 +1930,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "payload": {
-          "name": "payload",
+        "request": {
+          "name": "request",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
@@ -1965,10 +1968,34 @@
           "primaryKey": false,
           "notNull": false
         },
+        "response": {
+          "name": "response",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "api_version": {
+          "name": "api_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "network": {
           "name": "network",
           "type": "network",
           "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next_retry": {
+          "name": "next_retry",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         }
@@ -2123,15 +2150,6 @@
         "local"
       ]
     },
-    "public.billing_type": {
-      "name": "billing_type",
-      "schema": "public",
-      "values": [
-        "one_time",
-        "recurring",
-        "metered"
-      ]
-    },
     "public.checkout_status": {
       "name": "checkout_status",
       "schema": "public",
@@ -2149,14 +2167,6 @@
         "deduct",
         "refund",
         "grant"
-      ]
-    },
-    "public.feature": {
-      "name": "feature",
-      "schema": "public",
-      "values": [
-        "aisdk",
-        "uploadthing"
       ]
     },
     "public.network": {

@@ -1,8 +1,16 @@
-import { Subscription, db, subscriptions } from "@/db";
+import { Network, Subscription, db, subscriptions } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-export const postSubscription = async (params: Partial<Subscription>) => {
+import { resolveOrgContext } from "./organization";
+
+export const postSubscription = async (
+  params: Omit<Subscription, "id" | "organizationId" | "environment">,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const subscriptionId = `sub_${nanoid(25)}`;
 
   // Use raw SQL with a subquery to validate product type
@@ -12,7 +20,7 @@ export const postSubscription = async (params: Partial<Subscription>) => {
       FROM product 
       WHERE id = ${params.productId} 
         AND type = 'subscription'::product_type
-        AND organization_id = ${params.organizationId}
+        AND organization_id = ${organizationId}
     )
     INSERT INTO subscription (
       id, customer_id, product_id, status, organization_id,
@@ -26,7 +34,7 @@ export const postSubscription = async (params: Partial<Subscription>) => {
       ${params.customerId},
       validated_product.id,
       ${params.status},
-      ${params.organizationId},
+      ${organizationId},
       ${params.currentPeriodStart},
       ${params.currentPeriodEnd},
       COALESCE(${params.cancelAtPeriodEnd}, false),
@@ -38,7 +46,7 @@ export const postSubscription = async (params: Partial<Subscription>) => {
       NOW(),
       NOW(),
       COALESCE(${params.metadata ? sql`${params.metadata}::jsonb` : sql`'{}'::jsonb`}),
-      ${params.environment}
+      ${environment}
     FROM validated_product
     RETURNING *
   `);
@@ -74,15 +82,19 @@ export const retrieveSubscription = async (
 
 export const listSubscriptions = async (
   customerId: string,
-  environment: string
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const subscriptionList = await db
     .select()
     .from(subscriptions)
     .where(
       and(
         eq(subscriptions.customerId, customerId),
-        eq(subscriptions.environment, environment as any)
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment)
       )
     );
 
@@ -91,16 +103,20 @@ export const listSubscriptions = async (
 
 export const putSubscription = async (
   id: string,
-  organizationId: string,
-  updateData: Partial<Subscription>
+  retUpdate: Partial<Subscription>,
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [record] = await db
     .update(subscriptions)
-    .set({ ...updateData, updatedAt: new Date() })
+    .set({ ...retUpdate, updatedAt: new Date() })
     .where(
       and(
         eq(subscriptions.id, id),
-        eq(subscriptions.organizationId, organizationId)
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment)
       )
     )
     .returning();
@@ -112,14 +128,18 @@ export const putSubscription = async (
 
 export const deleteSubscription = async (
   id: string,
-  organizationId: string
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   await db
     .delete(subscriptions)
     .where(
       and(
         eq(subscriptions.id, id),
-        eq(subscriptions.organizationId, organizationId)
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment)
       )
     )
     .returning();

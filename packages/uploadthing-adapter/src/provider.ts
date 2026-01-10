@@ -86,8 +86,13 @@ export class StellarToolsUploadThingAdapter {
           const result = await this.stellar.credits.consume(customerId, {
             productId: this.options.productId,
             rawAmount,
-            reason: "Upload started",
-            metadata: { fileCount: opts.files.length },
+            reason: "deduct",
+            metadata: {
+              files: opts.files.map((f) => f.name),
+              source: "uploadthing-adapter",
+              fileCount: opts.files.length,
+              totalSize: rawAmount,
+            },
           });
 
           if (!result.ok) {

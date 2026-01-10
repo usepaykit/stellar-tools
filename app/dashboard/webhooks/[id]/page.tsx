@@ -26,8 +26,9 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { WebhookLog } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useQuery } from "@tanstack/react-query";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
@@ -41,178 +42,14 @@ import moment from "moment";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-type WebhookLogStatus = "failed" | "succeeded";
-
-type WebhookLog = {
-  id: string;
-  eventType: string;
-  status: WebhookLogStatus;
-  statusCode?: number;
-  timestamp: Date;
-  eventId: string;
-  originDate: Date;
-  source: string;
-  apiVersion: string;
-  description: string;
-  response?: string;
-  request: object;
-  nextRetry?: string;
-};
-
-const mockWebhookLogs: WebhookLog[] = [
-  {
-    id: "log_1",
-    eventType: "checkout.session.completed",
-    status: "failed",
-    statusCode: 500,
-    timestamp: new Date("2024-12-22T23:56:53"),
-    eventId: "evt_1ShCrASF0MtsiMvy7jNESOSz",
-    originDate: new Date("2024-12-22T22:55:37"),
-    source: "Automatic",
-    apiVersion: "2024-11-20.acacia",
-    description: "A Checkout Session was completed",
-    response: undefined,
-    nextRetry: "118 minutes",
-    request: {
-      id: "evt_1ShCrASF0MtsiMvy7jNESOSz",
-      object: "event",
-      api_version: "2024-11-20.acacia",
-      created: 1766424316,
-      data: {
-        object: {
-          id: "cs_live_b1GEl4Fou7z3jIF5yGf2AI6railZLHRL9r8YpS1IyUvuGUnkQyhNvwFf3C",
-          object: "checkout.session",
-          adaptive_pricing: { enabled: false },
-          after_expiration: null,
-          allow_promotion_codes: true,
-          amount_subtotal: 834,
-          amount_total: 0,
-          automatic_tax: { enabled: false, liability: null, provider: null },
-        },
-      },
-    },
-  },
-  {
-    id: "log_2",
-    eventType: "payment_intent.succeeded",
-    status: "succeeded",
-    statusCode: 200,
-    timestamp: new Date("2024-12-22T23:19:46"),
-    eventId: "evt_1ShCrBSF0MtsiMvy7jNESOSz",
-    originDate: new Date("2024-12-22T23:19:46"),
-    source: "Automatic",
-    apiVersion: "2024-11-20.acacia",
-    description: "A Payment Intent succeeded",
-    response: "Success",
-    request: {
-      id: "evt_1ShCrBSF0MtsiMvy7jNESOSz",
-      object: "event",
-      api_version: "2024-11-20.acacia",
-      created: 1766422786,
-      data: {
-        object: {
-          id: "pi_1ShCrBSF0MtsiMvy7jNESOSz",
-          object: "payment_intent",
-          amount: 834,
-          currency: "usd",
-        },
-      },
-    },
-  },
-  {
-    id: "log_3",
-    eventType: "payment_intent.payment_failed",
-    status: "succeeded",
-    statusCode: 200,
-    timestamp: new Date("2024-12-22T22:45:12"),
-    eventId: "evt_1ShCrCSF0MtsiMvy7jNESOSz",
-    originDate: new Date("2024-12-22T22:45:12"),
-    source: "Automatic",
-    apiVersion: "2024-11-20.acacia",
-    description: "A Payment Intent payment failed",
-    response: "Success",
-    request: {
-      id: "evt_1ShCrCSF0MtsiMvy7jNESOSz",
-      object: "event",
-      api_version: "2024-11-20.acacia",
-      created: 1766420712,
-      data: {
-        object: {
-          id: "pi_1ShCrCSF0MtsiMvy7jNESOSz",
-          object: "payment_intent",
-          amount: 500,
-          currency: "usd",
-        },
-      },
-    },
-  },
-  {
-    id: "log_4",
-    eventType: "checkout.session.completed",
-    status: "failed",
-    statusCode: 503,
-    timestamp: new Date("2024-12-22T22:30:25"),
-    eventId: "evt_1ShCrDSF0MtsiMvy7jNESOSz",
-    originDate: new Date("2024-12-22T22:30:25"),
-    source: "Automatic",
-    apiVersion: "2024-11-20.acacia",
-    description: "A Checkout Session was completed",
-    response: undefined,
-    nextRetry: "45 minutes",
-    request: {
-      id: "evt_1ShCrDSF0MtsiMvy7jNESOSz",
-      object: "event",
-      api_version: "2024-11-20.acacia",
-      created: 1766419825,
-      data: {
-        object: {
-          id: "cs_live_a2GEl4Fou7z3jIF5yGf2AI6railZLHRL9r8YpS1IyUvuGUnkQyhNvwFf3C",
-          object: "checkout.session",
-          amount_subtotal: 1200,
-          amount_total: 1200,
-        },
-      },
-    },
-  },
-  {
-    id: "log_5",
-    eventType: "payment_intent.succeeded",
-    status: "succeeded",
-    statusCode: 200,
-    timestamp: new Date("2024-12-22T21:15:30"),
-    eventId: "evt_1ShCrESF0MtsiMvy7jNESOSz",
-    originDate: new Date("2024-12-22T21:15:30"),
-    source: "Automatic",
-    apiVersion: "2024-11-20.acacia",
-    description: "A Payment Intent succeeded",
-    response: "Success",
-    request: {
-      id: "evt_1ShCrESF0MtsiMvy7jNESOSz",
-      object: "event",
-      api_version: "2024-11-20.acacia",
-      created: 1766415330,
-      data: {
-        object: {
-          id: "pi_1ShCrESF0MtsiMvy7jNESOSz",
-          object: "payment_intent",
-          amount: 2500,
-          currency: "usd",
-        },
-      },
-    },
-  },
-];
-
 const StatusBadge = ({
-  status,
   statusCode,
   nextRetry,
 }: {
-  status: WebhookLogStatus;
   statusCode?: number;
   nextRetry?: string;
 }) => {
-  if (status === "succeeded" && statusCode === 200) {
+  if (statusCode === 200) {
     return (
       <Badge
         variant="outline"
@@ -269,9 +106,10 @@ const columns: ColumnDef<WebhookLog>[] = [
         <div className="flex items-center gap-3">
           <div className="shrink-0">
             <StatusBadge
-              status={log.status}
-              statusCode={log.statusCode}
-              nextRetry={log.nextRetry}
+              statusCode={log.statusCode ?? undefined}
+              nextRetry={
+                log.nextRetry ? moment(log.nextRetry).fromNow() : undefined
+              }
             />
           </div>
           <span className="text-sm font-medium">{log.eventType}</span>
@@ -288,7 +126,7 @@ const columns: ColumnDef<WebhookLog>[] = [
       return (
         <div className="text-right whitespace-nowrap">
           <span className="text-muted-foreground text-sm">
-            {log.timestamp.toLocaleTimeString("en-US", {
+            {log.createdAt.toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
               second: "2-digit",
@@ -302,9 +140,6 @@ const columns: ColumnDef<WebhookLog>[] = [
   },
 ];
 
-// TODO: Get organizationId from context/session
-const ORGANIZATION_ID = "org_placeholder";
-
 // --- Main Component ---
 
 export default function WebhookLogPage() {
@@ -313,19 +148,45 @@ export default function WebhookLogPage() {
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  const { data: _webhookLogs, isLoading: isLoadingWebhookLogs } = useQuery({
-    queryKey: ["webhookLogs", webhookId, ORGANIZATION_ID],
-    queryFn: async () => {
-      return await retrieveWebhookLogs(webhookId, ORGANIZATION_ID);
-    },
-    enabled: !!webhookId,
-  });
+  const {
+    data: webhookLogs,
+    isLoading: isLoadingWebhookLogs,
+    refetch: refetchWebhookLogs,
+  } = useOrgQuery(
+    ["webhookLogs", webhookId],
+    () => retrieveWebhookLogs(webhookId),
+    {
+      enabled: !!webhookId,
+      select: (data) => {
+        return data.map((log) => ({
+          id: log.id,
+          eventType: log.eventType,
+          status:
+            log.statusCode === 200
+              ? ("succeeded" as const)
+              : ("failed" as const),
+          statusCode: log.statusCode ?? undefined,
+          timestamp: new Date(log.createdAt),
+          eventId: log.id,
+          originDate: new Date(log.createdAt),
+          source: "Automatic",
+          apiVersion: log.apiVersion,
+          description: log.description,
+          response: log.response ?? undefined,
+          request: log.request ?? {},
+          nextRetry: log.nextRetry
+            ? moment(log.nextRetry).fromNow()
+            : undefined,
+        }));
+      },
+    }
+  );
 
   const filteredLogs = React.useMemo(() => {
-    let logs = mockWebhookLogs;
+    let logs = webhookLogs;
 
     if (searchQuery) {
-      logs = logs.filter(
+      logs = logs?.filter(
         (log) =>
           log.eventId.toLowerCase().includes(searchQuery.toLowerCase()) ||
           log.eventType.toLowerCase().includes(searchQuery.toLowerCase())
@@ -333,11 +194,11 @@ export default function WebhookLogPage() {
     }
 
     if (statusFilter && statusFilter !== "all") {
-      logs = logs.filter((log) => log.status === statusFilter);
+      logs = logs?.filter((log) => log.status === statusFilter);
     }
 
     return logs;
-  }, [searchQuery, statusFilter]);
+  }, [webhookLogs, searchQuery, statusFilter]);
 
   const renderDetail = (log: WebhookLog) => {
     return (
@@ -356,24 +217,26 @@ export default function WebhookLogPage() {
               <div className="flex items-start justify-between gap-4">
                 <span className="text-sm font-medium">Delivery status</span>
                 <div className="flex shrink-0 items-center gap-2">
-                  {log.status === "failed" ? (
+                  {log.statusCode === 200 ? (
                     <Badge
                       variant="outline"
-                      className="border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                      className="w-[90px] justify-center gap-1.5 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
                     >
-                      Failed
+                      <CheckCircle2 className="h-3 w-3" />
+                      200 OK
                     </Badge>
                   ) : (
                     <Badge
                       variant="outline"
-                      className="border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+                      className="w-[90px] justify-center gap-1.5 border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
                     >
-                      Succeeded
+                      <XCircle className="h-3 w-3" />
+                      Failed
                     </Badge>
                   )}
                   {log.nextRetry && (
                     <span className="text-muted-foreground text-xs whitespace-nowrap">
-                      Next retry in {log.nextRetry}
+                      Next retry in {moment(log.nextRetry).fromNow()}
                     </span>
                   )}
                 </div>
@@ -381,7 +244,7 @@ export default function WebhookLogPage() {
 
               <LogDetailItem
                 label="Attempt date"
-                value={log.timestamp.toLocaleString("en-US", {
+                value={log.createdAt.toLocaleString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -397,31 +260,24 @@ export default function WebhookLogPage() {
                     label="Event ID"
                     value={
                       <Link href="#" className="text-primary hover:underline">
-                        {log.eventId}
+                        {log.id}
                       </Link>
                     }
                   />
                 </div>
                 <div className="flex items-center pt-4">
-                  <CopyButton text={log.eventId} label="Copy event ID" />
+                  <CopyButton text={log.id} label="Copy event ID" />
                 </div>
               </div>
 
               <LogDetailItem
                 label="Origin date"
-                value={
-                  log.originDate.toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  }) + " IST"
-                }
+                value={moment(log.createdAt)
+                  .utc()
+                  .format("MMM D, YYYY, h:mm A [GMT]")}
               />
 
-              <LogDetailItem label="Source" value={log.source} />
+              <LogDetailItem label="Source" value="Automatic" />
               <LogDetailItem label="API version" value={log.apiVersion} />
               <LogDetailItem label="Description" value={log.description} />
             </div>
@@ -498,7 +354,12 @@ export default function WebhookLogPage() {
                   </UnderlineTabsTrigger>
                 </UnderlineTabsList>
               </UnderlineTabs>
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer gap-2"
+                onClick={() => refetchWebhookLogs()}
+              >
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
@@ -510,7 +371,7 @@ export default function WebhookLogPage() {
 
             <div className="h-[calc(100vh-400px)] min-h-[600px]">
               <LogPicker
-                data={filteredLogs}
+                data={filteredLogs as unknown as WebhookLog[]}
                 columns={columns}
                 renderDetail={renderDetail}
                 detailPanelWidth={500}

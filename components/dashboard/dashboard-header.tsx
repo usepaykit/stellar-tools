@@ -1,9 +1,10 @@
 "use client";
 
+import { EnvironmentToggle } from "@/components/environment-toggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { toast } from "@/components/ui/toast";
+import { useOrgContext } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import {
   Bell,
@@ -13,7 +14,6 @@ import {
   Search,
   Settings,
 } from "lucide-react";
-import { X } from "lucide-react";
 
 interface NavIconButtonProps {
   icon: React.ReactNode;
@@ -58,8 +58,14 @@ function NavIconButton({
 }
 
 export default function DashboardHeader() {
+  const { data: orgContext } = useOrgContext();
+  const currentEnvironment = orgContext?.environment;
+
   return (
     <header>
+      {currentEnvironment && (
+        <EnvironmentToggle currentEnvironment={currentEnvironment} />
+      )}
       <div className="container flex h-14 items-center justify-between gap-4 px-4">
         {/* Search Bar */}
         <SidebarTrigger className="-ml-1" />

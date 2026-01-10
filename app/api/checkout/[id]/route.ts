@@ -4,7 +4,8 @@ import {
   putCheckout,
   retrieveCheckout,
 } from "@/actions/checkout";
-import { Checkout, checkoutStatusEnum } from "@/db";
+import { checkoutStatus } from "@/constant/schema.client";
+import { Checkout } from "@/db";
 import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -21,16 +22,16 @@ export const GET = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const checkout = await retrieveCheckout(id, organizationId);
+  const checkout = await retrieveCheckout(id, organizationId, environment);
 
   return NextResponse.json({ data: checkout });
 };
 
 const putCheckoutSchema = schemaFor<Partial<Checkout>>()(
   z.object({
-    status: z.enum(checkoutStatusEnum.enumValues),
+    status: z.enum(checkoutStatus),
     metadata: z.record(z.string(), z.any()).default({}),
   })
 );
@@ -47,13 +48,13 @@ export const PUT = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
   const { error, data } = putCheckoutSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const checkout = await putCheckout(id, organizationId, data);
+  const checkout = await putCheckout(id, data, organizationId, environment);
 
   return NextResponse.json({ data: checkout });
 };
@@ -70,9 +71,9 @@ export const DELETE = async (
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  await deleteCheckout(id, organizationId);
+  await deleteCheckout(id, organizationId, environment);
 
   return NextResponse.json({ data: null });
 };

@@ -9,7 +9,7 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Curl, TypeScript } from "@/components/icon";
-import { TextAreaField, TextField } from "@/components/input-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { LineChart } from "@/components/line-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,13 +18,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
-import { Network } from "@/db";
 import { Webhook as WebhookSchema } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { WebhookEvent } from "@stellartools/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Activity,
@@ -37,7 +37,6 @@ import {
   Clock,
   Copy,
   Info,
-  Loader2,
   Plus,
   Sparkles,
   TrendingUp,
@@ -58,11 +57,6 @@ interface WebhookDestination extends Pick<
   responseTime?: number[];
   errorRate: number;
 }
-
-// TODO: Get organizationId and environment from context/session
-// For now using placeholder values - these should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT: Network = "testnet";
 
 const StatusBadge = ({ isDisabled }: { isDisabled: boolean }) => {
   return (
@@ -271,22 +265,22 @@ function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { data: webhooks = [], isLoading } = useQuery({
-    queryKey: ["webhooks", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: async () => {
-      return await getWebhooksWithAnalytics(ORGANIZATION_ID, ENVIRONMENT);
-    },
-    select: (webhooksData) => {
-      return webhooksData.map((webhook) => ({
-        ...webhook,
-        logsCount: webhook.logsCount,
-        eventsFrom: "account" as const,
-        eventCount: webhook.events.length,
-        errorRate: 0,
-        activity: [],
-      }));
-    },
-  });
+  const { data: webhooks = [], isLoading } = useOrgQuery(
+    ["webhooks"],
+    () => getWebhooksWithAnalytics(),
+    {
+      select: (webhooksData) => {
+        return webhooksData.map((webhook) => ({
+          ...webhook,
+          logsCount: webhook.logsCount,
+          eventsFrom: "account" as const,
+          eventCount: webhook.events.length,
+          errorRate: 0,
+          activity: [],
+        }));
+      },
+    }
+  );
 
   React.useEffect(() => {
     if (searchParams.get("create") === "true") {
@@ -399,9 +393,9 @@ function WebhooksPageContent() {
                         </Badge>
                       </div>
                       <p className="text-muted-foreground/80 mx-auto max-w-md text-sm">
-                        We&apos;re building a comprehensive overview dashboard
-                        that will give you insights into your webhook
-                        performance, analytics, and real-time monitoring.
+                        We’re building a comprehensive overview dashboard that
+                        will give you insights into your webhook performance,
+                        analytics, and real-time monitoring.
                       </p>
                     </div>
 
@@ -470,12 +464,8 @@ function WebhooksPageContent() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-      <WebHooksModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        organizationId={ORGANIZATION_ID}
-        environment={ENVIRONMENT}
-      />
+
+      <WebooksModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }
@@ -613,13 +603,6 @@ const schema = z.object({
   events: z.array(z.string()).min(1, "Please select at least one event"),
 });
 
-interface WebhooksModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  organizationId: string;
-  environment: Network;
-}
-
 const WEBHOOK_EVENTS = [
   { id: "customer.created", label: "Customer Created" },
   { id: "customer.updated", label: "Customer Updated" },
@@ -633,14 +616,14 @@ const WEBHOOK_EVENTS = [
   { id: "refund.failed", label: "Refund Failed" },
 ] as const satisfies { id: WebhookEvent[number]; label: string }[];
 
-function WebHooksModal({
-  open,
-  onOpenChange,
-  organizationId,
-  environment,
-}: WebhooksModalProps) {
+interface WebhooksModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
-  const queryClient = useQueryClient();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
   const [webhookSecret, setWebhookSecret] = React.useState<string>("");
   const { copied, handleCopy } = useCopy();
 
@@ -676,33 +659,25 @@ function WebHooksModal({
   // Create webhook mutation
   const createWebhookMutation = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
-      return await postWebhook(organizationId, {
+      return await postWebhook(undefined, undefined, {
         name: data.destinationName,
         url: data.endpointUrl,
-        description: data.description || undefined,
+        description: data.description ?? null,
         events: data.events as WebhookEvent[],
-        environment,
+        isDisabled: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        secret: webhookSecret,
       });
     },
-    onSuccess: (webhook) => {
-      // Invalidate and refetch webhooks
-      queryClient.invalidateQueries({
-        queryKey: ["webhooks", organizationId, environment],
-      });
-      toast.success("Webhook destination created successfully", {
-        description: `${webhook.name} is now configured to receive events.`,
-      } as Parameters<typeof toast.success>[1]);
+    onSuccess: () => {
+      invalidateOrgQuery(["webhooks"]);
+      toast.success("Webhook destination created successfully");
       form.reset();
       onOpenChange(false);
     },
-    onError: (error) => {
-      console.error("Failed to create webhook destination:", error);
-      toast.error("Failed to create webhook destination", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "An unexpected error occurred",
-      } as Parameters<typeof toast.error>[1]);
+    onError: () => {
+      toast.error("Failed to create webhook destination");
     },
   });
 
@@ -753,15 +728,9 @@ function WebHooksModal({
           onClick={() => form.handleSubmit(onSubmit)()}
           className="gap-2"
           disabled={createWebhookMutation.isPending}
+          isLoading={createWebhookMutation.isPending}
         >
-          {createWebhookMutation.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            "Create destination"
-          )}
+          Create destination
         </Button>
       </div>
     </div>

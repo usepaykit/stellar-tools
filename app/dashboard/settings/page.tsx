@@ -6,11 +6,12 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/input-picker";
 import {
   type PhoneNumber,
   PhoneNumberPicker,
 } from "@/components/phone-number-picker";
+import { TagInputPicker } from "@/components/tag-input-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,22 +45,25 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
-import { cn } from "@/lib/utils";
+import { roles } from "@/constant/schema.client";
+import { useCopy } from "@/hooks/use-copy";
+import { cn, getInitials } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   Calendar,
   Camera,
   ChevronRight,
+  Copy,
   ExternalLink,
   Loader2,
-  Lock,
   Mail,
   Plus,
   Save,
   User,
 } from "lucide-react";
 import moment from "moment";
+import { nanoid } from "nanoid";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -189,14 +193,14 @@ const organizationSchema = z.object({
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
 const inviteMemberSchema = z.object({
-  email: z.email(),
-  role: z.enum(["owner", "admin", "developer", "viewer"]),
+  emails: z.array(z.email()).min(1, "At least one email is required"),
+  role: z.enum(roles),
 });
 
 type InviteMemberFormData = z.infer<typeof inviteMemberSchema>;
 
 const updateRoleSchema = z.object({
-  role: z.enum(["owner", "admin", "developer", "viewer"]),
+  role: z.enum(roles),
 });
 
 type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;
@@ -216,6 +220,9 @@ export default function SettingsPage() {
     React.useState(false);
   const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] =
     React.useState<TeamMember | null>(null);
+  const [inviteLink, setInviteLink] = React.useState<string | null>(null);
+
+  const { handleCopy } = useCopy();
 
   const profileForm = RHF.useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -237,7 +244,7 @@ export default function SettingsPage() {
   const inviteMemberForm = RHF.useForm<InviteMemberFormData>({
     resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
-      email: "",
+      emails: [],
       role: "viewer",
     },
   });
@@ -248,23 +255,6 @@ export default function SettingsPage() {
       role: "viewer",
     },
   });
-
-  // Generate slug from name
-  const watchedOrgName = organizationForm.watch("name");
-  React.useEffect(() => {
-    if (watchedOrgName) {
-      const generatedSlug = watchedOrgName
-        .trim()
-        .toLowerCase()
-        .normalize("NFKD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "");
-      organizationForm.setValue("slug", generatedSlug);
-    }
-  }, [watchedOrgName, organizationForm]);
 
   const onProfileSubmit = async (data: ProfileFormData) => {
     setIsSubmitting(true);
@@ -357,17 +347,13 @@ export default function SettingsPage() {
         email: selectedMemberForRoleUpdate.email,
         newRole: data.role,
       });
-      toast.success("Role updated successfully", {
-        description: `${selectedMemberForRoleUpdate.email}'s role has been updated to ${data.role}`,
-      } as Parameters<typeof toast.success>[1]);
+      toast.success("Role updated successfully");
       updateRoleForm.reset();
       setIsUpdateRoleModalOpen(false);
       setSelectedMemberForRoleUpdate(null);
     } catch (error) {
       console.error("Failed to update role:", error);
-      toast.error("Failed to update role", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      toast.error("Failed to update role");
     } finally {
       setIsSubmitting(false);
     }
@@ -385,21 +371,18 @@ export default function SettingsPage() {
   const onInviteMemberSubmit = async (data: InviteMemberFormData) => {
     setIsSubmitting(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Inviting team member:", data);
-      toast.success("Invitation sent successfully", {
-        description: `An invitation has been sent to ${data.email}`,
-      } as Parameters<typeof toast.success>[1]);
-      inviteMemberForm.reset();
-      setIsInviteModalOpen(false);
-      // Optionally switch to pending tab
+      const link = `${window.location.origin}/join/${nanoid(25)}`;
+      setInviteLink(link);
+
+      const emailCount = data.emails.length;
+      toast.success(
+        `Invitation created successfully for ${emailCount} ${emailCount === 1 ? "person" : "people"}`
+      );
+
       setTeamTab("pending");
     } catch (error) {
       console.error("Failed to send invitation:", error);
-      toast.error("Failed to send invitation", {
-        description: "Please try again later",
-      } as Parameters<typeof toast.error>[1]);
+      toast.error("Failed to create invitation");
     } finally {
       setIsSubmitting(false);
     }
@@ -410,6 +393,7 @@ export default function SettingsPage() {
     if (!isInviteModalOpen) {
       inviteMemberForm.reset();
       setIsSubmitting(false);
+      setInviteLink(null);
     }
   }, [isInviteModalOpen, inviteMemberForm]);
 
@@ -601,7 +585,6 @@ export default function SettingsPage() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-6 p-4 sm:p-6">
-            {/* Breadcrumbs */}
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
@@ -618,7 +601,6 @@ export default function SettingsPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Settings Tabs */}
             <UnderlineTabs
               value={activeTab}
               onValueChange={setActiveTab}
@@ -639,7 +621,6 @@ export default function SettingsPage() {
 
               {/* Profile Tab */}
               <UnderlineTabsContent value="profile" className="mt-6 space-y-6">
-                {/* Profile Information Section */}
                 <Card className="shadow-none">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-6">
@@ -650,11 +631,7 @@ export default function SettingsPage() {
                             className="object-cover"
                           />
                           <AvatarFallback className="text-lg">
-                            {mockUser.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()}
+                            {getInitials(mockUser.name)}
                           </AvatarFallback>
                         </Avatar>
                         <label
@@ -676,10 +653,6 @@ export default function SettingsPage() {
                           <CardTitle className="text-xl">
                             Profile Information
                           </CardTitle>
-                          <CardDescription className="mt-1">
-                            Update your personal information and how others see
-                            you on Stellar Tools.
-                          </CardDescription>
                         </div>
                         <div className="text-muted-foreground flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4" />
@@ -737,30 +710,15 @@ export default function SettingsPage() {
                       />
 
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label
-                            htmlFor="email"
-                            className="flex items-center gap-2"
-                          >
-                            <Mail className="h-4 w-4" />
-                            Email Address
-                          </Label>
-                          <Badge variant="secondary" className="text-xs">
-                            Read-only
-                          </Badge>
-                        </div>
-                        <div className="relative">
-                          <TextField
-                            id="email"
-                            label=""
-                            value={mockUser.email}
-                            onChange={() => {}}
-                            disabled
-                            error={null}
-                            className="w-full pr-10 shadow-none"
-                          />
-                          <Lock className="text-muted-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                        </div>
+                        <TextField
+                          id="email"
+                          label="Email Address"
+                          value={mockUser.email}
+                          onChange={() => {}}
+                          disabled
+                          error={null}
+                          className="w-full pr-10 shadow-none"
+                        />
                         <p className="text-muted-foreground text-xs">
                           Email cannot be changed for security reasons. Contact
                           support if needed.
@@ -835,7 +793,7 @@ export default function SettingsPage() {
                             Organization Information
                           </CardTitle>
                           <CardDescription className="mt-1">
-                            Update your organization details and branding
+                            Update your organization details and branding.
                           </CardDescription>
                         </div>
                       </div>
@@ -930,9 +888,7 @@ export default function SettingsPage() {
                 </Card>
               </UnderlineTabsContent>
 
-              {/* Team Tab */}
               <UnderlineTabsContent value="team" className="mt-6 space-y-6">
-                {/* Header */}
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-2xl font-semibold">Team Members</h2>
@@ -955,7 +911,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Tabs */}
                 <div className="border-border flex gap-1 border-b">
                   <button
                     type="button"
@@ -985,7 +940,6 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                {/* Table Header */}
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold">
@@ -1001,7 +955,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Table */}
                 {teamTableData.length > 0 ? (
                   <div className="[&_tr:hover]:bg-muted/50 [&_th]:text-muted-foreground [&_table]:bg-transparent [&_tbody]:bg-transparent [&_td]:py-4 [&_th]:pb-3 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_thead]:bg-transparent [&_tr]:border-b [&>div]:bg-transparent [&>div>div]:rounded-none [&>div>div]:border-0 [&>div>div]:shadow-none">
                     <DataTable
@@ -1029,7 +982,6 @@ export default function SettingsPage() {
                 )}
               </UnderlineTabsContent>
 
-              {/* API & Webhooks Tab */}
               <UnderlineTabsContent value="api" className="mt-6 space-y-6">
                 <Card className="shadow-none">
                   <CardHeader>
@@ -1098,77 +1050,107 @@ export default function SettingsPage() {
               disabled={isSubmitting}
               className="shadow-none"
             >
-              Cancel
+              {inviteLink ? "Done" : "Cancel"}
             </Button>
-            <Button
-              type="button"
-              onClick={() =>
-                inviteMemberForm.handleSubmit(onInviteMemberSubmit)()
-              }
-              disabled={isSubmitting}
-              className="gap-2 shadow-none"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                "Send Invitation"
-              )}
-            </Button>
+            {!inviteLink && (
+              <Button
+                type="button"
+                onClick={() =>
+                  inviteMemberForm.handleSubmit(onInviteMemberSubmit)()
+                }
+                disabled={isSubmitting}
+                className="gap-2 shadow-none"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Invitation"
+                )}
+              </Button>
+            )}
           </div>
         }
       >
-        <form
-          onSubmit={inviteMemberForm.handleSubmit(onInviteMemberSubmit)}
-          className="space-y-6"
-        >
-          <RHF.Controller
-            control={inviteMemberForm.control}
-            name="email"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                id="invite-email"
-                label="Email Address"
-                type="email"
-                placeholder="colleague@example.com"
-                error={error?.message || null}
-                className="w-full shadow-none"
-              />
-            )}
-          />
+        {!inviteLink ? (
+          <form
+            onSubmit={inviteMemberForm.handleSubmit(onInviteMemberSubmit)}
+            className="space-y-6"
+          >
+            <RHF.Controller
+              control={inviteMemberForm.control}
+              name="emails"
+              render={({ field, fieldState: { error } }) => (
+                <TagInputPicker
+                  {...field}
+                  id="invite-emails"
+                  label="Email Addresses"
+                  placeholder="colleague@example.com"
+                  helpText="Press Enter or comma to add multiple emails"
+                  error={error?.message}
+                  className="w-full"
+                />
+              )}
+            />
 
-          <RHF.Controller
-            control={inviteMemberForm.control}
-            name="role"
-            render={({ field, fieldState: { error } }) => (
-              <div className="space-y-2">
-                <Label htmlFor="invite-role">Role</Label>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="invite-role" className="w-full">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="developer">Developer</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                  </SelectContent>
-                </Select>
-                {error && (
-                  <p className="text-destructive text-sm" role="alert">
-                    {error.message}
+            <RHF.Controller
+              control={inviteMemberForm.control}
+              name="role"
+              render={({ field, fieldState: { error } }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="invite-role">Role</Label>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="invite-role" className="w-full">
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                      <SelectItem value="developer">Developer</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="owner">Owner</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {error && (
+                    <p className="text-destructive text-sm" role="alert">
+                      {error.message}
+                    </p>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    Choose the permission level for this team member
                   </p>
-                )}
-                <p className="text-muted-foreground text-xs">
-                  Choose the permission level for this team member
-                </p>
-              </div>
-            )}
-          />
-        </form>
+                </div>
+              )}
+            />
+          </form>
+        ) : (
+          <div className="flex w-full gap-2 space-y-2">
+            <TextField
+              id="invite-link"
+              label="Invitation Link"
+              value={inviteLink}
+              onChange={() => {}}
+              disabled
+              error={null}
+              className="w-full flex-1 shadow-none outline-2"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                handleCopy({
+                  text: inviteLink,
+                  message: "Copied to clipboard",
+                })
+              }
+              className="hover:bg-muted-foreground/10 h-8 w-8 shrink-0 p-0"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </FullScreenModal>
 
       {/* Update Role Modal */}

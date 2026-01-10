@@ -12,30 +12,26 @@ import {
 } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
-  NumberPicker,
+
   TextAreaField,
   TextField,
-} from "@/components/input-picker";
+} from "@/components/text-field";
+
+import { NumberPicker } from "@/components/number-picker";
+import { SelectPicker } from "@/components/select-picker";
+import { RadioGroupPicker } from "@/components/radio-group-picker";
 import { MarkdownPicker } from "@/components/markdown-picker";
 import { PricePicker } from "@/components/price-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { Network, RecurringPeriod } from "@/db";
+import { RecurringPeriod } from "@/db";
 import { Product as ProductSchema } from "@/db";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
 import {
   Archive,
@@ -44,7 +40,6 @@ import {
   ArrowUpDown,
   Download,
   HelpCircle,
-  Loader2,
   Package,
   Plus,
   RefreshCw,
@@ -73,7 +68,7 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   images: z.array(z.any()).transform((val) => val as FileWithPreview[]),
-  billingCycle: z.enum(["one_time", "recurring", "metered"]),
+  type: z.enum(["one_time", "subscription", "metered"]),
   recurringInterval: z.number().min(1).optional(),
   recurringPeriod: z.enum(["day", "week", "month", "year"]).optional(),
   price: z.object({
@@ -86,8 +81,6 @@ const productSchema = z.object({
       ),
     asset: z.string().min(1, "Asset is required"),
   }),
-  phoneNumberEnabled: z.boolean(),
-
   unit: z.string().optional(),
   unitsPerCredit: z.number().min(1).default(1).optional(),
   unitDivisor: z.number().min(1).optional(),
@@ -95,11 +88,6 @@ const productSchema = z.object({
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
-
-// TODO: Get organizationId and environment from context/session
-// For now using placeholder values - these should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT: Network = "testnet";
 
 const SortableHeader = ({
   column,
@@ -217,27 +205,29 @@ function ProductsPageContent() {
     null
   );
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveProductsWithAsset(ORGANIZATION_ID, ENVIRONMENT),
-    select: (productsData) => {
-      return productsData.map(({ product, asset }) => {
-        return {
-          id: product.id,
-          name: product.name,
-          pricing: {
-            amount: product.priceAmount,
-            asset: asset.code,
-            isRecurring: product.billingType === "recurring",
-            period: product.recurringPeriod!,
-          },
-          status: product.status,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt,
-        };
-      });
-    },
-  });
+  const { data: products, isLoading } = useOrgQuery(
+    ["products"],
+    () => retrieveProductsWithAsset(),
+    {
+      select: (productsData) => {
+        return productsData.map(({ product, asset }) => {
+          return {
+            id: product.id,
+            name: product.name,
+            pricing: {
+              amount: product.priceAmount,
+              asset: asset.code,
+              isRecurring: product.type === "subscription",
+              period: product.recurringPeriod!,
+            },
+            status: product.status,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+          };
+        });
+      },
+    }
+  );
 
   const stats = React.useMemo(
     () => ({
@@ -389,7 +379,7 @@ function ProductsModal({
 }) {
   const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
   const isEditMode = !!editingProduct;
-  const queryClient = useQueryClient();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const form = RHF.useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -397,10 +387,9 @@ function ProductsModal({
       name: "",
       description: "",
       images: [],
-      billingCycle: "recurring",
+      type: "one_time",
       recurringPeriod: "month",
       price: { amount: "", asset: "XLM" },
-      phoneNumberEnabled: false,
       unitDivisor: 1,
       unitsPerCredit: 1,
       creditsGranted: 0,
@@ -424,10 +413,9 @@ function ProductsModal({
         name: "",
         description: "",
         images: [],
-        billingCycle: "recurring",
+        type: "one_time",
         recurringPeriod: "month",
         price: { amount: "", asset: "XLM" },
-        phoneNumberEnabled: false,
       });
     }
   }, [open, editingProduct, form]);
@@ -444,49 +432,38 @@ function ProductsModal({
 
       const images: Array<string> = []; // todo: upload images to storage and get the url
 
-      const productData = {
+      const productData: Parameters<typeof postProduct>[0] = {
         name: data.name,
-        description: data.description,
+        description: data.description ?? null,
         images,
-        billingType: data.billingCycle,
+        type: data.type,
         assetId: data.price.asset,
-        phoneNumberRequired: data.phoneNumberEnabled,
         status: "active" as const,
-        organizationId: ORGANIZATION_ID,
-        environment: ENVIRONMENT,
         metadata,
         priceAmount: parseFloat(data.price.amount),
-        recurringPeriod: data.recurringPeriod,
-
-        // Meter
-        unit: data.unit,
-        unitDivisor: data.unitDivisor,
-        unitsPerCredit: data.unitsPerCredit,
-        creditsGranted: data.creditsGranted,
+        recurringPeriod: data.recurringPeriod ?? null,
+        unit: data.unit ?? null,
+        unitDivisor: data.unitDivisor ?? null,
+        unitsPerCredit: data.unitsPerCredit ?? null,
+        creditsGranted: data.creditsGranted ?? null,
+        creditExpiryDays: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       return await postProduct(productData);
     },
     onSuccess: () => {
-      // Invalidate and refetch products
-      queryClient.invalidateQueries({
-        queryKey: ["products", ORGANIZATION_ID, ENVIRONMENT],
-      });
+      invalidateOrgQuery(["products"]);
       toast.success(
         isEditMode ? "Product updated successfully!" : "Product created!"
       );
       form.reset();
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: () => {
       toast.error(
-        isEditMode ? "Failed to update product" : "Failed to create product",
-        {
-          description:
-            error instanceof Error
-              ? error.message
-              : "An unexpected error occurred",
-        } as Parameters<typeof toast.error>[1]
+        isEditMode ? "Failed to update product" : "Failed to create product"
       );
     },
   });
@@ -516,10 +493,8 @@ function ProductsModal({
             <Button
               onClick={form.handleSubmit(onSubmit)}
               disabled={createProductMutation.isPending}
+              isLoading={createProductMutation.isPending}
             >
-              {createProductMutation.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}{" "}
               {isEditMode ? "Update product" : "Add product"}
             </Button>
           </div>
@@ -591,36 +566,26 @@ function ProductsModal({
               </div>
               <RHF.Controller
                 control={form.control}
-                name="billingCycle"
-                render={({ field }) => (
-                  <RadioGroup
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="recurring" id="recurring" />
-                      <Label htmlFor="recurring" className="font-normal">
-                        Recurring
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="one_time" id="one_time" />
-                      <Label htmlFor="one_time" className="font-normal">
-                        One-off
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="metered" id="metered" />
-                      <Label htmlFor="metered" className="font-normal">
-                        Metered (Credits)
-                      </Label>
-                    </div>
-                  </RadioGroup>
+                name="type"
+                render={({ field, fieldState: { error } }) => (
+                  <RadioGroupPicker
+                    id="type"
+                    value={field.value}
+                    onChange={field.onChange}
+                    items={[
+                      { value: "recurring", label: "Recurring" },
+                      { value: "one_time", label: "One-off" },
+                      { value: "metered", label: "Metered (Credits)" },
+                    ]}
+                    error={error?.message}
+                    label={null}
+                    helpText={null}
+                    itemLayout="horizontal"
+                  />
                 )}
               />
 
-              {watched.billingCycle === "metered" && (
+              {watched.type === "metered" && (
                 <div className="space-y-4 rounded-lg border p-4">
                   <div className="space-y-1">
                     <h4 className="text-sm font-semibold">
@@ -699,69 +664,41 @@ function ProductsModal({
                 <RHF.Controller
                   control={form.control}
                   name="price"
-                  render={({ field }) => (
+                  render={({ field, fieldState: { error } }) => (
                     <PricePicker
                       id="price"
                       className="flex-1"
                       value={field.value}
                       onChange={field.onChange}
                       assets={["XLM", "USDC"]}
-                      error={form.formState.errors.price?.amount?.message}
+                      error={error?.message}
                     />
                   )}
                 />
 
-                {watched.billingCycle == "recurring" && (
+                {watched.type == "subscription" && (
                   <RHF.Controller
-                    control={form.control}
                     name="recurringPeriod"
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger className="mt-2.5 h-12 w-[150px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="day">Daily</SelectItem>
-                          <SelectItem value="week">Weekly</SelectItem>
-                          <SelectItem value="month">Monthly</SelectItem>
-                          <SelectItem value="year">Yearly</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    control={form.control}
+                    render={({ field, fieldState: { error } }) => (
+                      <SelectPicker
+                        id={field.name}
+                        value={field.value as string}
+                        onChange={field.onChange}
+                        triggerValuePlaceholder="Select recurring period"
+                        triggerClassName="mt-2.5 h-12 w-[150px]"
+                        items={[
+                          { value: "day", label: "Daily" },
+                          { value: "week", label: "Weekly" },
+                          { value: "month", label: "Monthly" },
+                          { value: "year", label: "Yearly" },
+                        ]}
+                        error={error?.message}
+                      />
                     )}
                   />
                 )}
               </div>
-            </div>
-
-            <div className="flex items-center justify-between border-t pt-4">
-              <RHF.Controller
-                control={form.control}
-                name="phoneNumberEnabled"
-                render={({ field }) => (
-                  <div className="flex w-full items-center justify-between space-x-2">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="phoneNumberEnabled"
-                        className="flex flex-col items-start gap-1"
-                      >
-                        Require phone number
-                        <p className="text-muted-foreground text-xs">
-                          Customers must provide a phone number
-                        </p>
-                      </Label>
-                    </div>
-
-                    <Switch
-                      id="phoneNumberEnabled"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </div>
-                )}
-              />
             </div>
           </div>
 
@@ -802,7 +739,7 @@ function ProductsModal({
                       {total.toFixed(2)} {watched.price?.asset || "XLM"}
                     </span>
                   </div>
-                  {watched.billingCycle === "recurring" && (
+                  {watched.type === "subscription" && (
                     <p className="text-muted-foreground mt-1 text-right text-xs">
                       Billed every {watched.recurringPeriod}
                     </p>

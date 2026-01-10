@@ -50,8 +50,15 @@ export class StellarTools {
 }
 
 export * from "./types";
-export { WebhooksExternal as Webhook } from "./resources/webhooks.external";
-export { schemaFor, tryCatchAsync, validateRequiredKeys } from "./utils";
+export { WebhookSigner } from "./resources/webhooks";
+export { ApiClient };
+export {
+  schemaFor,
+  tryCatchAsync,
+  tryCatchSync,
+  validateRequiredKeys,
+} from "./utils";
+export type { LooseAutoComplete } from "./types";
 export * from "./schema/customer";
 export * from "./schema/checkout";
 export * from "./schema/payment";

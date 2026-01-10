@@ -1,14 +1,27 @@
 "use server";
 
-import { Refund, refunds } from "@/db";
+import { Network, Refund, refunds } from "@/db";
 import { db } from "@/db";
 import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-export const postRefund = async (params: Partial<Refund>) => {
+import { resolveOrgContext } from "./organization";
+
+export const postRefund = async (
+  params: Omit<Refund, "id" | "organizationId" | "environment">,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [refund] = await db
     .insert(refunds)
-    .values({ id: `rf_${nanoid(25)}`, ...params } as Refund)
+    .values({
+      id: `rf_${nanoid(25)}`,
+      organizationId,
+      environment,
+      ...params,
+    } as Refund)
     .returning();
 
   if (!refund) throw new Error("Failed to create refund");
@@ -16,11 +29,19 @@ export const postRefund = async (params: Partial<Refund>) => {
   return refund as Refund;
 };
 
-export const getRefund = async (id: string, organizationId: string) => {
+export const getRefund = async (id: string, orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [refund] = await db
     .select()
     .from(refunds)
-    .where(and(eq(refunds.id, id), eq(refunds.organizationId, organizationId)))
+    .where(
+      and(
+        eq(refunds.id, id),
+        eq(refunds.organizationId, organizationId),
+        eq(refunds.environment, environment)
+      )
+    )
     .limit(1);
 
   if (!refund) throw new Error("Refund not found");
@@ -30,13 +51,22 @@ export const getRefund = async (id: string, organizationId: string) => {
 
 export const updateRefund = async (
   id: string,
-  organizationId: string,
-  params: Partial<Refund>
+  retUpdate: Partial<Refund>,
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [refund] = await db
     .update(refunds)
-    .set({ ...params, updatedAt: new Date() } as Refund)
-    .where(and(eq(refunds.id, id), eq(refunds.organizationId, organizationId)))
+    .set({ ...retUpdate, updatedAt: new Date() } as Refund)
+    .where(
+      and(
+        eq(refunds.id, id),
+        eq(refunds.organizationId, organizationId),
+        eq(refunds.environment, environment)
+      )
+    )
     .returning();
 
   if (!refund) throw new Error("Failed to update refund");

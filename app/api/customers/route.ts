@@ -1,22 +1,19 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postCustomer, retrieveCustomers } from "@/actions/customers";
+import { triggerWebhooks } from "@/actions/webhook";
 import { Customer } from "@/db";
-import { schemaFor } from "@stellartools/core";
+import { schemaFor, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 const postCustomerSchema = schemaFor<
-  Pick<
-    Customer,
-    "email" | "name" | "phone" | "appMetadata" | "internalMetadata"
-  >
+  Pick<Customer, "email" | "name" | "phone" | "appMetadata">
 >()(
   z.object({
     email: z.email(),
     phone: z.string(),
     name: z.string(),
     appMetadata: z.record(z.string(), z.any()).default({}),
-    internalMetadata: z.record(z.string(), z.any()).default({}),
   })
 );
 
@@ -32,11 +29,25 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const customer = await postCustomer({
-    ...data,
+  const customer = await postCustomer(
+    {
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      walletAddresses: null,
+    },
     organizationId,
-    environment,
-  });
+    environment
+  );
+
+  await tryCatchAsync(
+    triggerWebhooks(
+      "customer.created",
+      { customer },
+      organizationId,
+      environment
+    )
+  );
 
   return NextResponse.json({ data: customer });
 };

@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 
 export function useCopy() {
   const [copied, setCopied] = React.useState(false);

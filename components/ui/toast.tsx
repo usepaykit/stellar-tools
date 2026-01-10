@@ -48,7 +48,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
 };
 
 export const toast = {
-  success: (message: string, options?: Omit<ToastT, "message">) => {
+  success: (message: string, options?: Omit<ToastT, "message" | "id">) => {
     return sonnerToast.success(message, {
       ...options,
       icon: (
@@ -59,7 +59,7 @@ export const toast = {
       className: options?.className,
     });
   },
-  error: (message: string, options?: Omit<ToastT, "message">) => {
+  error: (message: string, options?: Omit<ToastT, "message" | "id">) => {
     return sonnerToast.error(message, {
       ...options,
       icon: (
@@ -70,7 +70,7 @@ export const toast = {
       className: options?.className,
     });
   },
-  info: (message: string, options?: Omit<ToastT, "message">) => {
+  info: (message: string, options?: Omit<ToastT, "message" | "id">) => {
     return sonnerToast.info(message, {
       ...options,
       icon: (
@@ -81,7 +81,7 @@ export const toast = {
       className: options?.className,
     });
   },
-  warning: (message: string, options?: Omit<ToastT, "message">) => {
+  warning: (message: string, options?: Omit<ToastT, "message" | "id">) => {
     return sonnerToast.warning(message, {
       ...options,
       icon: (
@@ -92,7 +92,7 @@ export const toast = {
       className: options?.className,
     });
   },
-  message: (message: string, options?: Omit<ToastT, "message">) => {
+  message: (message: string, options?: Omit<ToastT, "message" | "id">) => {
     return sonnerToast(message, {
       ...options,
       className: cn("border-border bg-card", options?.className),

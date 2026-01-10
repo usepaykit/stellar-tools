@@ -2,27 +2,30 @@
 
 import * as React from "react";
 
-import { retrievePayment } from "@/actions/payment";
+import {
+  retrievePayment,
+  retrievePaymentsWithDetails,
+} from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/input-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   CheckCircle2,
   Copy,
   Download,
-  Loader2,
   Plus,
   Settings,
   Wallet,
@@ -54,117 +57,6 @@ type Transaction = {
   refundedDate?: Date;
   status: TransactionStatus;
 };
-
-// --- Mock Data ---
-
-const mockTransactions: Transaction[] = [
-  {
-    id: "tx_1",
-    amount: "6.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8V",
-    customer: {
-      email: "abramson@theleadgenerationguys.com",
-    },
-    date: new Date("2024-12-22T16:52:00"),
-    status: "succeeded",
-  },
-  {
-    id: "tx_2",
-    amount: "9.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8W",
-    customer: {
-      email: "customer@example.com",
-    },
-    date: new Date("2024-12-22T15:30:00"),
-    status: "succeeded",
-  },
-  {
-    id: "tx_3",
-    amount: "12.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8X",
-    customer: {
-      email: "user@example.com",
-    },
-    date: new Date("2024-12-22T14:15:00"),
-    status: "succeeded",
-  },
-  {
-    id: "tx_4",
-    amount: "3.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8Y",
-    customer: {
-      email: "chris@1secondleads.com",
-    },
-    date: new Date("2024-12-21T10:20:00"),
-    status: "failed",
-  },
-  {
-    id: "tx_5",
-    amount: "8400.00",
-    asset: "INR",
-    paymentMethod: {
-      type: "wallet",
-      address: "GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs8Z",
-    customer: {
-      email: "yogi@branale.com",
-    },
-    date: new Date("2024-12-20T09:45:00"),
-    status: "failed",
-  },
-  {
-    id: "tx_6",
-    amount: "15.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs9A",
-    customer: {
-      email: "refund@example.com",
-    },
-    date: new Date("2024-12-19T12:00:00"),
-    refundedDate: new Date("2024-12-20T10:00:00"),
-    status: "refunded",
-  },
-  {
-    id: "tx_8",
-    amount: "8.00",
-    asset: "USD",
-    paymentMethod: {
-      type: "wallet",
-      address: "GEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
-    },
-    description: "pi_3Sh7CESF0MtsiMvy1FkUbs9C",
-    customer: {
-      email: "customer2@example.com",
-    },
-    date: new Date("2024-12-17T13:20:00"),
-    status: "succeeded",
-  },
-];
 
 // --- Status Badge Component ---
 
@@ -327,10 +219,6 @@ const refundSchema = z.object({
 
 type RefundFormData = z.infer<typeof refundSchema>;
 
-// TODO: Get organizationId from context/session
-// For now using placeholder value - this should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-
 // --- Refund Modal Component ---
 
 export function RefundModal({
@@ -342,7 +230,7 @@ export function RefundModal({
   onOpenChange: (open: boolean) => void;
   initialPaymentId?: string;
 }) {
-  const queryClient = useQueryClient();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
@@ -361,21 +249,23 @@ export function RefundModal({
 
   const createRefundMutation = useMutation({
     mutationFn: async (data: RefundFormData) => {
-      const payment = await retrievePayment(data.paymentId, ORGANIZATION_ID);
+      const payment = await retrievePayment(data.paymentId);
 
-      return await postRefund({
-        paymentId: payment.id,
-        organizationId: payment.organizationId,
-        environment: payment.environment,
-        amount: payment.amount,
-        assetId: payment.assetId,
-        customerId: payment.customerId,
-        receiverPublicKey: data.walletAddress,
-        reason: data.reason,
-        status: "pending",
-        transactionHash: payment.transactionHash,
-        metadata: {},
-      });
+      return await postRefund(
+        {
+          paymentId: payment.id,
+          amount: payment.amount,
+          customerId: payment.customerId,
+          receiverPublicKey: data.walletAddress,
+          reason: data.reason,
+          status: "pending",
+          metadata: {},
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        payment.organizationId,
+        payment.environment
+      );
 
       // todo: use sendAssetPayment from stellar core and update the status.
     },
@@ -383,17 +273,10 @@ export function RefundModal({
       toast.success("Refund created successfully!");
       form.reset();
       onOpenChange(false);
-      queryClient.invalidateQueries({
-        queryKey: ["refunds", ORGANIZATION_ID],
-      });
+      invalidateOrgQuery(["refunds"]);
     },
-    onError: (error) => {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error("Failed to create refund", {
-        id: "refund-error",
-        description: errorMessage,
-      });
+    onError: () => {
+      toast.error("Failed to create refund");
     },
   });
 
@@ -419,11 +302,9 @@ export function RefundModal({
           <Button
             onClick={form.handleSubmit(onSubmit)}
             disabled={createRefundMutation.isPending}
+            isLoading={createRefundMutation.isPending}
           >
-            {createRefundMutation.isPending && (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            Create refund
+            {createRefundMutation.isPending ? "Creating..." : "Create refund"}
           </Button>
         </div>
       }
@@ -497,35 +378,43 @@ function TransactionsPageContent() {
     string | null
   >(null);
 
-  // Calculate statistics
+  const { data: payments, isLoading } = useOrgQuery(["payments"], () =>
+    retrievePaymentsWithDetails()
+  );
+
   const stats = React.useMemo(() => {
-    const all = mockTransactions.length;
-    const succeeded = mockTransactions.filter(
-      (t) => t.status === "succeeded"
-    ).length;
-    const refunded = mockTransactions.filter(
-      (t) => t.status === "refunded"
-    ).length;
-    const failed = mockTransactions.filter((t) => t.status === "failed").length;
+    if (!payments?.length) {
+      return { all: 0, succeeded: 0, refunded: 0, failed: 0 };
+    }
 
-    return { all, succeeded, refunded, failed };
-  }, []);
+    return payments.reduce(
+      (acc, p) => ({
+        ...acc,
+        all: acc.all + 1,
+        succeeded: acc.succeeded + (p.status === "confirmed" ? 1 : 0),
+        refunded: acc.refunded + (p.refundStatus === "succeeded" ? 1 : 0),
+        failed: acc.failed + (p.status === "failed" ? 1 : 0),
+      }),
+      { all: 0, succeeded: 0, refunded: 0, failed: 0 }
+    );
+  }, [payments]);
 
-  // Filter transactions based on active tab
   const filteredTransactions = React.useMemo(() => {
-    if (customerId) {
-      return mockTransactions.filter((t) => t.customer.email === customerId);
-    }
+    if (!payments?.length) return [];
 
-    if (paymentId) {
-      return mockTransactions.filter((t) => t.description === paymentId);
-    }
+    return payments.filter((p) => {
+      if (customerId && p.customerEmail !== customerId) return false;
 
-    if (activeTab === "all") {
-      return mockTransactions;
-    }
-    return mockTransactions.filter((t) => t.status === activeTab);
-  }, [activeTab, customerId, paymentId]);
+      if (paymentId) {
+        const matchesId = p.id === paymentId || p.checkoutId === paymentId;
+        if (!matchesId) return false;
+      }
+
+      if (activeTab === "all") return true;
+      if (activeTab === "refunded") return p.refundStatus === "succeeded";
+      return p.status === activeTab;
+    });
+  }, [payments, activeTab, customerId, paymentId]);
 
   const tableActions: TableAction<Transaction>[] = [
     {
@@ -558,7 +447,6 @@ function TransactionsPageContent() {
       <DashboardSidebar>
         <DashboardSidebarInset>
           <div className="flex flex-col gap-8 p-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">
@@ -579,7 +467,6 @@ function TransactionsPageContent() {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="border-border flex items-center gap-1 border-b">
               {tabs.map((tab) => (
                 <button
@@ -593,11 +480,6 @@ function TransactionsPageContent() {
                   )}
                 >
                   {tab.label}
-                  {tab.count > 0 && (
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      ({tab.count})
-                    </span>
-                  )}
                   {activeTab === tab.id && (
                     <div className="bg-primary absolute right-0 bottom-0 left-0 h-0.5" />
                   )}
@@ -605,7 +487,6 @@ function TransactionsPageContent() {
               ))}
             </div>
 
-            {/* Summary Cards */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               {tabs.map((tab) => (
                 <Card
@@ -630,7 +511,6 @@ function TransactionsPageContent() {
               ))}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="gap-2">
@@ -644,27 +524,43 @@ function TransactionsPageContent() {
               </div>
             </div>
 
-            {/* Data Table */}
             <div className="border-border/50 overflow-hidden rounded-lg border">
               <DataTable
                 columns={columns}
-                data={filteredTransactions}
+                data={filteredTransactions.map((it) => ({
+                  id: it.id,
+                  amount: it.amount.toString(),
+                  asset: it.assetCode ?? "",
+                  paymentMethod: {
+                    type: "wallet" as const,
+                    address: it.transactionHash,
+                  },
+                  description: it.checkoutId || it.id,
+                  customer: {
+                    email: it.customerEmail!,
+                  },
+                  date: it.createdAt,
+                  status: (it.refundStatus === "succeeded"
+                    ? "refunded"
+                    : it.status === "confirmed"
+                      ? "succeeded"
+                      : it.status) as TransactionStatus,
+                  refundedDate: it.refundedAt ?? undefined,
+                }))}
                 enableBulkSelect={true}
                 actions={tableActions}
+                isLoading={isLoading}
               />
             </div>
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      {/* Refund Modal */}
       <RefundModal
         open={isRefundModalOpen}
         onOpenChange={(open) => {
           setIsRefundModalOpen(open);
-          if (!open) {
-            setSelectedPaymentId(null);
-          }
+          if (!open) setSelectedPaymentId(null);
         }}
         initialPaymentId={selectedPaymentId ?? undefined}
       />

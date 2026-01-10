@@ -88,6 +88,8 @@ export const createCustomer = (options: StellarToolsBetterAuthOptions) => {
         update: { stellarCustomerId: result.value!.id },
       });
 
+      options?.onCustomerCreated?.(result.value!);
+
       return ctx.json(result.value!);
     }
   );
@@ -217,6 +219,8 @@ export const createSubscription = (options: StellarToolsBetterAuthOptions) => {
         });
       }
 
+      options?.onSubscriptionCreated?.(result.value!);
+
       return ctx.json(result.value!);
     }
   );
@@ -331,7 +335,9 @@ export const pauseSubscription = (options: StellarToolsBetterAuthOptions) => {
         });
       }
 
-      return ctx.json(result.value!);
+      options?.onSubscriptionUpdated?.(result.value);
+
+      return ctx.json(result.value);
     }
   );
 };
@@ -371,6 +377,8 @@ export const resumeSubscription = (options: StellarToolsBetterAuthOptions) => {
           message: result.error.message,
         });
       }
+
+      options?.onSubscriptionUpdated?.(result.value);
 
       return ctx.json(result.value!);
     }
@@ -415,6 +423,8 @@ export const updateSubscription = (options: StellarToolsBetterAuthOptions) => {
         });
       }
 
+      options?.onSubscriptionUpdated?.(result.value);
+
       return ctx.json(result.value!);
     }
   );
@@ -454,6 +464,8 @@ export const cancelSubscription = (options: StellarToolsBetterAuthOptions) => {
           message: result.error.message,
         });
       }
+
+      options?.onSubscriptionCanceled?.(result.value);
 
       return ctx.json(result.value!);
     }
@@ -523,7 +535,7 @@ export const consumeCredits = (options: StellarToolsBetterAuthOptions) => {
       const result = await stellar.credits.consume(customerId, {
         productId: ctx.body.productId,
         rawAmount: ctx.body.rawAmount,
-        reason: ctx.body.reason ?? "Consumed",
+        reason: "deduct",
         metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
       });
 

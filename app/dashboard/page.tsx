@@ -5,6 +5,7 @@ import React from "react";
 import { AreaChart } from "@/components/area-chart";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { SelectPicker } from "@/components/select-picker";
 import { LineChart } from "@/components/line-chart";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,13 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -235,21 +229,25 @@ export default function DashboardPage() {
                 <h2 className="text-2xl font-semibold tracking-tight">
                   Your overview
                 </h2>
-                <Select value={dateRange} onValueChange={setDateRange}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select date range" />
-                  </SelectTrigger>
-                  <SelectContent className="shadow-none">
-                    <SelectItem value="7">Last 7 days</SelectItem>
-                    <SelectItem value="30">Last 30 days</SelectItem>
-                    <SelectItem value="90">Last 90 days</SelectItem>
-                    <SelectItem value="180">Last 6 months</SelectItem>
-                    <SelectItem value="365">Last year</SelectItem>
-                    <SelectItem value="this-month">This month</SelectItem>
-                    <SelectItem value="last-month">Last month</SelectItem>
-                    <SelectItem value="this-year">This year</SelectItem>
-                  </SelectContent>
-                </Select>
+
+                <SelectPicker
+                  id="date-range"
+                  value={dateRange}
+                  onChange={setDateRange}
+                  triggerValuePlaceholder="Select date range"
+                  triggerClassName="w-[180px]"
+                  isLoading={true}
+                  items={[
+                    { value: "7", label: "Last 7 days" },
+                    { value: "30", label: "Last 30 days" },
+                    { value: "90", label: "Last 90 days" },
+                    { value: "180", label: "Last 6 months" },
+                    { value: "365", label: "Last year" },
+                    { value: "this-month", label: "This month" },
+                    { value: "last-month", label: "Last month" },
+                    { value: "this-year", label: "This year" },
+                  ]}
+                />
               </div>
 
               {/* Overview Chart - Full Width */}

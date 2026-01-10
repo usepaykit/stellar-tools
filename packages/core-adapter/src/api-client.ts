@@ -1,19 +1,77 @@
+import { nanoid } from "nanoid";
+
 import {
   ERR,
   OK,
-  ResultFP,
+  Result,
   buildError,
   executeWithRetryWithHandler,
 } from "./utils";
 
+const DEFAULT_TIMEOUT = 30000;
+
 export type ApiClientConfig = {
+  /**
+   * The base URL of the API
+   */
   baseUrl: string;
+
+  /**
+   * The headers to send with the request
+   */
   headers: Record<string, string>;
+
+  /**
+   * The retry options
+   */
   retryOptions: { max: number; baseDelay: number; debug: boolean };
+
+  /**
+   * The timeout for the request
+   */
+  timeout?: number;
+};
+
+export type ApiResponse<T = unknown> = {
+  /**
+   * Whether the request was successful
+   */
+  ok: boolean;
+  /**
+   * The status code of the response
+   */
+  status: number;
+
+  /**
+   * The status text of the response
+   */
+  statusText: string;
+
+  /**
+   * The headers of the response
+   */
+  headers: Headers;
+
+  /**
+   * The parsed JSON data of the response
+   */
+  data: T;
+
+  /**
+   * The raw response text
+   */
+  text: string;
+
+  /**
+   * The final URL after redirects
+   */
+  url: string;
 };
 
 export class ApiClient {
   constructor(private config: ApiClientConfig) {}
+
+  private abortControllers: Map<string, AbortController> = new Map();
 
   private errorHandler = (err: unknown) => {
     return ERR(buildError(String(err), err));
@@ -52,6 +110,11 @@ export class ApiClient {
       /500|502|503|504/,
     ];
 
+    // Don't retry if explicitly aborted
+    if (errorString.includes("aborted")) {
+      return { retry: false, data: null };
+    }
+
     const shouldRetry = retryablePatterns.some((pattern) =>
       pattern.test(errorString)
     );
@@ -66,8 +129,8 @@ export class ApiClient {
   };
 
   private async withRetry<T>(
-    apiCall: () => Promise<ResultFP<T, Error>>
-  ): Promise<ResultFP<T, Error>> {
+    apiCall: () => Promise<Result<ApiResponse<T>, Error>>
+  ): Promise<Result<ApiResponse<T>, Error>> {
     return executeWithRetryWithHandler(
       apiCall,
       this.retryErrorHandler,
@@ -76,82 +139,256 @@ export class ApiClient {
     );
   }
 
+  private createAbortController(requestId: string): AbortController {
+    const controller = new AbortController();
+    const timeout = this.config.timeout ?? DEFAULT_TIMEOUT;
+
+    // Auto-abort after timeout
+    const timeoutId = setTimeout(() => {
+      controller.abort(new Error(`Request timed out after ${timeout}ms`));
+    }, timeout);
+
+    // Cleanup timeout on abort
+    controller.signal.addEventListener("abort", () => {
+      clearTimeout(timeoutId);
+    });
+
+    this.abortControllers.set(requestId, controller);
+    return controller;
+  }
+
+  private cleanupAbortController(requestId: string) {
+    const controller = this.abortControllers.get(requestId);
+    if (controller) {
+      this.abortControllers.delete(requestId);
+    }
+  }
+
+  abort(requestId: string) {
+    const controller = this.abortControllers.get(requestId);
+    if (controller) {
+      controller.abort(new Error("Request aborted by user"));
+      this.cleanupAbortController(requestId);
+    }
+  }
+
+  abortAll() {
+    for (const [id, controller] of this.abortControllers.entries()) {
+      controller.abort(new Error("All requests aborted"));
+      this.cleanupAbortController(id);
+    }
+  }
+
+  private async parseResponse<T>(res: Response): Promise<ApiResponse<T>> {
+    const text = await res.text();
+    let data: T;
+
+    try {
+      data = text ? (JSON.parse(text) as T) : ({} as T);
+    } catch {
+      data = text as unknown as T;
+    }
+
+    return {
+      ok: res.ok,
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers,
+      data,
+      text,
+      url: res.url,
+    };
+  }
+
   get = async <T>(
     endpoint: string,
-    options?: Omit<RequestInit, "method">
-  ): Promise<ResultFP<T, Error>> => {
+    options?: Omit<RequestInit, "method"> & { requestId?: string }
+  ): Promise<Result<ApiResponse<T>, Error>> => {
+    const requestId = options?.requestId ?? `get_${Date.now()}_${nanoid(10)}`;
+
     return this.withRetry(async () => {
-      const url = this.getFullUrl(endpoint);
-      const requestOptions = this.getRequestOptions(options);
+      try {
+        const controller = this.createAbortController(requestId);
+        const url = this.getFullUrl(endpoint);
+        const requestOptions = this.getRequestOptions(options);
 
-      const res = await fetch(url, { method: "GET", ...requestOptions });
+        const res = await fetch(url, {
+          method: "GET",
+          ...requestOptions,
+          signal: controller.signal,
+        });
 
-      const data = (await res.json()) as T;
+        this.cleanupAbortController(requestId);
 
-      if (!res.ok) {
-        return ERR(buildError(`${res.status}: ${JSON.stringify(data)}`, data));
+        const apiResponse = await this.parseResponse<T>(res);
+
+        if (!res.ok) {
+          return ERR(
+            buildError(
+              `${res.status}: ${apiResponse.text}`,
+              apiResponse
+            ) as Error
+          );
+        }
+
+        return OK(apiResponse);
+      } catch (err) {
+        this.cleanupAbortController(requestId);
+        return this.errorHandler(err);
       }
-      return OK(data);
     });
   };
 
   post = async <T>(
     endpoint: string,
-    options?: Omit<RequestInit, "method">
-  ): Promise<ResultFP<T, Error>> => {
+    options?: Omit<RequestInit, "method"> & { requestId?: string }
+  ): Promise<Result<ApiResponse<T>, Error>> => {
+    const requestId = options?.requestId ?? `post_${Date.now()}_${nanoid(10)}`;
+
     return this.withRetry(async () => {
-      const url = this.getFullUrl(endpoint);
-      const requestOptions = this.getRequestOptions(options);
-      const res = await fetch(url, { method: "POST", ...requestOptions });
+      try {
+        const controller = this.createAbortController(requestId);
+        const url = this.getFullUrl(endpoint);
+        const requestOptions = this.getRequestOptions(options);
 
-      const data = (await res.json()) as T;
+        const res = await fetch(url, {
+          method: "POST",
+          ...requestOptions,
+          signal: controller.signal,
+        });
 
-      if (!res.ok) {
-        return ERR(
-          buildError(`${res.status}: ${JSON.stringify(data)}`, data) as Error
-        );
+        this.cleanupAbortController(requestId);
+        const apiResponse = await this.parseResponse<T>(res);
+
+        if (!res.ok) {
+          return ERR(
+            buildError(
+              `${res.status}: ${apiResponse.text}`,
+              apiResponse
+            ) as Error
+          );
+        }
+
+        return OK(apiResponse);
+      } catch (err) {
+        this.cleanupAbortController(requestId);
+        return this.errorHandler(err);
       }
-
-      return OK(data);
     });
   };
 
   delete = async <T>(
     endpoint: string,
-    options?: Omit<RequestInit, "method">
-  ): Promise<ResultFP<T, Error>> => {
+    options?: Omit<RequestInit, "method"> & { requestId?: string }
+  ): Promise<Result<ApiResponse<T>, Error>> => {
+    const requestId =
+      options?.requestId ?? `delete_${Date.now()}_${nanoid(10)}`;
+
     return this.withRetry(async () => {
-      const url = this.getFullUrl(endpoint);
-      const requestOptions = this.getRequestOptions(options);
-      return await fetch(url, { method: "DELETE", ...requestOptions })
-        .then((res) => OK(res.json() as T))
-        .catch((err) => this.errorHandler(err));
+      try {
+        const controller = this.createAbortController(requestId);
+        const url = this.getFullUrl(endpoint);
+        const requestOptions = this.getRequestOptions(options);
+
+        const res = await fetch(url, {
+          method: "DELETE",
+          ...requestOptions,
+          signal: controller.signal,
+        });
+
+        this.cleanupAbortController(requestId);
+        const apiResponse = await this.parseResponse<T>(res);
+
+        if (!res.ok) {
+          return ERR(
+            buildError(
+              `${res.status}: ${apiResponse.text}`,
+              apiResponse
+            ) as Error
+          );
+        }
+
+        return OK(apiResponse);
+      } catch (err) {
+        this.cleanupAbortController(requestId);
+        return this.errorHandler(err);
+      }
     });
   };
 
   put = async <T>(
     endpoint: string,
-    options?: Omit<RequestInit, "method">
-  ): Promise<ResultFP<T, Error>> => {
+    options?: Omit<RequestInit, "method"> & { requestId?: string }
+  ): Promise<Result<ApiResponse<T>, Error>> => {
+    const requestId = options?.requestId ?? `put_${Date.now()}_${nanoid(10)}`;
+
     return this.withRetry(async () => {
-      const url = this.getFullUrl(endpoint);
-      const requestOptions = this.getRequestOptions(options);
-      return await fetch(url, { method: "PUT", ...requestOptions })
-        .then((res) => OK(res.json() as T))
-        .catch((err) => this.errorHandler(err));
+      try {
+        const controller = this.createAbortController(requestId);
+        const url = this.getFullUrl(endpoint);
+        const requestOptions = this.getRequestOptions(options);
+
+        const res = await fetch(url, {
+          method: "PUT",
+          ...requestOptions,
+          signal: controller.signal,
+        });
+
+        this.cleanupAbortController(requestId);
+        const apiResponse = await this.parseResponse<T>(res);
+
+        if (!res.ok) {
+          return ERR(
+            buildError(
+              `${res.status}: ${apiResponse.text}`,
+              apiResponse
+            ) as Error
+          );
+        }
+
+        return OK(apiResponse);
+      } catch (err) {
+        this.cleanupAbortController(requestId);
+        return this.errorHandler(err);
+      }
     });
   };
 
   patch = async <T>(
     endpoint: string,
-    options?: Omit<RequestInit, "method">
-  ): Promise<ResultFP<T, Error>> => {
+    options?: Omit<RequestInit, "method"> & { requestId?: string }
+  ): Promise<Result<ApiResponse<T>, Error>> => {
+    const requestId = options?.requestId ?? `patch_${Date.now()}_${nanoid(10)}`;
+
     return this.withRetry(async () => {
-      const url = this.getFullUrl(endpoint);
-      const requestOptions = this.getRequestOptions(options);
-      return await fetch(url, { method: "PATCH", ...requestOptions })
-        .then((res) => OK(res.json() as T))
-        .catch((err) => this.errorHandler(err));
+      try {
+        const controller = this.createAbortController(requestId);
+        const url = this.getFullUrl(endpoint);
+        const requestOptions = this.getRequestOptions(options);
+
+        const res = await fetch(url, {
+          method: "PATCH",
+          ...requestOptions,
+          signal: controller.signal,
+        });
+
+        this.cleanupAbortController(requestId);
+        const apiResponse = await this.parseResponse<T>(res);
+
+        if (!res.ok) {
+          return ERR(
+            buildError(
+              `${res.status}: ${apiResponse.text}`,
+              apiResponse
+            ) as Error
+          );
+        }
+
+        return OK(apiResponse);
+      } catch (err) {
+        this.cleanupAbortController(requestId);
+        return this.errorHandler(err);
+      }
     });
   };
 }

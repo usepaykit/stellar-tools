@@ -115,9 +115,9 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     }
 
     return {
-      id: checkout.value!.id,
+      id: checkout.value.id,
       status: PaymentSessionStatus.REQUIRES_MORE,
-      data: { payment_url: checkout.value!.paymentUrl },
+      data: { payment_url: checkout.value.paymentUrl },
     };
   };
 
@@ -186,7 +186,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     };
 
     return {
-      status: statusMap[payment.value!.status] || PaymentSessionStatus.PENDING,
+      status: statusMap[payment.value.status] || PaymentSessionStatus.PENDING,
       data: payment.value as unknown as Record<string, unknown>,
     };
   };
@@ -275,7 +275,6 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       "payment.pending": PaymentActions.PENDING,
       "payment.confirmed": PaymentActions.SUCCESSFUL,
       "payment.failed": PaymentActions.FAILED,
-      "checkout.completed": PaymentActions.SUCCESSFUL,
       "checkout.expired": PaymentActions.CANCELED,
     };
 
@@ -318,7 +317,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     }
 
     return {
-      id: stellarCustomer.value!.id,
+      id: stellarCustomer.value.id,
       data: stellarCustomer.value as unknown as Record<string, unknown>,
     };
   };

@@ -7,7 +7,7 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextField } from "@/components/input-picker";
+import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -19,27 +19,17 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { ApiKey, Network } from "@/db";
+import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  ChevronRight,
-  Copy,
-  ExternalLink,
-  Info,
-  Loader2,
-  Plus,
-} from "lucide-react";
+import { ChevronRight, Copy, ExternalLink, Info, Plus } from "lucide-react";
+import { nanoid } from "nanoid";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
-
-// TODO: Get organizationId and environment from context/session
-// For now using placeholder values - these should be obtained from user session or context
-const ORGANIZATION_ID = "org_placeholder";
-const ENVIRONMENT: Network = "testnet";
 
 const apiKeySchema = z.object({
   name: z
@@ -55,12 +45,10 @@ type ApiKeyFormData = z.infer<typeof apiKeySchema>;
 export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
-  const queryClient = useQueryClient();
 
-  const { data: apiKeys = [], isLoading } = useQuery({
-    queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
-    queryFn: () => retrieveApiKeys(ORGANIZATION_ID, ENVIRONMENT),
-  });
+  const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () =>
+    retrieveApiKeys()
+  );
 
   const { handleCopy } = useCopy();
 
@@ -271,7 +259,6 @@ export default function ApiKeysPage() {
         onOpenChange={setIsModalOpen}
         createdApiKey={createdApiKey}
         onApiKeyCreated={setCreatedApiKey}
-        queryClient={queryClient}
       />
     </div>
   );
@@ -284,15 +271,16 @@ function ApiKeyModal({
   onOpenChange,
   createdApiKey,
   onApiKeyCreated,
-  queryClient,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   createdApiKey: string | null;
   onApiKeyCreated: (key: string | null) => void;
-  queryClient: ReturnType<typeof useQueryClient>;
 }) {
   const { handleCopy } = useCopy();
+
+  const invalidateOrgQuery = useInvalidateOrgQuery();
+
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
     defaultValues: {
@@ -308,32 +296,29 @@ function ApiKeyModal({
       });
     }
   };
+
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: ApiKeyFormData) => {
+      const token = `stKey_${nanoid(32)}`;
+
       return await postApiKey({
         name: data.name,
-        organizationId: ORGANIZATION_ID,
-        environment: ENVIRONMENT,
         scope: ["*"],
         isRevoked: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: null,
+        token,
+        lastUsedAt: null,
       });
     },
     onSuccess: (apiKey) => {
-      queryClient.invalidateQueries({
-        queryKey: ["apiKeys", ORGANIZATION_ID, ENVIRONMENT],
-      });
+      invalidateOrgQuery(["apiKeys"]);
       onApiKeyCreated(apiKey.token);
-      toast.success("API key created", {
-        description: `Your key "${apiKey.name}" has been created successfully.`,
-      } as Parameters<typeof toast.success>[1]);
+      toast.success("API key created");
     },
-    onError: (error) => {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error("Failed to create API key", {
-        id: "create-api-key-error",
-        description: errorMessage,
-      });
+    onError: () => {
+      toast.error("Failed to create API key");
     },
   });
 
@@ -383,15 +368,9 @@ function ApiKeyModal({
                   createApiKeyMutation.mutate(data);
                 })}
                 disabled={createApiKeyMutation.isPending}
+                isLoading={createApiKeyMutation.isPending}
               >
-                {createApiKeyMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create key"
-                )}
+                {createApiKeyMutation.isPending ? "Creating..." : "Create key"}
               </Button>
             </>
           )}
@@ -403,7 +382,7 @@ function ApiKeyModal({
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
               <strong className="text-foreground">Important:</strong> Make sure
-              to copy your API key now. You won&apos;t be able to see it again!
+              to copy your API key now. You won’t be able to see it again!
             </p>
           </div>
           <div className="space-y-2">

@@ -2,12 +2,19 @@
 
 import * as React from "react";
 
+import { getCurrentUser } from "@/actions/auth";
+import {
+  retrieveOrganizations,
+  setCurrentOrganization,
+  switchEnvironment,
+} from "@/actions/organization";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,18 +40,19 @@ import {
   SidebarProvider,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { toast } from "@/components/ui/toast";
+import { useOrgContext } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
+import { Network } from "@/db";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  AudioWaveform,
   BadgeCheck,
   Bell,
+  Building2,
   ChevronRight,
   ChevronsUpDown,
   Code,
-  Command,
-  CreditCard,
-  GalleryVerticalEnd,
   LayoutDashboard,
   LogOut,
   Package,
@@ -54,94 +62,133 @@ import {
   Settings2,
   Sparkles,
   Users,
+  Wallet,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
-// This is sample data.
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+const navMain = [
+  {
+    title: "Overview",
+    url: "/dashboard",
+    icon: LayoutDashboard,
   },
-  teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
-  ],
-  navMain: [
-    {
-      title: "Overview",
-      url: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      title: "Products",
-      url: "/dashboard/products",
-      icon: Package,
-    },
-    {
-      title: "Transactions",
-      url: "/dashboard/transactions",
-      icon: Receipt,
-    },
-    {
-      title: "Customers",
-      url: "/dashboard/customers",
-      icon: Users,
-    },
-    {
-      title: "Subscriptions",
-      url: "/dashboard/subscriptions",
-      icon: Repeat,
-    },
-    {
-      title: "Usage",
-      url: "/dashboard/usage",
-      icon: Activity,
-    },
-    {
-      title: "Settings",
-      url: "/dashboard/settings",
-      icon: Settings2,
-    },
-    {
-      title: "Developers",
-      url: "/dashboard/developers",
-      icon: Code,
-      items: [
-        {
-          title: "API Keys",
-          url: "/dashboard/api-keys",
-        },
-        {
-          title: "Webhooks",
-          url: "/dashboard/webhooks",
-        },
-        {
-          title: "Documentation",
-          url: "/dashboard/documentation",
-        },
-      ],
-    },
-  ],
-};
+  {
+    title: "Products",
+    url: "/dashboard/products",
+    icon: Package,
+  },
+  {
+    title: "Transactions",
+    url: "/dashboard/transactions",
+    icon: Receipt,
+  },
+
+  {
+    title: "Customers",
+    url: "/dashboard/customers",
+    icon: Users,
+  },
+  {
+    title: "Subscriptions",
+    url: "/dashboard/subscriptions",
+    icon: Repeat,
+  },
+  {
+    title: "Payout",
+    url: "/dashboard/payout",
+    icon: Wallet,
+  },
+  {
+    title: "Usage",
+    url: "/dashboard/usage",
+    icon: Activity,
+  },
+
+  {
+    title: "Settings",
+    url: "/dashboard/settings",
+    icon: Settings2,
+  },
+  {
+    title: "Developers",
+    url: "/dashboard/developers",
+    icon: Code,
+    items: [
+      {
+        title: "API Keys",
+        url: "/dashboard/api-keys",
+      },
+      {
+        title: "Webhooks",
+        url: "/dashboard/webhooks",
+      },
+      {
+        title: "Documentation",
+        url: "/dashboard/documentation",
+      },
+    ],
+  },
+];
 
 export function DashboardSidebar({ children }: { children: React.ReactNode }) {
-  const [activeTeam, setActiveTeam] = React.useState(data.teams[0]);
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const [isSwitching, setIsSwitching] = React.useState(false);
+  const [isSwitchingEnvironment, setIsSwitchingEnvironment] =
+    React.useState(false);
+
+  // Get current organization context (includes environment)
+  const { data: orgContext } = useOrgContext();
+
+  // Fetch user data
+  const { data: user } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: () => getCurrentUser(),
+  });
+
+  // Fetch organizations
+  const { data: organizations, isLoading: isLoadingOrgs } = useQuery({
+    queryKey: ["sidebar-organizations"],
+    queryFn: () => retrieveOrganizations(),
+  });
+
+  // Get current org from organizations list (first one as default)
+  const currentOrg = React.useMemo(() => {
+    if (!organizations || organizations.length === 0) return null;
+    // In a real scenario, this should come from a cookie or context
+    // For now, we'll use the first organization
+    return organizations[0];
+  }, [organizations]);
+
+  // Get current environment
+  const currentEnvironment = orgContext?.environment || "testnet";
+  const isLiveMode = currentEnvironment === "mainnet";
+
+  // Get user display name and initials
+  const userName = React.useMemo(() => {
+    if (!user) return "Loading...";
+    if (user.profile.firstName && user.profile.lastName) {
+      return `${user.profile.firstName} ${user.profile.lastName}`;
+    }
+    if (user.profile.firstName) {
+      return user.profile.firstName;
+    }
+    return user.email.split("@")[0];
+  }, [user]);
+
+  const userInitials = React.useMemo(() => {
+    if (!user) return "??";
+    if (user.profile.firstName && user.profile.lastName) {
+      return `${user.profile.firstName[0]}${user.profile.lastName[0]}`.toUpperCase();
+    }
+    if (user.profile.firstName) {
+      return user.profile.firstName.slice(0, 2).toUpperCase();
+    }
+    return user.email.slice(0, 2).toUpperCase();
+  }, [user]);
 
   const isActive = (url: string) => {
     if (url === "/dashboard") {
@@ -149,6 +196,49 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     }
     return pathname.startsWith(url);
   };
+
+  const handleSwitchOrganization = React.useCallback(
+    async (orgId: string) => {
+      if (!currentOrg || orgId === currentOrg.id) return;
+
+      setIsSwitching(true);
+      try {
+        // Keep current environment when switching organizations
+        await setCurrentOrganization(orgId, currentEnvironment);
+        toast.success("Organization switched successfully");
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to switch organization:", error);
+        toast.error("Failed to switch organization");
+      } finally {
+        setIsSwitching(false);
+      }
+    },
+    [currentOrg, currentEnvironment, router]
+  );
+
+  const handleSwitchEnvironment = React.useCallback(
+    async (checked: boolean) => {
+      setIsSwitchingEnvironment(true);
+      const newEnvironment: Network = checked ? "mainnet" : "testnet";
+
+      try {
+        await switchEnvironment(newEnvironment);
+        // Invalidate org-context query to update the banner in real-time
+        await queryClient.invalidateQueries({ queryKey: ["org-context"] });
+        toast.success(
+          `Switched to ${checked ? "Live" : "Test"} mode successfully`
+        );
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to switch environment:", error);
+        toast.error("Failed to switch environment");
+      } finally {
+        setIsSwitchingEnvironment(false);
+      }
+    },
+    [router, queryClient]
+  );
 
   return (
     <SidebarProvider>
@@ -161,16 +251,27 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <SidebarMenuButton
                     size="lg"
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    disabled={isSwitching}
                   >
-                    <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                      <activeTeam.logo className="size-4" />
+                    <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
+                      {currentOrg?.logoUrl ? (
+                        <Image
+                          src={currentOrg.logoUrl}
+                          alt={currentOrg.name}
+                          width={32}
+                          height={32}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="size-4" />
+                      )}
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">
-                        {activeTeam.name}
+                        {currentOrg?.name || "Loading..."}
                       </span>
-                      <span className="truncate text-xs">
-                        {activeTeam.plan}
+                      <span className="truncate text-xs capitalize">
+                        {currentOrg?.role || "Member"}
                       </span>
                     </div>
                     <ChevronsUpDown className="ml-auto" />
@@ -183,29 +284,62 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   sideOffset={4}
                 >
                   <DropdownMenuLabel className="text-muted-foreground text-xs">
-                    Teams
+                    Organizations
                   </DropdownMenuLabel>
-                  {data.teams.map((team, index) => (
-                    <DropdownMenuItem
-                      key={team.name}
-                      onClick={() => setActiveTeam(team)}
-                      className="gap-2 p-2"
-                    >
-                      <div className="flex size-6 items-center justify-center rounded-sm border">
-                        <team.logo className="size-4 shrink-0" />
+                  {isLoadingOrgs ? (
+                    <DropdownMenuItem disabled className="gap-2 p-2">
+                      <div className="flex size-6 items-center justify-center">
+                        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                       </div>
-                      {team.name}
-                      <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                      Loading organizations...
                     </DropdownMenuItem>
-                  ))}
+                  ) : organizations && organizations.length > 0 ? (
+                    organizations.map((org) => (
+                      <DropdownMenuItem
+                        key={org.id}
+                        onClick={() => handleSwitchOrganization(org.id)}
+                        className="gap-2 p-2"
+                        disabled={isSwitching}
+                      >
+                        <div className="flex size-6 items-center justify-center overflow-hidden rounded-sm border">
+                          {org.logoUrl ? (
+                            <Image
+                              src={org.logoUrl}
+                              alt={org.name}
+                              width={24}
+                              height={24}
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            <Building2 className="size-4 shrink-0" />
+                          )}
+                        </div>
+                        <div className="flex flex-1 flex-col">
+                          <span className="truncate">{org.name}</span>
+                          <span className="text-muted-foreground text-xs capitalize">
+                            {org.role}
+                          </span>
+                        </div>
+                        {currentOrg && org.id === currentOrg.id && (
+                          <DropdownMenuShortcut>✓</DropdownMenuShortcut>
+                        )}
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <DropdownMenuItem disabled className="gap-2 p-2">
+                      No organizations found
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2 p-2">
-                    <div className="bg-background flex size-6 items-center justify-center rounded-md border">
-                      <Plus className="size-4" />
-                    </div>
-                    <div className="text-muted-foreground font-medium">
-                      Add team
-                    </div>
+                  <DropdownMenuItem asChild className="gap-2 p-2">
+                    <Link href="/select-organization?create=true">
+                      <div className="bg-background flex size-6 items-center justify-center rounded-md border">
+                        <Plus className="size-4" />
+                      </div>
+                      <div className="text-muted-foreground font-medium">
+                        Create organization
+                      </div>
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -215,7 +349,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarGroup>
             <SidebarMenu>
-              {data.navMain.map((item) => {
+              {navMain.map((item) => {
                 const itemActive = isActive(item.url);
                 if (item.items && item.items.length > 0) {
                   const hasActiveSubItem = item.items.some((subItem) =>
@@ -290,6 +424,29 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                 </SidebarMenuSubItem>
                               );
                             })}
+                            {item.title === "Developers" && (
+                              <>
+                                <div className="mx-2 my-2 h-px bg-sidebar-border" />
+                                <SidebarMenuSubItem>
+                                  <div className="flex items-center justify-between gap-4 px-2 py-1.5">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-muted-foreground text-xs font-medium">
+                                        Environment
+                                      </span>
+                                      <span className="text-foreground text-sm">
+                                        {isLiveMode ? "Live Mode" : "Test Mode"}
+                                      </span>
+                                    </div>
+                                    <Switch
+                                      checked={isLiveMode}
+                                      onCheckedChange={handleSwitchEnvironment}
+                                      disabled={isSwitchingEnvironment}
+                                      aria-label="Toggle between test and live mode"
+                                    />
+                                  </div>
+                                </SidebarMenuSubItem>
+                              </>
+                            )}
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </SidebarMenuItem>
@@ -335,17 +492,17 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
                       <AvatarImage
-                        src={data.user.avatar}
-                        alt={data.user.name}
+                        src={user?.profile.avatarUrl || undefined}
+                        alt={userName}
                       />
-                      <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                      <AvatarFallback className="rounded-lg">
+                        {userInitials}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">
-                        {data.user.name}
-                      </span>
+                      <span className="truncate font-semibold">{userName}</span>
                       <span className="truncate text-xs">
-                        {data.user.email}
+                        {user?.email || ""}
                       </span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4" />
@@ -361,19 +518,19 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="h-8 w-8 rounded-lg">
                         <AvatarImage
-                          src={data.user.avatar}
-                          alt={data.user.name}
+                          src={user?.profile.avatarUrl || undefined}
+                          alt={userName}
                         />
                         <AvatarFallback className="rounded-lg">
-                          CN
+                          {userInitials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-semibold">
-                          {data.user.name}
+                          {userName}
                         </span>
                         <span className="truncate text-xs">
-                          {data.user.email}
+                          {user?.email || ""}
                         </span>
                       </div>
                     </div>
@@ -387,13 +544,11 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    <DropdownMenuItem className="gap-2">
-                      <BadgeCheck className="size-4" />
-                      Account
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2">
-                      <CreditCard className="size-4" />
-                      Billing
+                    <DropdownMenuItem asChild className="gap-2">
+                      <Link href="/dashboard/settings">
+                        <BadgeCheck className="size-4" />
+                        Account
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2">
                       <Bell className="size-4" />
@@ -401,9 +556,11 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2">
-                    <LogOut className="size-4" />
-                    Log out
+                  <DropdownMenuItem asChild className="gap-2">
+                    <Link href="/auth/signout">
+                      <LogOut className="size-4" />
+                      Log out
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

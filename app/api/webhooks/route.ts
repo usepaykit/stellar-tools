@@ -2,6 +2,7 @@ import { resolveApiKey } from "@/actions/apikey";
 import { postWebhook } from "@/actions/webhook";
 import { Webhook } from "@/db";
 import { WebhookEvent, schemaFor, webhookEvent } from "@stellartools/core";
+import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -26,13 +27,22 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKey(apiKey);
 
   const { error, data } = postWebhookSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const webhook = await postWebhook(organizationId, data);
+  const webhook = await postWebhook(organizationId, environment, {
+    name: data.name,
+    url: data.url,
+    events: data.events,
+    isDisabled: data.isDisabled,
+    description: data.description ?? null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    secret: `whsec_${nanoid(32)}`,
+  });
 
   return NextResponse.json({ data: webhook });
 };

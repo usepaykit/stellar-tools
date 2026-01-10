@@ -173,9 +173,7 @@ export class ImageTransformer {
     const format = await this.getSupportedFormat(file);
 
     // Already in target format
-    if (file.type.toLowerCase() === to.toLowerCase()) {
-      return file;
-    }
+    if (file.type.toLowerCase() === to.toLowerCase()) return file;
 
     switch (format) {
       case "heic":
@@ -189,42 +187,5 @@ export class ImageTransformer {
         // Unknown format, return as-is
         return file;
     }
-  }
-
-  async createPreviewUrl(file: File, targetFormat?: MimeType): Promise<string> {
-    try {
-      let processedFile = file;
-
-      // Convert to target format if specified
-      if (targetFormat && file.type !== targetFormat) {
-        processedFile = await this.transformTo(file, targetFormat);
-      }
-
-      return URL.createObjectURL(processedFile);
-    } catch (error) {
-      console.error("Failed to create preview URL:", error);
-      // Fallback to original file
-      return URL.createObjectURL(file);
-    }
-  }
-
-  async transformBatch(
-    files: File[],
-    to: MimeType
-  ): Promise<{ file: File; original: File }[]> {
-    return Promise.all(
-      files.map(async (original) => ({
-        file: await this.transformTo(original, to),
-        original,
-      }))
-    );
-  }
-
-  /**
-   * Check if a file needs transformation to be web-compatible
-   */
-  async needsTransformation(file: File): Promise<boolean> {
-    const format = await this.getSupportedFormat(file);
-    return format === "heic" || format === "svg";
   }
 }

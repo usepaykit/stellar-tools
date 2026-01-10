@@ -1,36 +1,68 @@
 "use server";
 
-import { TeamInvite, db, teamInvites } from "@/db";
+import { Network, TeamInvite, db, teamInvites } from "@/db";
 import { and, eq } from "drizzle-orm";
 import moment from "moment";
 import { nanoid } from "nanoid";
 
-export const postTeamInvite = async (params: Partial<TeamInvite>) => {
+import { resolveOrgContext } from "./organization";
+
+export const postTeamInvite = async (
+  params: Omit<
+    TeamInvite,
+    "id" | "organizationId" | "environment" | "expiresAt" | "status"
+  >,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [teamInvite] = await db
     .insert(teamInvites)
     .values({
+      ...params,
       id: `ti_${nanoid(25)}`,
       expiresAt: moment().add(7, "days").toDate(),
       status: "pending",
-      ...params,
-    } as TeamInvite)
+      organizationId,
+      environment,
+    })
     .returning();
 
   return teamInvite;
 };
 
-export const retrieveTeamInvites = async (organizationId: string) => {
+export const retrieveTeamInvites = async (orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   return await db
     .select()
     .from(teamInvites)
-    .where(eq(teamInvites.organizationId, organizationId));
+    .where(
+      and(
+        eq(teamInvites.organizationId, organizationId),
+        eq(teamInvites.environment, environment)
+      )
+    );
 };
 
-export const retrieveTeamInvite = async (id: string) => {
+export const retrieveTeamInvite = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [teamInvite] = await db
     .select()
     .from(teamInvites)
-    .where(eq(teamInvites.id, id))
+    .where(
+      and(
+        eq(teamInvites.id, id),
+        eq(teamInvites.organizationId, organizationId),
+        eq(teamInvites.environment, environment)
+      )
+    )
     .limit(1);
 
   if (!teamInvite) throw new Error("Team invite not found");
@@ -40,16 +72,20 @@ export const retrieveTeamInvite = async (id: string) => {
 
 export const putTeamInvite = async (
   id: string,
-  organizationId: string,
-  params: Partial<TeamInvite>
+  params: Partial<TeamInvite>,
+  orgId?: string,
+  env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   const [teamInvite] = await db
     .update(teamInvites)
     .set({ ...params, updatedAt: new Date() })
     .where(
       and(
         eq(teamInvites.id, id),
-        eq(teamInvites.organizationId, organizationId)
+        eq(teamInvites.organizationId, organizationId),
+        eq(teamInvites.environment, environment)
       )
     )
     .returning();
@@ -59,13 +95,20 @@ export const putTeamInvite = async (
   return teamInvite;
 };
 
-export const deleteTeamInvite = async (id: string, organizationId: string) => {
+export const deleteTeamInvite = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   await db
     .delete(teamInvites)
     .where(
       and(
         eq(teamInvites.id, id),
-        eq(teamInvites.organizationId, organizationId)
+        eq(teamInvites.organizationId, organizationId),
+        eq(teamInvites.environment, environment)
       )
     )
     .returning();

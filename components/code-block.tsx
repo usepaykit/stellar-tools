@@ -54,14 +54,13 @@ export function CodeBlock({
   const { resolvedTheme } = useTheme();
   const { copied, handleCopy } = useCopy();
 
-  // Normalize language
   const lang = language.toLowerCase();
   const isShell = ["bash", "sh", "shell", "zsh"].includes(lang);
 
-  // Copy Logic
   const copyToClipboard = React.useCallback(async () => {
     if (!children) return;
     await handleCopy({ text: children, message: "Copied to clipboard" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [children]);
 
   const syntaxTheme = React.useMemo(() => {
