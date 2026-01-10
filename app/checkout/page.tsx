@@ -3,15 +3,16 @@
 import * as React from "react";
 
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextField } from "@/components/text-field";
 import {
   PhoneNumber,
   PhoneNumberPicker,
 } from "@/components/phone-number-picker";
+import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Stellar } from "@/integrations/stellar";
 import { cn } from "@/lib/utils";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,6 +104,7 @@ const WalletIcon = ({ wallet }: { wallet: Wallet }) => {
 export default function CheckoutPage() {
   const [showBanner, setShowBanner] = React.useState(true);
   const [isWalletModalOpen, setIsWalletModalOpen] = React.useState(false);
+  const [paymentURI, setPaymentURI] = React.useState<string | null>(null);
 
   const form = RHF.useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -117,6 +119,22 @@ export default function CheckoutPage() {
   };
 
   const isFormValid = form.formState.isValid;
+
+  const checkoutId = "cz_1234567890";
+
+  React.useEffect(() => {
+    if (isFormValid) {
+      const stellar = new Stellar("testnet");
+      const uri = stellar.makePaymentURI({
+        destination: process.env.NEXT_PUBLIC_MERCHANT_STELLAR_ADDRESS!,
+        amount: PRICE.toString(),
+        memo: checkoutId, // MEMO_TEXT
+        message: "Unlimited Monthly Subscription Payment",
+        callback: `${window.location.origin}/api/payment/callback`,
+      });
+      setPaymentURI(uri);
+    }
+  }, [isFormValid, form]);
 
   return (
     <div>
@@ -234,7 +252,7 @@ export default function CheckoutPage() {
                         <CardContent className="flex flex-col items-center justify-center space-y-4 p-0 shadow-none">
                           <div className="border-border flex items-center justify-center rounded-lg border bg-white p-1">
                             <BeautifulQRCode
-                              data="http"
+                              data={paymentURI ? paymentURI : "http"}
                               foregroundColor="#000000"
                               backgroundColor="#ffffff"
                               radius={1}
