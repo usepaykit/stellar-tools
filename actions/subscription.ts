@@ -1,3 +1,5 @@
+"use server";
+
 import { Network, Subscription, db, subscriptions } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
