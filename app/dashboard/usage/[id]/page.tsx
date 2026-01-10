@@ -23,10 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   UnderlineTabs,
-  UnderlineTabsList,
-  UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
-import { useCopy } from "@/hooks/use-copy";
 import { ColumnDef } from "@tanstack/react-table";
 import {
     ChevronRight,
