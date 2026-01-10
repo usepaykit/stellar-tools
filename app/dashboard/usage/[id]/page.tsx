@@ -19,6 +19,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   UnderlineTabs,
@@ -237,7 +238,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
 const columns: ColumnDef<UsageRecord>[] = [
   {
     accessorKey: "status",
-    header: () => null,
+    header: "Status",
     cell: ({ row }) => {
       const record = row.original;
       return (
@@ -252,8 +253,8 @@ const columns: ColumnDef<UsageRecord>[] = [
         </div>
       );
     },
+    enableSorting: false,
   },
-
   {
     accessorKey: "reason",
     header: "Reason",
@@ -307,7 +308,6 @@ const columns: ColumnDef<UsageRecord>[] = [
 export default function UsageDetailPage() {
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
-  // Filter records based on status
   const filteredRecords = React.useMemo(() => {
     let records = mockUsageRecords;
 
@@ -318,6 +318,39 @@ export default function UsageDetailPage() {
     return records;
   }, [statusFilter]);
 
+  const usageMeter = React.useMemo(() => {
+    const sortedRecords = [...mockUsageRecords].sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+    );
+
+    let totalGranted = 0;
+    let totalConsumed = 0;
+
+    sortedRecords.forEach((record) => {
+      if (record.amount > 0) {
+        totalGranted += record.amount;
+      } else {
+        totalConsumed += Math.abs(record.amount);
+      }
+    });
+
+    const currentBalance =
+      sortedRecords.length > 0
+        ? sortedRecords[sortedRecords.length - 1].balanceAfter
+        : 0;
+
+    const remaining = currentBalance;
+    const usagePercentage =
+      totalGranted > 0 ? (totalConsumed / totalGranted) * 100 : 0;
+
+    return {
+      granted: totalGranted,
+      consumed: totalConsumed,
+      remaining,
+      usagePercentage: Math.min(usagePercentage, 100),
+    };
+  }, []);
+
   const formatJSON = (obj: object) => {
     return JSON.stringify(obj, null, 2);
   };
@@ -325,7 +358,6 @@ export default function UsageDetailPage() {
   const renderDetail = (record: UsageRecord) => {
     return (
       <div className="flex h-full flex-col">
-        {/* Header */}
         <div className="border-border mb-4 flex items-start justify-between border-b pb-4">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Usage Record</h3>
@@ -340,9 +372,7 @@ export default function UsageDetailPage() {
           <StatusBadge status={record.status} />
         </div>
 
-        {/* Scrollable Content */}
         <div className="flex-1 space-y-6 overflow-y-auto pr-2">
-          {/* Balance Information */}
           <LogDetailSection title="Balance Information">
             <div className="space-y-3">
               <LogDetailItem
@@ -505,6 +535,50 @@ export default function UsageDetailPage() {
                 </p>
               </div>
             </div>
+
+            {/* Usage Meter */}
+            <Card className="shadow-none">
+              <CardContent className="p-6">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground">
+                        Usage Meter
+                      </h3>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="text-2xl font-bold">
+                          {usageMeter.consumed.toLocaleString()}
+                        </span>
+                        <span className="text-muted-foreground text-sm">
+                          / {usageMeter.granted.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        Remaining
+                      </p>
+                      <p className="mt-2 text-2xl font-bold">
+                        {usageMeter.remaining.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-muted h-2.5 flex-1 overflow-hidden rounded-full">
+                      <div
+                        className="bg-primary h-full transition-all"
+                        style={{
+                          width: `${usageMeter.usagePercentage}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-muted-foreground text-sm font-medium">
+                      {usageMeter.usagePercentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Filters */}
             <div className="flex items-center justify-between gap-4">
