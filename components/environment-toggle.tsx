@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { Network } from "@/db";
+import { useQueryClient } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +19,7 @@ export function EnvironmentToggle({
   currentEnvironment,
 }: EnvironmentToggleProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLiveMode, setIsLiveMode] = React.useState(
     currentEnvironment === "mainnet"
   );
@@ -31,6 +33,7 @@ export function EnvironmentToggle({
 
       try {
         await switchEnvironment(newEnvironment);
+        await queryClient.invalidateQueries({ queryKey: ["org-context"] });
         setIsLiveMode(newEnvironment === "mainnet");
         toast.success(
           `Switched to ${checked ? "Live" : "Test"} mode successfully`
@@ -42,14 +45,18 @@ export function EnvironmentToggle({
         setIsPending(false);
       }
     },
-    [router]
+    [router, queryClient]
   );
+
+  React.useEffect(() => {
+    setIsLiveMode(currentEnvironment === "mainnet");
+  }, [currentEnvironment]);
 
   if (isLiveMode) return null;
 
   return (
-    <div className="bg-muted/50 border-border animate-in slide-in-from-top fixed top-0 right-0 left-0 z-50 border-b px-6 py-2.5 duration-300">
-      <div className="flex items-center justify-between">
+    <div className="bg-muted/50 border-border border-b px-6 py-2.5">
+      <div className="container flex items-center justify-between">
         <div />
         <div className="flex items-center gap-2">
           <Info className="text-muted-foreground h-4 w-4" />
