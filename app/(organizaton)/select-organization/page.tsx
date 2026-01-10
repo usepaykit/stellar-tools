@@ -12,11 +12,12 @@ import {
   type FileWithPreview,
 } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/text-field";
 import {
   PhoneNumber,
   PhoneNumberPicker,
+  phoneNumberToString,
 } from "@/components/phone-number-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -45,7 +46,11 @@ export default function SelectOrganizationPage() {
     showCreate ? true : false
   );
 
-  const { data: organizations, isLoading, error } = useQuery({
+  const {
+    data: organizations,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["organizations"],
     queryFn: () => retrieveOrganizations(),
   });
@@ -226,7 +231,7 @@ const CreateOrganizationModal = ({
 
       const org = await postOrganization({
         name: data.name,
-        phoneNumber: data.phoneNumber?.number || null,
+        phoneNumber: phoneNumberToString(data.phoneNumber),
         description: data.description || null,
         logoUrl,
         settings: null,
