@@ -32,6 +32,41 @@ const signInSchema = z.object({
 
 type SignInFormData = z.infer<typeof signInSchema>;
 
+export const AuthErrorAlert = ({
+  error,
+  onDismissError,
+}: {
+  error?: string | null;
+  onDismissError: () => void;
+}) => {
+  if (!error) return null;
+
+  return (
+    <div className="border-destructive/50 bg-destructive/10 w-full rounded-lg border p-4">
+      <div className="flex items-start gap-3">
+        <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
+        <div className="flex-1 space-y-1">
+          <h3 className="text-destructive text-sm font-semibold">
+            Authentication Error
+          </h3>
+          <p className="text-destructive/90 text-sm">
+            An error occured during authentication. Please try again.
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDismissError}
+          className="text-destructive/70 hover:text-destructive shrink-0 transition-colors"
+          aria-label="Dismiss error"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 export default function SignIn() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [dismissedError, setDismissedError] = React.useState(false);
@@ -40,13 +75,11 @@ export default function SignIn() {
 
   const redirect = searchParams.get("redirect") ?? "/dashboard";
   const error = searchParams.get("error");
-  const errorDescription = searchParams.get("error_description");
 
   React.useEffect(() => {
     if (dismissedError && error) {
       const newSearchParams = new URLSearchParams(searchParams.toString());
       newSearchParams.delete("error");
-      newSearchParams.delete("error_description");
       router.replace(`/signin?${newSearchParams.toString()}`);
       setDismissedError(false);
     }
@@ -56,10 +89,7 @@ export default function SignIn() {
     mutationFn: async (data: { email: string; password: string }) => {
       return await accountValidator(
         data.email,
-        {
-          provider: "local",
-          sub: data.password,
-        },
+        { provider: "local", sub: data.password },
         "SIGN_IN",
         undefined,
         { intent: "SIGN_IN" }
@@ -198,35 +228,10 @@ export default function SignIn() {
             </h2>
           </div>
 
-          {/* Auth Error Alert */}
-          {error && !dismissedError && (
-            <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
-                <div className="flex-1 space-y-1">
-                  <h3 className="text-destructive text-sm font-semibold">
-                    Authentication Error
-                  </h3>
-                  <p className="text-destructive/90 text-sm">
-                    {errorDescription ||
-                      (error === "access_denied"
-                        ? "Access was denied. Please try again."
-                        : error === "no_code"
-                          ? "No authorization code received. Please try again."
-                          : "An error occurred during authentication. Please try again.")}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDismissedError(true)}
-                  className="text-destructive/70 hover:text-destructive shrink-0 transition-colors"
-                  aria-label="Dismiss error"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <AuthErrorAlert
+            error={error}
+            onDismissError={() => setDismissedError(true)}
+          />
 
           <Button
             type="button"
