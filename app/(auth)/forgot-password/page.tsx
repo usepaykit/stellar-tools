@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { AlertCircle, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+
+import { AuthErrorAlert } from "../signin/page";
 
 const forgotPasswordSchema = z.object({
   email: z.email(),
@@ -26,13 +27,11 @@ export default function ForgotPassword() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
-  const errorDescription = searchParams.get("error_description");
 
   React.useEffect(() => {
     if (dismissedError && error) {
       const newSearchParams = new URLSearchParams(searchParams.toString());
       newSearchParams.delete("error");
-      newSearchParams.delete("error_description");
       router.replace(`/forgot-password?${newSearchParams.toString()}`);
       setDismissedError(false);
     }
@@ -161,39 +160,15 @@ export default function ForgotPassword() {
           <div className="w-full space-y-2 text-center">
             <h2 className="f text-3xl tracking-tighter">Reset your password</h2>
             <p className="text-muted-foreground text-sm">
-              Enter your email address and we&apos;ll send you a link to reset your
-              password.
+              Enter your email address and we&apos;ll send you a link to reset
+              your password.
             </p>
           </div>
 
-          {error && !dismissedError && (
-            <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
-                <div className="flex-1 space-y-1">
-                  <h3 className="text-destructive text-sm font-semibold">
-                    Authentication Error
-                  </h3>
-                  <p className="text-destructive/90 text-sm">
-                    {errorDescription ||
-                      (error === "access_denied"
-                        ? "Access was denied. Please try again."
-                        : error === "no_code"
-                          ? "No authorization code received. Please try again."
-                          : "An error occurred during authentication. Please try again.")}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDismissedError(true)}
-                  className="text-destructive/70 hover:text-destructive shrink-0 transition-colors"
-                  aria-label="Dismiss error"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+          <AuthErrorAlert
+            error={error}
+            onDismissError={() => setDismissedError(true)}
+          />
 
           <div className="w-full">
             <Controller
