@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { Network } from "@/db";
+import { useQueryClient } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +19,7 @@ export function EnvironmentToggle({
   currentEnvironment,
 }: EnvironmentToggleProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLiveMode, setIsLiveMode] = React.useState(
     currentEnvironment === "mainnet"
   );
@@ -31,6 +33,7 @@ export function EnvironmentToggle({
 
       try {
         await switchEnvironment(newEnvironment);
+        await queryClient.invalidateQueries({ queryKey: ["org-context"] });
         setIsLiveMode(newEnvironment === "mainnet");
         toast.success(
           `Switched to ${checked ? "Live" : "Test"} mode successfully`
@@ -42,7 +45,7 @@ export function EnvironmentToggle({
         setIsPending(false);
       }
     },
-    [router]
+    [router, queryClient]
   );
 
   React.useEffect(() => {

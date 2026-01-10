@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/actions/auth";
 import {
   retrieveOrganizations,
   setCurrentOrganization,
+  switchEnvironment,
 } from "@/actions/organization";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -13,6 +14,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,8 +41,10 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/toast";
+import { useOrgContext } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { Network } from "@/db";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   BadgeCheck,
@@ -131,7 +135,13 @@ const navMain = [
 export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSwitching, setIsSwitching] = React.useState(false);
+  const [isSwitchingEnvironment, setIsSwitchingEnvironment] =
+    React.useState(false);
+
+  // Get current organization context (includes environment)
+  const { data: orgContext } = useOrgContext();
 
   // Fetch user data
   const { data: user } = useQuery({
@@ -152,6 +162,10 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     // For now, we'll use the first organization
     return organizations[0];
   }, [organizations]);
+
+  // Get current environment
+  const currentEnvironment = orgContext?.environment || "testnet";
+  const isLiveMode = currentEnvironment === "mainnet";
 
   // Get user display name and initials
   const userName = React.useMemo(() => {
@@ -189,8 +203,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
       setIsSwitching(true);
       try {
-        // Default to testnet when switching
-        await setCurrentOrganization(orgId, "testnet");
+        // Keep current environment when switching organizations
+        await setCurrentOrganization(orgId, currentEnvironment);
         toast.success("Organization switched successfully");
         router.refresh();
       } catch (error) {
@@ -200,7 +214,30 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         setIsSwitching(false);
       }
     },
-    [currentOrg, router]
+    [currentOrg, currentEnvironment, router]
+  );
+
+  const handleSwitchEnvironment = React.useCallback(
+    async (checked: boolean) => {
+      setIsSwitchingEnvironment(true);
+      const newEnvironment: Network = checked ? "mainnet" : "testnet";
+
+      try {
+        await switchEnvironment(newEnvironment);
+        // Invalidate org-context query to update the banner in real-time
+        await queryClient.invalidateQueries({ queryKey: ["org-context"] });
+        toast.success(
+          `Switched to ${checked ? "Live" : "Test"} mode successfully`
+        );
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to switch environment:", error);
+        toast.error("Failed to switch environment");
+      } finally {
+        setIsSwitchingEnvironment(false);
+      }
+    },
+    [router, queryClient]
   );
 
   return (
@@ -387,6 +424,29 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                 </SidebarMenuSubItem>
                               );
                             })}
+                            {item.title === "Developers" && (
+                              <>
+                                <div className="mx-2 my-2 h-px bg-sidebar-border" />
+                                <SidebarMenuSubItem>
+                                  <div className="flex items-center justify-between gap-4 px-2 py-1.5">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-muted-foreground text-xs font-medium">
+                                        Environment
+                                      </span>
+                                      <span className="text-foreground text-sm">
+                                        {isLiveMode ? "Live Mode" : "Test Mode"}
+                                      </span>
+                                    </div>
+                                    <Switch
+                                      checked={isLiveMode}
+                                      onCheckedChange={handleSwitchEnvironment}
+                                      disabled={isSwitchingEnvironment}
+                                      aria-label="Toggle between test and live mode"
+                                    />
+                                  </div>
+                                </SidebarMenuSubItem>
+                              </>
+                            )}
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </SidebarMenuItem>
