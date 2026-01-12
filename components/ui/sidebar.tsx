@@ -1,4 +1,5 @@
-"use client";
+
+"use client"
 
 import * as React from "react";
 
@@ -71,16 +72,12 @@ function SidebarProvider({
 
   const [_open, _setOpen] = React.useState(() => {
     if (typeof document === "undefined") return defaultOpen;
-    const cookies = document.cookie.split(";");
-    const sidebarCookie = cookies.find((cookie) =>
-      cookie.trim().startsWith(`${SIDEBAR_COOKIE_NAME}=`)
+    const match = document.cookie.match(
+      new RegExp(`(^|; )${SIDEBAR_COOKIE_NAME}=([^;]*)`)
     );
-    if (sidebarCookie) {
-      const value = sidebarCookie.split("=")[1]?.trim();
-      return value === "true";
-    }
-    return defaultOpen;
+    return match ? match[2] === "true" : defaultOpen;
   });
+  
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
