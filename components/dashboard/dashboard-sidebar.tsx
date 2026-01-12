@@ -409,7 +409,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                         : ""
                                     )}
                                   >
-                                    <a href={subItem.url}>
+                                    <Link href={subItem.url}>
                                       <span
                                         className={cn(
                                           subItemActive
@@ -419,7 +419,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                       >
                                         {subItem.title}
                                       </span>
-                                    </a>
+                                    </Link>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               );
@@ -460,7 +460,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       tooltip={item.title}
                       isActive={itemActive}
                     >
-                      <a href={item.url}>
+                      <Link href={item.url}>
                         {item.icon && (
                           <item.icon
                             className={cn(itemActive ? "text-primary" : "")}
@@ -473,7 +473,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                         >
                           {item.title}
                         </span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
