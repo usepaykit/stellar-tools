@@ -294,7 +294,6 @@ export const checkouts = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<object | null>(),
     environment: networkEnum("network").notNull(),
-    assetCode: text("asset_code"),
     successUrl: text("success_url"),
     successMessage: text("success_message"),
   },

@@ -1,21 +1,8 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postCustomer, retrieveCustomers } from "@/actions/customers";
 import { triggerWebhooks } from "@/actions/webhook";
-import { Customer } from "@/db";
-import { schemaFor, tryCatchAsync } from "@stellartools/core";
+import { createCustomerSchema, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-
-const postCustomerSchema = schemaFor<
-  Pick<Customer, "email" | "name" | "phone" | "appMetadata">
->()(
-  z.object({
-    email: z.email(),
-    phone: z.string(),
-    name: z.string(),
-    appMetadata: z.record(z.string(), z.any()).default({}),
-  })
-);
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
@@ -23,7 +10,7 @@ export const POST = async (req: NextRequest) => {
   if (!apiKey)
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
 
-  const { error, data } = postCustomerSchema.safeParse(await req.json());
+  const { error, data } = createCustomerSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
@@ -35,6 +22,7 @@ export const POST = async (req: NextRequest) => {
       createdAt: new Date(),
       updatedAt: new Date(),
       walletAddresses: null,
+      phone: data?.phone ?? null,
     },
     organizationId,
     environment

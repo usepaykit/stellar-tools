@@ -4,24 +4,10 @@ import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { triggerWebhooks } from "@/actions/webhook";
-import { Refund } from "@/db";
 import { Encryption } from "@/integrations/encryption";
 import { Stellar } from "@/integrations/stellar";
-import { schemaFor, tryCatchAsync } from "@stellartools/core";
+import { createRefundSchema, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-
-const postRefundSchema = schemaFor<Partial<Refund>>()(
-  z.object({
-    paymentId: z.string(),
-    customerId: z.string(),
-    assetId: z.string(),
-    amount: z.number(),
-    reason: z.string().optional(),
-    metadata: z.record(z.string(), z.any()).default({}),
-    publicKey: z.string(),
-  })
-);
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
@@ -30,7 +16,7 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { error, data } = postRefundSchema.safeParse(await req.json());
+  const { error, data } = createRefundSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
@@ -76,7 +62,7 @@ export const POST = async (req: NextRequest) => {
 
   const refundResult = await stellar.sendAssetPayment(
     secretKey,
-    data.publicKey,
+    data.receiverPublicKey,
     asset.code,
     asset.issuer || "",
     (data.amount / 10_000_000).toString(), // Convert stroops to XLM,
@@ -105,7 +91,7 @@ export const POST = async (req: NextRequest) => {
       status: "pending",
       createdAt: new Date(),
       updatedAt: new Date(),
-      receiverPublicKey: data.publicKey,
+      receiverPublicKey: data.receiverPublicKey,
       metadata: data.metadata ?? {},
       customerId: data.customerId,
       paymentId: data.paymentId,

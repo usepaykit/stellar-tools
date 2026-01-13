@@ -52,7 +52,7 @@ export interface Webhook {
   /**
    * The description of the webhook.
    */
-  description: string;
+  description?: string;
 
   /**
    * The is disabled flag of the webhook.
@@ -85,7 +85,7 @@ export const webhookSchema = schemaFor<Webhook>()(
       z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))
     ),
     name: z.string(),
-    description: z.string(),
+    description: z.string().optional(),
     isDisabled: z.boolean(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -99,7 +99,6 @@ export const createWebhookSchema = webhookSchema
     url: true,
     description: true,
     events: true,
-    organizationId: true,
   })
   .refine((data) => data.events.length > 0, {
     message: "At least one event is required",
