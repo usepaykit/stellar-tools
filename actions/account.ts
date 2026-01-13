@@ -1,6 +1,7 @@
 "use server";
 
-import { Account, AuthProvider, accounts, db } from "@/db";
+import { AuthProvider } from "@/constant/schema.client";
+import { Account, accounts, db } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 

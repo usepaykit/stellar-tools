@@ -121,7 +121,6 @@ export const createCheckoutSchema = checkoutSchema
     amount: true,
     description: true,
     metadata: true,
-    assetCode: true,
     successUrl: true,
     successMessage: true,
   })
@@ -136,6 +135,14 @@ export const createCheckoutSchema = checkoutSchema
       message: "Either successUrl or successMessage must be provided",
       path: ["successUrl", "successMessage"],
     }
+  )
+  .and(
+    z.object({
+      /**
+       * Guest checkouts, e.g e-commerce checkout
+       */
+      customerEmail: z.email().optional(),
+    })
   );
 
 export type CreateCheckout = Pick<
@@ -149,7 +156,12 @@ export type CreateCheckout = Pick<
   | "assetCode"
   | "successUrl"
   | "successMessage"
->;
+> & {
+  /**
+   * The email of the guest customer
+   */
+  customerEmail?: string;
+};
 
 export const updateCheckoutSchema = checkoutSchema.pick({
   status: true,

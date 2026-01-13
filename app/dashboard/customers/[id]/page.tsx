@@ -12,12 +12,10 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
-import { FullScreenModal } from "@/components/fullscreen-modal";
-import {  
-  TextAreaField,
-} from "@/components/text-field";
 import { DateTimePicker } from "@/components/date-picker";
+import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectPicker } from "@/components/select-picker";
+import { TextAreaField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -761,7 +759,8 @@ function CheckoutModal({
         updatedAt: new Date(),
         metadata: {},
         amount: null,
-        assetCode: null,
+        successUrl: null,
+        successMessage: "Thank you for your purchase! 🎉",
       });
     },
     onSuccess: () => {

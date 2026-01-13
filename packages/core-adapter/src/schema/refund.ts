@@ -100,6 +100,8 @@ export const refundSchema = schemaFor<Refund>()(
 
 export const createRefundSchema = refundSchema.pick({
   paymentId: true,
+  customerId: true,
+  assetId: true,
   amount: true,
   reason: true,
   metadata: true,

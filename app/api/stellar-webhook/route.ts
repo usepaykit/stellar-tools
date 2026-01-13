@@ -1,5 +1,5 @@
 import { resolveApiKey } from "@/actions/apikey";
-import { retrieveOrganization } from "@/actions/organization";
+import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { processStellarWebhook } from "@/actions/webhook";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -16,11 +16,12 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const organization = await retrieveOrganization(organizationId);
+  const { secret } = await retrieveOrganizationIdAndSecret(
+    organizationId,
+    environment
+  );
 
-  const stellarAccount = organization?.stellarAccounts?.[environment];
-
-  if (!stellarAccount) {
+  if (!secret) {
     return NextResponse.json(
       { error: "Stellar account not found" },
       { status: 404 }
@@ -28,8 +29,8 @@ export const POST = async (req: NextRequest) => {
   }
   await processStellarWebhook(
     environment,
-    stellarAccount,
-    organization,
+    secret.publicKey,
+    organizationId,
     checkoutId
   );
 

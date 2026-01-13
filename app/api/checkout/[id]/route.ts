@@ -4,11 +4,8 @@ import {
   putCheckout,
   retrieveCheckout,
 } from "@/actions/checkout";
-import { checkoutStatus } from "@/constant/schema.client";
-import { Checkout } from "@/db";
-import { schemaFor } from "@stellartools/core";
+import { updateCheckoutSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 export const GET = async (
   req: NextRequest,
@@ -29,13 +26,6 @@ export const GET = async (
   return NextResponse.json({ data: checkout });
 };
 
-const putCheckoutSchema = schemaFor<Partial<Checkout>>()(
-  z.object({
-    status: z.enum(checkoutStatus),
-    metadata: z.record(z.string(), z.any()).default({}),
-  })
-);
-
 export const PUT = async (
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -50,7 +40,7 @@ export const PUT = async (
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const { error, data } = putCheckoutSchema.safeParse(await req.json());
+  const { error, data } = updateCheckoutSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
