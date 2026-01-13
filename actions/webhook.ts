@@ -1,14 +1,6 @@
 "use server";
 
-import {
-  Network,
-  Organization,
-  Webhook,
-  WebhookLog,
-  db,
-  webhookLogs,
-  webhooks,
-} from "@/db";
+import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { Stellar } from "@/integrations/stellar";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { parseJSON } from "@/lib/utils";
@@ -347,17 +339,13 @@ export const triggerWebhooks = async (
 
 export const processStellarWebhook = async (
   environment: Network,
-  stellarAccount: NonNullable<Organization["stellarAccounts"]>[Network],
-  organization: Organization,
+  accountPublicKey: string,
+  organizationId: string,
   checkoutId: string
 ) => {
   const stellar = new Stellar(environment);
 
-  const publicKey = stellarAccount?.public_key;
-
-  if (!publicKey) return { error: "Stellar account not found" };
-
-  stellar.streamTx(publicKey, {
+  stellar.streamTx(accountPublicKey, {
     onError: (error) => {
       console.error("Stream error:", error);
     },
@@ -369,7 +357,7 @@ export const processStellarWebhook = async (
 
       const checkout = await retrieveCheckout(
         checkoutId,
-        organization.id,
+        organizationId,
         environment
       );
 
@@ -382,7 +370,7 @@ export const processStellarWebhook = async (
         putCheckout(
           checkout.id,
           { status: "completed", updatedAt: new Date() },
-          organization.id,
+          organizationId,
           environment
         ),
         postPayment(
@@ -395,7 +383,7 @@ export const processStellarWebhook = async (
             createdAt: new Date(),
             updatedAt: new Date(),
           },
-          organization.id,
+          organizationId,
           environment
         ),
       ]);
@@ -406,7 +394,7 @@ export const processStellarWebhook = async (
           payment_id: tx.hash,
           checkout_id: checkout.id,
         },
-        organization.id,
+        organizationId,
         environment
       );
 

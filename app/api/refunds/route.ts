@@ -1,10 +1,11 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
-import { retrieveOrganization } from "@/actions/organization";
+import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { triggerWebhooks } from "@/actions/webhook";
 import { Refund } from "@/db";
+import { Encryption } from "@/integrations/encryption";
 import { Stellar } from "@/integrations/stellar";
 import { schemaFor, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -35,9 +36,8 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const [payment, organization, asset] = await Promise.all([
+  const [payment, asset] = await Promise.all([
     retrievePayment(data.paymentId, organizationId, environment),
-    retrieveOrganization(organizationId),
     retrieveAsset(data.assetId),
   ]);
 
@@ -53,11 +53,14 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: "Invalid state" }, { status: 400 });
   }
 
-  const stellarAccount = organization?.stellarAccounts?.[environment];
+  const { secret } = await retrieveOrganizationIdAndSecret(
+    organizationId,
+    environment
+  );
 
-  if (!stellarAccount) {
+  if (!secret) {
     return NextResponse.json(
-      { error: "Stellar account is not set, please contact support" },
+      { error: "Stellar secret is not set, please contact support" },
       { status: 400 }
     );
   }
@@ -69,8 +72,10 @@ export const POST = async (req: NextRequest) => {
     amount: data.amount,
   });
 
+  const secretKey = new Encryption().decrypt(secret.encrypted, secret.version);
+
   const refundResult = await stellar.sendAssetPayment(
-    stellarAccount.secret_key,
+    secretKey,
     data.publicKey,
     asset.code,
     asset.issuer || "",

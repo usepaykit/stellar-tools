@@ -235,7 +235,6 @@ const CreateOrganizationModal = ({
         description: data.description || null,
         logoUrl,
         settings: null,
-        stellarAccounts: null,
         createdAt: new Date(),
         updatedAt: new Date(),
         metadata: null,

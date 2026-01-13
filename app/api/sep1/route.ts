@@ -1,4 +1,7 @@
-import { retrieveOrganization } from "@/actions/organization";
+import {
+  retrieveOrganization,
+  retrieveOrganizationIdAndSecret,
+} from "@/actions/organization";
 import { retrieveActiveProductsWithAsset } from "@/actions/product";
 import { Network } from "@/db";
 import TOML from "@iarna/toml";
@@ -11,11 +14,12 @@ const PLATFORM_OFFICIAL_EMAIL = "support@stellartools.io";
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
 
-const ENVIRONMENT: Network = "mainnet";
-
 export async function GET(request: Request) {
   const host = request.headers.get("host") || "";
   const orgId = host.split(".")[0];
+
+  const searchParams = new URL(request.url).searchParams;
+  const environment = (searchParams.get("mode") as Network) ?? "mainnet";
 
   if (!orgId) {
     return new Response("Organization not found", { status: 404 });
@@ -23,15 +27,18 @@ export async function GET(request: Request) {
 
   try {
     const org = await retrieveOrganization(orgId);
-    const stellarAccount = org.stellarAccounts?.[ENVIRONMENT];
+    const { secret } = await retrieveOrganizationIdAndSecret(
+      orgId,
+      environment
+    );
 
     const productsWithAssets = await retrieveActiveProductsWithAsset(
       org.id,
-      ENVIRONMENT
+      environment
     );
 
     const networkPassphrase =
-      ENVIRONMENT === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
+      environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
 
     const orgLogo = org.logoUrl || DEFAULT_LOGO_URL;
     const orgUrl = `https://${orgId}.stellartools.io`;
@@ -67,7 +74,7 @@ export async function GET(request: Request) {
 
     const tomlData = {
       NETWORK_PASSPHRASE: networkPassphrase,
-      ACCOUNTS: stellarAccount?.public_key ? [stellarAccount.public_key] : [],
+      ACCOUNTS: secret?.publicKey ? [secret.publicKey] : [],
       WEB_AUTH_ENDPOINT: PLATFORM_WEB_AUTH_ENDPOINT,
       DOCUMENTATION: {
         ORG_NAME: org.name,
