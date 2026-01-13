@@ -9,6 +9,7 @@ import { InputGroup } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
+import { OverrideProps } from "@stellartools/core";
 import { X } from "lucide-react";
 
 type LabelProps = React.ComponentProps<typeof Label>;
@@ -17,7 +18,13 @@ type HelpTextProps = React.ComponentProps<"p">;
 
 interface TagInputPickerProps
   extends
-    MixinProps<"input", Omit<React.ComponentProps<typeof Input>, "value" | "onChange">>,
+    MixinProps<
+      "input",
+      OverrideProps<
+        React.ComponentProps<typeof Input>,
+        { value?: string; onChange?: (value: string) => void }
+      >
+    >,
     MixinProps<"tag", Omit<React.ComponentProps<typeof Badge>, "children">>,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
@@ -33,8 +40,8 @@ interface TagInputPickerProps
 }
 
 export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerProps>(
-  (
-    {
+  (props, ref) => {
+    const {
       id,
       className,
       value = [],
@@ -43,11 +50,8 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
       label,
       error,
       helpText,
-      ...props
-    }: TagInputPickerProps,
-    ref
-  ) => {
-    const [pendingData, setPendingData] = React.useState("");
+      ...restProps
+    } = props;
 
     const {
       input,
@@ -56,33 +60,30 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
       error: errorProps,
       helpText: helpTextProps,
       rest,
-    } = splitProps(props, "input", "tag", "label", "error", "helpText");
+    } = splitProps(restProps, "input", "tag", "label", "error", "helpText");
+
+    const [internalPending, setInternalPending] = React.useState("");
+    const pendingData = input?.value !== undefined ? input?.value : internalPending;
+
+    const setPendingData = (value: string) => {
+      if (input?.onChange) input.onChange(value);
+      else setInternalPending(value);
+    };
 
     const addPendingData = () => {
-      if (pendingData) {
-        const newData = new Set([...value, pendingData.trim()]);
-        onChange(Array.from(newData));
+      if (pendingData.trim()) {
+        onChange(Array.from(new Set([...value, pendingData.trim()])));
         setPendingData("");
       }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
+      if (e.key === "Enter" || e.key === ",") {
         e.preventDefault();
         addPendingData();
       } else if (e.key === "Backspace" && !pendingData && value.length > 0) {
-        e.preventDefault();
-        const newValue = [...value];
-        newValue.pop();
-        onChange(newValue);
-      } else if (e.key === ",") {
-        e.preventDefault(); // Treat comma as a delimiter
-        addPendingData();
+        onChange(value.slice(0, -1));
       }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-      onChange(value.filter((t) => t !== tagToRemove));
     };
 
     return (
@@ -92,7 +93,6 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
             {label}
           </Label>
         )}
-
         {helpText && (
           <p
             {...helpTextProps}
@@ -101,24 +101,28 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
             {helpText}
           </p>
         )}
-        <InputGroup className={cn("h-auto min-h-10 flex-wrap gap-2 p-2", className)} {...rest}>
+
+        <InputGroup
+          className={cn("bg-background h-auto min-h-10 flex-wrap gap-2 p-2", className)}
+          {...rest}
+        >
           {value.map((t) => (
-            <Badge key={t} variant="secondary" className={cn("gap-1 pr-1", tag.className)} {...tag}>
+            <Badge key={t} variant="secondary" {...tag} className={cn("gap-1 pr-1", tag.className)}>
               {t}
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 p-0 hover:bg-transparent"
-                onClick={() => removeTag(t)}
+                onClick={() => onChange(value.filter((val) => val !== t))}
               >
-                <X className="text-muted-foreground hover:text-foreground h-3 w-3" />
+                <X className="h-3 w-3" />
               </Button>
             </Badge>
           ))}
 
           <Input
+            {...input}
             ref={ref}
-            data-slot="input-group-control"
             className={cn(
               "h-7 min-w-[80px] flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0",
               input.className
@@ -126,18 +130,12 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
             value={pendingData}
             onChange={(e) => setPendingData(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={addPendingData} // Optional: Add tag when user clicks away
+            onBlur={addPendingData}
             placeholder={value.length === 0 ? placeholder : ""}
-            {...input}
           />
         </InputGroup>
-
         {error && (
-          <p
-            {...errorProps}
-            className={cn("text-destructive text-sm", errorProps.className)}
-            role="alert"
-          >
+          <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)}>
             {error}
           </p>
         )}

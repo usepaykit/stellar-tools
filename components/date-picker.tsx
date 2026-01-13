@@ -4,6 +4,7 @@ import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import moment from "moment";
+import { DateRange } from "react-day-picker";
 
 import { Button } from "./ui/button";
 import { Calendar } from "./ui/calendar";
@@ -155,23 +156,24 @@ DateTimePicker.displayName = "DateTimePicker";
 
 export interface DatePickerProps
   extends
-    MixinProps<"label", Omit<LabelProps, "children">>,
-    MixinProps<"error", Omit<ErrorProps, "children">>,
-    MixinProps<"helpText", Omit<HelpTextProps, "children">>,
-    MixinProps<"button", Omit<React.ComponentProps<typeof Button>, "onClick">>,
+    MixinProps<"label", React.ComponentPropsWithoutRef<typeof Label>>,
+    MixinProps<"error", React.ComponentPropsWithoutRef<"p">>,
+    MixinProps<"helpText", React.ComponentPropsWithoutRef<"p">>,
+    MixinProps<"input", React.ComponentPropsWithoutRef<typeof Input>>,
     MixinProps<"calendar", Omit<React.ComponentProps<typeof Calendar>, "selected" | "onSelect">> {
   id: string;
-  value: Date | undefined;
-  onChange: (date: Date | undefined) => void;
-  label?: LabelProps["children"] | null;
-  error?: ErrorProps["children"] | null;
-  helpText?: HelpTextProps["children"] | null;
+  value: Date | DateRange | undefined;
+  mode?: "single" | "range";
+  onChange: (date: Date | DateRange | undefined) => void;
+  label?: React.ReactNode;
+  error?: React.ReactNode;
+  helpText?: React.ReactNode;
   placeholder?: string;
   disabled?: boolean;
-  dateFormat?: string;
+  dateFormat?: string; // Moment format, e.g., "MMMM DD, YYYY"
 }
 
-export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
+export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
   (
     {
       id,
@@ -182,81 +184,133 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       helpText,
       placeholder = "Select date",
       disabled = false,
-      dateFormat = "PPP",
+      dateFormat = "MMMM DD, YYYY",
+      mode = "single",
       ...mixProps
     },
     ref
   ) => {
     const {
-      label: labelProps,
-      error: errorProps,
-      helpText: helpTextProps,
-      button: buttonProps,
-      calendar: calendarProps,
-    } = splitProps(mixProps, "label", "error", "helpText", "button", "calendar");
+      label: lp,
+      error: ep,
+      helpText: htp,
+      input: ip,
+      calendar: cp,
+    } = splitProps(mixProps, "label", "error", "helpText", "input", "calendar");
 
     const [open, setOpen] = React.useState(false);
 
+    const [inputValue, setInputValue] = React.useState("");
+    React.useEffect(() => {
+      if (!value) {
+        setInputValue("");
+        return;
+      }
+
+      if (value instanceof Date) {
+        setInputValue(moment(value).format(dateFormat));
+      } else {
+        // Range formatting: "From Date - To Date"
+        const from = value.from ? moment(value.from).format(dateFormat) : "";
+        const to = value.to ? moment(value.to).format(dateFormat) : "";
+        setInputValue(from ? (to ? `${from} - ${to}` : from) : "");
+      }
+    }, [value, dateFormat]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const text = e.target.value;
+      setInputValue(text);
+
+      const parsedDate = moment(text, dateFormat, true);
+      if (parsedDate.isValid()) {
+        onChange(parsedDate.toDate());
+      } else if (text === "") {
+        onChange(undefined);
+      }
+    };
+
     return (
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         {label && (
-          <Label
-            {...labelProps}
-            htmlFor={id}
-            className={cn("text-sm font-medium", labelProps.className)}
-          >
+          <Label {...lp} htmlFor={id} className={cn("px-1", lp.className)}>
             {label}
           </Label>
         )}
 
         {helpText && (
-          <p
-            {...helpTextProps}
-            className={cn("text-muted-foreground text-sm", helpTextProps.className)}
-          >
+          <p {...htp} className={cn("text-muted-foreground text-sm", htp.className)}>
             {helpText}
           </p>
         )}
 
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              {...buttonProps}
-              ref={ref}
-              id={id}
-              variant="outline"
-              disabled={disabled}
-              data-empty={!value}
-              className={cn(
-                "data-[empty=true]:text-muted-foreground w-full justify-start text-left font-normal",
-                buttonProps.className
+        <div className="relative flex items-center">
+          <Input
+            {...ip}
+            ref={ref}
+            id={id}
+            value={inputValue}
+            placeholder={placeholder}
+            disabled={disabled}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setOpen(true);
+              }
+              ip.onKeyDown?.(e);
+            }}
+            readOnly={mode === "range"} // Range manual typing is complex, usually best kept readOnly
+            className={cn("bg-background pr-10", ip.className)}
+          />
+
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={disabled}
+                className="absolute right-2 size-7 p-0 hover:bg-transparent"
+              >
+                <CalendarIcon className="text-muted-foreground size-4" />
+                <span className="sr-only">Toggle calendar</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
+              {mode === "range" ? (
+                <Calendar
+                  {...cp}
+                  mode="range"
+                  selected={value as DateRange}
+                  numberOfMonths={2}
+                  onSelect={(val: any) => {
+                    onChange(val);
+                    if (val?.from && val?.to) {
+                      setOpen(false);
+                    }
+                  }}
+                  disabled={disabled}
+                  initialFocus
+                />
+              ) : (
+                <Calendar
+                  {...cp}
+                  mode="single"
+                  selected={value as Date}
+                  numberOfMonths={1}
+                  onSelect={(val: any) => {
+                    onChange(val);
+                    setOpen(false);
+                  }}
+                  disabled={disabled}
+                  initialFocus
+                />
               )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {value ? moment(value).format(dateFormat) : <span>{placeholder}</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              {...calendarProps}
-              mode="single"
-              selected={value}
-              onSelect={(date: Date | undefined) => {
-                onChange(date);
-                setOpen(false);
-              }}
-              disabled={disabled}
-              autoFocus
-            />
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        </div>
 
         {error && (
-          <p
-            {...errorProps}
-            className={cn("text-destructive text-sm", errorProps.className)}
-            role="alert"
-          >
+          <p {...ep} className={cn("text-destructive text-sm", ep.className)} role="alert">
             {error}
           </p>
         )}
