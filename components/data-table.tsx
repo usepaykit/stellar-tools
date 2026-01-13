@@ -54,6 +54,7 @@ interface DataTableProps<TData, TValue>
   actions?: TableAction<TData>[];
   isLoading?: boolean;
   skeletonRowCount?: number;
+  emptyMessage?: string;
 }
 
 export const DataTable = <TData, TValue>({
@@ -64,6 +65,7 @@ export const DataTable = <TData, TValue>({
   actions,
   isLoading = false,
   skeletonRowCount = 5,
+  emptyMessage = "No results found.",
   ...mixProps
 }: DataTableProps<TData, TValue>) => {
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -241,7 +243,7 @@ export const DataTable = <TData, TValue>({
                   colSpan={tableColumns.length}
                   className={cn("h-24 text-center", cell.className)}
                 >
-                  No results.
+                  {emptyMessage}
                 </TableCell>
               </TableRow>
             )}
