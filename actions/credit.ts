@@ -1,10 +1,4 @@
-import {
-  CreditBalance,
-  CreditTransaction,
-  creditBalances,
-  creditTransactions,
-  db,
-} from "@/db";
+import { CreditBalance, CreditTransaction, creditBalances, creditTransactions, db } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -51,10 +45,7 @@ export const retrieveCreditBalanceById = async (id: string) => {
   return creditBalance;
 };
 
-export const putCreditBalance = async (
-  id: string,
-  retUpdate: Partial<CreditBalance>
-) => {
+export const putCreditBalance = async (id: string, retUpdate: Partial<CreditBalance>) => {
   const [record] = await db
     .update(creditBalances)
     .set({ ...retUpdate, updatedAt: new Date() })
@@ -74,9 +65,7 @@ export const deleteCreditBalance = async (id: string) => {
 
 // TRANSACTIONS
 
-export const postCreditTransaction = async (
-  params: Partial<CreditTransaction>
-) => {
+export const postCreditTransaction = async (params: Partial<CreditTransaction>) => {
   const [creditTransaction] = await db
     .insert(creditTransactions)
     .values({ id: `ct_${nanoid(25)}`, ...params } as CreditTransaction)
@@ -85,18 +74,12 @@ export const postCreditTransaction = async (
   return creditTransaction;
 };
 
-export const retrieveCreditTransaction = async (
-  id: string,
-  organizationId: string
-) => {
+export const retrieveCreditTransaction = async (id: string, organizationId: string) => {
   const [creditTransaction] = await db
     .select()
     .from(creditTransactions)
     .where(
-      and(
-        eq(creditTransactions.id, id),
-        eq(creditTransactions.organizationId, organizationId)
-      )
+      and(eq(creditTransactions.id, id), eq(creditTransactions.organizationId, organizationId))
     )
     .limit(1);
 
@@ -121,10 +104,7 @@ export const putCreditTransaction = async (
 };
 
 export const deleteCreditTransaction = async (id: string) => {
-  await db
-    .delete(creditTransactions)
-    .where(eq(creditTransactions.id, id))
-    .returning();
+  await db.delete(creditTransactions).where(eq(creditTransactions.id, id)).returning();
 
   return null;
 };

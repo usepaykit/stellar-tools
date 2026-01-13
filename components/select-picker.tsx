@@ -1,24 +1,21 @@
 import * as React from "react";
-import * as SelectPrimitive from "@radix-ui/react-select";
+
 import { MixinProps, splitProps } from "@/lib/mixin";
-import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
+import * as SelectPrimitive from "@radix-ui/react-select";
 import { Loader2 } from "lucide-react";
+
+import { Label } from "./ui/label";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
 
-type SelectTriggerProps = React.ComponentProps<
-  typeof SelectPrimitive.SelectTrigger
->;
+type SelectTriggerProps = React.ComponentProps<typeof SelectPrimitive.SelectTrigger>;
 
 interface SelectPickerProps
   extends
-    Omit<
-      React.ComponentProps<typeof SelectPrimitive.Select>,
-      "value" | "onChange"
-    >,
+    Omit<React.ComponentProps<typeof SelectPrimitive.Select>, "value" | "onChange">,
     MixinProps<"trigger", Omit<SelectTriggerProps, "children">>,
     MixinProps<
       "triggerValue",
@@ -26,10 +23,7 @@ interface SelectPickerProps
     >,
     MixinProps<
       "item",
-      Omit<
-        React.ComponentProps<typeof SelectPrimitive.SelectItem>,
-        "children" | "value"
-      >
+      Omit<React.ComponentProps<typeof SelectPrimitive.SelectItem>, "children" | "value">
     >,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
@@ -62,14 +56,7 @@ export const SelectPicker = ({
     trigger: triggerProps,
     triggerValue: triggerValueProps,
     rest,
-  } = splitProps(
-    mixProps,
-    "label",
-    "error",
-    "helpText",
-    "trigger",
-    "triggerValue"
-  );
+  } = splitProps(mixProps, "label", "error", "helpText", "trigger", "triggerValue");
 
   return (
     <div className="space-y-2">
@@ -80,10 +67,7 @@ export const SelectPicker = ({
       )}
 
       {helpText && (
-        <p
-          {...helpTextProps}
-          className={cn("text-sm", helpTextProps.className)}
-        >
+        <p {...helpTextProps} className={cn("text-sm", helpTextProps.className)}>
           {helpText}
         </p>
       )}
@@ -110,10 +94,7 @@ export const SelectPicker = ({
         <p
           {...errorProps}
           role="alert"
-          className={cn(
-            "text-destructive text-sm font-medium",
-            errorProps.className
-          )}
+          className={cn("text-destructive text-sm font-medium", errorProps.className)}
         >
           {error}
         </p>

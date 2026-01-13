@@ -28,18 +28,11 @@ export const retrieveCheckouts = async (orgId?: string, env?: Network) => {
     .select()
     .from(checkouts)
     .where(
-      and(
-        eq(checkouts.organizationId, organizationId),
-        eq(checkouts.environment, environment)
-      )
+      and(eq(checkouts.organizationId, organizationId), eq(checkouts.environment, environment))
     );
 };
 
-export const retrieveCheckout = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const retrieveCheckout = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [checkout] = await db
@@ -83,11 +76,7 @@ export const putCheckout = async (
   return checkout;
 };
 
-export const deleteCheckout = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const deleteCheckout = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   await db

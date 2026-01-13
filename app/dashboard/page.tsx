@@ -5,18 +5,224 @@ import React from "react";
 import { AreaChart } from "@/components/area-chart";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { FullScreenModal } from "@/components/fullscreen-modal";
+import { type ChartColor, LineChart } from "@/components/line-chart";
 import { SelectPicker } from "@/components/select-picker";
-import { LineChart } from "@/components/line-chart";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, Plus, Search, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+type Integration = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  chartData: any[];
+  chartConfig: any;
+  xAxisKey: string;
+  activeKey: string;
+  color: ChartColor;
+};
+
+const allIntegrations: Integration[] = [
+  {
+    id: "uploadthing",
+    name: "UploadThing",
+    description: "File uploads processed through UploadThing",
+    icon: "/images/integrations/uploadthing.png",
+    category: "Storage",
+    chartData: [
+      { month: "Jan", uploads: 186 },
+      { month: "Feb", uploads: 305 },
+      { month: "Mar", uploads: 237 },
+      { month: "Apr", uploads: 273 },
+      { month: "May", uploads: 209 },
+      { month: "Jun", uploads: 314 },
+    ],
+    chartConfig: {
+      uploads: {
+        label: "Uploads",
+        color: "hsl(var(--chart-2))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "uploads",
+    color: "var(--chart-2)",
+  },
+  {
+    id: "aisdk",
+    name: "AI SDK",
+    description: "API requests handled by AI SDK",
+    icon: "/images/integrations/aisdk.jpg",
+    category: "AI",
+    chartData: [
+      { month: "Jan", requests: 142 },
+      { month: "Feb", requests: 198 },
+      { month: "Mar", requests: 165 },
+      { month: "Apr", requests: 221 },
+      { month: "May", requests: 189 },
+      { month: "Jun", requests: 256 },
+    ],
+    chartConfig: {
+      requests: {
+        label: "API Requests",
+        color: "hsl(var(--chart-3))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "requests",
+    color: "var(--chart-3)",
+  },
+  {
+    id: "medusa",
+    name: "Medusa",
+    description: "Orders processed through Medusa",
+    icon: "/images/integrations/medusa.jpeg",
+    category: "E-commerce",
+    chartData: [
+      { month: "Jan", orders: 89 },
+      { month: "Feb", orders: 124 },
+      { month: "Mar", orders: 156 },
+      { month: "Apr", orders: 142 },
+      { month: "May", orders: 178 },
+      { month: "Jun", orders: 201 },
+    ],
+    chartConfig: {
+      orders: {
+        label: "Orders",
+        color: "hsl(var(--chart-4))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "orders",
+    color: "var(--chart-4)",
+  },
+  {
+    id: "better-auth",
+    name: "Better Auth",
+    description: "User sessions managed by Better Auth",
+    icon: "/images/integrations/better-auth.png",
+    category: "Authentication",
+    chartData: [
+      { month: "Jan", sessions: 156 },
+      { month: "Feb", sessions: 198 },
+      { month: "Mar", sessions: 187 },
+      { month: "Apr", sessions: 223 },
+      { month: "May", sessions: 245 },
+      { month: "Jun", sessions: 267 },
+    ],
+    chartConfig: {
+      sessions: {
+        label: "Sessions",
+        color: "hsl(var(--chart-1))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "sessions",
+    color: "var(--chart-1)",
+  },
+  {
+    id: "shopify",
+    name: "Shopify",
+    description: "Transactions processed via Shopify",
+    icon: "/images/integrations/shopify.png",
+    category: "E-commerce",
+    chartData: [
+      { month: "Jan", transactions: 67 },
+      { month: "Feb", transactions: 89 },
+      { month: "Mar", transactions: 112 },
+      { month: "Apr", transactions: 98 },
+      { month: "May", transactions: 134 },
+      { month: "Jun", transactions: 156 },
+    ],
+    chartConfig: {
+      transactions: {
+        label: "Transactions",
+        color: "hsl(var(--chart-2))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "transactions",
+    color: "var(--chart-2)",
+  },
+  {
+    id: "payloadcms",
+    name: "Payload CMS",
+    description: "Content updates in Payload CMS",
+    icon: "/images/integrations/payloadcms.png",
+    category: "CMS",
+    chartData: [
+      { month: "Jan", content: 45 },
+      { month: "Feb", content: 67 },
+      { month: "Mar", content: 54 },
+      { month: "Apr", content: 78 },
+      { month: "May", content: 89 },
+      { month: "Jun", content: 102 },
+    ],
+    chartConfig: {
+      content: {
+        label: "Content Updates",
+        color: "hsl(var(--chart-3))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "content",
+    color: "var(--chart-3)",
+  },
+  {
+    id: "clerk",
+    name: "Clerk",
+    description: "User authentication and management",
+    icon: "/images/integrations/clerk.png",
+    category: "Authentication",
+    chartData: [
+      { month: "Jan", users: 234 },
+      { month: "Feb", users: 289 },
+      { month: "Mar", users: 312 },
+      { month: "Apr", users: 298 },
+      { month: "May", users: 356 },
+      { month: "Jun", users: 401 },
+    ],
+    chartConfig: {
+      users: {
+        label: "Active Users",
+        color: "hsl(var(--chart-1))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "users",
+    color: "var(--chart-1)",
+  },
+  {
+    id: "wordpress",
+    name: "WordPress",
+    description: "Content management and publishing",
+    icon: "/images/integrations/wordpress.png",
+    category: "CMS",
+    chartData: [
+      { month: "Jan", posts: 89 },
+      { month: "Feb", posts: 112 },
+      { month: "Mar", posts: 98 },
+      { month: "Apr", posts: 134 },
+      { month: "May", posts: 156 },
+      { month: "Jun", posts: 178 },
+    ],
+    chartConfig: {
+      posts: {
+        label: "Posts",
+        color: "hsl(var(--chart-4))",
+      },
+    },
+    xAxisKey: "month",
+    activeKey: "posts",
+    color: "var(--chart-4)",
+  },
+];
 
 // Sample data for the overview charts (Last 7 days)
 const overviewData = [
@@ -36,115 +242,40 @@ const overviewChartConfig = {
   },
 };
 
-// Sample data for UploadThing provider
-const uploadThingData = [
-  { month: "Jan", uploads: 186 },
-  { month: "Feb", uploads: 305 },
-  { month: "Mar", uploads: 237 },
-  { month: "Apr", uploads: 273 },
-  { month: "May", uploads: 209 },
-  { month: "Jun", uploads: 314 },
-];
-
-const uploadThingChartConfig = {
-  uploads: {
-    label: "Uploads",
-    color: "hsl(var(--chart-2))",
-  },
-};
-
-// Sample data for AI SDK provider
-const aiSdkData = [
-  { month: "Jan", requests: 142 },
-  { month: "Feb", requests: 198 },
-  { month: "Mar", requests: 165 },
-  { month: "Apr", requests: 221 },
-  { month: "May", requests: 189 },
-  { month: "Jun", requests: 256 },
-];
-
-const aiSdkChartConfig = {
-  requests: {
-    label: "API Requests",
-    color: "hsl(var(--chart-3))",
-  },
-};
-
-// Sample data for Medusa provider
-const medusaData = [
-  { month: "Jan", orders: 89 },
-  { month: "Feb", orders: 124 },
-  { month: "Mar", orders: 156 },
-  { month: "Apr", orders: 142 },
-  { month: "May", orders: 178 },
-  { month: "Jun", orders: 201 },
-];
-
-const medusaChartConfig = {
-  orders: {
-    label: "Orders",
-    color: "hsl(var(--chart-4))",
-  },
-};
-
-// Sample data for Better Auth provider
-const betterAuthData = [
-  { month: "Jan", sessions: 156 },
-  { month: "Feb", sessions: 198 },
-  { month: "Mar", sessions: 187 },
-  { month: "Apr", sessions: 223 },
-  { month: "May", sessions: 245 },
-  { month: "Jun", sessions: 267 },
-];
-
-const betterAuthChartConfig = {
-  sessions: {
-    label: "Sessions",
-    color: "hsl(var(--chart-1))",
-  },
-};
-
-// Sample data for Shopify provider
-const shopifyData = [
-  { month: "Jan", transactions: 67 },
-  { month: "Feb", transactions: 89 },
-  { month: "Mar", transactions: 112 },
-  { month: "Apr", transactions: 98 },
-  { month: "May", transactions: 134 },
-  { month: "Jun", transactions: 156 },
-];
-
-const shopifyChartConfig = {
-  transactions: {
-    label: "Transactions",
-    color: "hsl(var(--chart-2))",
-  },
-};
-
-// Sample data for Payload CMS provider
-const payloadCmsData = [
-  { month: "Jan", content: 45 },
-  { month: "Feb", content: 67 },
-  { month: "Mar", content: 54 },
-  { month: "Apr", content: 78 },
-  { month: "May", content: 89 },
-  { month: "Jun", content: 102 },
-];
-
-const payloadCmsChartConfig = {
-  content: {
-    label: "Content Updates",
-    color: "hsl(var(--chart-3))",
-  },
-};
-
 export default function DashboardPage() {
+  const router = useRouter();
   const [dateRange, setDateRange] = React.useState("7");
+  const [activeIntegrations, setActiveIntegrations] = React.useState<string[]>([]);
+  const [isMarketplaceOpen, setIsMarketplaceOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+
   const currentTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
+
+  const activeIntegrationData = React.useMemo(() => {
+    return allIntegrations.filter((integration) => activeIntegrations.includes(integration.id));
+  }, [activeIntegrations]);
+
+  const filteredMarketplaceIntegrations = React.useMemo(() => {
+    return allIntegrations.filter((integration) => {
+      const matchesSearch =
+        integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        integration.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        integration.category.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesSearch;
+    });
+  }, [searchQuery]);
+
+  const handleAddIntegration = (integrationId: string) => {
+    if (!activeIntegrations.includes(integrationId)) {
+      setActiveIntegrations([...activeIntegrations, integrationId]);
+      setIsMarketplaceOpen(false);
+      router.push("/dashboard");
+    }
+  };
 
   return (
     <div className="w-full">
@@ -160,13 +291,9 @@ export default function DashboardPage() {
                 <Card className="shadow-none">
                   <CardContent className="pt-6">
                     <div className="space-y-1">
-                      <p className="text-muted-foreground text-sm">
-                        Gross volume
-                      </p>
+                      <p className="text-muted-foreground text-sm">Gross volume</p>
                       <p className="text-2xl font-semibold">1,613.60 XLM</p>
-                      <p className="text-muted-foreground text-xs">
-                        as of {currentTime}
-                      </p>
+                      <p className="text-muted-foreground text-xs">as of {currentTime}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -186,13 +313,8 @@ export default function DashboardPage() {
                   <CardContent className="pt-6">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-muted-foreground text-sm">
-                          XLM balance
-                        </p>
-                        <Link
-                          href="#"
-                          className="text-primary text-xs hover:underline"
-                        >
+                        <p className="text-muted-foreground text-sm">XLM balance</p>
+                        <Link href="#" className="text-primary text-xs hover:underline">
                           View
                         </Link>
                       </div>
@@ -207,17 +329,12 @@ export default function DashboardPage() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <p className="text-muted-foreground text-sm">Payouts</p>
-                        <Link
-                          href="#"
-                          className="text-primary text-xs hover:underline"
-                        >
+                        <Link href="#" className="text-primary text-xs hover:underline">
                           View
                         </Link>
                       </div>
                       <p className="text-2xl font-semibold">2,343.36 XLM</p>
-                      <p className="text-muted-foreground text-xs">
-                        Expected tomorrow
-                      </p>
+                      <p className="text-muted-foreground text-xs">Expected tomorrow</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -226,9 +343,7 @@ export default function DashboardPage() {
 
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Your overview
-                </h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Your overview</h2>
 
                 <SelectPicker
                   id="date-range"
@@ -256,9 +371,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Gross volume</CardTitle>
-                      <CardDescription>
-                        Total volume over the last 7 days
-                      </CardDescription>
+                      <CardDescription>Total volume over the last 7 days</CardDescription>
                     </div>
                     <Button variant="ghost" size="sm">
                       Explore
@@ -277,206 +390,170 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <h2 className="text-2xl font-semibold tracking-tight">
-                Integrations
-              </h2>
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <Card className="shadow-none">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
-                        <Image
-                          src="/images/integrations/uploadthing.png"
-                          alt="UploadThing"
-                          width={24}
-                          height={24}
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle>UploadThing</CardTitle>
-                        <CardDescription>
-                          File uploads processed through UploadThing
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <LineChart
-                      data={uploadThingData}
-                      config={uploadThingChartConfig}
-                      xAxisKey="month"
-                      activeKey="uploads"
-                      color="var(--chart-2)"
-                      className="h-[250px]"
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* AI SDK Chart */}
-                <Card className="shadow-none">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
-                        <Image
-                          src="/images/integrations/aisdk.jpg"
-                          alt="AI SDK"
-                          width={24}
-                          height={24}
-                          className="rounded object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle>AI SDK</CardTitle>
-                        <CardDescription>
-                          API requests handled by AI SDK
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <LineChart
-                      data={aiSdkData}
-                      config={aiSdkChartConfig}
-                      xAxisKey="month"
-                      activeKey="requests"
-                      color="var(--chart-3)"
-                      className="h-[250px]"
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Medusa Chart */}
-                <Card className="shadow-none">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
-                        <Image
-                          src="/images/integrations/medusa.jpeg"
-                          alt="Medusa"
-                          width={24}
-                          height={24}
-                          className="rounded object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle>Medusa</CardTitle>
-                        <CardDescription>
-                          Orders processed through Medusa
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <LineChart
-                      data={medusaData}
-                      config={medusaChartConfig}
-                      xAxisKey="month"
-                      activeKey="orders"
-                      color="var(--chart-4)"
-                      className="h-[250px]"
-                    />
-                  </CardContent>
-                </Card>
-
-                <Card className="shadow-none">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
-                        <Image
-                          src="/images/integrations/better-auth.png"
-                          alt="Better Auth"
-                          width={24}
-                          height={24}
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle>Better Auth</CardTitle>
-                        <CardDescription>
-                          User sessions managed by Better Auth
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <LineChart
-                      data={betterAuthData}
-                      config={betterAuthChartConfig}
-                      xAxisKey="month"
-                      activeKey="sessions"
-                      color="var(--chart-1)"
-                      className="h-[250px]"
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Shopify Chart */}
-                <Card className="shadow-none">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
-                        <Image
-                          src="/images/integrations/shopify.png"
-                          alt="Shopify"
-                          width={24}
-                          height={24}
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle>Shopify</CardTitle>
-                        <CardDescription>
-                          Transactions processed via Shopify
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <LineChart
-                      data={shopifyData}
-                      config={shopifyChartConfig}
-                      xAxisKey="month"
-                      activeKey="transactions"
-                      color="var(--chart-2)"
-                      className="h-[250px]"
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Payload CMS Chart */}
-                <Card className="shadow-none">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
-                        <Image
-                          src="/images/integrations/payloadcms.png"
-                          alt="Payload CMS"
-                          width={24}
-                          height={24}
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <CardTitle>Payload CMS</CardTitle>
-                        <CardDescription>
-                          Content updates in Payload CMS
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <LineChart
-                      data={payloadCmsData}
-                      config={payloadCmsChartConfig}
-                      xAxisKey="month"
-                      activeKey="content"
-                      color="var(--chart-3)"
-                      className="h-[250px]"
-                    />
-                  </CardContent>
-                </Card>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold tracking-tight">Integrations</h2>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setIsMarketplaceOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Integration
+                </Button>
               </div>
+
+              <FullScreenModal
+                open={isMarketplaceOpen}
+                onOpenChange={setIsMarketplaceOpen}
+                title="Integration Marketplace"
+                description="Connect your favorite tools and services to streamline your workflow"
+                size="full"
+                showCloseButton={true}
+              >
+                <div className="flex flex-col gap-6">
+                  <div className="relative">
+                    <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search integrations..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-4 pl-9 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredMarketplaceIntegrations.map((integration) => {
+                      const isActive = activeIntegrations.includes(integration.id);
+                      return (
+                        <Card
+                          key={integration.id}
+                          className="hover:border-primary/50 group cursor-pointer border shadow-none transition-colors"
+                          onClick={() => {
+                            if (!isActive) {
+                              handleAddIntegration(integration.id);
+                            }
+                          }}
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
+                                <div className="border-border bg-background flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
+                                  <Image
+                                    src={integration.icon}
+                                    alt={integration.name}
+                                    width={32}
+                                    height={32}
+                                    className="object-contain"
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <CardTitle className="truncate text-base">
+                                    {integration.name}
+                                  </CardTitle>
+                                  <CardDescription className="line-clamp-2 text-xs">
+                                    {integration.description}
+                                  </CardDescription>
+                                </div>
+                              </div>
+                              {isActive ? (
+                                <Badge
+                                  variant="outline"
+                                  className="shrink-0 gap-1.5 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+                                >
+                                  <Check className="h-3 w-3" />
+                                  Added
+                                </Badge>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="shrink-0 gap-1.5 opacity-0 transition-opacity group-hover:opacity-100"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAddIntegration(integration.id);
+                                  }}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                  Add
+                                </Button>
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {integration.category}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                  {filteredMarketplaceIntegrations.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                        <Search className="text-muted-foreground h-8 w-8" />
+                      </div>
+                      <p className="mb-1 text-sm font-medium">No integrations found</p>
+                      <p className="text-muted-foreground text-xs">
+                        Try adjusting your search query
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </FullScreenModal>
+
+              {activeIntegrationData.length === 0 ? (
+                <Card className="border-dashed shadow-none">
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <div className="bg-primary/10 text-primary mb-6 flex h-16 w-16 items-center justify-center rounded-full">
+                      <Sparkles className="h-8 w-8" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold">No integrations yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md text-center text-sm">
+                      Connect your favorite tools and services to start tracking your data and
+                      streamline your workflow
+                    </p>
+                    <Button className="gap-2" onClick={() => setIsMarketplaceOpen(true)}>
+                      <Plus className="h-4 w-4" />
+                      Browse Integrations
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  {activeIntegrationData.map((integration) => (
+                    <Card key={integration.id} className="shadow-none">
+                      <CardHeader>
+                        <div className="flex items-center gap-3">
+                          <div className="border-border bg-background flex h-8 w-8 items-center justify-center rounded-lg border">
+                            <Image
+                              src={integration.icon}
+                              alt={integration.name}
+                              width={24}
+                              height={24}
+                              className="object-contain"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <CardTitle>{integration.name}</CardTitle>
+                            <CardDescription>{integration.description}</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <LineChart
+                          data={integration.chartData}
+                          config={integration.chartConfig}
+                          xAxisKey={integration.xAxisKey}
+                          activeKey={integration.activeKey}
+                          color={integration.color}
+                          className="h-[250px]"
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </DashboardSidebarInset>

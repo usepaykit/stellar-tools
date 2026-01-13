@@ -1,9 +1,4 @@
-import {
-  Checkout,
-  CreditBalance,
-  Customer,
-  Subscription,
-} from "@stellartools/core";
+import { Checkout, CreditBalance, Customer, Subscription } from "@stellartools/core";
 
 export interface StellarToolsBetterAuthOptions {
   /**

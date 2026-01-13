@@ -6,8 +6,7 @@ const integrationData = [
   {
     id: 1,
     title: "BetterAuth",
-    description:
-      "Simple, secure authentication with built-in Stellar payment support.",
+    description: "Simple, secure authentication with built-in Stellar payment support.",
     category: "Authentication",
     logo: "/images/integrations/better-auth.png",
     relatedIds: [2, 3],
@@ -17,8 +16,7 @@ const integrationData = [
   {
     id: 2,
     title: "Medusa",
-    description:
-      "Headless commerce backend with native Stellar payment integration.",
+    description: "Headless commerce backend with native Stellar payment integration.",
     category: "E-commerce",
     logo: "/images/integrations/medusa.svg",
     relatedIds: [1, 4],
@@ -28,8 +26,7 @@ const integrationData = [
   {
     id: 3,
     title: "AI SDK",
-    description:
-      "AI model integration with metered billing powered by Stellar credits.",
+    description: "AI model integration with metered billing powered by Stellar credits.",
     category: "AI/ML",
     logo: "/images/integrations/aisdk.jpg",
     relatedIds: [1, 5],
@@ -39,8 +36,7 @@ const integrationData = [
   {
     id: 4,
     title: "Shopify",
-    description:
-      "E-commerce platform integration for Stellar blockchain payments.",
+    description: "E-commerce platform integration for Stellar blockchain payments.",
     category: "E-commerce",
     logo: "/images/integrations/shopify.png",
     relatedIds: [2, 6],
@@ -50,8 +46,7 @@ const integrationData = [
   {
     id: 5,
     title: "UploadThing",
-    description:
-      "File upload service with usage-based billing via Stellar credits.",
+    description: "File upload service with usage-based billing via Stellar credits.",
     category: "Storage",
     logo: "/images/integrations/uploadthing.png",
     relatedIds: [3, 6],
@@ -80,8 +75,7 @@ export function AppConnectionWidget() {
               Platform Integrations
             </h2>
             <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-              Seamlessly integrate Stellar payments with your favorite platforms
-              and tools.
+              Seamlessly integrate Stellar payments with your favorite platforms and tools.
             </p>
           </div>
           <RadialOrbitalTimeline timelineData={integrationData} />

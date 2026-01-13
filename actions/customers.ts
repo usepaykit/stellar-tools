@@ -15,7 +15,7 @@ export const postCustomer = async (
 
   const [customer] = await db
     .insert(customers)
-    .values({ ...params, id: `cu_${nanoid(25)}`, organizationId, environment })
+    .values({ ...params, id: `cus_${nanoid(25)}`, organizationId, environment })
     .returning();
 
   if (!customer) throw new Error("Customer not created");
@@ -23,11 +23,7 @@ export const postCustomer = async (
   return customer;
 };
 
-export const upsertCustomer = async (
-  params: Partial<Customer>,
-  orgId?: string,
-  env?: Network
-) => {
+export const upsertCustomer = async (params: Partial<Customer>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   let whereClause: SQL<unknown>;
@@ -41,8 +37,7 @@ export const upsertCustomer = async (
   } else if (params?.email) {
     whereClause = eq(customers.email, params.email);
   } else if (params?.phone) {
-    whereClause =
-      sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
+    whereClause = sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
   } else {
     throw new Error("Invalid customer identifier");
   }
@@ -74,10 +69,7 @@ export const retrieveCustomers = async (orgId?: string, env?: Network) => {
     .select()
     .from(customers)
     .where(
-      and(
-        eq(customers.organizationId, organizationId),
-        eq(customers.environment, environment)
-      )
+      and(eq(customers.organizationId, organizationId), eq(customers.environment, environment))
     );
 };
 
@@ -99,8 +91,7 @@ export const retrieveCustomer = async (
   } else if ("email" in params) {
     whereClause = eq(customers.email, params.email);
   } else if ("phone" in params) {
-    whereClause =
-      sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
+    whereClause = sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
   } else {
     throw new Error("Invalid customer identifier");
   }
@@ -147,11 +138,7 @@ export const putCustomer = async (
   return customer;
 };
 
-export const deleteCustomer = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const deleteCustomer = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   await db

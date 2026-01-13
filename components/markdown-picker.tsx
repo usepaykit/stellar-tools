@@ -26,30 +26,15 @@ export interface MarkdownPickerProps
       "components" | "remarkPlugins" | "rehypePlugins"
     >,
     MixinProps<"container", Omit<React.ComponentProps<"div">, "children">>,
-    MixinProps<
-      "codeBlock",
-      Omit<React.ComponentProps<typeof CodeBlock>, "children">
-    > {
+    MixinProps<"codeBlock", Omit<React.ComponentProps<typeof CodeBlock>, "children">> {
   content: string;
 }
 
-export const MarkdownPicker = ({
-  content,
-  ...mixProps
-}: MarkdownPickerProps) => {
-  const { container, codeBlock, rest } = splitProps(
-    mixProps,
-    "container",
-    "codeBlock"
-  );
+export const MarkdownPicker = ({ content, ...mixProps }: MarkdownPickerProps) => {
+  const { container, codeBlock, rest } = splitProps(mixProps, "container", "codeBlock");
 
   return (
-    <div
-      className={cn(
-        "prose prose-neutral dark:prose-invert max-w-none",
-        container.className
-      )}
-    >
+    <div className={cn("prose prose-neutral dark:prose-invert max-w-none", container.className)}>
       <ReactMarkdown
         {...rest}
         remarkPlugins={[remarkGfm, remarkMath]}
@@ -71,10 +56,7 @@ export const MarkdownPicker = ({
 
             if (inline) {
               return (
-                <code
-                  className="bg-muted rounded-md px-1.5 py-0.5 font-mono text-sm"
-                  {...props}
-                >
+                <code className="bg-muted rounded-md px-1.5 py-0.5 font-mono text-sm" {...props}>
                   {children}
                 </code>
               );
@@ -93,29 +75,18 @@ export const MarkdownPicker = ({
             );
           },
 
-          table: ({ children }: { children?: React.ReactNode }) => (
-            <Table>{children}</Table>
-          ),
+          table: ({ children }: { children?: React.ReactNode }) => <Table>{children}</Table>,
           thead: ({ children }: { children?: React.ReactNode }) => (
             <TableHeader>{children}</TableHeader>
           ),
           tbody: ({ children }: { children?: React.ReactNode }) => (
             <TableBody>{children}</TableBody>
           ),
-          tr: ({ children }: { children?: React.ReactNode }) => (
-            <TableRow>{children}</TableRow>
-          ),
-          th: ({ children }: { children?: React.ReactNode }) => (
-            <TableHead>{children}</TableHead>
-          ),
-          td: ({ children }: { children?: React.ReactNode }) => (
-            <TableCell>{children}</TableCell>
-          ),
+          tr: ({ children }: { children?: React.ReactNode }) => <TableRow>{children}</TableRow>,
+          th: ({ children }: { children?: React.ReactNode }) => <TableHead>{children}</TableHead>,
+          td: ({ children }: { children?: React.ReactNode }) => <TableCell>{children}</TableCell>,
           // Responsive Images (using img for markdown compatibility)
-          img: ({
-            alt,
-            ...props
-          }: React.ImgHTMLAttributes<HTMLImageElement>) => (
+          img: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               {...props}

@@ -15,8 +15,8 @@ export default function HeroSection() {
               Stripe for Stellar
             </h1>
             <p className="text-muted-foreground mb-8 text-lg leading-8 sm:text-xl">
-              Drop-in payment adapters for your stack. Accept fast, low-cost
-              crypto payments in minutes.
+              Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in
+              minutes.
             </p>
           </div>
 
@@ -47,11 +47,7 @@ export default function HeroSection() {
             </div>
 
             {Heroproviders.map((provider) => (
-              <TabsContent
-                key={provider.id}
-                value={provider.id}
-                className="mt-0 w-full"
-              >
+              <TabsContent key={provider.id} value={provider.id} className="mt-0 w-full">
                 <div className="mx-2 sm:mx-0">
                   <CodeBlock
                     language="typescript"

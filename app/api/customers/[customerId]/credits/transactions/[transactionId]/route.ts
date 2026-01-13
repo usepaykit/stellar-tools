@@ -12,18 +12,12 @@ export const GET = async (
     const apiKey = req.headers.get("x-api-key");
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
     const { organizationId } = await resolveApiKey(apiKey);
 
-    const transaction = await retrieveCreditTransaction(
-      transactionId,
-      organizationId
-    );
+    const transaction = await retrieveCreditTransaction(transactionId, organizationId);
 
     return NextResponse.json({ data: transaction });
   } catch (error: unknown) {

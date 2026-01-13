@@ -2,10 +2,7 @@
 
 import * as React from "react";
 
-import {
-  retrievePayment,
-  retrievePaymentsWithDetails,
-} from "@/actions/payment";
+import { retrievePayment, retrievePaymentsWithDetails } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -22,15 +19,7 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  CheckCircle2,
-  Copy,
-  Download,
-  Plus,
-  Settings,
-  Wallet,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Copy, Download, Plus, Settings, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
 import { useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
@@ -63,20 +52,17 @@ type Transaction = {
 const StatusBadge = ({ status }: { status: TransactionStatus }) => {
   const variants = {
     succeeded: {
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       icon: CheckCircle2,
       label: "Succeeded",
     },
     refunded: {
-      className:
-        "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+      className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
       icon: CheckCircle2,
       label: "Refunded",
     },
     failed: {
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
       icon: XCircle,
       label: "Failed",
     },
@@ -86,10 +72,7 @@ const StatusBadge = ({ status }: { status: TransactionStatus }) => {
   const Icon = variant.icon;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1.5 border", variant.className)}
-    >
+    <Badge variant="outline" className={cn("gap-1.5 border", variant.className)}>
       <Icon className="h-3 w-3" />
       {variant.label}
     </Badge>
@@ -163,9 +146,7 @@ const columns: ColumnDef<Transaction>[] = [
     header: "Description",
     cell: ({ row }) => {
       return (
-        <div className="text-muted-foreground font-mono text-sm">
-          {row.original.description}
-        </div>
+        <div className="text-muted-foreground font-mono text-sm">{row.original.description}</div>
       );
     },
   },
@@ -182,9 +163,7 @@ const columns: ColumnDef<Transaction>[] = [
     cell: ({ row }) => {
       const date = row.original.date;
       return (
-        <div className="text-muted-foreground text-sm">
-          {moment(date).format("MMM D, h:mm A")}
-        </div>
+        <div className="text-muted-foreground text-sm">{moment(date).format("MMM D, h:mm A")}</div>
       );
     },
   },
@@ -374,9 +353,7 @@ function TransactionsPageContent() {
 
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
 
-  const [selectedPaymentId, setSelectedPaymentId] = React.useState<
-    string | null
-  >(null);
+  const [selectedPaymentId, setSelectedPaymentId] = React.useState<string | null>(null);
 
   const { data: payments, isLoading } = useOrgQuery(["payments"], () =>
     retrievePaymentsWithDetails()
@@ -449,9 +426,7 @@ function TransactionsPageContent() {
           <div className="flex flex-col gap-8 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Transactions
-                </h1>
+                <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -474,9 +449,7 @@ function TransactionsPageContent() {
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
                     "hover:text-foreground relative px-4 py-2 text-sm font-medium transition-colors",
-                    activeTab === tab.id
-                      ? "text-foreground"
-                      : "text-muted-foreground"
+                    activeTab === tab.id ? "text-foreground" : "text-muted-foreground"
                   )}
                 >
                   {tab.label}
@@ -499,12 +472,8 @@ function TransactionsPageContent() {
                 >
                   <CardContent className="p-4">
                     <div className="space-y-1">
-                      <p className="text-muted-foreground text-sm font-medium">
-                        {tab.label}
-                      </p>
-                      <p className="text-2xl font-bold tracking-tight">
-                        {tab.count}
-                      </p>
+                      <p className="text-muted-foreground text-sm font-medium">{tab.label}</p>
+                      <p className="text-2xl font-bold tracking-tight">{tab.count}</p>
                     </div>
                   </CardContent>
                 </Card>

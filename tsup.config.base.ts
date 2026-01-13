@@ -1,8 +1,6 @@
 import { Options, defineConfig } from "tsup";
 
-export function createTsupConfig(
-  options: Options = {}
-): ReturnType<typeof defineConfig> {
+export function createTsupConfig(options: Options = {}): ReturnType<typeof defineConfig> {
   return defineConfig({
     entry: ["src/**/*.ts"],
     format: ["cjs", "esm"],

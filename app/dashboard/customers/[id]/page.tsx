@@ -12,12 +12,10 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
-import { FullScreenModal } from "@/components/fullscreen-modal";
-import {  
-  TextAreaField,
-} from "@/components/text-field";
 import { DateTimePicker } from "@/components/date-picker";
+import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectPicker } from "@/components/select-picker";
+import { TextAreaField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -66,20 +64,17 @@ import { z } from "zod";
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
     confirmed: {
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       icon: CheckCircle2,
       label: "Confirmed",
     },
     pending: {
-      className:
-        "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
       icon: Clock,
       label: "Pending",
     },
     failed: {
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
       icon: XCircle,
       label: "Failed",
     },
@@ -89,10 +84,7 @@ const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const Icon = variant.icon;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1.5 border", variant.className)}
-    >
+    <Badge variant="outline" className={cn("gap-1.5 border", variant.className)}>
       <Icon className="h-3 w-3" />
       {variant.label}
     </Badge>
@@ -136,17 +128,13 @@ const paymentColumns: ColumnDef<Payment>[] = [
     accessorKey: "checkoutId",
     header: "Description",
     cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">
-        {row.original.checkoutId}
-      </span>
+      <span className="text-muted-foreground font-mono text-sm">{row.original.checkoutId}</span>
     ),
   },
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <StatusBadge status={row.original.status as Payment["status"]} />
-    ),
+    cell: ({ row }) => <StatusBadge status={row.original.status as Payment["status"]} />,
   },
   {
     accessorKey: "createdAt",
@@ -172,26 +160,20 @@ export default function CustomerDetailPage() {
   const params = useParams();
   const customerId = params?.id as string;
 
-  const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(
-    new Set()
-  );
+  const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(new Set());
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
-  const [selectedPaymentId, setSelectedPaymentId] = React.useState<
-    string | null
-  >(null);
+  const [selectedPaymentId, setSelectedPaymentId] = React.useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = React.useState(false);
 
-  const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(
-    ["payments"],
-    () => retrievePayments(undefined, { customerId }, undefined)
+  const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments"], () =>
+    retrievePayments(undefined, { customerId }, undefined)
   );
 
-  const { data: customer, isLoading: customerLoading } = useOrgQuery(
-    ["customer", customerId],
-    () => retrieveCustomer({ id: customerId })
+  const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
+    retrieveCustomer({ id: customerId })
   );
 
   const handleToggleWalletVisibility = (walletId: string) => {
@@ -280,8 +262,7 @@ export default function CustomerDetailPage() {
     .reduce((sum, p) => sum + (p.amount ?? 0), 0);
 
   const isNewCustomer =
-    new Date().getTime() - customer.createdAt.getTime() <
-    7 * 24 * 60 * 60 * 1000;
+    new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
 
   return (
     <div className="w-full">
@@ -308,18 +289,14 @@ export default function CustomerDetailPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <h1 className="text-2xl font-bold sm:text-3xl">
-                      {customer.name}
-                    </h1>
+                    <h1 className="text-2xl font-bold sm:text-3xl">{customer.name}</h1>
                     {isNewCustomer && (
                       <Badge variant="secondary" className="text-xs">
                         New customer
                       </Badge>
                     )}
                   </div>
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    {customer.email}
-                  </p>
+                  <p className="text-muted-foreground text-sm sm:text-base">{customer.email}</p>
                 </div>
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <Button
@@ -331,10 +308,7 @@ export default function CustomerDetailPage() {
                     <span className="hidden sm:inline">Create checkout</span>
                     <span className="sm:hidden">Checkout</span>
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 shadow-none sm:w-auto"
-                  >
+                  <Button variant="outline" className="w-full gap-2 shadow-none sm:w-auto">
                     <Plus className="h-4 w-4" />
                     <span className="hidden sm:inline">Create invoice</span>
                     <span className="sm:hidden">Invoice</span>
@@ -351,16 +325,12 @@ export default function CustomerDetailPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => setIsEditModalOpen(true)}
-                      >
+                      <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
                         Edit customer
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() =>
-                          router.push(
-                            `/dashboard/transactions?customerId=${customerId}`
-                          )
+                          router.push(`/dashboard/transactions?customerId=${customerId}`)
                         }
                       >
                         {" "}
@@ -395,16 +365,13 @@ export default function CustomerDetailPage() {
                 {/* Wallet Address Section */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold sm:text-xl">
-                      Wallet Address
-                    </h3>
+                    <h3 className="text-lg font-semibold sm:text-xl">Wallet Address</h3>
                     <Button variant="ghost" size="icon-sm" className="h-8 w-8">
                       <Plus className="h-4 w-4" />
                       <span className="sr-only">Add wallet address</span>
                     </Button>
                   </div>
-                  {customer.walletAddresses &&
-                  customer.walletAddresses.length > 0 ? (
+                  {customer.walletAddresses && customer.walletAddresses.length > 0 ? (
                     <div className="space-y-3">
                       {customer.walletAddresses.map(({ address, memo }) => {
                         const isHidden = hiddenWallets.has(address);
@@ -426,9 +393,7 @@ export default function CustomerDetailPage() {
                                   {isHidden ? "•".repeat(20) : address}
                                 </div>
                                 {memo && (
-                                  <div className="text-muted-foreground mt-1 text-xs">
-                                    {memo}
-                                  </div>
+                                  <div className="text-muted-foreground mt-1 text-xs">{memo}</div>
                                 )}
                               </div>
                             </div>
@@ -437,13 +402,9 @@ export default function CustomerDetailPage() {
                                 variant="ghost"
                                 size="icon-sm"
                                 className="h-8 w-8"
-                                onClick={() =>
-                                  handleToggleWalletVisibility(address)
-                                }
+                                onClick={() => handleToggleWalletVisibility(address)}
                                 aria-label={
-                                  isHidden
-                                    ? "Show wallet address"
-                                    : "Hide wallet address"
+                                  isHidden ? "Show wallet address" : "Hide wallet address"
                                 }
                               >
                                 {isHidden ? (
@@ -452,10 +413,7 @@ export default function CustomerDetailPage() {
                                   <EyeOff className="h-4 w-4" />
                                 )}
                               </Button>
-                              <CopyButton
-                                text={address}
-                                label="Copy wallet address"
-                              />
+                              <CopyButton text={address} label="Copy wallet address" />
                             </div>
                           </div>
                         );
@@ -483,9 +441,7 @@ export default function CustomerDetailPage() {
                             currency: "USD",
                           }).format(totalSpent ?? 0)}
                         </div>
-                        <div className="text-muted-foreground text-sm">
-                          Total spent
-                        </div>
+                        <div className="text-muted-foreground text-sm">Total spent</div>
                       </div>
                     </div>
                   </div>
@@ -494,9 +450,7 @@ export default function CustomerDetailPage() {
                 {/* Details Section */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold sm:text-xl">
-                      Details
-                    </h3>
+                    <h3 className="text-lg font-semibold sm:text-xl">Details</h3>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -510,12 +464,8 @@ export default function CustomerDetailPage() {
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Customer ID
-                        </div>
-                        <div className="font-mono text-sm break-all">
-                          {customer.id}
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Customer ID</div>
+                        <div className="font-mono text-sm break-all">{customer.id}</div>
                       </div>
                       <CopyButton text={customer.id} label="Copy customer ID" />
                     </div>
@@ -524,9 +474,7 @@ export default function CustomerDetailPage() {
 
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Customer since
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Customer since</div>
                         <div className="text-sm">
                           {customer.createdAt.toLocaleDateString("en-US", {
                             month: "short",
@@ -541,28 +489,17 @@ export default function CustomerDetailPage() {
 
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Billing email
-                        </div>
-                        <div className="text-sm break-all">
-                          {customer.email}
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Billing email</div>
+                        <div className="text-sm break-all">{customer.email}</div>
                       </div>
-                      <CopyButton
-                        text={customer?.email || ""}
-                        label="Copy email"
-                      />
+                      <CopyButton text={customer?.email || ""} label="Copy email" />
                     </div>
 
                     <Separator />
 
                     <div>
-                      <div className="text-muted-foreground mb-1 text-xs">
-                        Full Name
-                      </div>
-                      <div className="text-muted-foreground text-sm">
-                        {customer?.name || "-"}
-                      </div>
+                      <div className="text-muted-foreground mb-1 text-xs">Full Name</div>
+                      <div className="text-muted-foreground text-sm">{customer?.name || "-"}</div>
                     </div>
                   </div>
                   <div className="pt-2">
@@ -574,9 +511,7 @@ export default function CustomerDetailPage() {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold sm:text-xl">
-                      Metadata
-                    </h3>
+                    <h3 className="text-lg font-semibold sm:text-xl">Metadata</h3>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -588,8 +523,7 @@ export default function CustomerDetailPage() {
                     </Button>
                   </div>
 
-                  {customer?.appMetadata &&
-                  Object.keys(customer?.appMetadata).length > 0 ? (
+                  {customer?.appMetadata && Object.keys(customer?.appMetadata).length > 0 ? (
                     <CodeBlock
                       language="json"
                       showCopyButton={true}
@@ -601,9 +535,7 @@ export default function CustomerDetailPage() {
                   ) : (
                     <div className="border-muted-foreground/20 hover:border-muted-foreground/30 flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors">
                       <div className="space-y-1 text-center">
-                        <div className="text-muted-foreground text-sm font-medium">
-                          No metadata
-                        </div>
+                        <div className="text-muted-foreground text-sm font-medium">No metadata</div>
                         <p className="text-muted-foreground/70 text-xs">
                           Add custom metadata to track additional information
                         </p>
@@ -747,9 +679,7 @@ function CheckoutModal({
 
   const createCheckoutMutation = useMutation({
     mutationFn: async (data: CheckoutFormData) => {
-      const expiresAt = moment(data.expiresAt.date)
-        .add(data.expiresAt.time, "hours")
-        .toDate();
+      const expiresAt = moment(data.expiresAt.date).add(data.expiresAt.time, "hours").toDate();
 
       return await postCheckout({
         customerId,
@@ -761,7 +691,8 @@ function CheckoutModal({
         updatedAt: new Date(),
         metadata: {},
         amount: null,
-        assetCode: null,
+        successUrl: null,
+        successMessage: "Thank you for your purchase! 🎉",
       });
     },
     onSuccess: () => {
@@ -811,9 +742,7 @@ function CheckoutModal({
               isLoading={createCheckoutMutation.isPending}
               className="gap-2"
             >
-              {createCheckoutMutation.isPending
-                ? "Creating..."
-                : "Create Checkout"}
+              {createCheckoutMutation.isPending ? "Creating..." : "Create Checkout"}
             </Button>
           </div>
         </div>
@@ -827,9 +756,7 @@ function CheckoutModal({
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold">Checkout Details</h3>
-            <p className="text-muted-foreground text-sm">
-              Configure the checkout session
-            </p>
+            <p className="text-muted-foreground text-sm">Configure the checkout session</p>
           </div>
 
           <RHF.Controller
@@ -874,9 +801,7 @@ function CheckoutModal({
         <div className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold">Expiration</h3>
-            <p className="text-muted-foreground text-sm">
-              Set when this checkout session expires
-            </p>
+            <p className="text-muted-foreground text-sm">Set when this checkout session expires</p>
           </div>
 
           <RHF.Controller
@@ -902,9 +827,8 @@ function CheckoutModal({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Checkout Link</p>
                 <p className="text-muted-foreground text-xs">
-                  A unique checkout link will be generated after creation. The
-                  customer can use this link to complete their payment before
-                  the expiration time.
+                  A unique checkout link will be generated after creation. The customer can use this
+                  link to complete their payment before the expiration time.
                 </p>
               </div>
             </div>
@@ -916,9 +840,7 @@ function CheckoutModal({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Customer</p>
                 <p className="text-muted-foreground text-xs">{customerName}</p>
-                <p className="text-muted-foreground font-mono text-xs">
-                  {customerId}
-                </p>
+                <p className="text-muted-foreground font-mono text-xs">{customerId}</p>
               </div>
             </div>
           </div>

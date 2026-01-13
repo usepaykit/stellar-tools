@@ -6,13 +6,10 @@ import { getCurrentUser } from "@/actions/auth";
 import {
   retrieveOrganizations,
   setCurrentOrganization,
+  switchEnvironment,
 } from "@/actions/organization";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,9 +35,12 @@ import {
   SidebarProvider,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { Network } from "@/db";
+import { useOrgContext } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   BadgeCheck,
@@ -131,7 +131,12 @@ const navMain = [
 export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSwitching, setIsSwitching] = React.useState(false);
+  const [isSwitchingEnvironment, setIsSwitchingEnvironment] = React.useState(false);
+
+  // Get current organization context (includes environment)
+  const { data: orgContext } = useOrgContext();
 
   // Fetch user data
   const { data: user } = useQuery({
@@ -152,6 +157,10 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     // For now, we'll use the first organization
     return organizations[0];
   }, [organizations]);
+
+  // Get current environment
+  const currentEnvironment = orgContext?.environment || "testnet";
+  const isLiveMode = currentEnvironment === "mainnet";
 
   // Get user display name and initials
   const userName = React.useMemo(() => {
@@ -189,8 +198,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
       setIsSwitching(true);
       try {
-        // Default to testnet when switching
-        await setCurrentOrganization(orgId, "testnet");
+        // Keep current environment when switching organizations
+        await setCurrentOrganization(orgId, currentEnvironment);
         toast.success("Organization switched successfully");
         router.refresh();
       } catch (error) {
@@ -200,7 +209,28 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         setIsSwitching(false);
       }
     },
-    [currentOrg, router]
+    [currentOrg, currentEnvironment, router]
+  );
+
+  const handleSwitchEnvironment = React.useCallback(
+    async (checked: boolean) => {
+      setIsSwitchingEnvironment(true);
+      const newEnvironment: Network = checked ? "mainnet" : "testnet";
+
+      try {
+        await switchEnvironment(newEnvironment);
+        // Invalidate org-context query to update the banner in real-time
+        await queryClient.invalidateQueries({ queryKey: ["org-context"] });
+        toast.success(`Switched to ${checked ? "Live" : "Test"} mode successfully`);
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to switch environment:", error);
+        toast.error("Failed to switch environment");
+      } finally {
+        setIsSwitchingEnvironment(false);
+      }
+    },
+    [router, queryClient]
   );
 
   return (
@@ -299,9 +329,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       <div className="bg-background flex size-6 items-center justify-center rounded-md border">
                         <Plus className="size-4" />
                       </div>
-                      <div className="text-muted-foreground font-medium">
-                        Create organization
-                      </div>
+                      <div className="text-muted-foreground font-medium">Create organization</div>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -315,9 +343,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
               {navMain.map((item) => {
                 const itemActive = isActive(item.url);
                 if (item.items && item.items.length > 0) {
-                  const hasActiveSubItem = item.items.some((subItem) =>
-                    isActive(subItem.url)
-                  );
+                  const hasActiveSubItem = item.items.some((subItem) => isActive(subItem.url));
                   return (
                     <Collapsible
                       key={item.title}
@@ -338,18 +364,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                           >
                             {item.icon && (
                               <item.icon
-                                className={cn(
-                                  itemActive || hasActiveSubItem
-                                    ? "text-primary"
-                                    : ""
-                                )}
+                                className={cn(itemActive || hasActiveSubItem ? "text-primary" : "")}
                               />
                             )}
                             <span
                               className={cn(
-                                itemActive || hasActiveSubItem
-                                  ? "text-primary font-medium"
-                                  : ""
+                                itemActive || hasActiveSubItem ? "text-primary font-medium" : ""
                               )}
                             >
                               {item.title}
@@ -372,21 +392,42 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                         : ""
                                     )}
                                   >
-                                    <a href={subItem.url}>
+                                    <Link href={subItem.url}>
                                       <span
                                         className={cn(
-                                          subItemActive
-                                            ? "text-primary font-medium"
-                                            : ""
+                                          subItemActive ? "text-primary font-medium" : ""
                                         )}
                                       >
                                         {subItem.title}
                                       </span>
-                                    </a>
+                                    </Link>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               );
                             })}
+                            {item.title === "Developers" && (
+                              <>
+                                <div className="bg-sidebar-border mx-2 my-2 h-px" />
+                                <SidebarMenuSubItem>
+                                  <div className="flex items-center justify-between gap-4 px-2 py-1.5">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="text-muted-foreground text-xs font-medium">
+                                        Environment
+                                      </span>
+                                      <span className="text-foreground text-sm">
+                                        {isLiveMode ? "Live Mode" : "Test Mode"}
+                                      </span>
+                                    </div>
+                                    <Switch
+                                      checked={isLiveMode}
+                                      onCheckedChange={handleSwitchEnvironment}
+                                      disabled={isSwitchingEnvironment}
+                                      aria-label="Toggle between test and live mode"
+                                    />
+                                  </div>
+                                </SidebarMenuSubItem>
+                              </>
+                            )}
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </SidebarMenuItem>
@@ -395,25 +436,15 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                 }
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.title}
-                      isActive={itemActive}
-                    >
-                      <a href={item.url}>
+                    <SidebarMenuButton asChild tooltip={item.title} isActive={itemActive}>
+                      <Link href={item.url}>
                         {item.icon && (
-                          <item.icon
-                            className={cn(itemActive ? "text-primary" : "")}
-                          />
+                          <item.icon className={cn(itemActive ? "text-primary" : "")} />
                         )}
-                        <span
-                          className={cn(
-                            itemActive ? "text-primary font-medium" : ""
-                          )}
-                        >
+                        <span className={cn(itemActive ? "text-primary font-medium" : "")}>
                           {item.title}
                         </span>
-                      </a>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -431,19 +462,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage
-                        src={user?.profile.avatarUrl || undefined}
-                        alt={userName}
-                      />
-                      <AvatarFallback className="rounded-lg">
-                        {userInitials}
-                      </AvatarFallback>
+                      <AvatarImage src={user?.profile.avatarUrl || undefined} alt={userName} />
+                      <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{userName}</span>
-                      <span className="truncate text-xs">
-                        {user?.email || ""}
-                      </span>
+                      <span className="truncate text-xs">{user?.email || ""}</span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4" />
                   </SidebarMenuButton>
@@ -457,21 +481,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="h-8 w-8 rounded-lg">
-                        <AvatarImage
-                          src={user?.profile.avatarUrl || undefined}
-                          alt={userName}
-                        />
-                        <AvatarFallback className="rounded-lg">
-                          {userInitials}
-                        </AvatarFallback>
+                        <AvatarImage src={user?.profile.avatarUrl || undefined} alt={userName} />
+                        <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">
-                          {userName}
-                        </span>
-                        <span className="truncate text-xs">
-                          {user?.email || ""}
-                        </span>
+                        <span className="truncate font-semibold">{userName}</span>
+                        <span className="truncate text-xs">{user?.email || ""}</span>
                       </div>
                     </div>
                   </DropdownMenuLabel>

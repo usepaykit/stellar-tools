@@ -163,14 +163,13 @@ export interface CreditTransactionHistoryParams {
   offset?: number;
 }
 
-export const creditTransactionHistorySchema =
-  schemaFor<CreditTransactionHistoryParams>()(
-    z.object({
-      productId: z.string(),
-      limit: z.number().optional(),
-      offset: z.number().optional(),
-    })
-  );
+export const creditTransactionHistorySchema = schemaFor<CreditTransactionHistoryParams>()(
+  z.object({
+    productId: z.string(),
+    limit: z.number().optional(),
+    offset: z.number().optional(),
+  })
+);
 
 export interface CheckCreditsParams {
   /**

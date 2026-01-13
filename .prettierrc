@@ -3,20 +3,9 @@
   "singleQuote": false,
   "tabWidth": 2,
   "trailingComma": "es5",
-  "printWidth": 80,
-  "plugins": [
-    "@trivago/prettier-plugin-sort-imports",
-    "prettier-plugin-tailwindcss"
-  ],
-  "importOrder": [
-    "server-only",
-    "^react$",
-    "^@paykit-sdk$",
-    "^react-dom$",
-    "<THIRD_PARTY_MODULES>",
-    "^[./]"
-  ],
+  "printWidth": 100,
+  "plugins": ["@trivago/prettier-plugin-sort-imports", "prettier-plugin-tailwindcss"],
+  "importOrder": ["server-only", "^react$", "^@paykit-sdk$", "^react-dom$", "<THIRD_PARTY_MODULES>", "^[./]"],
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true
 }
-

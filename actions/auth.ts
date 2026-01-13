@@ -24,13 +24,9 @@ export const postAuth = async (params: Partial<Auth>): Promise<Auth> => {
   return response;
 };
 
-export const retrieveAuth = async (
-  params: { id: string } | { accountId: string }
-) => {
+export const retrieveAuth = async (params: { id: string } | { accountId: string }) => {
   const whereClause =
-    "id" in params
-      ? eq(auth.id, params.id)
-      : eq(auth.accountId, params.accountId);
+    "id" in params ? eq(auth.id, params.id) : eq(auth.accountId, params.accountId);
 
   const [response] = await db.select().from(auth).where(whereClause).limit(1);
 
@@ -61,9 +57,7 @@ export const deleteAuth = async (id: string) => {
 
 // -- Password Reset --
 
-export const createPasswordResetToken = async (
-  params: Partial<PasswordReset>
-) => {
+export const createPasswordResetToken = async (params: Partial<PasswordReset>) => {
   const [result] = await db
     .insert(passwordReset)
     .values({
@@ -79,29 +73,18 @@ export const createPasswordResetToken = async (
   return result;
 };
 
-export const retrievePasswordReset = async (
-  params: { id: string } | { token: string }
-) => {
+export const retrievePasswordReset = async (params: { id: string } | { token: string }) => {
   const whereClause =
-    "id" in params
-      ? eq(passwordReset.id, params.id)
-      : eq(passwordReset.token, params.token);
+    "id" in params ? eq(passwordReset.id, params.id) : eq(passwordReset.token, params.token);
 
-  const [result] = await db
-    .select()
-    .from(passwordReset)
-    .where(whereClause)
-    .limit(1);
+  const [result] = await db.select().from(passwordReset).where(whereClause).limit(1);
 
   if (!result) throw new Error("Password reset not found");
 
   return result;
 };
 
-export const putPasswordReset = async (
-  id: string,
-  params: Partial<PasswordReset>
-) => {
+export const putPasswordReset = async (id: string, params: Partial<PasswordReset>) => {
   const [result] = await db
     .update(passwordReset)
     .set({ ...params, updatedAt: new Date() })
@@ -114,10 +97,7 @@ export const putPasswordReset = async (
 };
 
 export const deletePasswordReset = async (id: string) => {
-  const [result] = await db
-    .delete(passwordReset)
-    .where(eq(passwordReset.id, id))
-    .returning();
+  const [result] = await db.delete(passwordReset).where(eq(passwordReset.id, id)).returning();
 
   if (!result) throw new Error("Failed to delete password reset");
 
@@ -126,10 +106,7 @@ export const deletePasswordReset = async (id: string) => {
 
 // -- Auth Internal --
 
-const generateAndSetSession = async (account: {
-  id: string;
-  email: string;
-}) => {
+const generateAndSetSession = async (account: { id: string; email: string }) => {
   const payload = { accountId: account.id, email: account.email };
 
   const accessToken = await new JWT().sign(payload, "30m");
@@ -156,9 +133,7 @@ export const accountValidator = async (
 
   if (!account) {
     if (intent === "SIGN_IN" && provider === "local") {
-      throw new Error(
-        "No account found with this email. Please sign up first."
-      );
+      throw new Error("No account found with this email. Please sign up first.");
     }
 
     const sub = provider === "local" ? await bcrypt.hash(rawSub, 10) : rawSub;
@@ -170,14 +145,10 @@ export const accountValidator = async (
     });
   } else {
     if (intent === "SIGN_UP" && provider === "local") {
-      throw new Error(
-        "An account with this email already exists. Please sign in."
-      );
+      throw new Error("An account with this email already exists. Please sign in.");
     }
 
-    const existingSso = account.sso?.values?.find(
-      (s) => s.provider === provider
-    );
+    const existingSso = account.sso?.values?.find((s) => s.provider === provider);
 
     if (provider === "local") {
       if (existingSso) {
@@ -230,11 +201,7 @@ export const forgotPassword = async (email: string) => {
 
   const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken.token}`;
 
-  new Resend().sendEmail(
-    email,
-    "Reset Password",
-    `<a href="${resetLink}">Reset Password</a>`
-  );
+  new Resend().sendEmail(email, "Reset Password", `<a href="${resetLink}">Reset Password</a>`);
 
   return { success: true };
 };
@@ -281,20 +248,14 @@ export const getCurrentUser = async () => {
   const authRecord = await retrieveAuth({ accountId: payload.accountId });
 
   if (authRecord.isRevoked || new Date() > authRecord.expiresAt) {
-    await new CookieManager().delete([
-      { key: "accessToken" },
-      { key: "refreshToken" },
-    ]);
+    await new CookieManager().delete([{ key: "accessToken" }, { key: "refreshToken" }]);
     return null;
   }
 
   const account = await retrieveAccount({ id: payload.accountId });
 
   if (!account) {
-    await new CookieManager().delete([
-      { key: "accessToken" },
-      { key: "refreshToken" },
-    ]);
+    await new CookieManager().delete([{ key: "accessToken" }, { key: "refreshToken" }]);
     return null;
   }
 

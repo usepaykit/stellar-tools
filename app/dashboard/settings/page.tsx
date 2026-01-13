@@ -6,10 +6,7 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import {
-  type PhoneNumber,
-  PhoneNumberPicker,
-} from "@/components/phone-number-picker";
+import { type PhoneNumber, PhoneNumberPicker } from "@/components/phone-number-picker";
 import { TagInputPicker } from "@/components/tag-input-picker";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,13 +20,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -174,10 +165,7 @@ const organizationSchema = z.object({
     .min(1)
     .min(2)
     .max(50)
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug can only contain lowercase letters, numbers, and hyphens"
-    )
+    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens")
     .refine(
       (slug) => !slug.startsWith("-") && !slug.endsWith("-"),
       "Slug cannot start or end with a hyphen"
@@ -207,17 +195,12 @@ type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = React.useState("profile");
-  const [teamTab, setTeamTab] = React.useState<"members" | "pending">(
-    "members"
-  );
+  const [teamTab, setTeamTab] = React.useState<"members" | "pending">("members");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
-  const [organizationLogoPreview, setOrganizationLogoPreview] = React.useState<
-    string | null
-  >(null);
+  const [organizationLogoPreview, setOrganizationLogoPreview] = React.useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
-  const [isUpdateRoleModalOpen, setIsUpdateRoleModalOpen] =
-    React.useState(false);
+  const [isUpdateRoleModalOpen, setIsUpdateRoleModalOpen] = React.useState(false);
   const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] =
     React.useState<TeamMember | null>(null);
   const [inviteLink, setInviteLink] = React.useState<string | null>(null);
@@ -298,9 +281,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleOrganizationLogoChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleOrganizationLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -413,10 +394,7 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <Avatar>
-                  <AvatarImage
-                    src={member.avatar || undefined}
-                    className="object-cover"
-                  />
+                  <AvatarImage src={member.avatar || undefined} className="object-cover" />
                   <AvatarFallback>
                     {member.name
                       .split(" ")
@@ -438,11 +416,7 @@ export default function SettingsPage() {
         accessorKey: "email",
         header: "Email",
         cell: ({ row }) => {
-          return (
-            <p className="text-muted-foreground text-sm">
-              {row.original.email}
-            </p>
-          );
+          return <p className="text-muted-foreground text-sm">{row.original.email}</p>;
         },
         size: 200,
       },
@@ -453,13 +427,7 @@ export default function SettingsPage() {
           const role = row.original.role;
           return (
             <Badge
-              variant={
-                role === "owner"
-                  ? "default"
-                  : role === "admin"
-                    ? "secondary"
-                    : "outline"
-              }
+              variant={role === "owner" ? "default" : role === "admin" ? "secondary" : "outline"}
               className={
                 role === "owner"
                   ? "border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
@@ -601,22 +569,12 @@ export default function SettingsPage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            <UnderlineTabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="w-full"
-            >
+            <UnderlineTabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <UnderlineTabsList>
-                <UnderlineTabsTrigger value="profile">
-                  Profile
-                </UnderlineTabsTrigger>
-                <UnderlineTabsTrigger value="organization">
-                  Organization
-                </UnderlineTabsTrigger>
+                <UnderlineTabsTrigger value="profile">Profile</UnderlineTabsTrigger>
+                <UnderlineTabsTrigger value="organization">Organization</UnderlineTabsTrigger>
                 <UnderlineTabsTrigger value="team">Team</UnderlineTabsTrigger>
-                <UnderlineTabsTrigger value="api">
-                  API Keys
-                </UnderlineTabsTrigger>
+                <UnderlineTabsTrigger value="api">API Keys</UnderlineTabsTrigger>
               </UnderlineTabsList>
 
               {/* Profile Tab */}
@@ -650,16 +608,11 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex-1 space-y-2">
                         <div>
-                          <CardTitle className="text-xl">
-                            Profile Information
-                          </CardTitle>
+                          <CardTitle className="text-xl">Profile Information</CardTitle>
                         </div>
                         <div className="text-muted-foreground flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4" />
-                          <span>
-                            Joined{" "}
-                            {moment(mockUser.joinedAt).format("MMM D, YYYY")}
-                          </span>
+                          <span>Joined {moment(mockUser.joinedAt).format("MMM D, YYYY")}</span>
                         </div>
                       </div>
                     </div>
@@ -698,9 +651,7 @@ export default function SettingsPage() {
                           <PhoneNumberPicker
                             id="phone-number"
                             label="Phone Number"
-                            value={
-                              field.value || { number: "", countryCode: "US" }
-                            }
+                            value={field.value || { number: "", countryCode: "US" }}
                             onChange={field.onChange}
                             error={error?.message || null}
                             disabled={isSubmitting}
@@ -720,17 +671,12 @@ export default function SettingsPage() {
                           className="w-full pr-10 shadow-none"
                         />
                         <p className="text-muted-foreground text-xs">
-                          Email cannot be changed for security reasons. Contact
-                          support if needed.
+                          Email cannot be changed for security reasons. Contact support if needed.
                         </p>
                       </div>
 
                       <div className="flex justify-end">
-                        <Button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="gap-2 shadow-none"
-                        >
+                        <Button type="submit" disabled={isSubmitting} className="gap-2 shadow-none">
                           {isSubmitting ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -747,10 +693,7 @@ export default function SettingsPage() {
               </UnderlineTabsContent>
 
               {/* Organization Tab */}
-              <UnderlineTabsContent
-                value="organization"
-                className="mt-6 space-y-6"
-              >
+              <UnderlineTabsContent value="organization" className="mt-6 space-y-6">
                 {/* Organization Information Section */}
                 <Card className="shadow-none">
                   <CardContent className="pt-6">
@@ -758,11 +701,7 @@ export default function SettingsPage() {
                       <div className="relative">
                         <Avatar className="h-20 w-20">
                           <AvatarImage
-                            src={
-                              organizationLogoPreview ||
-                              mockOrganization.logo ||
-                              undefined
-                            }
+                            src={organizationLogoPreview || mockOrganization.logo || undefined}
                             className="object-cover"
                           />
                           <AvatarFallback className="text-lg">
@@ -789,9 +728,7 @@ export default function SettingsPage() {
                       </div>
                       <div className="flex-1 space-y-2">
                         <div>
-                          <CardTitle className="text-xl">
-                            Organization Information
-                          </CardTitle>
+                          <CardTitle className="text-xl">Organization Information</CardTitle>
                           <CardDescription className="mt-1">
                             Update your organization details and branding.
                           </CardDescription>
@@ -810,9 +747,7 @@ export default function SettingsPage() {
                   </CardHeader>
                   <CardContent>
                     <form
-                      onSubmit={organizationForm.handleSubmit(
-                        onOrganizationSubmit
-                      )}
+                      onSubmit={organizationForm.handleSubmit(onOrganizationSubmit)}
                       className="space-y-6"
                     >
                       <RHF.Controller
@@ -865,11 +800,7 @@ export default function SettingsPage() {
                       />
 
                       <div className="flex justify-end">
-                        <Button
-                          type="submit"
-                          disabled={isSubmitting}
-                          className="gap-2 shadow-none"
-                        >
+                        <Button type="submit" disabled={isSubmitting} className="gap-2 shadow-none">
                           {isSubmitting ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -898,8 +829,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="secondary" className="text-sm">
-                      {mockTeamMembers.length + mockPendingInvites.length} total
-                      members
+                      {mockTeamMembers.length + mockPendingInvites.length} total members
                     </Badge>
                     <Button
                       onClick={() => setIsInviteModalOpen(true)}
@@ -943,9 +873,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold">
-                      {teamTab === "members"
-                        ? "Active Members"
-                        : "Pending Invitations"}
+                      {teamTab === "members" ? "Active Members" : "Pending Invitations"}
                     </h3>
                     <p className="text-muted-foreground mt-1 text-sm">
                       {teamTab === "members"
@@ -969,9 +897,7 @@ export default function SettingsPage() {
                       <User className="text-muted-foreground h-8 w-8" />
                     </div>
                     <h3 className="mb-2 text-lg font-semibold">
-                      {teamTab === "members"
-                        ? "No active members"
-                        : "No pending invitations"}
+                      {teamTab === "members" ? "No active members" : "No pending invitations"}
                     </h3>
                     <p className="text-muted-foreground text-center text-sm">
                       {teamTab === "members"
@@ -993,8 +919,8 @@ export default function SettingsPage() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <p className="text-muted-foreground text-sm">
-                        Create and manage API keys to authenticate your requests
-                        to the Stellar Tools API.
+                        Create and manage API keys to authenticate your requests to the Stellar
+                        Tools API.
                       </p>
                       <Link href="/dashboard/api-keys">
                         <Button variant="outline" className="gap-2 shadow-none">
@@ -1016,8 +942,8 @@ export default function SettingsPage() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <p className="text-muted-foreground text-sm">
-                        Set up webhooks to receive real-time notifications about
-                        events in your account.
+                        Set up webhooks to receive real-time notifications about events in your
+                        account.
                       </p>
                       <Link href="/dashboard/webhooks">
                         <Button variant="outline" className="gap-2 shadow-none">
@@ -1055,9 +981,7 @@ export default function SettingsPage() {
             {!inviteLink && (
               <Button
                 type="button"
-                onClick={() =>
-                  inviteMemberForm.handleSubmit(onInviteMemberSubmit)()
-                }
+                onClick={() => inviteMemberForm.handleSubmit(onInviteMemberSubmit)()}
                 disabled={isSubmitting}
                 className="gap-2 shadow-none"
               >
@@ -1193,10 +1117,7 @@ export default function SettingsPage() {
           </div>
         }
       >
-        <form
-          onSubmit={updateRoleForm.handleSubmit(onUpdateRoleSubmit)}
-          className="space-y-6"
-        >
+        <form onSubmit={updateRoleForm.handleSubmit(onUpdateRoleSubmit)} className="space-y-6">
           <RHF.Controller
             control={updateRoleForm.control}
             name="role"

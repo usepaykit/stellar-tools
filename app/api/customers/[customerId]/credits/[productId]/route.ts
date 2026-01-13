@@ -17,11 +17,7 @@ export const GET = async (
   const { organizationId } = await resolveApiKey(apiKey);
 
   try {
-    const creditBalance = await retrieveCreditBalance(
-      customerId,
-      productId,
-      organizationId
-    );
+    const creditBalance = await retrieveCreditBalance(customerId, productId, organizationId);
 
     return NextResponse.json({ data: creditBalance });
   } catch (error: unknown) {

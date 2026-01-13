@@ -22,10 +22,7 @@ export const POST = async (req: NextRequest) => {
     const apiKey = req.headers.get("x-api-key");
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
     const { error, data } = postSubscriptionSchema.safeParse(await req.json());
@@ -63,10 +60,7 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { error: "Failed to create subscription" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create subscription" }, { status: 500 });
   }
 };
 
@@ -94,8 +88,7 @@ export const GET = async (req: NextRequest) => {
 
     return NextResponse.json({ data: subscriptions });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to list subscriptions";
+    const errorMessage = error instanceof Error ? error.message : "Failed to list subscriptions";
 
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

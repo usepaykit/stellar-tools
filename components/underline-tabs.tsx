@@ -2,12 +2,7 @@
 
 import * as React from "react";
 
-import {
-  TabsContent,
-  TabsList,
-  Tabs as TabsPrimitive,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { TabsContent, TabsList, Tabs as TabsPrimitive, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 export const UnderlineTabsList = React.forwardRef<
@@ -56,15 +51,9 @@ export const UnderlineTabsContent = React.forwardRef<
 });
 UnderlineTabsContent.displayName = "UnderlineTabsContent";
 
-interface UnderlineTabsProps extends React.ComponentProps<
-  typeof TabsPrimitive
-> {}
+interface UnderlineTabsProps extends React.ComponentProps<typeof TabsPrimitive> {}
 
-export const UnderlineTabs = ({
-  children,
-  className,
-  ...rest
-}: UnderlineTabsProps) => {
+export const UnderlineTabs = ({ children, className, ...rest }: UnderlineTabsProps) => {
   return (
     <TabsPrimitive {...rest} className={cn("w-full", className)}>
       {children}

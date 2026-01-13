@@ -6,22 +6,14 @@ import { postProduct, retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
-import {
-  FileUploadPicker,
-  type FileWithPreview,
-} from "@/components/file-upload-picker";
+import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import {
-
-  TextAreaField,
-  TextField,
-} from "@/components/text-field";
-
-import { NumberPicker } from "@/components/number-picker";
-import { SelectPicker } from "@/components/select-picker";
-import { RadioGroupPicker } from "@/components/radio-group-picker";
 import { MarkdownPicker } from "@/components/markdown-picker";
+import { NumberPicker } from "@/components/number-picker";
 import { PricePicker } from "@/components/price-picker";
+import { RadioGroupPicker } from "@/components/radio-group-picker";
+import { SelectPicker } from "@/components/select-picker";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -89,13 +81,7 @@ const productSchema = z.object({
 
 type ProductFormData = z.infer<typeof productSchema>;
 
-const SortableHeader = ({
-  column,
-  title,
-}: {
-  column: Column<Product, unknown>;
-  title: string;
-}) => {
+const SortableHeader = ({ column, title }: { column: Column<Product, unknown>; title: string }) => {
   const isSorted = column.getIsSorted();
   return (
     <Button
@@ -135,9 +121,7 @@ const StatCard = ({
       <div
         className={`flex h-10 w-10 items-center justify-center rounded-lg ${active ? "bg-primary/10" : "bg-muted/50"}`}
       >
-        <Icon
-          className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`}
-        />
+        <Icon className={`h-5 w-5 ${active ? "text-primary" : "text-muted-foreground"}`} />
       </div>
     </CardContent>
   </Card>
@@ -174,8 +158,7 @@ const columns: ColumnDef<Product>[] = [
         </div>
       );
     },
-    sortingFn: (rowA, rowB) =>
-      rowA.original.pricing.amount - rowB.original.pricing.amount,
+    sortingFn: (rowA, rowB) => rowA.original.pricing.amount - rowB.original.pricing.amount,
   },
   {
     accessorKey: "createdAt",
@@ -194,16 +177,10 @@ const columns: ColumnDef<Product>[] = [
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isModalOpen, setIsModalOpen] = React.useState(
-    searchParams.get("active") === "true"
-  );
-  const [editingProduct, setEditingProduct] = React.useState<Product | null>(
-    null
-  );
+  const [isModalOpen, setIsModalOpen] = React.useState(searchParams.get("active") === "true");
+  const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
 
-  const [selectedStatus, setSelectedStatus] = React.useState<string | null>(
-    null
-  );
+  const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
 
   const { data: products, isLoading } = useOrgQuery(
     ["products"],
@@ -281,9 +258,7 @@ function ProductsPageContent() {
           <div className="flex flex-col gap-8 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">
-                  Product catalog
-                </h1>
+                <h1 className="text-3xl font-bold tracking-tight">Product catalog</h1>
                 <p className="text-muted-foreground mt-1.5 text-sm">
                   Manage and organize your product offerings
                 </p>
@@ -301,17 +276,8 @@ function ProductsPageContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <StatCard label="All" count={stats.all} icon={Package} />
-              <StatCard
-                label="Active"
-                count={stats.active}
-                icon={Package}
-                active
-              />
-              <StatCard
-                label="Archived"
-                count={stats.archived}
-                icon={Archive}
-              />
+              <StatCard label="Active" count={stats.active} icon={Package} active />
+              <StatCard label="Archived" count={stats.archived} icon={Archive} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -319,10 +285,7 @@ function ProductsPageContent() {
                 {selectedStatus && (
                   <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
                     Status: <span className="capitalize">{selectedStatus}</span>
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => setSelectedStatus(null)}
-                    />
+                    <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedStatus(null)} />
                   </Badge>
                 )}
               </div>
@@ -455,16 +418,12 @@ function ProductsModal({
     },
     onSuccess: () => {
       invalidateOrgQuery(["products"]);
-      toast.success(
-        isEditMode ? "Product updated successfully!" : "Product created!"
-      );
+      toast.success(isEditMode ? "Product updated successfully!" : "Product created!");
       form.reset();
       onOpenChange(false);
     },
     onError: () => {
-      toast.error(
-        isEditMode ? "Failed to update product" : "Failed to create product"
-      );
+      toast.error(isEditMode ? "Failed to update product" : "Failed to create product");
     },
   });
 
@@ -588,9 +547,7 @@ function ProductsModal({
               {watched.type === "metered" && (
                 <div className="space-y-4 rounded-lg border p-4">
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">
-                      Credit Configuration
-                    </h4>
+                    <h4 className="text-sm font-semibold">Credit Configuration</h4>
                     <p className="text-muted-foreground text-xs">
                       Define how usage is measured and converted to credits
                     </p>
@@ -710,10 +667,7 @@ function ProductsModal({
                 {watched.images?.[0] && (
                   <div className="relative aspect-video overflow-hidden rounded-lg border">
                     <Image
-                      src={
-                        watched.images[0].preview ||
-                        URL.createObjectURL(watched.images[0])
-                      }
+                      src={watched.images[0].preview || URL.createObjectURL(watched.images[0])}
                       alt="Preview"
                       fill
                       className="object-cover"
@@ -722,9 +676,7 @@ function ProductsModal({
                 )}
 
                 <div className="space-y-1">
-                  <h4 className="text-base font-bold">
-                    {watched.name || "Product Name"}
-                  </h4>
+                  <h4 className="text-base font-bold">{watched.name || "Product Name"}</h4>
                   <p className="text-muted-foreground line-clamp-2 text-sm">
                     {watched.description || "No description provided."}
                   </p>
@@ -732,9 +684,7 @@ function ProductsModal({
 
                 <div className="border-t pt-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground font-medium">
-                      Total Price
-                    </span>
+                    <span className="text-muted-foreground font-medium">Total Price</span>
                     <span className="font-bold">
                       {total.toFixed(2)} {watched.price?.asset || "XLM"}
                     </span>
@@ -756,9 +706,7 @@ function ProductsModal({
         onOpenChange={setIsLearnMoreOpen}
         title="Understanding Metered Billing"
         size="full"
-        footer={
-          <Button onClick={() => setIsLearnMoreOpen(false)}>Got it</Button>
-        }
+        footer={<Button onClick={() => setIsLearnMoreOpen(false)}>Got it</Button>}
       >
         <MarkdownPicker
           content={

@@ -2,20 +2,14 @@ import { resolveApiKey } from "@/actions/apikey";
 import { putSubscription } from "@/actions/subscription";
 import { NextRequest, NextResponse } from "next/server";
 
-export const POST = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const POST = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context.params;
 
     const apiKey = req.headers.get("x-api-key");
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
     const { organizationId, environment } = await resolveApiKey(apiKey);
@@ -33,9 +27,6 @@ export const POST = async (
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { error: "Failed to pause subscription" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to pause subscription" }, { status: 500 });
   }
 };

@@ -13,11 +13,7 @@ import {
 } from "@/components/ui/command";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 
@@ -99,9 +95,7 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
                   <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    <span className="font-medium">
-                      {value.asset || "Select"}
-                    </span>
+                    <span className="font-medium">{value.asset || "Select"}</span>
                     <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                   </>
                 )}

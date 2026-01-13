@@ -1,14 +1,13 @@
 import { schemaFor } from "@stellartools/core";
 import { z } from "zod";
 
-export const stellarToolsAISDKOptionsSchema =
-  schemaFor<StellarToolsAISDKOptions>()(
-    z.object({
-      apiKey: z.string(),
-      customerId: z.string(),
-      productId: z.string(),
-    })
-  );
+export const stellarToolsAISDKOptionsSchema = schemaFor<StellarToolsAISDKOptions>()(
+  z.object({
+    apiKey: z.string(),
+    customerId: z.string(),
+    productId: z.string(),
+  })
+);
 
 export interface StellarToolsAISDKOptions {
   /**

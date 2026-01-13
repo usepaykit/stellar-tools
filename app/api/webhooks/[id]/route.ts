@@ -5,10 +5,7 @@ import { WebhookEvent, schemaFor, webhookEvent } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-export const GET = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
@@ -28,9 +25,7 @@ const putWebhookSchema = schemaFor<Partial<Webhook>>()(
   z.object({
     url: z.string().optional(),
     events: z
-      .array(
-        z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))
-      )
+      .array(z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent)))
       .optional(),
     isDisabled: z.boolean().default(false).optional(),
     name: z.string().optional(),
@@ -38,10 +33,7 @@ const putWebhookSchema = schemaFor<Partial<Webhook>>()(
   })
 );
 
-export const PUT = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
@@ -61,10 +53,7 @@ export const PUT = async (
   return NextResponse.json({ data: webhook });
 };
 
-export const DELETE = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");

@@ -1,9 +1,7 @@
 import { LooseAutoComplete } from "@stellartools/core";
 import { cookies } from "next/headers";
 
-type CookieKey = LooseAutoComplete<
-  "accessToken" | "refreshToken" | "selectedOrg"
->;
+type CookieKey = LooseAutoComplete<"accessToken" | "refreshToken" | "selectedOrg">;
 
 export class CookieManager {
   private readonly BASE_OPTIONS = {
@@ -18,9 +16,7 @@ export class CookieManager {
     return cookieStore.get(key as string)?.value;
   }
 
-  async set(
-    params: Array<{ key: CookieKey; value: string; maxAge?: number }>
-  ): Promise<void> {
+  async set(params: Array<{ key: CookieKey; value: string; maxAge?: number }>): Promise<void> {
     const cookieStore = await cookies();
     for (const param of params) {
       cookieStore.set(param.key as string, param.value, {

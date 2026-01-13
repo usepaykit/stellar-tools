@@ -1,14 +1,6 @@
 "use server";
 
-import {
-  Network,
-  Organization,
-  Webhook,
-  WebhookLog,
-  db,
-  webhookLogs,
-  webhooks,
-} from "@/db";
+import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { Stellar } from "@/integrations/stellar";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { parseJSON } from "@/lib/utils";
@@ -50,22 +42,14 @@ export const retrieveWebhooks = async (orgId?: string, env?: Network) => {
   const webhooksResult = await db
     .select()
     .from(webhooks)
-    .where(
-      and(
-        eq(webhooks.organizationId, organizationId),
-        eq(webhooks.environment, environment)
-      )
-    );
+    .where(and(eq(webhooks.organizationId, organizationId), eq(webhooks.environment, environment)));
 
   if (!webhooksResult.length) throw new Error("Failed to retrieve webhooks");
 
   return webhooksResult;
 };
 
-export const getWebhooksWithAnalytics = async (
-  orgId?: string,
-  env?: Network
-) => {
+export const getWebhooksWithAnalytics = async (orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const result = await db
@@ -81,9 +65,7 @@ export const getWebhooksWithAnalytics = async (
       createdAt: webhooks.createdAt,
       updatedAt: webhooks.updatedAt,
       environment: webhooks.environment,
-      logsCount: sql<number>`cast(count(${webhookLogs.id}) as integer)`.as(
-        "logs_count"
-      ),
+      logsCount: sql<number>`cast(count(${webhookLogs.id}) as integer)`.as("logs_count"),
       errorCount:
         sql<number>`cast(count(${webhookLogs.id}) filter (where ${webhookLogs.statusCode} >= 400 or ${webhookLogs.errorMessage} is not null) as integer)`.as(
           "error_count"
@@ -95,12 +77,7 @@ export const getWebhooksWithAnalytics = async (
     })
     .from(webhooks)
     .leftJoin(webhookLogs, eq(webhookLogs.webhookId, webhooks.id))
-    .where(
-      and(
-        eq(webhooks.organizationId, organizationId),
-        eq(webhooks.environment, environment)
-      )
-    )
+    .where(and(eq(webhooks.organizationId, organizationId), eq(webhooks.environment, environment)))
     .groupBy(webhooks.id);
 
   if (!result.length) throw new Error("Failed to retrieve webhooks");
@@ -108,18 +85,12 @@ export const getWebhooksWithAnalytics = async (
   return result.map((webhook) => ({
     ...webhook,
     errorRate:
-      webhook.logsCount > 0
-        ? Math.round((webhook.errorCount / webhook.logsCount) * 100)
-        : 0,
+      webhook.logsCount > 0 ? Math.round((webhook.errorCount / webhook.logsCount) * 100) : 0,
     responseTime: webhook.responseTime ?? [],
   }));
 };
 
-export const retrieveWebhook = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const retrieveWebhook = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [webhook] = await db
@@ -163,11 +134,7 @@ export const putWebhook = async (
   return webhook;
 };
 
-export const deleteWebhook = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const deleteWebhook = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   await db
@@ -202,11 +169,7 @@ export const postWebhookLog = async (
   return webhookLog;
 };
 
-export const retrieveWebhookLogs = async (
-  webhookId: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const retrieveWebhookLogs = async (webhookId: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const webhookLogsResult = await db
@@ -220,17 +183,12 @@ export const retrieveWebhookLogs = async (
       )
     );
 
-  if (!webhookLogsResult.length)
-    throw new Error("Failed to retrieve webhook logs");
+  if (!webhookLogsResult.length) throw new Error("Failed to retrieve webhook logs");
 
   return webhookLogsResult;
 };
 
-export const retrieveWebhookLog = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const retrieveWebhookLog = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [webhookLog] = await db
@@ -274,11 +232,7 @@ export const putWebhookLog = async (
   return webhookLog;
 };
 
-export const deleteWebhookLog = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const deleteWebhookLog = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   await db
@@ -316,9 +270,7 @@ export const triggerWebhooks = async (
       )
     );
 
-  const subscribedWebhooks = orgWebhooks.filter((webhook) =>
-    webhook.events.includes(eventType)
-  );
+  const subscribedWebhooks = orgWebhooks.filter((webhook) => webhook.events.includes(eventType));
 
   if (subscribedWebhooks.length === 0) {
     console.log(
@@ -328,17 +280,13 @@ export const triggerWebhooks = async (
   }
 
   const results = await Promise.allSettled(
-    subscribedWebhooks.map((webhook) =>
-      new WebhookDelivery().deliver(webhook, eventType, payload)
-    )
+    subscribedWebhooks.map((webhook) => new WebhookDelivery().deliver(webhook, eventType, payload))
   );
 
   const delivered = results.filter((r) => r.status === "fulfilled").length;
   const failed = results.filter((r) => r.status === "rejected").length;
 
-  console.log(
-    `Webhooks triggered for ${eventType}: ${delivered} delivered, ${failed} failed`
-  );
+  console.log(`Webhooks triggered for ${eventType}: ${delivered} delivered, ${failed} failed`);
 
   return { success: true, delivered, failed };
 };
@@ -347,17 +295,13 @@ export const triggerWebhooks = async (
 
 export const processStellarWebhook = async (
   environment: Network,
-  stellarAccount: NonNullable<Organization["stellarAccounts"]>[Network],
-  organization: Organization,
+  accountPublicKey: string,
+  organizationId: string,
   checkoutId: string
 ) => {
   const stellar = new Stellar(environment);
 
-  const publicKey = stellarAccount?.public_key;
-
-  if (!publicKey) return { error: "Stellar account not found" };
-
-  stellar.streamTx(publicKey, {
+  stellar.streamTx(accountPublicKey, {
     onError: (error) => {
       console.error("Stream error:", error);
     },
@@ -367,11 +311,7 @@ export const processStellarWebhook = async (
         z.object({ amount: z.number(), checkoutId: z.string() })
       );
 
-      const checkout = await retrieveCheckout(
-        checkoutId,
-        organization.id,
-        environment
-      );
+      const checkout = await retrieveCheckout(checkoutId, organizationId, environment);
 
       if (!checkout) {
         console.error(`Checkout ${checkoutId} not found`);
@@ -382,7 +322,7 @@ export const processStellarWebhook = async (
         putCheckout(
           checkout.id,
           { status: "completed", updatedAt: new Date() },
-          organization.id,
+          organizationId,
           environment
         ),
         postPayment(
@@ -395,7 +335,7 @@ export const processStellarWebhook = async (
             createdAt: new Date(),
             updatedAt: new Date(),
           },
-          organization.id,
+          organizationId,
           environment
         ),
       ]);
@@ -406,7 +346,7 @@ export const processStellarWebhook = async (
           payment_id: tx.hash,
           checkout_id: checkout.id,
         },
-        organization.id,
+        organizationId,
         environment
       );
 

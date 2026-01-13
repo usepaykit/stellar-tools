@@ -1,10 +1,10 @@
 import React from "react";
+
+import { MixinProps, splitProps } from "@/lib/mixin";
+import { cn } from "@/lib/utils";
+
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { cn } from "@/lib/utils";
-import { MixinProps, splitProps } from "@/lib/mixin";
-
-
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
@@ -25,21 +25,8 @@ interface NumberPickerProps
   allowDecimal?: boolean;
 }
 
-
-export const NumberPicker = React.forwardRef<
-  HTMLInputElement,
-  NumberPickerProps
->((props, ref) => {
-  const {
-    id,
-    value,
-    onChange,
-    label,
-    error,
-    helpText,
-    allowDecimal = false,
-    ...mixProps
-  } = props;
+export const NumberPicker = React.forwardRef<HTMLInputElement, NumberPickerProps>((props, ref) => {
+  const { id, value, onChange, label, error, helpText, allowDecimal = false, ...mixProps } = props;
 
   const {
     label: labelProps,
@@ -91,20 +78,14 @@ export const NumberPicker = React.forwardRef<
         <Label
           {...labelProps}
           htmlFor={id}
-          className={cn(
-            "text-sm leading-none font-medium",
-            labelProps.className
-          )}
+          className={cn("text-sm leading-none font-medium", labelProps.className)}
         >
           {label}
         </Label>
       )}
 
       {helpText && (
-        <p
-          {...helpTextProps}
-          className={cn("text-sm", helpTextProps.className)}
-        >
+        <p {...helpTextProps} className={cn("text-sm", helpTextProps.className)}>
           {helpText}
         </p>
       )}
@@ -127,10 +108,7 @@ export const NumberPicker = React.forwardRef<
         <p
           {...errorProps}
           role="alert"
-          className={cn(
-            "text-destructive text-sm font-medium",
-            errorProps.className
-          )}
+          className={cn("text-destructive text-sm font-medium", errorProps.className)}
         >
           {error}
         </p>

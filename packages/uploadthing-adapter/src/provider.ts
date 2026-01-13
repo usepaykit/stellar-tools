@@ -15,8 +15,7 @@ export class StellarToolsUploadThingAdapter {
   private baseFactory = createUploadthing();
 
   constructor(opts: StellarToolsUploadthingOptions) {
-    const { error, data } =
-      stellarToolsUploadthingOptionsSchema.safeParse(opts);
+    const { error, data } = stellarToolsUploadthingOptionsSchema.safeParse(opts);
     if (error) throw new Error(`Invalid options: ${error.message}`);
 
     this.options = data;
@@ -44,9 +43,7 @@ export class StellarToolsUploadThingAdapter {
           files: Array<{ name: string; size: number; type: string }>;
           input: unknown;
         }) => {
-          const product = await this.stellar.products.retrieve(
-            this.options.productId
-          );
+          const product = await this.stellar.products.retrieve(this.options.productId);
           if (!product.ok)
             throw new UploadThingError({
               code: "INTERNAL_SERVER_ERROR",
@@ -55,9 +52,7 @@ export class StellarToolsUploadThingAdapter {
 
           const customerId =
             opts.req?.headers?.get?.("x-customer-id") ??
-            (opts.req?.headers as unknown as Record<string, string>)?.[
-              "x-customer-id"
-            ];
+            (opts.req?.headers as unknown as Record<string, string>)?.["x-customer-id"];
 
           if (!customerId) {
             throw new UploadThingError({
@@ -66,10 +61,7 @@ export class StellarToolsUploadThingAdapter {
             });
           }
 
-          const rawAmount = opts.files.reduce(
-            (sum: number, f: any) => sum + f.size,
-            0
-          );
+          const rawAmount = opts.files.reduce((sum: number, f: any) => sum + f.size, 0);
 
           const check = await this.stellar.credits.check(customerId, {
             productId: this.options.productId,
@@ -103,9 +95,7 @@ export class StellarToolsUploadThingAdapter {
           }
 
           try {
-            const userMetadata = userMiddleware
-              ? await userMiddleware(opts)
-              : ({} as TOutput);
+            const userMetadata = userMiddleware ? await userMiddleware(opts) : ({} as TOutput);
 
             return {
               ...userMetadata,

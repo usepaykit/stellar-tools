@@ -54,27 +54,17 @@ export const postSubscription = async (
   `);
 
   if (result.length === 0) {
-    throw new Error(
-      `Product ${params.productId} is not a subscription product or doesn't exist`
-    );
+    throw new Error(`Product ${params.productId} is not a subscription product or doesn't exist`);
   }
 
   return result[0];
 };
 
-export const retrieveSubscription = async (
-  id: string,
-  organizationId: string
-) => {
+export const retrieveSubscription = async (id: string, organizationId: string) => {
   const [subscription] = await db
     .select()
     .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.id, id),
-        eq(subscriptions.organizationId, organizationId)
-      )
-    )
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.organizationId, organizationId)))
     .limit(1);
 
   if (!subscription) throw new Error("Subscription not found");
@@ -82,11 +72,7 @@ export const retrieveSubscription = async (
   return subscription;
 };
 
-export const listSubscriptions = async (
-  customerId: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const listSubscriptions = async (customerId: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const subscriptionList = await db
@@ -128,11 +114,7 @@ export const putSubscription = async (
   return record;
 };
 
-export const deleteSubscription = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const deleteSubscription = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   await db

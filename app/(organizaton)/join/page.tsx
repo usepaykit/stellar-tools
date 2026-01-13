@@ -5,12 +5,7 @@ import * as React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { getInitials } from "@/lib/utils";
 import { Check, Mail } from "lucide-react";
@@ -53,8 +48,7 @@ function JoinTeamPageContent() {
         router.push("/dashboard");
       }, 2000);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
       toast.error("Failed to join team", { description: errorMessage });
       setIsSubmitting(false);
     }
@@ -70,15 +64,11 @@ function JoinTeamPageContent() {
             <Check className="text-primary h-8 w-8" />
           </div>
           <div className="space-y-2 text-center">
-            <h1 className="text-foreground text-2xl font-semibold">
-              You’re all set!
-            </h1>
+            <h1 className="text-foreground text-2xl font-semibold">You’re all set!</h1>
             <p className="text-muted-foreground text-sm">
               You’ve successfully joined {mockInvitation.organizationName}
             </p>
-            <p className="text-muted-foreground mt-2 text-xs">
-              Redirecting to dashboard...
-            </p>
+            <p className="text-muted-foreground mt-2 text-xs">Redirecting to dashboard...</p>
           </div>
         </div>
       </div>
@@ -93,18 +83,13 @@ function JoinTeamPageContent() {
             <Mail className="text-destructive h-8 w-8" />
           </div>
           <div className="space-y-2 text-center">
-            <h1 className="text-foreground text-2xl font-semibold">
-              Invitation Expired
-            </h1>
+            <h1 className="text-foreground text-2xl font-semibold">Invitation Expired</h1>
             <p className="text-muted-foreground text-sm">
-              This invitation has expired. Please contact the team administrator
-              for a new invitation.
+              This invitation has expired. Please contact the team administrator for a new
+              invitation.
             </p>
           </div>
-          <Button
-            onClick={() => router.push("/signin")}
-            className="w-full shadow-none"
-          >
+          <Button onClick={() => router.push("/signin")} className="w-full shadow-none">
             Sign In
           </Button>
         </div>
@@ -132,19 +117,13 @@ function JoinTeamPageContent() {
             <div className="space-y-2">
               <h2 className="text-xl">You’ve been invited!</h2>
               <CardDescription>
-                <span className="font-semibold">
-                  {mockInvitation.inviterName}
-                </span>{" "}
-                has invited you to join{" "}
-                <span className="font-semibold">
-                  {mockInvitation.organizationName}
-                </span>
+                <span className="font-semibold">{mockInvitation.inviterName}</span> has invited you
+                to join <span className="font-semibold">{mockInvitation.organizationName}</span>
               </CardDescription>
             </div>
             <div className="flex items-center justify-center gap-2">
               <Badge variant="secondary" className="text-xs">
-                {mockInvitation.role.charAt(0).toUpperCase() +
-                  mockInvitation.role.slice(1)}
+                {mockInvitation.role.charAt(0).toUpperCase() + mockInvitation.role.slice(1)}
               </Badge>
               <span className="text-muted-foreground text-xs">role</span>
             </div>
@@ -153,8 +132,8 @@ function JoinTeamPageContent() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-muted-foreground text-xs">
-                  By joining, you agree to become a member of this organization
-                  and will have access based on your assigned role.
+                  By joining, you agree to become a member of this organization and will have access
+                  based on your assigned role.
                 </p>
               </div>
 
@@ -177,9 +156,7 @@ function JoinTeamPageContent() {
               Don’t have an account?{" "}
               <button
                 onClick={() => {
-                  const signupUrl = token
-                    ? `/auth/signup?joinorg=${token}`
-                    : "/auth/signup";
+                  const signupUrl = token ? `/auth/signup?joinorg=${token}` : "/auth/signup";
                   router.push(signupUrl);
                 }}
                 className="hover:text-foreground font-semibold underline transition-colors"

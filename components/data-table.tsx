@@ -88,9 +88,7 @@ export const DataTable = <TData, TValue>({
           <Checkbox
             {...checkbox}
             checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(checked) =>
-              table.toggleAllPageRowsSelected(!!checked)
-            }
+            onCheckedChange={(checked) => table.toggleAllPageRowsSelected(!!checked)}
             aria-label="Select all"
             className={cn(checkbox.className, "translate-y-[2px]")}
           />
@@ -208,18 +206,12 @@ export const DataTable = <TData, TValue>({
                     <TableHead
                       key={header.id}
                       style={{
-                        width:
-                          header.getSize() !== 150
-                            ? header.getSize()
-                            : undefined,
+                        width: header.getSize() !== 150 ? header.getSize() : undefined,
                       }}
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}
@@ -237,10 +229,7 @@ export const DataTable = <TData, TValue>({
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell {...cell} key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -297,12 +286,7 @@ const DataTableSkeleton = <TData, TValue>({
   skeletonRowCount = 5,
   ...mixProps
 }: Omit<DataTableProps<TData, TValue>, "data">) => {
-  const { row, body, cell, ...rest } = splitProps(
-    mixProps,
-    "row",
-    "body",
-    "cell"
-  );
+  const { row, body, cell, ...rest } = splitProps(mixProps, "row", "body", "cell");
 
   return (
     <div className="space-y-4">
@@ -319,10 +303,7 @@ const DataTableSkeleton = <TData, TValue>({
                 <TableHead
                   key={column.id || `col-${index}`}
                   style={{
-                    width:
-                      (column.size as number) !== 150
-                        ? (column.size as number)
-                        : undefined,
+                    width: (column.size as number) !== 150 ? (column.size as number) : undefined,
                   }}
                 >
                   <Skeleton className="h-4 w-24" />
@@ -344,10 +325,7 @@ const DataTableSkeleton = <TData, TValue>({
                   </TableCell>
                 )}
                 {columns.map((column, colIndex) => (
-                  <TableCell
-                    key={column.id || `skeleton-cell-${rowIndex}-${colIndex}`}
-                    {...cell}
-                  >
+                  <TableCell key={column.id || `skeleton-cell-${rowIndex}-${colIndex}`} {...cell}>
                     <Skeleton
                       className="h-4"
                       style={{

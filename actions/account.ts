@@ -1,6 +1,7 @@
 "use server";
 
-import { Account, AuthProvider, accounts, db } from "@/db";
+import { AuthProvider } from "@/constant/schema.client";
+import { Account, accounts, db } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -16,10 +17,7 @@ export const postAccount = async (params: Partial<Account>) => {
 };
 
 export const retrieveAccount = async (
-  payload:
-    | { id: string }
-    | { email: string }
-    | { sso: { provider: AuthProvider; sub: string } }
+  payload: { id: string } | { email: string } | { sso: { provider: AuthProvider; sub: string } }
 ): Promise<Account | null> => {
   let whereClause;
 
@@ -36,11 +34,7 @@ export const retrieveAccount = async (
     whereClause = eq(accounts.email, payload.email);
   }
 
-  const [account] = await db
-    .select()
-    .from(accounts)
-    .where(whereClause)
-    .limit(1);
+  const [account] = await db.select().from(accounts).where(whereClause).limit(1);
 
   return account || null;
 };

@@ -1,12 +1,7 @@
 "use client";
 
 import { getCurrentOrganization } from "@/actions/organization";
-import {
-  QueryKey,
-  UseQueryOptions,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { QueryKey, UseQueryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 
 type OrgQueryKey = [string, ...any[]];
 
@@ -21,17 +16,10 @@ export function useOrgContext() {
   return { data: orgContext, isLoading: isLoadingOrgContext };
 }
 
-export function useOrgQuery<
-  TQueryFnData = unknown,
-  TError = Error,
-  TData = TQueryFnData,
->(
+export function useOrgQuery<TQueryFnData = unknown, TError = Error, TData = TQueryFnData>(
   baseQueryKey: OrgQueryKey,
   queryFn: () => Promise<TQueryFnData>,
-  options?: Omit<
-    UseQueryOptions<TQueryFnData, TError, TData, QueryKey>,
-    "queryKey" | "queryFn"
-  >
+  options?: Omit<UseQueryOptions<TQueryFnData, TError, TData, QueryKey>, "queryKey" | "queryFn">
 ) {
   const { data: orgContext, isLoading: isLoadingOrgContext } = useOrgContext();
 
@@ -40,18 +28,13 @@ export function useOrgQuery<
 
   // Construct query key with org context
   const queryKey: QueryKey =
-    organizationId && environment
-      ? [...baseQueryKey, organizationId, environment]
-      : baseQueryKey;
+    organizationId && environment ? [...baseQueryKey, organizationId, environment] : baseQueryKey;
 
   const result = useQuery<TQueryFnData, TError, TData>({
     queryKey,
     queryFn,
     enabled:
-      !isLoadingOrgContext &&
-      !!organizationId &&
-      !!environment &&
-      (options?.enabled ?? true),
+      !isLoadingOrgContext && !!organizationId && !!environment && (options?.enabled ?? true),
     ...options,
   });
 
@@ -72,9 +55,7 @@ export function useInvalidateOrgQuery() {
     const environment = orgContext?.environment;
 
     const queryKey: QueryKey =
-      organizationId && environment
-        ? [...baseQueryKey, organizationId, environment]
-        : baseQueryKey;
+      organizationId && environment ? [...baseQueryKey, organizationId, environment] : baseQueryKey;
 
     return queryClient.invalidateQueries({ queryKey });
   };

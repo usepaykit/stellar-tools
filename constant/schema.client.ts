@@ -1,11 +1,15 @@
 export const roles = ["owner", "admin", "developer", "viewer"] as const;
 
-export const checkoutStatus = [
-  "open",
-  "completed",
-  "expired",
-  "failed",
-] as const;
+export const networkEnum = ["testnet", "mainnet"] as const;
+
+export const checkoutStatus = ["open", "completed", "expired", "failed"] as const;
+
+export const authProviderEnum = ["google", "local"] as const;
 
 export type Role = (typeof roles)[number];
+
 export type CheckoutStatus = (typeof checkoutStatus)[number];
+
+export type Network = (typeof networkEnum)[number];
+
+export type AuthProvider = (typeof authProviderEnum)[number];

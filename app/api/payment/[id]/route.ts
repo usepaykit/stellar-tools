@@ -7,10 +7,7 @@ const getSchema = z.object({
   verifyOnChain: z.boolean().default(false),
 });
 
-export const GET = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
@@ -26,12 +23,7 @@ export const GET = async (
   const payment = await retrievePayment(id, organizationId, environment);
 
   if (verifyOnChain && payment.status === "pending") {
-    await refreshTxStatus(
-      id,
-      payment.transactionHash,
-      organizationId,
-      environment
-    );
+    await refreshTxStatus(id, payment.transactionHash, organizationId, environment);
   }
 
   return NextResponse.json({ data: payment });

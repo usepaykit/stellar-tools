@@ -3,12 +3,7 @@ import { z } from "zod";
 import { schemaFor } from "../utils";
 import { Environment, environmentSchema } from "./shared";
 
-export const checkoutStatusEnum = z.enum([
-  "open",
-  "completed",
-  "expired",
-  "failed",
-]);
+export const checkoutStatusEnum = z.enum(["open", "completed", "expired", "failed"]);
 
 type CheckoutStatus = z.infer<typeof checkoutStatusEnum>;
 
@@ -82,6 +77,16 @@ export interface Checkout {
    * The environment of the checkout.
    */
   environment: Environment;
+
+  /**
+   * The success URL of the checkout.
+   */
+  successUrl?: string;
+
+  /**
+   * The success message of the checkout.
+   */
+  successMessage?: string;
 }
 
 export const checkoutSchema = schemaFor<Checkout>()(
@@ -99,6 +104,8 @@ export const checkoutSchema = schemaFor<Checkout>()(
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}),
     environment: environmentSchema,
+    successUrl: z.string().optional(),
+    successMessage: z.string().optional(),
   })
 );
 
@@ -109,12 +116,25 @@ export const createCheckoutSchema = checkoutSchema
     amount: true,
     description: true,
     metadata: true,
-    assetCode: true,
+    successUrl: true,
+    successMessage: true,
   })
   .refine((data) => data.productId !== undefined || data.amount !== undefined, {
     message: "Either productId or amount must be specified",
     path: ["productId"],
-  });
+  })
+  .refine((data) => data.successUrl !== undefined || data.successMessage !== undefined, {
+    message: "Either successUrl or successMessage must be provided",
+    path: ["successUrl", "successMessage"],
+  })
+  .and(
+    z.object({
+      /**
+       * Guest checkouts, e.g e-commerce checkout
+       */
+      customerEmail: z.email().optional(),
+    })
+  );
 
 export type CreateCheckout = Pick<
   Checkout,
@@ -125,7 +145,14 @@ export type CreateCheckout = Pick<
   | "metadata"
   | "description"
   | "assetCode"
->;
+  | "successUrl"
+  | "successMessage"
+> & {
+  /**
+   * The email of the guest customer
+   */
+  customerEmail?: string;
+};
 
 export const updateCheckoutSchema = checkoutSchema.pick({
   status: true,

@@ -2,19 +2,12 @@
 
 import * as React from "react";
 
-import {
-  ImageTransformer,
-  type MimeType,
-} from "@/integrations/image-transformer";
+import { ImageTransformer, type MimeType } from "@/integrations/image-transformer";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import { ImagePlus, Loader2, Pencil } from "lucide-react";
 import Image from "next/image";
-import {
-  type DropzoneOptions,
-  type FileRejection,
-  useDropzone,
-} from "react-dropzone";
+import { type DropzoneOptions, type FileRejection, useDropzone } from "react-dropzone";
 
 type LabelProps = React.ComponentProps<"p">;
 type ErrorProps = React.ComponentProps<"p">;
@@ -50,10 +43,7 @@ interface FileUploadPickerProps
   error?: ErrorProps["children"];
 }
 
-export const FileUploadPicker = React.forwardRef<
-  HTMLInputElement,
-  FileUploadPickerProps
->(
+export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPickerProps>(
   (
     {
       value = [],
@@ -98,10 +88,7 @@ export const FileUploadPicker = React.forwardRef<
 
                 if (enableTransformation) {
                   try {
-                    processedFile = await new ImageTransformer().transformTo(
-                      file,
-                      targetFormat
-                    );
+                    processedFile = await new ImageTransformer().transformTo(file, targetFormat);
                     previewUrl = URL.createObjectURL(processedFile);
                   } catch (error) {
                     console.error("Image transformation failed:", error);
@@ -117,9 +104,7 @@ export const FileUploadPicker = React.forwardRef<
               })
             );
 
-            const updatedFiles = dropzone.multiple
-              ? [...value, ...processedFiles]
-              : processedFiles;
+            const updatedFiles = dropzone.multiple ? [...value, ...processedFiles] : processedFiles;
             onFilesChange?.(updatedFiles);
           } finally {
             setIsTransforming(false);
@@ -130,14 +115,7 @@ export const FileUploadPicker = React.forwardRef<
           onFilesRejected?.(fileRejections);
         }
       },
-      [
-        dropzone.multiple,
-        value,
-        onFilesChange,
-        onFilesRejected,
-        enableTransformation,
-        targetFormat,
-      ]
+      [dropzone.multiple, value, onFilesChange, onFilesRejected, enableTransformation, targetFormat]
     );
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -157,10 +135,7 @@ export const FileUploadPicker = React.forwardRef<
     return (
       <div className={cn("w-full", className)}>
         {label && (
-          <p
-            {...labelProps}
-            className={cn("text-sm font-medium", labelProps.className)}
-          >
+          <p {...labelProps} className={cn("text-sm font-medium", labelProps.className)}>
             {label}
           </p>
         )}
@@ -169,12 +144,9 @@ export const FileUploadPicker = React.forwardRef<
           {...getRootProps()}
           className={cn(
             "group border-input bg-muted/5 relative flex h-64 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all",
-            isDragActive &&
-              "border-primary bg-primary/5 ring-primary/10 ring-4",
+            isDragActive && "border-primary bg-primary/5 ring-primary/10 ring-4",
             (disabled || isTransforming) && "cursor-not-allowed opacity-50",
-            !hasImage &&
-              !isTransforming &&
-              "hover:bg-muted/50 hover:border-primary/50"
+            !hasImage && !isTransforming && "hover:bg-muted/50 hover:border-primary/50"
           )}
         >
           <input ref={ref} {...getInputProps({ id })} />
@@ -211,9 +183,7 @@ export const FileUploadPicker = React.forwardRef<
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium">{placeholder}</p>
-                {description && (
-                  <p className="text-muted-foreground text-xs">{description}</p>
-                )}
+                {description && <p className="text-muted-foreground text-xs">{description}</p>}
               </div>
             </div>
           )}

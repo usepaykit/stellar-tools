@@ -22,12 +22,8 @@ interface RadialOrbitalTimelineProps {
   timelineData: TimelineItem[];
 }
 
-export default function RadialOrbitalTimeline({
-  timelineData,
-}: RadialOrbitalTimelineProps) {
-  const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>(
-    {}
-  );
+export default function RadialOrbitalTimeline({ timelineData }: RadialOrbitalTimelineProps) {
+  const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({});
   const [viewMode, _setViewMode] = useState<"orbital">("orbital");
   const [rotationAngle, setRotationAngle] = useState<number>(0);
   const [autoRotate, setAutoRotate] = useState<boolean>(true);
@@ -121,10 +117,7 @@ export default function RadialOrbitalTimeline({
     const y = radius * Math.sin(radian) + centerOffset.y;
 
     const zIndex = Math.round(100 + 50 * Math.cos(radian));
-    const opacity = Math.max(
-      0.4,
-      Math.min(1, 0.4 + 0.6 * ((1 + Math.sin(radian)) / 2))
-    );
+    const opacity = Math.max(0.4, Math.min(1, 0.4 + 0.6 * ((1 + Math.sin(radian)) / 2)));
 
     return { x, y, angle, zIndex, opacity };
   };
@@ -261,11 +254,7 @@ export default function RadialOrbitalTimeline({
                     <div className="bg-border absolute -top-3 left-1/2 h-3 w-px -translate-x-1/2"></div>
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
-                        <Badge
-                          className={`px-2 text-xs ${getStatusStyles(
-                            item.status
-                          )}`}
-                        >
+                        <Badge className={`px-2 text-xs ${getStatusStyles(item.status)}`}>
                           {item.status === "available"
                             ? "AVAILABLE"
                             : item.status === "beta"
@@ -298,9 +287,7 @@ export default function RadialOrbitalTimeline({
                             <Zap size={10} className="text-primary mr-1" />
                             Adoption Rate
                           </span>
-                          <span className="text-foreground font-mono">
-                            {item.adoption}%
-                          </span>
+                          <span className="text-foreground font-mono">{item.adoption}%</span>
                         </div>
                         <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
                           <div
@@ -313,19 +300,14 @@ export default function RadialOrbitalTimeline({
                       {item.relatedIds.length > 0 && (
                         <div className="border-border mt-4 border-t pt-3">
                           <div className="mb-2 flex items-center">
-                            <Link
-                              size={10}
-                              className="text-muted-foreground mr-1"
-                            />
+                            <Link size={10} className="text-muted-foreground mr-1" />
                             <h4 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                               Related Integrations
                             </h4>
                           </div>
                           <div className="flex flex-wrap gap-1">
                             {item.relatedIds.map((relatedId) => {
-                              const relatedItem = timelineData.find(
-                                (i) => i.id === relatedId
-                              );
+                              const relatedItem = timelineData.find((i) => i.id === relatedId);
                               return (
                                 <Button
                                   key={relatedId}
@@ -338,10 +320,7 @@ export default function RadialOrbitalTimeline({
                                   }}
                                 >
                                   {relatedItem?.title}
-                                  <ArrowRight
-                                    size={8}
-                                    className="text-muted-foreground ml-1"
-                                  />
+                                  <ArrowRight size={8} className="text-muted-foreground ml-1" />
                                 </Button>
                               );
                             })}

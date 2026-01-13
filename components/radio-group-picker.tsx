@@ -1,8 +1,10 @@
 import * as React from "react";
-import {RadioGroup, RadioGroupItem} from "@/components/ui/radio-group";
+
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MixinProps, splitProps } from "@/lib/mixin";
-import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
+
+import { Label } from "./ui/label";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
@@ -10,10 +12,7 @@ type HelpTextProps = React.ComponentProps<"p">;
 
 interface RadioGroupPickerProps
   extends
-    Omit<
-      React.ComponentProps<typeof RadioGroup>,
-      "value" | "onChange"
-    >,
+    Omit<React.ComponentProps<typeof RadioGroup>, "value" | "onChange">,
     MixinProps<
       "item",
       Omit<
@@ -61,19 +60,12 @@ export const RadioGroupPicker = ({
       )}
 
       {helpText && (
-        <p
-          {...helpTextProps}
-          className={cn("text-sm", helpTextProps.className)}
-        >
+        <p {...helpTextProps} className={cn("text-sm", helpTextProps.className)}>
           {helpText}
         </p>
       )}
 
-      <RadioGroup
-        {...rest}
-        value={value}
-        onValueChange={onChange}
-      >
+      <RadioGroup {...rest} value={value} onValueChange={onChange}>
         <div
           className={cn(
             "flex flex-col gap-2",
@@ -101,10 +93,7 @@ export const RadioGroupPicker = ({
         <p
           {...errorProps}
           role="alert"
-          className={cn(
-            "text-destructive text-sm font-medium",
-            errorProps.className
-          )}
+          className={cn("text-destructive text-sm font-medium", errorProps.className)}
         >
           {error}
         </p>

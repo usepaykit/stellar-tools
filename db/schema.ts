@@ -1,4 +1,10 @@
-import { checkoutStatus, roles } from "@/constant/schema.client";
+import {
+  AuthProvider,
+  authProviderEnum as authProviderEnum$1,
+  checkoutStatus,
+  networkEnum as networkEnum$1,
+  roles,
+} from "@/constant/schema.client";
 import { WebhookEvent } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
@@ -14,11 +20,9 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 
-export const networkEnum = pgEnum("network", ["testnet", "mainnet"]);
+const networkEnum = pgEnum("network", networkEnum$1);
 
-export const authProviderEnum = pgEnum("auth_provider", ["google", "local"]);
-
-export type AuthProvider = (typeof authProviderEnum.enumValues)[number];
+const authProviderEnum = pgEnum("auth_provider", authProviderEnum$1);
 
 export type AccountSSOOption = {
   provider: AuthProvider;
@@ -69,12 +73,46 @@ export const organizations = pgTable("organization", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object | null>(),
-  stellarAccounts: jsonb("stellar_account").$type<{
-    [K in (typeof networkEnum.enumValues)[number]]: {
-      public_key: string;
-      secret_key: string;
-    };
-  }>(),
+});
+
+export const organizationSecrets = pgTable("organization_secret", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  testnetSecretEncrypted: text("testnet_secret_encrypted").notNull(),
+  testnetSecretVersion: integer("testnet_secret_version")
+    .notNull()
+    .default(parseInt(process.env.ENCRYPTION_KEY_VERSION!)),
+  testnetPublicKey: text("testnet_public_key").notNull(),
+  mainnetSecretEncrypted: text("mainnet_secret_encrypted"),
+  mainnetSecretVersion: integer("mainnet_secret_version")
+    .notNull()
+    .default(parseInt(process.env.ENCRYPTION_KEY_VERSION!)),
+  mainnetPublicKey: text("mainnet_public_key"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const secretAccessLogActionEnum = pgEnum("secret_access_log_action", [
+  "decrypt",
+  "rotate",
+  "backup",
+]);
+
+export const secretAccessLog = pgTable("secret_access_log", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  secretId: text("secret_id")
+    .notNull()
+    .references(() => organizationSecrets.id),
+  action: secretAccessLogActionEnum("action").notNull(),
+  metadata: jsonb("metadata").$type<object | null>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  environment: networkEnum("network").notNull(),
 });
 
 const roleEnum = pgEnum("role", roles);
@@ -149,11 +187,7 @@ export const assets = pgTable(
     metadata: jsonb("metadata").$type<object | null>(),
   },
   (table) => ({
-    uniqueCodeIssuerNetwork: unique().on(
-      table.code,
-      table.issuer,
-      table.network
-    ),
+    uniqueCodeIssuerNetwork: unique().on(table.code, table.issuer, table.network),
   })
 );
 
@@ -185,27 +219,15 @@ export const customers = pgTable(
   })
 );
 
-export const productStatusEnum = pgEnum("product_status", [
-  "active",
-  "archived",
-]);
+export const productStatusEnum = pgEnum("product_status", ["active", "archived"]);
 
 export type ProductStatus = (typeof productStatusEnum.enumValues)[number];
 
-export const recurringPeriodEnum = pgEnum("recurring_period", [
-  "day",
-  "week",
-  "month",
-  "year",
-]);
+export const recurringPeriodEnum = pgEnum("recurring_period", ["day", "week", "month", "year"]);
 
 export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
-export const productTypeEnum = pgEnum("product_type", [
-  "subscription",
-  "one_time",
-  "metered",
-]);
+export const productTypeEnum = pgEnum("product_type", ["subscription", "one_time", "metered"]);
 
 export type ProductType = (typeof productTypeEnum.enumValues)[number];
 
@@ -256,12 +278,17 @@ export const checkouts = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<object | null>(),
     environment: networkEnum("network").notNull(),
-    assetCode: text("asset_code"),
+    successUrl: text("success_url"),
+    successMessage: text("success_message"),
   },
   (table) => ({
     amountOrProductCheck: check(
       "amount_or_product_check",
       sql`${table.productId} IS NOT NULL OR ${table.amount} IS NOT NULL`
+    ),
+    successUrlOrMessageCheck: check(
+      "success_url_or_message_check",
+      sql`${table.successUrl} IS NOT NULL OR ${table.successMessage} IS NOT NULL`
     ),
   })
 );
@@ -299,11 +326,7 @@ export const subscriptions = pgTable("subscription", {
   environment: networkEnum("network").notNull(),
 });
 
-export const paymentStatusEnum = pgEnum("payment_status", [
-  "pending",
-  "confirmed",
-  "failed",
-]);
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "confirmed", "failed"]);
 
 export const payments = pgTable("payment", {
   id: text("id").primaryKey(),
@@ -358,11 +381,7 @@ export const webhookLogs = pgTable("webhook_log", {
   description: text("description").notNull(),
 });
 
-export const refundStatusEnum = pgEnum("refund_status", [
-  "pending",
-  "succeeded",
-  "failed",
-]);
+export const refundStatusEnum = pgEnum("refund_status", ["pending", "succeeded", "failed"]);
 
 export const refunds = pgTable(
   "refund",
@@ -409,15 +428,8 @@ export const creditBalances = pgTable(
   },
   (table) => ({
     // One balance per customer per product
-    uniqueCustomerProduct: unique().on(
-      table.customerId,
-      table.productId,
-      table.environment
-    ),
-    balanceIndex: index("credit_balance_customer_idx").on(
-      table.customerId,
-      table.organizationId
-    ),
+    uniqueCustomerProduct: unique().on(table.customerId, table.productId, table.environment),
+    balanceIndex: index("credit_balance_customer_idx").on(table.customerId, table.organizationId),
   })
 );
 
@@ -449,10 +461,7 @@ export const creditTransactions = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
-    customerIdx: index("credit_tx_customer_idx").on(
-      table.customerId,
-      table.productId
-    ),
+    customerIdx: index("credit_tx_customer_idx").on(table.customerId, table.productId),
     balanceIdx: index("credit_tx_balance_idx").on(table.balanceId),
     createdAtIdx: index("credit_tx_created_at_idx").on(table.createdAt),
   })
@@ -495,3 +504,5 @@ export type CreditTransaction = InferSelectModel<typeof creditTransactions>;
 export type Subscription = InferSelectModel<typeof subscriptions>;
 export type Auth = InferSelectModel<typeof auth>;
 export type PasswordReset = InferSelectModel<typeof passwordReset>;
+export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
+export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;

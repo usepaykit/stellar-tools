@@ -3,15 +3,13 @@
 import * as React from "react";
 
 import { FullScreenModal } from "@/components/fullscreen-modal";
+import { PhoneNumber, PhoneNumberPicker } from "@/components/phone-number-picker";
 import { TextField } from "@/components/text-field";
-import {
-  PhoneNumber,
-  PhoneNumberPicker,
-} from "@/components/phone-number-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Stellar } from "@/integrations/stellar";
 import { cn } from "@/lib/utils";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -103,6 +101,7 @@ const WalletIcon = ({ wallet }: { wallet: Wallet }) => {
 export default function CheckoutPage() {
   const [showBanner, setShowBanner] = React.useState(true);
   const [isWalletModalOpen, setIsWalletModalOpen] = React.useState(false);
+  const [paymentURI, setPaymentURI] = React.useState<string | null>(null);
 
   const form = RHF.useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -117,6 +116,22 @@ export default function CheckoutPage() {
   };
 
   const isFormValid = form.formState.isValid;
+
+  const checkoutId = "cz_1234567890";
+
+  React.useEffect(() => {
+    if (isFormValid) {
+      const stellar = new Stellar("testnet");
+      const uri = stellar.makePaymentURI({
+        destination: process.env.NEXT_PUBLIC_MERCHANT_STELLAR_ADDRESS!,
+        amount: PRICE.toString(),
+        memo: `ORD-${checkoutId}`, // MEMO_TEXT
+        message: "Unlimited Monthly Subscription Payment",
+        callback: `${window.location.origin}/api/payment/callback`,
+      });
+      setPaymentURI(uri);
+    }
+  }, [isFormValid, form]);
 
   return (
     <div>
@@ -151,17 +166,15 @@ export default function CheckoutPage() {
                     Unlimited Monthly Subscription
                   </h1>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Unlimited Monthly offers a flexible subscription that
-                    unlocks premium features like unlimited transactions,
-                    priority support, and advanced analytics. Billed monthly and
-                    can be canceled anytime.
+                    Unlimited Monthly offers a flexible subscription that unlocks premium features
+                    like unlimited transactions, priority support, and advanced analytics. Billed
+                    monthly and can be canceled anytime.
                   </p>
                 </div>
 
                 <div className="border-border border-t pt-4">
                   <p className="text-foreground text-2xl font-semibold">
-                    {PRICE} XLM{" "}
-                    <span className="text-base font-normal">/ month</span>
+                    {PRICE} XLM <span className="text-base font-normal">/ month</span>
                   </p>
                 </div>
               </div>
@@ -180,10 +193,7 @@ export default function CheckoutPage() {
 
             <Card className="shadow-none">
               <CardContent className="space-y-6 pt-6 pb-6">
-                <form
-                  className="space-y-6"
-                  onSubmit={form.handleSubmit(onSubmit)}
-                >
+                <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
                   <RHF.Controller
                     control={form.control}
                     name="email"
@@ -234,7 +244,7 @@ export default function CheckoutPage() {
                         <CardContent className="flex flex-col items-center justify-center space-y-4 p-0 shadow-none">
                           <div className="border-border flex items-center justify-center rounded-lg border bg-white p-1">
                             <BeautifulQRCode
-                              data="http"
+                              data={paymentURI ? paymentURI : "http"}
                               foregroundColor="#000000"
                               backgroundColor="#ffffff"
                               radius={1}
@@ -252,9 +262,7 @@ export default function CheckoutPage() {
                     {/* OR Separator */}
                     <div className="flex items-center gap-4">
                       <Separator className="flex-1" />
-                      <span className="text-muted-foreground text-sm font-medium">
-                        OR
-                      </span>
+                      <span className="text-muted-foreground text-sm font-medium">OR</span>
                       <Separator className="flex-1" />
                     </div>
 
@@ -284,10 +292,7 @@ export default function CheckoutPage() {
             <div className="space-y-6">
               <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                 <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                  <span>
-                    © {new Date().getFullYear()} Stellar Tools. All rights
-                    reserved.
-                  </span>
+                  <span>© {new Date().getFullYear()} Stellar Tools. All rights reserved.</span>
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs">
@@ -317,9 +322,7 @@ export default function CheckoutPage() {
                   </Link>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-xs">
-                    Powered by
-                  </span>
+                  <span className="text-muted-foreground text-xs">Powered by</span>
                   <Image
                     src="/images/integrations/stellar-official.png"
                     alt="Stellar"
@@ -327,9 +330,7 @@ export default function CheckoutPage() {
                     height={20}
                     className="object-contain"
                   />
-                  <span className="text-foreground text-xs font-medium">
-                    Stellar
-                  </span>
+                  <span className="text-foreground text-xs font-medium">Stellar</span>
                 </div>
               </div>
             </div>

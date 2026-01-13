@@ -120,9 +120,7 @@ export function Header() {
 
     (async function fetchGithubRepoStars() {
       try {
-        const response = await axios.get(
-          "https://api.github.com/repos/usepaykit/stellar-tools"
-        );
+        const response = await axios.get("https://api.github.com/repos/usepaykit/stellar-tools");
         if (!mounted) return;
         setStarsNumber(response.data.stargazers_count);
         console.log("Stars count:", response.data.stargazers_count);
@@ -154,9 +152,7 @@ export function Header() {
               height={32}
               className="size-8 rounded-md object-contain"
             />
-            <span className="font-rosemary text-lg font-semibold">
-              Stellar Tools
-            </span>
+            <span className="font-rosemary text-lg font-semibold">Stellar Tools</span>
           </Link>
           <NavigationMenu className="ml-8 hidden lg:flex">
             <NavigationMenuList>
@@ -172,9 +168,7 @@ export function Header() {
                 <NavigationMenuContent className="bg-background pt-3">
                   <ul className="w-[300px]">
                     <div>
-                      <span className="text-muted-foreground p-4">
-                        Adapters
-                      </span>
+                      <span className="text-muted-foreground p-4">Adapters</span>
                       {cloud.map((component) => (
                         <ListItem
                           key={component.title}
@@ -202,9 +196,7 @@ export function Header() {
                 <NavigationMenuContent className="bg-background pt-3">
                   <ul className="w-[300px]">
                     <div>
-                      <span className="text-muted-foreground p-4">
-                        Use Cases
-                      </span>
+                      <span className="text-muted-foreground p-4">Use Cases</span>
                       {cases.map((component) => (
                         <ListItem
                           key={component.title}
@@ -256,12 +248,7 @@ export function Header() {
             </>
           ) : (
             <>
-              <Button
-                asChild
-                size={"sm"}
-                variant={"ghost"}
-                className="flex items-center gap-2"
-              >
+              <Button asChild size={"sm"} variant={"ghost"} className="flex items-center gap-2">
                 <a
                   href="https://github.com/usepaykit/stellar-tools"
                   target="_blank"
@@ -300,15 +287,11 @@ export function Header() {
           <DropdownMenuContent className="w-70 rounded-xl p-3" align="end">
             <div className="p-2">
               <h1 className="font-semibold">Ali Imam</h1>
-              <p className="text-muted-foreground text-sm">
-                contact@aliimam.in
-              </p>
+              <p className="text-muted-foreground text-sm">contact@aliimam.in</p>
             </div>
             <DropdownMenuGroup>
               <DropdownMenuItem className="py-3">Dadhboard</DropdownMenuItem>
-              <DropdownMenuItem className="py-3">
-                Account Settings
-              </DropdownMenuItem>
+              <DropdownMenuItem className="py-3">Account Settings</DropdownMenuItem>
               <DropdownMenuItem className="justify-between py-3">
                 Create Taems <CirclePlus strokeWidth={2} />
               </DropdownMenuItem>
@@ -344,9 +327,7 @@ function ListItem({
   ...props
 }: React.ComponentPropsWithoutRef<"li"> & {
   href: string;
-  icon?:
-    | React.ComponentType<React.SVGProps<SVGSVGElement>>
-    | React.ReactElement;
+  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>> | React.ReactElement;
   logoUrl?: string;
 }) {
   let IconElement: React.ReactNode = null;
@@ -375,9 +356,7 @@ function ListItem({
                 className="size-6 rounded-full object-contain"
               />
             ) : IconElement ? (
-              <div className="icon-container rounded-sm border p-2">
-                {IconElement}
-              </div>
+              <div className="icon-container rounded-sm border p-2">{IconElement}</div>
             ) : null}
             <div className="text-container">
               <div className="text-sm leading-none font-medium">{title}</div>
@@ -471,9 +450,7 @@ const ThemeSwitcher = ({ className }: ThemeSwitcherProps) => {
             onClick={() => handleThemeClick(key as "light" | "dark" | "system")}
             type="button"
           >
-            {isActive && (
-              <div className="bg-secondary absolute inset-0 rounded-full" />
-            )}
+            {isActive && <div className="bg-secondary absolute inset-0 rounded-full" />}
             <Icon
               className={cn(
                 "relative z-10 m-auto h-3.5 w-3.5",

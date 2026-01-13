@@ -1,9 +1,5 @@
 import { resolveApiKey } from "@/actions/apikey";
-import {
-  postCreditTransaction,
-  putCreditBalance,
-  retrieveCreditBalance,
-} from "@/actions/credit";
+import { postCreditTransaction, putCreditBalance, retrieveCreditBalance } from "@/actions/credit";
 import { retrieveProduct } from "@/actions/product";
 import { calculateCredits } from "@/lib/credit-calculator";
 import { NextRequest, NextResponse } from "next/server";
@@ -36,11 +32,7 @@ export const POST = async (
 
     const product = await retrieveProduct(productId, organizationId);
 
-    const creditBalance = await retrieveCreditBalance(
-      customerId,
-      productId,
-      organizationId
-    );
+    const creditBalance = await retrieveCreditBalance(customerId, productId, organizationId);
 
     if (!creditBalance) throw new Error("Invalid Meter Configuration");
 

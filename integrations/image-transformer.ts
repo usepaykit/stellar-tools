@@ -69,10 +69,7 @@ export class ImageTransformer {
         ctx.drawImage(imageBitmap, 0, 0);
 
         blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob(
-            (b) => (b ? resolve(b) : reject(new Error("Failed to convert"))),
-            to
-          );
+          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Failed to convert"))), to);
         });
       }
 
@@ -101,8 +98,7 @@ export class ImageTransformer {
     const svgElement = svgDoc.documentElement;
 
     const width = parseInt(svgElement.getAttribute("width") || "1000") || 1000;
-    const height =
-      parseInt(svgElement.getAttribute("height") || "1000") || 1000;
+    const height = parseInt(svgElement.getAttribute("height") || "1000") || 1000;
     canvas.width = width;
     canvas.height = height;
 
@@ -157,10 +153,7 @@ export class ImageTransformer {
 
       const extension = this.getExtensionFromMimeType(to);
       const currentExt = file.name.split(".").pop() || "";
-      const fileName = file.name.replace(
-        new RegExp(`\\.${currentExt}$`, "i"),
-        `.${extension}`
-      );
+      const fileName = file.name.replace(new RegExp(`\\.${currentExt}$`, "i"), `.${extension}`);
       return new File([blob], fileName, { type: to });
     } catch (error) {
       throw new Error(

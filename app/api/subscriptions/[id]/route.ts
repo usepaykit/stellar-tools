@@ -1,9 +1,5 @@
 import { resolveApiKey } from "@/actions/apikey";
-import {
-  deleteSubscription,
-  putSubscription,
-  retrieveSubscription,
-} from "@/actions/subscription";
+import { deleteSubscription, putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -16,20 +12,14 @@ const updateSubscriptionSchema = z.object({
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
-export const GET = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context.params;
 
     const apiKey = req.headers.get("x-api-key");
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
     const { organizationId } = await resolveApiKey(apiKey);
@@ -42,31 +32,20 @@ export const GET = async (
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
 
-    return NextResponse.json(
-      { error: "Failed to retrieve subscription" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Failed to retrieve subscription" }, { status: 404 });
   }
 };
 
-export const PUT = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context.params;
 
     const apiKey = req.headers.get("x-api-key");
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
-    const { error, data } = updateSubscriptionSchema.safeParse(
-      await req.json()
-    );
+    const { error, data } = updateSubscriptionSchema.safeParse(await req.json());
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -74,12 +53,7 @@ export const PUT = async (
 
     const { organizationId, environment } = await resolveApiKey(apiKey);
 
-    const subscription = await putSubscription(
-      id,
-      data,
-      organizationId,
-      environment
-    );
+    const subscription = await putSubscription(id, data, organizationId, environment);
 
     return NextResponse.json({ data: subscription });
   } catch (error: unknown) {
@@ -87,27 +61,18 @@ export const PUT = async (
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { error: "Failed to update subscription" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update subscription" }, { status: 500 });
   }
 };
 
-export const DELETE = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await context.params;
 
     const apiKey = req.headers.get("x-api-key");
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
     const { organizationId } = await resolveApiKey(apiKey);
@@ -120,9 +85,6 @@ export const DELETE = async (
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(
-      { error: "Failed to delete subscription" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete subscription" }, { status: 500 });
   }
 };

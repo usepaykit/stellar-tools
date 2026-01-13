@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
     const state = searchParams.get("state");
 
     if (error) {
-      const errorDescription =
-        searchParams.get("error_description") ?? "Authentication failed";
+      const errorDescription = searchParams.get("error_description") ?? "Authentication failed";
 
       return NextResponse.redirect(
         new URL(
@@ -31,8 +30,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [stateData] = tryCatchSync<{ redirect: string; [x: string]: any }>(
-      () => JSON.parse(Buffer.from(state ?? "", "base64").toString())
+    const [stateData] = tryCatchSync<{ redirect: string; [x: string]: any }>(() =>
+      JSON.parse(Buffer.from(state ?? "", "base64").toString())
     );
 
     const client = new OAuth2Client(
@@ -80,14 +79,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/select-organization", req.url));
   } catch (error) {
     console.error("OAuth callback error:", error);
-    console.error(
-      "Error stack:",
-      error instanceof Error ? error.stack : "No stack trace"
-    );
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
 
-    return NextResponse.json(
-      { error: "Failed to verify callback" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to verify callback" }, { status: 500 });
   }
 }

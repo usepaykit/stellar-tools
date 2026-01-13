@@ -9,8 +9,8 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Curl, TypeScript } from "@/components/icon";
-import { TextAreaField, TextField } from "@/components/text-field";
 import { LineChart } from "@/components/line-chart";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ChartConfig } from "@/components/ui/chart";
@@ -23,7 +23,7 @@ import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { WebhookEvent } from "@stellartools/core";
+import { WebhookEvent, webhookEvent } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -47,10 +47,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-interface WebhookDestination extends Pick<
-  WebhookSchema,
-  "id" | "name" | "url" | "isDisabled"
-> {
+interface WebhookDestination extends Pick<WebhookSchema, "id" | "name" | "url" | "isDisabled"> {
   eventCount: number;
   eventsFrom: "account" | "test";
   activity?: number[];
@@ -178,10 +175,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown
-              className="ml-1 h-4 w-4 opacity-50"
-              aria-hidden="true"
-            />
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
         </button>
       );
@@ -191,9 +185,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
       return (
         <div className="flex flex-col gap-1">
           {webhook.name && <div className="font-medium">{webhook.name}</div>}
-          <div className="text-muted-foreground font-mono text-sm break-all">
-            {webhook.url}
-          </div>
+          <div className="text-muted-foreground font-mono text-sm break-all">{webhook.url}</div>
         </div>
       );
     },
@@ -252,9 +244,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
     accessorKey: "errorRate",
     header: "Error rate",
     cell: ({ row }) => (
-      <div className="text-muted-foreground text-sm">
-        {row.original.errorRate} %
-      </div>
+      <div className="text-muted-foreground text-sm">{row.original.errorRate} %</div>
     ),
     enableSorting: false,
   },
@@ -334,18 +324,12 @@ function WebhooksPageContent() {
             <div className="flex flex-col gap-4">
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-2">
-                  <h1 className="text-2xl font-bold sm:text-3xl">
-                    Event destinations
-                  </h1>
+                  <h1 className="text-2xl font-bold sm:text-3xl">Event destinations</h1>
                   <p className="text-muted-foreground text-sm sm:text-base">
-                    Send events from Stellar to webhook endpoints and cloud
-                    services.
+                    Send events from Stellar to webhook endpoints and cloud services.
                   </p>
                 </div>
-                <Button
-                  className="gap-2"
-                  onClick={() => handleModalChange(true)}
-                >
+                <Button className="gap-2" onClick={() => handleModalChange(true)}>
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add destination</span>
                   <span className="sm:hidden">Add</span>
@@ -354,16 +338,10 @@ function WebhooksPageContent() {
 
               <Tabs defaultValue="webhooks" className="w-full shadow-none">
                 <TabsList>
-                  <TabsTrigger
-                    value="overview"
-                    className="data-[state=active]:shadow-none"
-                  >
+                  <TabsTrigger value="overview" className="data-[state=active]:shadow-none">
                     Overview
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="webhooks"
-                    className="data-[state=active]:shadow-none"
-                  >
+                  <TabsTrigger value="webhooks" className="data-[state=active]:shadow-none">
                     Webhooks
                   </TabsTrigger>
                 </TabsList>
@@ -393,9 +371,8 @@ function WebhooksPageContent() {
                         </Badge>
                       </div>
                       <p className="text-muted-foreground/80 mx-auto max-w-md text-sm">
-                        We’re building a comprehensive overview dashboard that
-                        will give you insights into your webhook performance,
-                        analytics, and real-time monitoring.
+                        We’re building a comprehensive overview dashboard that will give you
+                        insights into your webhook performance, analytics, and real-time monitoring.
                       </p>
                     </div>
 
@@ -405,9 +382,7 @@ function WebhooksPageContent() {
                           <div className="bg-primary/10 group-hover:bg-primary/20 rounded-lg p-2 transition-colors">
                             <Activity className="text-primary h-5 w-5" />
                           </div>
-                          <h3 className="text-sm font-semibold">
-                            Real-time Monitoring
-                          </h3>
+                          <h3 className="text-sm font-semibold">Real-time Monitoring</h3>
                         </div>
                         <p className="text-muted-foreground text-xs">
                           Track webhook events and responses in real-time
@@ -419,9 +394,7 @@ function WebhooksPageContent() {
                           <div className="bg-primary/10 group-hover:bg-primary/20 rounded-lg p-2 transition-colors">
                             <TrendingUp className="text-primary h-5 w-5" />
                           </div>
-                          <h3 className="text-sm font-semibold">
-                            Analytics & Insights
-                          </h3>
+                          <h3 className="text-sm font-semibold">Analytics & Insights</h3>
                         </div>
                         <p className="text-muted-foreground text-xs">
                           Detailed analytics and performance metrics
@@ -433,9 +406,7 @@ function WebhooksPageContent() {
                           <div className="bg-primary/10 group-hover:bg-primary/20 rounded-lg p-2 transition-colors">
                             <Clock className="text-primary h-5 w-5" />
                           </div>
-                          <h3 className="text-sm font-semibold">
-                            Historical Data
-                          </h3>
+                          <h3 className="text-sm font-semibold">Historical Data</h3>
                         </div>
                         <p className="text-muted-foreground text-xs">
                           View past events and historical trends
@@ -567,17 +538,7 @@ curl -X POST https://your-domain.com/api/webhooks \\
     }
   }'
 
-# Available webhook events:
-# - customer.created
-# - customer.updated
-# - customer.deleted
-# - checkout.created
-# - payment.pending
-# - payment.confirmed
-# - payment.failed
-# - refund.created
-# - refund.succeeded
-# - refund.failed
+# Available webhook events: \n ${webhookEvent.map((event) => `- ${event}`).join("\n")}
 `;
 
 const schema = z.object({
@@ -600,7 +561,9 @@ const schema = z.object({
     .max(500, "Description must be less than 500 characters")
     .optional()
     .or(z.literal("")),
-  events: z.array(z.string()).min(1, "Please select at least one event"),
+  events: z
+    .array(z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent)))
+    .min(1, "Please select at least one event"),
 });
 
 const WEBHOOK_EVENTS = [
@@ -650,7 +613,7 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
       destinationName: "",
       endpointUrl: "",
       description: "",
-      events: [] as string[],
+      events: [],
     },
   });
 
@@ -663,7 +626,7 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
         name: data.destinationName,
         url: data.endpointUrl,
         description: data.description ?? null,
-        events: data.events as WebhookEvent[],
+        events: data.events,
         isDisabled: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -806,9 +769,7 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 onClick={handleSelectAll}
                 className="h-auto px-2 py-1 text-xs shadow-none"
               >
-                {events.length === WEBHOOK_EVENTS.length
-                  ? "Deselect all"
-                  : "Select all"}
+                {events.length === WEBHOOK_EVENTS.length ? "Deselect all" : "Select all"}
               </Button>
             </div>
             <p className="text-muted-foreground text-sm">
@@ -828,16 +789,11 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
                           onCheckedChange={(checked) => {
                             const newValue = checked
                               ? [...field.value, event.id]
-                              : field.value.filter(
-                                  (id: string) => id !== event.id
-                                );
+                              : field.value.filter((id: string) => id !== event.id);
                             field.onChange(newValue);
                           }}
                         />
-                        <Label
-                          htmlFor={event.id}
-                          className="cursor-pointer text-sm font-medium"
-                        >
+                        <Label htmlFor={event.id} className="cursor-pointer text-sm font-medium">
                           {event.label}
                         </Label>
                       </div>
@@ -859,9 +815,7 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
             <Label>Webhook Secret</Label>
             <div className="flex items-center gap-2">
               <div className="bg-muted border-border flex-1 rounded-md border p-3 shadow-none">
-                <code className="font-mono text-sm break-all">
-                  {webhookSecret}
-                </code>
+                <code className="font-mono text-sm break-all">{webhookSecret}</code>
               </div>
               <Button
                 type="button"
@@ -878,16 +832,15 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              Use this secret to verify webhook signatures. Keep it secure and
-              never expose it in client-side code.
+              Use this secret to verify webhook signatures. Keep it secure and never expose it in
+              client-side code.
             </p>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-lg font-semibold">Code Examples</h3>
             <p className="text-muted-foreground text-sm">
-              Here are examples of how to handle webhook events in your
-              application.
+              Here are examples of how to handle webhook events in your application.
             </p>
           </div>
 

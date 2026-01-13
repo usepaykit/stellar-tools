@@ -75,20 +75,15 @@ export class WebhookDelivery {
       );
 
       if (!isSuccess) {
-        throw new Error(
-          `Webhook delivery failed: ${statusCode} - ${responseText}`
-        );
+        throw new Error(`Webhook delivery failed: ${statusCode} - ${responseText}`);
       }
 
-      console.log(
-        `✅ Webhook delivered to ${webhook.url} in ${duration}ms (${statusCode})`
-      );
+      console.log(`✅ Webhook delivered to ${webhook.url} in ${duration}ms (${statusCode})`);
 
       return { success: true, webhookId: webhook.id };
     } catch (error) {
       const duration = Date.now() - startTime;
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
       await postWebhookLog(
         webhook.id,

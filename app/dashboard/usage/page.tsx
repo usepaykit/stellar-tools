@@ -13,11 +13,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight, Package, Search } from "lucide-react";
 import Link from "next/link";
@@ -151,9 +147,7 @@ const columns: ColumnDef<UsageRecord>[] = [
       return (
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="font-medium">
-              {record.consumed.toLocaleString()}
-            </span>
+            <span className="font-medium">{record.consumed.toLocaleString()}</span>
             <span className="text-muted-foreground text-sm">
               / {record.granted.toLocaleString()}
             </span>
@@ -165,9 +159,7 @@ const columns: ColumnDef<UsageRecord>[] = [
                 style={{ width: `${Math.min(usagePercentage, 100)}%` }}
               />
             </div>
-            <span className="text-muted-foreground text-xs">
-              {usagePercentage.toFixed(1)}%
-            </span>
+            <span className="text-muted-foreground text-xs">{usagePercentage.toFixed(1)}%</span>
           </div>
         </div>
       );
@@ -183,9 +175,7 @@ const columns: ColumnDef<UsageRecord>[] = [
       return (
         <div className="flex flex-col gap-1">
           <span className="font-medium">{customer.name}</span>
-          <span className="text-muted-foreground text-sm">
-            {customer.email}
-          </span>
+          <span className="text-muted-foreground text-sm">{customer.email}</span>
         </div>
       );
     },
@@ -258,9 +248,7 @@ export default function UsagePage() {
     {
       label: "View Payment",
       onClick: (record) => {
-        router.push(
-          `/dashboard/transactions?customer=${record.customerId}&paymentId=x`
-        );
+        router.push(`/dashboard/transactions?customer=${record.customerId}&paymentId=x`);
       },
     },
     {

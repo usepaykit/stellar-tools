@@ -4,12 +4,7 @@ import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
@@ -21,10 +16,7 @@ import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
 import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
 import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx";
 import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
-import {
-  oneDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 SyntaxHighlighter.registerLanguage("tsx", tsx);
 SyntaxHighlighter.registerLanguage("typescript", typescript);
@@ -110,14 +102,7 @@ export function CodeBlock({
   }, [hasMaxHeight, maxHeight, showHeader]);
 
   if (!mounted) {
-    return (
-      <div
-        className={cn(
-          "bg-muted h-[100px] w-full animate-pulse rounded-lg",
-          className
-        )}
-      />
-    );
+    return <div className={cn("bg-muted h-[100px] w-full animate-pulse rounded-lg", className)} />;
   }
 
   return (
@@ -143,15 +128,11 @@ export function CodeBlock({
                 />
               )}
               {filename && (
-                <span className="text-muted-foreground text-xs font-medium">
-                  {filename}
-                </span>
+                <span className="text-muted-foreground text-xs font-medium">{filename}</span>
               )}
             </div>
 
-            {showCopyButton && !isShell && (
-              <CopyButton copied={copied} onCopy={copyToClipboard} />
-            )}
+            {showCopyButton && !isShell && <CopyButton copied={copied} onCopy={copyToClipboard} />}
           </div>
         )}
 
@@ -191,11 +172,7 @@ export function CodeBlock({
             {/* Floating Copy Button for Shell/No-Header view */}
             {!showHeader && showCopyButton && (
               <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-                <CopyButton
-                  copied={copied}
-                  onCopy={copyToClipboard}
-                  variant="floating"
-                />
+                <CopyButton copied={copied} onCopy={copyToClipboard} variant="floating" />
               </div>
             )}
           </div>
@@ -234,9 +211,7 @@ function CopyButton({
           <span className="sr-only">Copy code</span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent>
-        {copied ? "Copied!" : "Copy to clipboard"}
-      </TooltipContent>
+      <TooltipContent>{copied ? "Copied!" : "Copy to clipboard"}</TooltipContent>
     </Tooltip>
   );
 }
