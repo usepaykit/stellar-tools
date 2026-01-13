@@ -2,11 +2,7 @@ import { getCurrentUser } from "@/actions/auth";
 import { getCurrentOrganization } from "@/actions/organization";
 import { redirect } from "next/navigation";
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
 
   if (!user) redirect("/signin");

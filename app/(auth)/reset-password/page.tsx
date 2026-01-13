@@ -4,11 +4,7 @@ import React from "react";
 
 import { resetPassword } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -113,28 +109,23 @@ export default function UpdatePassword() {
 
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs.
-                Centralized control with enterprise reliability.
+                The cloud platform for managing Stellar payment SDKs. Centralized control with
+                enterprise reliability.
               </p>
 
               <div className="flex flex-col gap-4 pt-2">
                 <div className="group flex items-start gap-4">
                   <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">
-                      Cloud-Native
-                    </h4>
+                    <h4 className="mb-1 text-sm font-semibold text-white">Cloud-Native</h4>
                     <p className="text-sm leading-relaxed text-white/60">
-                      Unified dashboard to deploy, monitor, and scale—zero
-                      infrastructure overhead.
+                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
                     </p>
                   </div>
                 </div>
 
                 <div className="group flex items-start gap-4">
                   <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">
-                      Global Infrastructure
-                    </h4>
+                    <h4 className="mb-1 text-sm font-semibold text-white">Global Infrastructure</h4>
                     <p className="text-sm leading-relaxed text-white/60">
                       99.9% uptime with enterprise-grade security by default.
                     </p>
@@ -154,8 +145,7 @@ export default function UpdatePassword() {
                 </h3>
               </div>
               <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of
-                applications worldwide.
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
               </p>
             </div>
           </div>
@@ -168,28 +158,21 @@ export default function UpdatePassword() {
           className="mx-auto flex w-full max-w-md flex-col items-center justify-center space-y-4 px-6 py-12"
         >
           <div className="w-full space-y-2 text-center">
-            <h2 className="f text-3xl tracking-tighter">
-              Update your password
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Choose a new password for your account.
-            </p>
+            <h2 className="f text-3xl tracking-tighter">Update your password</h2>
+            <p className="text-muted-foreground text-sm">Choose a new password for your account.</p>
             {!token && (
               <p className="text-destructive mt-2 text-sm">
-                Invalid or missing reset token. Please request a new password
-                reset link.
+                Invalid or missing reset token. Please request a new password reset link.
               </p>
             )}
           </div>
 
           {error && !dismissedError && (
-            <div className="w-full rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+            <div className="border-destructive/50 bg-destructive/10 w-full rounded-lg border p-4">
               <div className="flex items-start gap-3">
                 <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
                 <div className="flex-1 space-y-1">
-                  <h3 className="text-destructive text-sm font-semibold">
-                    Authentication Error
-                  </h3>
+                  <h3 className="text-destructive text-sm font-semibold">Authentication Error</h3>
                   <p className="text-destructive/90 text-sm">
                     {errorDescription ||
                       (error === "access_denied"
@@ -238,9 +221,7 @@ export default function UpdatePassword() {
                         size="icon"
                         className="h-6 w-6 shadow-none hover:bg-transparent"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        aria-label={
-                          showNewPassword ? "Hide password" : "Show password"
-                        }
+                        aria-label={showNewPassword ? "Hide password" : "Show password"}
                       >
                         {showNewPassword ? (
                           <EyeOff className="text-muted-foreground h-4 w-4" />
@@ -250,9 +231,7 @@ export default function UpdatePassword() {
                       </Button>
                     </InputGroupAddon>
                   </InputGroup>
-                  {error?.message && (
-                    <p className="text-destructive text-sm">{error.message}</p>
-                  )}
+                  {error?.message && <p className="text-destructive text-sm">{error.message}</p>}
                 </div>
               )}
             />
@@ -284,14 +263,8 @@ export default function UpdatePassword() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 shadow-none hover:bg-transparent"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        aria-label={
-                          showConfirmPassword
-                            ? "Hide password"
-                            : "Show password"
-                        }
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="text-muted-foreground h-4 w-4" />
@@ -301,9 +274,7 @@ export default function UpdatePassword() {
                       </Button>
                     </InputGroupAddon>
                   </InputGroup>
-                  {error?.message && (
-                    <p className="text-destructive text-sm">{error.message}</p>
-                  )}
+                  {error?.message && <p className="text-destructive text-sm">{error.message}</p>}
                 </div>
               )}
             />

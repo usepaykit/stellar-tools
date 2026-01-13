@@ -1,16 +1,9 @@
 import { resolveApiKey } from "@/actions/apikey";
-import {
-  deleteCheckout,
-  putCheckout,
-  retrieveCheckout,
-} from "@/actions/checkout";
+import { deleteCheckout, putCheckout, retrieveCheckout } from "@/actions/checkout";
 import { updateCheckoutSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
-export const GET = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
@@ -26,10 +19,7 @@ export const GET = async (
   return NextResponse.json({ data: checkout });
 };
 
-export const PUT = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
@@ -49,10 +39,7 @@ export const PUT = async (
   return NextResponse.json({ data: checkout });
 };
 
-export const DELETE = async (
-  req: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) => {
+export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");

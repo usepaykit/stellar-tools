@@ -17,10 +17,7 @@ export const postAccount = async (params: Partial<Account>) => {
 };
 
 export const retrieveAccount = async (
-  payload:
-    | { id: string }
-    | { email: string }
-    | { sso: { provider: AuthProvider; sub: string } }
+  payload: { id: string } | { email: string } | { sso: { provider: AuthProvider; sub: string } }
 ): Promise<Account | null> => {
   let whereClause;
 
@@ -37,11 +34,7 @@ export const retrieveAccount = async (
     whereClause = eq(accounts.email, payload.email);
   }
 
-  const [account] = await db
-    .select()
-    .from(accounts)
-    .where(whereClause)
-    .limit(1);
+  const [account] = await db.select().from(accounts).where(whereClause).limit(1);
 
   return account || null;
 };

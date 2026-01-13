@@ -35,10 +35,7 @@ export class Encryption {
     const key = this.getEncryptionKey(version);
 
     const ivHex = encrypted.slice(0, this.ivLength * 2);
-    const authTagHex = encrypted.slice(
-      this.ivLength * 2,
-      (this.ivLength + this.tagLength) * 2
-    );
+    const authTagHex = encrypted.slice(this.ivLength * 2, (this.ivLength + this.tagLength) * 2);
     const encryptedHex = encrypted.slice((this.ivLength + this.tagLength) * 2);
 
     const iv = Buffer.from(ivHex, "hex");

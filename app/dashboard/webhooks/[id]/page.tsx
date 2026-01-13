@@ -6,11 +6,7 @@ import { retrieveWebhookLogs } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import {
-  LogDetailItem,
-  LogDetailSection,
-  LogPicker,
-} from "@/components/log-picker";
+import { LogDetailItem, LogDetailSection, LogPicker } from "@/components/log-picker";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -30,25 +26,12 @@ import { WebhookLog } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useOrgQuery } from "@/hooks/use-org-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  Copy,
-  RefreshCw,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
 import moment from "moment";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-const StatusBadge = ({
-  statusCode,
-  nextRetry,
-}: {
-  statusCode?: number;
-  nextRetry?: string;
-}) => {
+const StatusBadge = ({ statusCode, nextRetry }: { statusCode?: number; nextRetry?: string }) => {
   if (statusCode === 200) {
     return (
       <Badge
@@ -66,11 +49,7 @@ const StatusBadge = ({
       variant="outline"
       className="w-[90px] justify-center gap-1.5 border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
     >
-      {nextRetry ? (
-        <Clock className="h-3 w-3" />
-      ) : (
-        <XCircle className="h-3 w-3" />
-      )}
+      {nextRetry ? <Clock className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
       Failed
     </Badge>
   );
@@ -87,11 +66,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
-      {copied ? (
-        <CheckCircle2 className="h-4 w-4 text-green-600" />
-      ) : (
-        <Copy className="h-4 w-4" />
-      )}
+      {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
     </Button>
   );
 };
@@ -107,9 +82,7 @@ const columns: ColumnDef<WebhookLog>[] = [
           <div className="shrink-0">
             <StatusBadge
               statusCode={log.statusCode ?? undefined}
-              nextRetry={
-                log.nextRetry ? moment(log.nextRetry).fromNow() : undefined
-              }
+              nextRetry={log.nextRetry ? moment(log.nextRetry).fromNow() : undefined}
             />
           </div>
           <span className="text-sm font-medium">{log.eventType}</span>
@@ -152,35 +125,26 @@ export default function WebhookLogPage() {
     data: webhookLogs,
     isLoading: isLoadingWebhookLogs,
     refetch: refetchWebhookLogs,
-  } = useOrgQuery(
-    ["webhookLogs", webhookId],
-    () => retrieveWebhookLogs(webhookId),
-    {
-      enabled: !!webhookId,
-      select: (data) => {
-        return data.map((log) => ({
-          id: log.id,
-          eventType: log.eventType,
-          status:
-            log.statusCode === 200
-              ? ("succeeded" as const)
-              : ("failed" as const),
-          statusCode: log.statusCode ?? undefined,
-          timestamp: new Date(log.createdAt),
-          eventId: log.id,
-          originDate: new Date(log.createdAt),
-          source: "Automatic",
-          apiVersion: log.apiVersion,
-          description: log.description,
-          response: log.response ?? undefined,
-          request: log.request ?? {},
-          nextRetry: log.nextRetry
-            ? moment(log.nextRetry).fromNow()
-            : undefined,
-        }));
-      },
-    }
-  );
+  } = useOrgQuery(["webhookLogs", webhookId], () => retrieveWebhookLogs(webhookId), {
+    enabled: !!webhookId,
+    select: (data) => {
+      return data.map((log) => ({
+        id: log.id,
+        eventType: log.eventType,
+        status: log.statusCode === 200 ? ("succeeded" as const) : ("failed" as const),
+        statusCode: log.statusCode ?? undefined,
+        timestamp: new Date(log.createdAt),
+        eventId: log.id,
+        originDate: new Date(log.createdAt),
+        source: "Automatic",
+        apiVersion: log.apiVersion,
+        description: log.description,
+        response: log.response ?? undefined,
+        request: log.request ?? {},
+        nextRetry: log.nextRetry ? moment(log.nextRetry).fromNow() : undefined,
+      }));
+    },
+  });
 
   const filteredLogs = React.useMemo(() => {
     let logs = webhookLogs;
@@ -272,9 +236,7 @@ export default function WebhookLogPage() {
 
               <LogDetailItem
                 label="Origin date"
-                value={moment(log.createdAt)
-                  .utc()
-                  .format("MMM D, YYYY, h:mm A [GMT]")}
+                value={moment(log.createdAt).utc().format("MMM D, YYYY, h:mm A [GMT]")}
               />
 
               <LogDetailItem label="Source" value="Automatic" />
@@ -285,11 +247,7 @@ export default function WebhookLogPage() {
 
           <LogDetailSection title="Response">
             {log.response ? (
-              <CodeBlock
-                language="json"
-                showCopyButton={true}
-                maxHeight="200px"
-              >
+              <CodeBlock language="json" showCopyButton={true} maxHeight="200px">
                 {typeof log.response === "string"
                   ? log.response
                   : JSON.stringify(log.response, null, 2)}
@@ -307,9 +265,7 @@ export default function WebhookLogPage() {
         </div>
 
         <div className="border-border mt-4 border-t pt-4">
-          <p className="text-muted-foreground text-center text-xs">
-            Resent automatically
-          </p>
+          <p className="text-muted-foreground text-center text-xs">Resent automatically</p>
         </div>
       </div>
     );
@@ -346,12 +302,8 @@ export default function WebhookLogPage() {
               >
                 <UnderlineTabsList>
                   <UnderlineTabsTrigger value="all">All</UnderlineTabsTrigger>
-                  <UnderlineTabsTrigger value="succeeded">
-                    Succeeded
-                  </UnderlineTabsTrigger>
-                  <UnderlineTabsTrigger value="failed">
-                    Failed
-                  </UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="succeeded">Succeeded</UnderlineTabsTrigger>
+                  <UnderlineTabsTrigger value="failed">Failed</UnderlineTabsTrigger>
                 </UnderlineTabsList>
               </UnderlineTabs>
               <Button

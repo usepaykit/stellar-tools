@@ -23,11 +23,7 @@ export const POST = async (req: NextRequest) => {
   let customer: Customer | null = null;
 
   if (data?.customerId) {
-    customer = await retrieveCustomer(
-      { id: data.customerId },
-      organizationId,
-      environment
-    );
+    customer = await retrieveCustomer({ id: data.customerId }, organizationId, environment);
   } else if (data?.customerEmail) {
     customer = await postCustomer(
       {
@@ -44,12 +40,7 @@ export const POST = async (req: NextRequest) => {
     );
 
     await tryCatchAsync(
-      triggerWebhooks(
-        "customer.created",
-        { customer },
-        organizationId,
-        environment
-      )
+      triggerWebhooks("customer.created", { customer }, organizationId, environment)
     );
   } else {
     throw new Error("Customer ID or email is required");
@@ -74,12 +65,7 @@ export const POST = async (req: NextRequest) => {
   );
 
   await tryCatchAsync(
-    triggerWebhooks(
-      "checkout.created",
-      { checkout },
-      organizationId,
-      environment
-    )
+    triggerWebhooks("checkout.created", { checkout }, organizationId, environment)
   );
 
   return NextResponse.json({ data: checkout });

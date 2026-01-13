@@ -99,29 +99,24 @@ export default function ForgotPassword() {
             {/* Value Proposition - Concise and impactful */}
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs.
-                Centralized control with enterprise reliability.
+                The cloud platform for managing Stellar payment SDKs. Centralized control with
+                enterprise reliability.
               </p>
 
               {/* Feature highlights - Minimal and elegant */}
               <div className="flex flex-col gap-4 pt-2">
                 <div className="group flex items-start gap-4">
                   <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">
-                      Cloud-Native
-                    </h4>
+                    <h4 className="mb-1 text-sm font-semibold text-white">Cloud-Native</h4>
                     <p className="text-sm leading-relaxed text-white/60">
-                      Unified dashboard to deploy, monitor, and scale—zero
-                      infrastructure overhead.
+                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
                     </p>
                   </div>
                 </div>
 
                 <div className="group flex items-start gap-4">
                   <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">
-                      Global Infrastructure
-                    </h4>
+                    <h4 className="mb-1 text-sm font-semibold text-white">Global Infrastructure</h4>
                     <p className="text-sm leading-relaxed text-white/60">
                       99.9% uptime with enterprise-grade security by default.
                     </p>
@@ -143,8 +138,7 @@ export default function ForgotPassword() {
                 </h3>
               </div>
               <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of
-                applications worldwide.
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
               </p>
             </div>
           </div>
@@ -160,15 +154,11 @@ export default function ForgotPassword() {
           <div className="w-full space-y-2 text-center">
             <h2 className="f text-3xl tracking-tighter">Reset your password</h2>
             <p className="text-muted-foreground text-sm">
-              Enter your email address and we&apos;ll send you a link to reset
-              your password.
+              Enter your email address and we&apos;ll send you a link to reset your password.
             </p>
           </div>
 
-          <AuthErrorAlert
-            error={error}
-            onDismissError={() => setDismissedError(true)}
-          />
+          <AuthErrorAlert error={error} onDismissError={() => setDismissedError(true)} />
 
           <div className="w-full">
             <Controller
@@ -193,9 +183,7 @@ export default function ForgotPassword() {
             disabled={forgotpasswordMutation.isPending}
             isLoading={forgotpasswordMutation.isPending}
           >
-            {forgotpasswordMutation.isPending
-              ? "Sending reset link..."
-              : "Send reset link"}
+            {forgotpasswordMutation.isPending ? "Sending reset link..." : "Send reset link"}
           </Button>
 
           <div className="my-6 w-full">

@@ -1,23 +1,21 @@
 import * as React from "react";
+
 import { MixinProps, splitProps } from "@/lib/mixin";
-import { Label } from "./ui/label";
 import { cn } from "@/lib/utils";
+
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
-
 
 export interface TimePickerProps
   extends
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
     MixinProps<"helpText", Omit<HelpTextProps, "children">>,
-    MixinProps<
-      "input",
-      Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type">
-    > {
+    MixinProps<"input", Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type">> {
   id: string;
   value: string | undefined;
   onChange: (time: string | undefined) => void;
@@ -67,10 +65,7 @@ export const TimePicker = React.forwardRef<HTMLInputElement, TimePickerProps>(
         {helpText && (
           <p
             {...helpTextProps}
-            className={cn(
-              "text-muted-foreground text-sm",
-              helpTextProps.className
-            )}
+            className={cn("text-muted-foreground text-sm", helpTextProps.className)}
           >
             {helpText}
           </p>

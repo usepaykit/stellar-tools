@@ -10,16 +10,12 @@ export class Stellar {
     if (this.network == "testnet") {
       return {
         networkPassphrase: StellarSDK.Networks.TESTNET,
-        server: new StellarSDK.Horizon.Server(
-          process.env.STELLAR_TESTNET_HORIZON_URL!
-        ),
+        server: new StellarSDK.Horizon.Server(process.env.STELLAR_TESTNET_HORIZON_URL!),
       };
     } else {
       return {
         networkPassphrase: StellarSDK.Networks.PUBLIC,
-        server: new StellarSDK.Horizon.Server(
-          process.env.STELLAR_MAINNET_HORIZON_URL!
-        ),
+        server: new StellarSDK.Horizon.Server(process.env.STELLAR_MAINNET_HORIZON_URL!),
       };
     }
   }
@@ -68,12 +64,7 @@ export class Stellar {
     sourceSecret: string,
     destinationPublicKey: string,
     startingBalance: string
-  ): Promise<
-    ApiResponse<
-      StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null,
-      string
-    >
-  > {
+  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> {
     if (!StellarSDK.StrKey.isValidEd25519PublicKey(destinationPublicKey)) {
       return {
         data: null,
@@ -145,11 +136,7 @@ export class Stellar {
     return { data: transactions };
   };
 
-  retrievePaymentHistory = async (
-    accountId: string,
-    limit: number = 20,
-    cursor?: string
-  ) => {
+  retrievePaymentHistory = async (accountId: string, limit: number = 20, cursor?: string) => {
     const { server } = this.getServerAndNetwork();
     const query = server.payments().forAccount(accountId);
 
@@ -170,15 +157,10 @@ export class Stellar {
 
   retrieveTx = async (
     transactionHash: string
-  ): Promise<
-    ApiResponse<StellarSDK.Horizon.ServerApi.TransactionRecord | null>
-  > => {
+  ): Promise<ApiResponse<StellarSDK.Horizon.ServerApi.TransactionRecord | null>> => {
     const { server } = this.getServerAndNetwork();
 
-    const transaction = await server
-      .transactions()
-      .transaction(transactionHash)
-      .call();
+    const transaction = await server.transactions().transaction(transactionHash).call();
 
     return { data: transaction };
   };
@@ -186,10 +168,7 @@ export class Stellar {
   retrievePayment = async (transactionHash: string) => {
     const { server } = this.getServerAndNetwork();
 
-    const payment = await server
-      .payments()
-      .forTransaction(transactionHash)
-      .call();
+    const payment = await server.payments().forTransaction(transactionHash).call();
 
     return { data: payment };
   };
@@ -202,10 +181,7 @@ export class Stellar {
     amount: string,
     memo?: string
   ): Promise<
-    ApiResponse<
-      StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null,
-      string
-    >
+    ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>
   > => {
     try {
       const keypair = StellarSDK.Keypair.fromSecret(sourceSecret);
@@ -251,9 +227,7 @@ export class Stellar {
     publicKey: string,
     evts: {
       onError: (event: MessageEvent) => void;
-      onMessage: (
-        event: StellarSDK.Horizon.ServerApi.TransactionRecord
-      ) => void;
+      onMessage: (event: StellarSDK.Horizon.ServerApi.TransactionRecord) => void;
     }
   ): (() => void) => {
     const { server } = this.getServerAndNetwork();
@@ -281,16 +255,8 @@ export class Stellar {
     callback?: string;
     originDomain?: string;
   }): string => {
-    const {
-      destination,
-      amount,
-      assetCode,
-      assetIssuer,
-      memo,
-      message,
-      callback,
-      originDomain,
-    } = params;
+    const { destination, amount, assetCode, assetIssuer, memo, message, callback, originDomain } =
+      params;
 
     const paymentRequest = Sep7Pay.forDestination(destination);
 

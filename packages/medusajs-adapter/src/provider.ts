@@ -32,10 +32,7 @@ import {
 } from "@medusajs/framework/utils";
 import { StellarTools, validateRequiredKeys } from "@stellartools/core";
 
-import {
-  StellarToolsMedusaAdapterOptions,
-  stellarToolsMedusaAdapterOptionsSchema,
-} from "./schema";
+import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
 
 export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarToolsMedusaAdapterOptions> {
   /**
@@ -63,10 +60,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
    * @param cradle - Medusa's dependency injection container
    * @param options - Stellar provider configuration
    */
-  constructor(
-    cradle: Record<string, unknown>,
-    options: StellarToolsMedusaAdapterOptions
-  ) {
+  constructor(cradle: Record<string, unknown>, options: StellarToolsMedusaAdapterOptions) {
     super(cradle, options);
 
     this.options = options;
@@ -74,9 +68,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     const debug = this.options.debug ?? false;
 
     if (debug) {
-      console.info(
-        `[Stellar] Initialized with API key: ${this.options.apiKey}`
-      );
+      console.info(`[Stellar] Initialized with API key: ${this.options.apiKey}`);
     }
 
     this.stellar = new StellarTools({ apiKey: this.options.apiKey });
@@ -129,9 +121,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     return { data: { captured: true } };
   };
 
-  authorizePayment = async (
-    input: AuthorizePaymentInput
-  ): Promise<AuthorizePaymentOutput> => {
+  authorizePayment = async (input: AuthorizePaymentInput): Promise<AuthorizePaymentOutput> => {
     if (this.options.debug) {
       console.info("[StellarTools] Authorizing payment", input);
     }
@@ -139,9 +129,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     return this.getPaymentStatus(input);
   };
 
-  cancelPayment = async (
-    input: CancelPaymentInput
-  ): Promise<CancelPaymentOutput> => {
+  cancelPayment = async (input: CancelPaymentInput): Promise<CancelPaymentOutput> => {
     if (this.options.debug) {
       console.info("[StellarTools] Canceling payment", input);
     }
@@ -152,15 +140,11 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     );
   };
 
-  deletePayment = async (
-    input: DeletePaymentInput
-  ): Promise<DeletePaymentOutput> => {
+  deletePayment = async (input: DeletePaymentInput): Promise<DeletePaymentOutput> => {
     return this.cancelPayment(input);
   };
 
-  getPaymentStatus = async (
-    input: GetPaymentStatusInput
-  ): Promise<GetPaymentStatusOutput> => {
+  getPaymentStatus = async (input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> => {
     const { id: paymentId } = validateRequiredKeys(
       ["id"],
       (input?.data ?? {}) as Record<string, string>,
@@ -191,9 +175,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     };
   };
 
-  refundPayment = async (
-    input: RefundPaymentInput
-  ): Promise<RefundPaymentOutput> => {
+  refundPayment = async (input: RefundPaymentInput): Promise<RefundPaymentOutput> => {
     if (this.options.debug) {
       console.info("[StellarTools] Refunding payment", input);
     }
@@ -223,9 +205,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     return { data: refund as Record<string, unknown> };
   };
 
-  retrievePayment = async (
-    input: RetrievePaymentInput
-  ): Promise<RetrievePaymentOutput> => {
+  retrievePayment = async (input: RetrievePaymentInput): Promise<RetrievePaymentOutput> => {
     if (this.options.debug) {
       console.info("[Stellar] Retrieving payment", input);
     }
@@ -335,21 +315,15 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     const { customer } = context;
 
     if (!customer) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        "Customer not found in context"
-      );
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Customer not found in context");
     }
 
-    const updatedCustomer = await this.stellar.customers.update(
-      accountHolderId,
-      {
-        email: customer.email,
-        name: `${customer.first_name} ${customer.last_name}`,
-        phone: customer.phone ?? undefined,
-        appMetadata: data?.metadata as Record<string, unknown>,
-      }
-    );
+    const updatedCustomer = await this.stellar.customers.update(accountHolderId, {
+      email: customer.email,
+      name: `${customer.first_name} ${customer.last_name}`,
+      phone: customer.phone ?? undefined,
+      appMetadata: data?.metadata as Record<string, unknown>,
+    });
 
     if (!updatedCustomer.ok) {
       throw new MedusaError(

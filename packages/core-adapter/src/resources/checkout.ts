@@ -23,9 +23,7 @@ export class CheckoutApi {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to create checkout: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to create checkout: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -35,18 +33,13 @@ export class CheckoutApi {
     const response = await this.apiClient.get<Checkout>(`/checkouts/${id}`);
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to retrieve checkout: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to retrieve checkout: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
   }
 
-  async update(
-    id: string,
-    params: UpdateCheckout
-  ): Promise<Result<Checkout, Error>> {
+  async update(id: string, params: UpdateCheckout): Promise<Result<Checkout, Error>> {
     const { error, data } = updateCheckoutSchema.safeParse(params);
 
     if (error) {
@@ -58,9 +51,7 @@ export class CheckoutApi {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to update checkout: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to update checkout: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -70,9 +61,7 @@ export class CheckoutApi {
     const response = await this.apiClient.delete<Checkout>(`/checkouts/${id}`);
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to delete checkout: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to delete checkout: ${response.error?.message}`));
     }
 
     return OK(response.value.data);

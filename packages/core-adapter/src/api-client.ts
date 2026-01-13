@@ -1,12 +1,6 @@
 import { nanoid } from "nanoid";
 
-import {
-  ERR,
-  OK,
-  Result,
-  buildError,
-  executeWithRetryWithHandler,
-} from "./utils";
+import { ERR, OK, Result, buildError, executeWithRetryWithHandler } from "./utils";
 
 const DEFAULT_TIMEOUT = 30000;
 
@@ -78,15 +72,11 @@ export class ApiClient {
   };
 
   private getFullUrl(endpoint: string): string {
-    const cleanEndpoint = endpoint.startsWith("/")
-      ? endpoint.slice(1)
-      : endpoint;
+    const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
     return `${this.config.baseUrl}/${cleanEndpoint}`;
   }
 
-  private getRequestOptions(
-    options?: Omit<RequestInit, "method">
-  ): RequestInit {
+  private getRequestOptions(options?: Omit<RequestInit, "method">): RequestInit {
     return {
       headers: {
         "Content-Type": "application/json",
@@ -115,9 +105,7 @@ export class ApiClient {
       return { retry: false, data: null };
     }
 
-    const shouldRetry = retryablePatterns.some((pattern) =>
-      pattern.test(errorString)
-    );
+    const shouldRetry = retryablePatterns.some((pattern) => pattern.test(errorString));
 
     if (this.config.retryOptions.debug) {
       console.info(
@@ -223,12 +211,7 @@ export class ApiClient {
         const apiResponse = await this.parseResponse<T>(res);
 
         if (!res.ok) {
-          return ERR(
-            buildError(
-              `${res.status}: ${apiResponse.text}`,
-              apiResponse
-            ) as Error
-          );
+          return ERR(buildError(`${res.status}: ${apiResponse.text}`, apiResponse) as Error);
         }
 
         return OK(apiResponse);
@@ -261,12 +244,7 @@ export class ApiClient {
         const apiResponse = await this.parseResponse<T>(res);
 
         if (!res.ok) {
-          return ERR(
-            buildError(
-              `${res.status}: ${apiResponse.text}`,
-              apiResponse
-            ) as Error
-          );
+          return ERR(buildError(`${res.status}: ${apiResponse.text}`, apiResponse) as Error);
         }
 
         return OK(apiResponse);
@@ -281,8 +259,7 @@ export class ApiClient {
     endpoint: string,
     options?: Omit<RequestInit, "method"> & { requestId?: string }
   ): Promise<Result<ApiResponse<T>, Error>> => {
-    const requestId =
-      options?.requestId ?? `delete_${Date.now()}_${nanoid(10)}`;
+    const requestId = options?.requestId ?? `delete_${Date.now()}_${nanoid(10)}`;
 
     return this.withRetry(async () => {
       try {
@@ -300,12 +277,7 @@ export class ApiClient {
         const apiResponse = await this.parseResponse<T>(res);
 
         if (!res.ok) {
-          return ERR(
-            buildError(
-              `${res.status}: ${apiResponse.text}`,
-              apiResponse
-            ) as Error
-          );
+          return ERR(buildError(`${res.status}: ${apiResponse.text}`, apiResponse) as Error);
         }
 
         return OK(apiResponse);
@@ -338,12 +310,7 @@ export class ApiClient {
         const apiResponse = await this.parseResponse<T>(res);
 
         if (!res.ok) {
-          return ERR(
-            buildError(
-              `${res.status}: ${apiResponse.text}`,
-              apiResponse
-            ) as Error
-          );
+          return ERR(buildError(`${res.status}: ${apiResponse.text}`, apiResponse) as Error);
         }
 
         return OK(apiResponse);
@@ -376,12 +343,7 @@ export class ApiClient {
         const apiResponse = await this.parseResponse<T>(res);
 
         if (!res.ok) {
-          return ERR(
-            buildError(
-              `${res.status}: ${apiResponse.text}`,
-              apiResponse
-            ) as Error
-          );
+          return ERR(buildError(`${res.status}: ${apiResponse.text}`, apiResponse) as Error);
         }
 
         return OK(apiResponse);

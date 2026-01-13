@@ -15,15 +15,7 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  Banknote,
-  Calendar,
-  CheckCircle2,
-  Clock,
-  Coins,
-  Plus,
-  Wallet,
-} from "lucide-react";
+import { Banknote, Calendar, CheckCircle2, Clock, Coins, Plus, Wallet } from "lucide-react";
 import moment from "moment";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -91,14 +83,12 @@ const mockPayouts: Payout[] = [
 const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const variants = {
     pending: {
-      className:
-        "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+      className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
       icon: Clock,
       label: "Pending",
     },
     paid: {
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       icon: CheckCircle2,
       label: "Paid",
     },
@@ -108,10 +98,7 @@ const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const Icon = variant.icon;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1.5 border", variant.className)}
-    >
+    <Badge variant="outline" className={cn("gap-1.5 border", variant.className)}>
       <Icon className="h-3 w-3" />
       {variant.label}
     </Badge>
@@ -120,11 +107,7 @@ const StatusBadge = ({ status }: { status: PayoutStatus }) => {
 
 // --- Payout Method Display Component ---
 
-const PayoutMethodDisplay = ({
-  method,
-}: {
-  method: Payout["payoutMethod"];
-}) => {
+const PayoutMethodDisplay = ({ method }: { method: Payout["payoutMethod"] }) => {
   return (
     <div className="flex items-center gap-2">
       <Wallet className="text-muted-foreground h-4 w-4" />
@@ -145,9 +128,7 @@ const columns: ColumnDef<Payout>[] = [
       </div>
     ),
     cell: ({ row }) => (
-      <div className="text-sm">
-        {moment(row.original.date).format("DD MMM YYYY")}
-      </div>
+      <div className="text-sm">{moment(row.original.date).format("DD MMM YYYY")}</div>
     ),
   },
   {
@@ -158,9 +139,7 @@ const columns: ColumnDef<Payout>[] = [
         <span>Payout method</span>
       </div>
     ),
-    cell: ({ row }) => (
-      <PayoutMethodDisplay method={row.original.payoutMethod} />
-    ),
+    cell: ({ row }) => <PayoutMethodDisplay method={row.original.payoutMethod} />,
   },
   {
     accessorKey: "status",
@@ -200,9 +179,7 @@ const requestPayoutSchema = z
   .refine(
     (data) => {
       if (data.paymentMethod === "wallet") {
-        return (
-          data.amount !== undefined && !isNaN(data.amount) && data.amount > 0
-        );
+        return data.amount !== undefined && !isNaN(data.amount) && data.amount > 0;
       }
       return true;
     },
@@ -282,13 +259,8 @@ function RequestPayoutModal({
           >
             Cancel
           </Button>
-          <Button
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={requestPayoutMutation.isPending}
-          >
-            {requestPayoutMutation.isPending
-              ? "Submitting..."
-              : "Request Payout"}
+          <Button onClick={form.handleSubmit(onSubmit)} disabled={requestPayoutMutation.isPending}>
+            {requestPayoutMutation.isPending ? "Submitting..." : "Request Payout"}
           </Button>
         </div>
       }
@@ -317,9 +289,7 @@ function RequestPayoutModal({
           >
             <Wallet className="h-4 w-4" />
             <span>Wallet Address</span>
-            {paymentMethod === "wallet" && (
-              <CheckCircle2 className="ml-1 h-4 w-4" />
-            )}
+            {paymentMethod === "wallet" && <CheckCircle2 className="ml-1 h-4 w-4" />}
           </Button>
 
           {/* Local Bank Button */}
@@ -446,10 +416,7 @@ export default function PayoutPage() {
           </div>
         </div>
 
-        <RequestPayoutModal
-          open={isRequestModalOpen}
-          onOpenChange={setIsRequestModalOpen}
-        />
+        <RequestPayoutModal open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen} />
       </DashboardSidebarInset>
     </DashboardSidebar>
   );

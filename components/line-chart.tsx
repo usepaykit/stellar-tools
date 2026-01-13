@@ -10,12 +10,7 @@ import {
 } from "@/components/ui/chart";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import {
-  CartesianGrid,
-  Line,
-  LineChart as RechartsLineChart,
-  XAxis,
-} from "recharts";
+import { CartesianGrid, Line, LineChart as RechartsLineChart, XAxis } from "recharts";
 
 export type BaseChartData = Record<string, string | number>;
 
@@ -29,10 +24,7 @@ export type ChartColor =
 interface LineChartProps<T extends BaseChartData>
   extends
     Omit<React.ComponentProps<typeof ChartContainer>, "children">,
-    MixinProps<
-      "xAxis",
-      Omit<React.ComponentProps<typeof XAxis>, "dataKey" | "key" | "ref">
-    >,
+    MixinProps<"xAxis", Omit<React.ComponentProps<typeof XAxis>, "dataKey" | "key" | "ref">>,
     MixinProps<
       "tooltip",
       Omit<
@@ -40,10 +32,7 @@ interface LineChartProps<T extends BaseChartData>
         "nameKey" | "labelFormatter" | "key" | "ref"
       >
     >,
-    MixinProps<
-      "line",
-      Omit<React.ComponentProps<typeof Line>, "dataKey" | "key" | "ref">
-    >,
+    MixinProps<"line", Omit<React.ComponentProps<typeof Line>, "dataKey" | "key" | "ref">>,
     MixinProps<"grid", React.ComponentProps<typeof CartesianGrid>> {
   data: T[];
   config: ChartConfig;
@@ -95,11 +84,7 @@ export function LineChart<T extends BaseChartData>({
       config={config}
       className={cn("aspect-auto h-[250px] w-full", className)}
     >
-      <RechartsLineChart
-        accessibilityLayer
-        data={data}
-        margin={{ left: 12, right: 12 }}
-      >
+      <RechartsLineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} {...grid} />
 
         {showXAxis && (

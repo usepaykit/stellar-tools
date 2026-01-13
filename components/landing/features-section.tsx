@@ -36,14 +36,12 @@ export default function FeaturesSection() {
     },
     {
       title: "One-time Payments",
-      description:
-        "Simple checkout flows for single payment products with instant confirmation.",
+      description: "Simple checkout flows for single payment products with instant confirmation.",
       icon: <CreditCard className="h-6 w-6" />,
     },
     {
       title: "Multi-platform Adapters",
-      description:
-        "Seamless integrations with BetterAuth, Medusa, AI SDK, UploadThing, and more.",
+      description: "Seamless integrations with BetterAuth, Medusa, AI SDK, UploadThing, and more.",
       icon: <Plug className="h-6 w-6" />,
     },
     {
@@ -60,20 +58,17 @@ export default function FeaturesSection() {
     },
     {
       title: "Stellar Blockchain",
-      description:
-        "Native Stellar blockchain integration for fast, low-cost crypto payments.",
+      description: "Native Stellar blockchain integration for fast, low-cost crypto payments.",
       icon: <DollarSign className="h-6 w-6" />,
     },
     {
       title: "API Keys & Security",
-      description:
-        "Secure API key management with environment-based access control.",
+      description: "Secure API key management with environment-based access control.",
       icon: <Key className="h-6 w-6" />,
     },
     {
       title: "Transaction Tracking",
-      description:
-        "Comprehensive transaction history with detailed logs and analytics.",
+      description: "Comprehensive transaction history with detailed logs and analytics.",
       icon: <Receipt className="h-6 w-6" />,
     },
     {
@@ -135,18 +130,14 @@ const Feature = ({
       {index >= 8 && (
         <div className="from-muted pointer-events-none absolute inset-0 h-full w-full bg-linear-to-t to-transparent opacity-0 transition duration-200 group-hover/feature:opacity-100" />
       )}
-      <div className="text-muted-foreground relative z-10 mb-4 px-10">
-        {icon}
-      </div>
+      <div className="text-muted-foreground relative z-10 mb-4 px-10">{icon}</div>
       <div className="relative z-10 mb-2 px-10 text-lg font-bold">
         <div className="bg-muted group-hover/feature:bg-primary absolute inset-y-0 left-0 h-6 w-1 origin-center rounded-tr-full rounded-br-full transition-all duration-200 group-hover/feature:h-8" />
         <span className="text-foreground inline-block transition duration-200 group-hover/feature:translate-x-2">
           {title}
         </span>
       </div>
-      <p className="text-muted-foreground relative z-10 max-w-xs px-10 text-sm">
-        {description}
-      </p>
+      <p className="text-muted-foreground relative z-10 max-w-xs px-10 text-sm">{description}</p>
     </div>
   );
 };

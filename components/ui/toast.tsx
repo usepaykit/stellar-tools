@@ -20,9 +20,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   }, []);
 
   // Resolve the actual theme (handle system theme)
-  const resolvedTheme = mounted
-    ? (theme === "system" ? systemTheme : theme) || "light"
-    : "light";
+  const resolvedTheme = mounted ? (theme === "system" ? systemTheme : theme) || "light" : "light";
 
   return (
     <Sonner

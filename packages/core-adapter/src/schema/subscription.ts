@@ -3,12 +3,7 @@ import { z } from "zod";
 import { schemaFor } from "..";
 import { Environment, environmentSchema } from "./shared";
 
-export const subscriptionStatusEnum = z.enum([
-  "active",
-  "past_due",
-  "canceled",
-  "paused",
-]);
+export const subscriptionStatusEnum = z.enum(["active", "past_due", "canceled", "paused"]);
 
 type SubscriptionStatus = z.infer<typeof subscriptionStatusEnum>;
 
@@ -121,10 +116,7 @@ export const createSubscriptionSchema = subscriptionSchema.pick({
   metadata: true,
 });
 
-export type CreateSubscription = Pick<
-  Subscription,
-  "customerId" | "productId" | "metadata"
->;
+export type CreateSubscription = Pick<Subscription, "customerId" | "productId" | "metadata">;
 
 export const pauseSubscriptionSchema = subscriptionSchema.pick({
   id: true,

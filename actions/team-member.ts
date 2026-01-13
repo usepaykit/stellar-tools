@@ -14,25 +14,14 @@ export const postTeamMember = async (params: Partial<TeamMember>) => {
 };
 
 export const retrieveTeamMembers = async (organizationId: string) => {
-  return await db
-    .select()
-    .from(teamMembers)
-    .where(eq(teamMembers.organizationId, organizationId));
+  return await db.select().from(teamMembers).where(eq(teamMembers.organizationId, organizationId));
 };
 
-export const retrieveTeamMember = async (
-  id: string,
-  organizationId: string
-) => {
+export const retrieveTeamMember = async (id: string, organizationId: string) => {
   const [teamMember] = await db
     .select()
     .from(teamMembers)
-    .where(
-      and(
-        eq(teamMembers.id, id),
-        eq(teamMembers.organizationId, organizationId)
-      )
-    )
+    .where(and(eq(teamMembers.id, id), eq(teamMembers.organizationId, organizationId)))
     .limit(1);
 
   if (!teamMember) throw new Error("Team member not found");
@@ -48,12 +37,7 @@ export const putTeamMember = async (
   const [teamMember] = await db
     .update(teamMembers)
     .set({ ...params, updatedAt: new Date() })
-    .where(
-      and(
-        eq(teamMembers.id, id),
-        eq(teamMembers.organizationId, organizationId)
-      )
-    )
+    .where(and(eq(teamMembers.id, id), eq(teamMembers.organizationId, organizationId)))
     .returning();
 
   if (!teamMember) throw new Error("Team member not found");
@@ -64,12 +48,7 @@ export const putTeamMember = async (
 export const deleteTeamMember = async (id: string, organizationId: string) => {
   await db
     .delete(teamMembers)
-    .where(
-      and(
-        eq(teamMembers.id, id),
-        eq(teamMembers.organizationId, organizationId)
-      )
-    )
+    .where(and(eq(teamMembers.id, id), eq(teamMembers.organizationId, organizationId)))
     .returning();
 
   return null;

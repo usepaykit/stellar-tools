@@ -58,8 +58,8 @@ export default function FooterSection() {
                 </span>
               </Link>
               <p className="text-muted-foreground mb-6 max-w-sm text-sm leading-relaxed">
-                Drop-in payment adapters for your stack. Accept fast, low-cost
-                crypto payments in minutes.
+                Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in
+                minutes.
               </p>
               <div className="flex items-center gap-4">
                 <a
@@ -85,9 +85,7 @@ export default function FooterSection() {
 
             {/* Product Links */}
             <div className="lg:col-span-2">
-              <h3 className="text-foreground mb-4 text-sm font-semibold">
-                Product
-              </h3>
+              <h3 className="text-foreground mb-4 text-sm font-semibold">Product</h3>
               <ul className="space-y-3">
                 {footerLinks.product.map((link) => (
                   <li key={link.name}>
@@ -104,9 +102,7 @@ export default function FooterSection() {
 
             {/* Resources Links */}
             <div className="lg:col-span-2">
-              <h3 className="text-foreground mb-4 text-sm font-semibold">
-                Resources
-              </h3>
+              <h3 className="text-foreground mb-4 text-sm font-semibold">Resources</h3>
               <ul className="space-y-3">
                 {footerLinks.resources.map((link) => (
                   <li key={link.name}>
@@ -123,9 +119,7 @@ export default function FooterSection() {
 
             {/* Company Links */}
             <div className="lg:col-span-2">
-              <h3 className="text-foreground mb-4 text-sm font-semibold">
-                Company
-              </h3>
+              <h3 className="text-foreground mb-4 text-sm font-semibold">Company</h3>
               <ul className="space-y-3">
                 {footerLinks.company.map((link) => (
                   <li key={link.name}>
@@ -142,9 +136,7 @@ export default function FooterSection() {
 
             {/* CTA Section */}
             <div className="lg:col-span-2">
-              <h3 className="text-foreground mb-4 text-sm font-semibold">
-                Get Started
-              </h3>
+              <h3 className="text-foreground mb-4 text-sm font-semibold">Get Started</h3>
               <p className="text-muted-foreground mb-4 text-sm">
                 Start accepting Stellar payments in minutes.
               </p>

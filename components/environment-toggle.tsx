@@ -15,14 +15,10 @@ interface EnvironmentToggleProps {
   currentEnvironment: Network;
 }
 
-export function EnvironmentToggle({
-  currentEnvironment,
-}: EnvironmentToggleProps) {
+export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [isLiveMode, setIsLiveMode] = React.useState(
-    currentEnvironment === "mainnet"
-  );
+  const [isLiveMode, setIsLiveMode] = React.useState(currentEnvironment === "mainnet");
 
   const [isPending, setIsPending] = React.useState(false);
 
@@ -35,9 +31,7 @@ export function EnvironmentToggle({
         await switchEnvironment(newEnvironment);
         await queryClient.invalidateQueries({ queryKey: ["org-context"] });
         setIsLiveMode(newEnvironment === "mainnet");
-        toast.success(
-          `Switched to ${checked ? "Live" : "Test"} mode successfully`
-        );
+        toast.success(`Switched to ${checked ? "Live" : "Test"} mode successfully`);
         router.refresh();
       } catch {
         toast.error("Failed to switch environment");
@@ -68,9 +62,7 @@ export function EnvironmentToggle({
           </Badge>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">
-            Enable Live Mode
-          </span>
+          <span className="text-muted-foreground text-sm">Enable Live Mode</span>
           <Switch
             checked={isLiveMode}
             onCheckedChange={handleToggle}

@@ -17,10 +17,7 @@ export class WebhookSigner {
     const timestamp = Math.floor(Date.now() / 1000);
     const signedPayload = `${timestamp}.${payload}`;
 
-    const hmac = crypto
-      .createHmac("sha256", secret)
-      .update(signedPayload)
-      .digest("hex");
+    const hmac = crypto.createHmac("sha256", secret).update(signedPayload).digest("hex");
 
     return `t=${timestamp},v1=${hmac}`;
   }
@@ -47,10 +44,7 @@ export class WebhookSigner {
         .update(signedPayload)
         .digest("hex");
 
-      return crypto.timingSafeEqual(
-        Buffer.from(receivedSignature),
-        Buffer.from(expectedSignature)
-      );
+      return crypto.timingSafeEqual(Buffer.from(receivedSignature), Buffer.from(expectedSignature));
     } catch {
       return false;
     }
@@ -74,9 +68,7 @@ export class WebhookApi extends WebhookSigner {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to create webhook: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to create webhook: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -86,18 +78,13 @@ export class WebhookApi extends WebhookSigner {
     const response = await this.apiClient.get<Webhook>(`/webhooks/${id}`);
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to retrieve webhook: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to retrieve webhook: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
   }
 
-  async update(
-    id: string,
-    params: UpdateWebhook
-  ): Promise<Result<Webhook, Error>> {
+  async update(id: string, params: UpdateWebhook): Promise<Result<Webhook, Error>> {
     const { error, data } = updateWebhookSchema.safeParse(params);
 
     if (error) {
@@ -109,9 +96,7 @@ export class WebhookApi extends WebhookSigner {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to update webhook: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to update webhook: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -121,9 +106,7 @@ export class WebhookApi extends WebhookSigner {
     const response = await this.apiClient.delete<Webhook>(`/webhooks/${id}`);
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to delete webhook: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to delete webhook: ${response.error?.message}`));
     }
 
     return OK(response.value.data);

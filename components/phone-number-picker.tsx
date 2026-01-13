@@ -13,11 +13,7 @@ import {
 } from "@/components/ui/command";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { type MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import { TCountryCode, getCountryData } from "countries-list";
@@ -37,10 +33,7 @@ export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
 
   // Format as (XXX) XXX-XXXX for 10-digit numbers
   if (digits.length === 10) {
-    return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(
-      3,
-      6
-    )}-${digits.slice(6)}`;
+    return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
 
   return `${prefix} ${digits}`;
@@ -72,20 +65,11 @@ type ErrorProps = React.ComponentProps<"p">;
 
 export interface PhoneNumberPickerProps
   extends
-    MixinProps<
-      "flag",
-      React.ComponentProps<(typeof CountryFlags)[TCountryCode]>
-    >,
+    MixinProps<"flag", React.ComponentProps<(typeof CountryFlags)[TCountryCode]>>,
     MixinProps<"label", Omit<LabelProps, "children">>,
-    MixinProps<
-      "input",
-      Omit<React.ComponentProps<typeof InputGroupInput>, "onChange" | "value">
-    >,
+    MixinProps<"input", Omit<React.ComponentProps<typeof InputGroupInput>, "onChange" | "value">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
-    MixinProps<
-      "group",
-      Omit<React.ComponentProps<typeof InputGroup>, "children">
-    > {
+    MixinProps<"group", Omit<React.ComponentProps<typeof InputGroup>, "children">> {
   id: string;
   value: PhoneNumber;
   onChange: (v: PhoneNumber) => void;
@@ -113,10 +97,7 @@ const CountryFlag = React.memo(
 
     return FlagComponent ? (
       <FlagComponent
-        className={cn(
-          "border-border/40 h-4 w-6 shrink-0 rounded border object-cover",
-          className
-        )}
+        className={cn("border-border/40 h-4 w-6 shrink-0 rounded border object-cover", className)}
       />
     ) : (
       <CountryFlags.US className={className} />
@@ -126,22 +107,8 @@ const CountryFlag = React.memo(
 
 CountryFlag.displayName = "CountryFlag";
 
-export const PhoneNumberPicker = React.forwardRef<
-  HTMLInputElement,
-  PhoneNumberPickerProps
->(
-  (
-    {
-      id,
-      value,
-      onChange,
-      disabled,
-      label,
-      error,
-      ...mixProps
-    }: PhoneNumberPickerProps,
-    ref
-  ) => {
+export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberPickerProps>(
+  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberPickerProps, ref) => {
     const {
       group,
       label: labelProps,
@@ -183,10 +150,7 @@ export const PhoneNumberPicker = React.forwardRef<
       } else if (digits.length <= 6) {
         return `${digits.slice(0, 3)} ${digits.slice(3)}`;
       } else {
-        return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(
-          6,
-          10
-        )}`;
+        return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;
       }
     };
 
@@ -230,10 +194,7 @@ export const PhoneNumberPicker = React.forwardRef<
                 disabled={disabled}
                 className="border-input hover:bg-accent hover:text-accent-foreground flex h-full gap-2 rounded-r-none border-r bg-transparent px-3"
               >
-                <CountryFlag
-                  countryCode={value.countryCode || "US"}
-                  className={flag.className}
-                />
+                <CountryFlag countryCode={value.countryCode || "US"} className={flag.className} />
                 <span className="text-foreground font-mono text-sm">
                   {selectedCountry?.prefix || "+1"}
                 </span>
@@ -254,19 +215,14 @@ export const PhoneNumberPicker = React.forwardRef<
                       <CommandItem
                         key={`${country.countryCode}-${country.prefix}`}
                         value={country.searchKey}
-                        onSelect={() =>
-                          handleCountrySelect(country.countryCode)
-                        }
+                        onSelect={() => handleCountrySelect(country.countryCode)}
                         className={cn(
                           "gap-3",
                           value.countryCode === country.countryCode &&
                             "bg-primary/10 hover:bg-primary/20"
                         )}
                       >
-                        <CountryFlag
-                          countryCode={country.countryCode}
-                          className={flag.className}
-                        />
+                        <CountryFlag countryCode={country.countryCode} className={flag.className} />
                         <span className="flex-1 truncate">{country.name}</span>
                         <span className="text-muted-foreground font-mono text-sm">
                           {country.prefix}

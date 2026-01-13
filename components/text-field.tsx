@@ -42,10 +42,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
         )}
 
         {helpText && (
-          <p
-            {...helpTextProps}
-            className={cn("text-sm", helpTextProps.className)}
-          >
+          <p {...helpTextProps} className={cn("text-sm", helpTextProps.className)}>
             {helpText}
           </p>
         )}
@@ -87,59 +84,50 @@ interface TextAreaFieldProps
   helpText?: HelpTextProps["children"] | null;
 }
 
-export const TextAreaField = React.forwardRef<
-  HTMLTextAreaElement,
-  TextAreaFieldProps
->(({ id, value, onChange, label, error, helpText, ...mixProps }, ref) => {
-  const {
-    label: labelProps,
-    error: errorProps,
-    helpText: helpTextProps,
-    rest,
-  } = splitProps(mixProps, "label", "error", "helpText");
+export const TextAreaField = React.forwardRef<HTMLTextAreaElement, TextAreaFieldProps>(
+  ({ id, value, onChange, label, error, helpText, ...mixProps }, ref) => {
+    const {
+      label: labelProps,
+      error: errorProps,
+      helpText: helpTextProps,
+      rest,
+    } = splitProps(mixProps, "label", "error", "helpText");
 
-  return (
-    <div className="space-y-2">
-      {label && (
-        <Label {...labelProps} htmlFor={id}>
-          {label}
-        </Label>
-      )}
+    return (
+      <div className="space-y-2">
+        {label && (
+          <Label {...labelProps} htmlFor={id}>
+            {label}
+          </Label>
+        )}
 
-      {helpText && (
-        <p
-          {...helpTextProps}
-          className={cn("text-sm", helpTextProps.className)}
-        >
-          {helpText}
-        </p>
-      )}
+        {helpText && (
+          <p {...helpTextProps} className={cn("text-sm", helpTextProps.className)}>
+            {helpText}
+          </p>
+        )}
 
-      <Textarea
-        {...rest}
-        id={id}
-        ref={ref}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn("w-full", rest.className)}
-      />
+        <Textarea
+          {...rest}
+          id={id}
+          ref={ref}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn("w-full", rest.className)}
+        />
 
-      {error && (
-        <p
-          {...errorProps}
-          className={cn("text-destructive text-sm", errorProps.className)}
-          role="alert"
-        >
-          {error}
-        </p>
-      )}
-    </div>
-  );
-});
+        {error && (
+          <p
+            {...errorProps}
+            className={cn("text-destructive text-sm", errorProps.className)}
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+);
 
 TextAreaField.displayName = "TextAreaField";
-
-
-
-
-

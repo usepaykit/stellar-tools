@@ -44,20 +44,17 @@ import { useParams, useRouter } from "next/navigation";
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
     confirmed: {
-      className:
-        "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       icon: CheckCircle2,
       label: "Confirmed",
     },
     pending: {
-      className:
-        "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
       icon: Clock,
       label: "Pending",
     },
     failed: {
-      className:
-        "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
       icon: XCircle,
       label: "Failed",
     },
@@ -67,10 +64,7 @@ const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const Icon = variant.icon;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1.5 border", variant.className)}
-    >
+    <Badge variant="outline" className={cn("gap-1.5 border", variant.className)}>
       <Icon className="h-3 w-3" />
       {variant.label}
     </Badge>
@@ -100,9 +94,8 @@ const mockPayment: Payment = {
   organizationId: "org_mock123",
   checkoutId: "chk_xyz789abc123def456",
   customerId: "cust_mock456",
-  amount: 50000000, 
-  transactionHash:
-    "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2",
+  amount: 50000000,
+  transactionHash: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2",
   status: "confirmed",
   createdAt: new Date("2025-01-15T10:30:00Z"),
   updatedAt: new Date("2025-01-15T10:30:15Z"),
@@ -258,14 +251,10 @@ export default function TransactionDetailPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <h1 className="text-2xl font-bold sm:text-3xl">
-                      Transaction Details
-                    </h1>
+                    <h1 className="text-2xl font-bold sm:text-3xl">Transaction Details</h1>
                     <StatusBadge status={payment.status} />
                   </div>
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    {payment.id}
-                  </p>
+                  <p className="text-muted-foreground text-sm sm:text-base">{payment.id}</p>
                 </div>
                 <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <Button
@@ -274,9 +263,7 @@ export default function TransactionDetailPage() {
                     onClick={handleRefreshStatus}
                     disabled={isRefreshing}
                   >
-                    <RefreshCw
-                      className={cn("h-4 w-4", isRefreshing && "animate-spin")}
-                    />
+                    <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
                     <span>Refresh Status</span>
                   </Button>
                   <DropdownMenu>
@@ -294,10 +281,7 @@ export default function TransactionDetailPage() {
                       <DropdownMenuItem
                         onClick={() => {
                           window.open(
-                            getStellarExplorerUrl(
-                              payment.transactionHash,
-                              payment.environment
-                            ),
+                            getStellarExplorerUrl(payment.transactionHash, payment.environment),
                             "_blank"
                           );
                         }}
@@ -306,9 +290,7 @@ export default function TransactionDetailPage() {
                         View on Stellar Explorer
                       </DropdownMenuItem>
                       {payment.status === "confirmed" && (
-                        <DropdownMenuItem
-                          onClick={() => setIsRefundModalOpen(true)}
-                        >
+                        <DropdownMenuItem onClick={() => setIsRefundModalOpen(true)}>
                           Process Refund
                         </DropdownMenuItem>
                       )}
@@ -331,23 +313,16 @@ export default function TransactionDetailPage() {
               <div className="space-y-6 lg:col-span-2">
                 {/* Transaction Information */}
                 <div className="space-y-3">
-                  <h3 className="text-lg font-semibold sm:text-xl">
-                    Transaction Information
-                  </h3>
-                  <div className="space-y-4 rounded-lg border bg-card p-4">
+                  <h3 className="text-lg font-semibold sm:text-xl">Transaction Information</h3>
+                  <div className="bg-card space-y-4 rounded-lg border p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Amount
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Amount</div>
                         <div className="text-2xl font-bold">
-                          {((payment.amount ?? 0) / 1000000).toLocaleString(
-                            "en-US",
-                            {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 7,
-                            }
-                          )}{" "}
+                          {((payment.amount ?? 0) / 1000000).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 7,
+                          })}{" "}
                           XLM
                         </div>
                       </div>
@@ -357,28 +332,18 @@ export default function TransactionDetailPage() {
 
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Transaction Hash
-                        </div>
-                        <div className="font-mono text-sm break-all">
-                          {payment.transactionHash}
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Transaction Hash</div>
+                        <div className="font-mono text-sm break-all">{payment.transactionHash}</div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <CopyButton
-                          text={payment.transactionHash}
-                          label="Copy transaction hash"
-                        />
+                        <CopyButton text={payment.transactionHash} label="Copy transaction hash" />
                         <Button
                           variant="ghost"
                           size="icon-sm"
                           className="h-8 w-8"
                           onClick={() => {
                             window.open(
-                              getStellarExplorerUrl(
-                                payment.transactionHash,
-                                payment.environment
-                              ),
+                              getStellarExplorerUrl(payment.transactionHash, payment.environment),
                               "_blank"
                             );
                           }}
@@ -392,12 +357,8 @@ export default function TransactionDetailPage() {
 
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Network
-                        </div>
-                        <div className="text-sm capitalize">
-                          {payment.environment}
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Network</div>
+                        <div className="text-sm capitalize">{payment.environment}</div>
                       </div>
                     </div>
 
@@ -405,32 +366,23 @@ export default function TransactionDetailPage() {
 
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Created At
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Created At</div>
                         <div className="text-sm">
-                          {moment(payment.createdAt).format(
-                            "MMMM DD, YYYY [at] h:mm A"
-                          )}
+                          {moment(payment.createdAt).format("MMMM DD, YYYY [at] h:mm A")}
                         </div>
                       </div>
                       <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                     </div>
 
                     {payment.updatedAt &&
-                      payment.updatedAt.getTime() !==
-                        payment.createdAt.getTime() && (
+                      payment.updatedAt.getTime() !== payment.createdAt.getTime() && (
                         <>
                           <Separator />
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <div className="text-muted-foreground mb-1 text-xs">
-                                Last Updated
-                              </div>
+                              <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
                               <div className="text-sm">
-                                {moment(payment.updatedAt).format(
-                                  "MMMM DD, YYYY [at] h:mm A"
-                                )}
+                                {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
                               </div>
                             </div>
                             <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -443,24 +395,20 @@ export default function TransactionDetailPage() {
                 {/* Refund Information */}
                 {hasRefund && latestRefund && (
                   <div className="space-y-3">
-                    <h3 className="text-lg font-semibold sm:text-xl">
-                      Refund Information
-                    </h3>
-                    <div className="space-y-4 rounded-lg border bg-card p-4">
+                    <h3 className="text-lg font-semibold sm:text-xl">Refund Information</h3>
+                    <div className="bg-card space-y-4 rounded-lg border p-4">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <div className="text-muted-foreground mb-1 text-xs">
-                            Refund Status
-                          </div>
+                          <div className="text-muted-foreground mb-1 text-xs">Refund Status</div>
                           <Badge
                             variant="outline"
                             className={cn(
                               "gap-1.5 border",
                               latestRefund.status === "succeeded"
-                                ? "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
+                                ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
                                 : latestRefund.status === "pending"
-                                  ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20"
-                                  : "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20"
+                                  ? "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+                                  : "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
                             )}
                           >
                             {latestRefund.status === "succeeded" ? (
@@ -470,9 +418,7 @@ export default function TransactionDetailPage() {
                             ) : (
                               <XCircle className="h-3 w-3" />
                             )}
-                            <span className="capitalize">
-                              {latestRefund.status}
-                            </span>
+                            <span className="capitalize">{latestRefund.status}</span>
                           </Badge>
                         </div>
                       </div>
@@ -481,17 +427,12 @@ export default function TransactionDetailPage() {
 
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <div className="text-muted-foreground mb-1 text-xs">
-                            Refund Amount
-                          </div>
+                          <div className="text-muted-foreground mb-1 text-xs">Refund Amount</div>
                           <div className="text-lg font-semibold">
-                            {((latestRefund.amount ?? 0) / 1000000).toLocaleString(
-                              "en-US",
-                              {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 7,
-                              }
-                            )}{" "}
+                            {((latestRefund.amount ?? 0) / 1000000).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 7,
+                            })}{" "}
                             XLM
                           </div>
                         </div>
@@ -502,9 +443,7 @@ export default function TransactionDetailPage() {
                           <Separator />
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <div className="text-muted-foreground mb-1 text-xs">
-                                Reason
-                              </div>
+                              <div className="text-muted-foreground mb-1 text-xs">Reason</div>
                               <div className="text-sm">{latestRefund.reason}</div>
                             </div>
                           </div>
@@ -539,13 +478,9 @@ export default function TransactionDetailPage() {
 
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <div className="text-muted-foreground mb-1 text-xs">
-                            Refunded At
-                          </div>
+                          <div className="text-muted-foreground mb-1 text-xs">Refunded At</div>
                           <div className="text-sm">
-                            {moment(latestRefund.createdAt).format(
-                              "MMMM DD, YYYY [at] h:mm A"
-                            )}
+                            {moment(latestRefund.createdAt).format("MMMM DD, YYYY [at] h:mm A")}
                           </div>
                         </div>
                         <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -563,17 +498,10 @@ export default function TransactionDetailPage() {
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Transaction ID
-                        </div>
-                        <div className="font-mono text-sm break-all">
-                          {payment.id}
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Transaction ID</div>
+                        <div className="font-mono text-sm break-all">{payment.id}</div>
                       </div>
-                      <CopyButton
-                        text={payment.id}
-                        label="Copy transaction ID"
-                      />
+                      <CopyButton text={payment.id} label="Copy transaction ID" />
                     </div>
 
                     <Separator />
@@ -582,17 +510,10 @@ export default function TransactionDetailPage() {
                       <>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="text-muted-foreground mb-1 text-xs">
-                              Checkout ID
-                            </div>
-                            <div className="font-mono text-sm break-all">
-                              {payment.checkoutId}
-                            </div>
+                            <div className="text-muted-foreground mb-1 text-xs">Checkout ID</div>
+                            <div className="font-mono text-sm break-all">{payment.checkoutId}</div>
                           </div>
-                          <CopyButton
-                            text={payment.checkoutId}
-                            label="Copy checkout ID"
-                          />
+                          <CopyButton text={payment.checkoutId} label="Copy checkout ID" />
                         </div>
 
                         <Separator />
@@ -603,22 +524,13 @@ export default function TransactionDetailPage() {
                       <>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <div className="text-muted-foreground mb-1 text-xs">
-                              Customer
-                            </div>
+                            <div className="text-muted-foreground mb-1 text-xs">Customer</div>
                             <div className="text-sm font-medium">
                               {customer.name || customer.email}
                             </div>
-                            <div className="text-muted-foreground text-xs">
-                              {customer.email}
-                            </div>
+                            <div className="text-muted-foreground text-xs">{customer.email}</div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="h-8 w-8"
-                            asChild
-                          >
+                          <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
                             <Link href={`/dashboard/customers/${customer.id}`}>
                               <ExternalLink className="h-4 w-4" />
                             </Link>
@@ -631,9 +543,7 @@ export default function TransactionDetailPage() {
 
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          Status
-                        </div>
+                        <div className="text-muted-foreground mb-1 text-xs">Status</div>
                         <StatusBadge status={payment.status} />
                       </div>
                     </div>
@@ -646,26 +556,21 @@ export default function TransactionDetailPage() {
                   <div className="space-y-2">
                     <Button
                       variant="outline"
-                      className="w-full justify-start gap-2.5 h-auto py-2.5 px-3 shadow-none hover:bg-muted/50 transition-colors"
+                      className="hover:bg-muted/50 h-auto w-full justify-start gap-2.5 px-3 py-2.5 shadow-none transition-colors"
                       onClick={() => {
                         window.open(
-                          getStellarExplorerUrl(
-                            payment.transactionHash,
-                            payment.environment
-                          ),
+                          getStellarExplorerUrl(payment.transactionHash, payment.environment),
                           "_blank"
                         );
                       }}
                     >
                       <ExternalLink className="h-4 w-4 shrink-0" />
-                      <span className="text-sm font-medium">
-                        View on Stellar Explorer
-                      </span>
+                      <span className="text-sm font-medium">View on Stellar Explorer</span>
                     </Button>
                     {payment.status === "confirmed" && (
                       <Button
                         variant="outline"
-                        className="w-full justify-start gap-2.5 h-auto py-2.5 px-3 shadow-none hover:bg-muted/50 transition-colors"
+                        className="hover:bg-muted/50 h-auto w-full justify-start gap-2.5 px-3 py-2.5 shadow-none transition-colors"
                         onClick={() => setIsRefundModalOpen(true)}
                       >
                         <Wallet className="h-4 w-4 shrink-0" />

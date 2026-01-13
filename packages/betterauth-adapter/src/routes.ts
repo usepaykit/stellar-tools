@@ -4,21 +4,17 @@ import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 
 import { StellarToolsBetterAuthOptions } from "./types";
 
-export const retrieveOrCreateCustomer = async (
-  ctx: GenericEndpointContext
-): Promise<string> => {
+export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<string> => {
   const session = ctx.context.session;
 
   if (!session?.user) {
     throw new APIError("UNAUTHORIZED");
   }
 
-  const user = await ctx.context.adapter.findOne<{ stellarCustomerId: string }>(
-    {
-      model: "user",
-      where: [{ field: "id", value: session.user.id }],
-    }
-  );
+  const user = await ctx.context.adapter.findOne<{ stellarCustomerId: string }>({
+    model: "user",
+    where: [{ field: "id", value: session.user.id }],
+  });
 
   if (user?.stellarCustomerId) return user.stellarCustomerId;
 
@@ -226,9 +222,7 @@ export const createSubscription = (options: StellarToolsBetterAuthOptions) => {
   );
 };
 
-export const retrieveSubscription = (
-  options: StellarToolsBetterAuthOptions
-) => {
+export const retrieveSubscription = (options: StellarToolsBetterAuthOptions) => {
   return createAuthEndpoint(
     "/stellar/subscription/retrieve",
     {
@@ -252,9 +246,7 @@ export const retrieveSubscription = (
 
       const stellar = new StellarTools({ apiKey: options.apiKey });
 
-      const result = await stellar.subscriptions.retrieve(
-        session.user.stellarCustomerId as string
-      );
+      const result = await stellar.subscriptions.retrieve(session.user.stellarCustomerId as string);
 
       return ctx.json(result.value!);
     }
@@ -547,8 +539,7 @@ export const consumeCredits = (options: StellarToolsBetterAuthOptions) => {
 
       if (
         options.onCreditsLow &&
-        result.value!.balance <=
-          (options.creditLowThreshold ?? DEFAULT_CREDITS_LOW_THRESHOLD)
+        result.value!.balance <= (options.creditLowThreshold ?? DEFAULT_CREDITS_LOW_THRESHOLD)
       ) {
         await options.onCreditsLow({ ...result.value!, customerId });
       }

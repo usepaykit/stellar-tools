@@ -20,9 +20,7 @@ import { nanoid } from "nanoid";
 import { resolveAccountContext } from "./account";
 import { postTeamMember } from "./team-member";
 
-export const postOrganization = async (
-  params: Omit<Organization, "id" | "accountId">
-) => {
+export const postOrganization = async (params: Omit<Organization, "id" | "accountId">) => {
   const { accountId } = await resolveAccountContext();
 
   const [organization] = await db
@@ -72,10 +70,7 @@ export const retrieveOrganization = async (id: string) => {
   return organization;
 };
 
-export const retrieveOrganizationIdAndSecret = async (
-  id: string,
-  environment: Network
-) => {
+export const retrieveOrganizationIdAndSecret = async (id: string, environment: Network) => {
   const prefix = environment === "testnet" ? "testnet" : "mainnet";
 
   const [result] = await db
@@ -97,10 +92,7 @@ export const retrieveOrganizationIdAndSecret = async (
         END`,
     })
     .from(organizations)
-    .leftJoin(
-      organizationSecrets,
-      eq(organizations.id, organizationSecrets.organizationId)
-    )
+    .leftJoin(organizationSecrets, eq(organizations.id, organizationSecrets.organizationId))
     .where(eq(organizations.id, id))
     .limit(1);
 
@@ -108,10 +100,7 @@ export const retrieveOrganizationIdAndSecret = async (
 
   return result;
 };
-export const putOrganization = async (
-  id: string,
-  params: Partial<Organization>
-) => {
+export const putOrganization = async (id: string, params: Partial<Organization>) => {
   const [organization] = await db
     .update(organizations)
     .set({ ...params, updatedAt: new Date() })
@@ -131,10 +120,7 @@ export const deleteOrganization = async (id: string) => {
 
 // -- Organization Internal --
 
-export const setCurrentOrganization = async (
-  orgId: string,
-  environment: Network = "testnet"
-) => {
+export const setCurrentOrganization = async (orgId: string, environment: Network = "testnet") => {
   const payload = { orgId, environment };
   const token = await new JWT().sign(payload, "1y");
 
@@ -210,10 +196,7 @@ export const retrieveOrganizationSecret = async (id: string) => {
 };
 
 export const postOrganizationSecret = async (
-  params: Omit<
-    OrganizationSecret,
-    "id" | "organizationId" | "createdAt" | "updatedAt"
-  >,
+  params: Omit<OrganizationSecret, "id" | "organizationId" | "createdAt" | "updatedAt">,
   orgId?: string,
   env?: Network
 ) => {
@@ -227,10 +210,7 @@ export const postOrganizationSecret = async (
   return secret;
 };
 
-export const putOrganizationSecret = async (
-  id: string,
-  params: Partial<OrganizationSecret>
-) => {
+export const putOrganizationSecret = async (id: string, params: Partial<OrganizationSecret>) => {
   const [secret] = await db
     .update(organizationSecrets)
     .set({ ...params, updatedAt: new Date() })
@@ -243,20 +223,14 @@ export const putOrganizationSecret = async (
 };
 
 export const deleteOrganizationSecret = async (id: string) => {
-  await db
-    .delete(organizationSecrets)
-    .where(eq(organizationSecrets.id, id))
-    .returning();
+  await db.delete(organizationSecrets).where(eq(organizationSecrets.id, id)).returning();
 
   return null;
 };
 
 // -- Rotate Organization Secret --
 
-export const rotateAllSecrets = async (
-  newVersion: number,
-  performedBy: string
-) => {
+export const rotateAllSecrets = async (newVersion: number, performedBy: string) => {
   const encryption = new Encryption();
   const stats = { total: 0, succeeded: 0, failed: 0 };
 
@@ -293,8 +267,7 @@ export const rotateAllSecrets = async (
           );
 
           // Re-encrypt mainnet (Optional field in your schema)
-          const hasMainnet =
-            secret.mainnetSecretEncrypted && secret.mainnetSecretVersion;
+          const hasMainnet = secret.mainnetSecretEncrypted && secret.mainnetSecretVersion;
           const mainnetReencrypted = hasMainnet
             ? encryption.reencrypt(
                 secret.mainnetSecretEncrypted!,

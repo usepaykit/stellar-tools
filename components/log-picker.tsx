@@ -68,40 +68,26 @@ export function LogPicker<TData, TValue>({
   return (
     <div className={cn("flex gap-4", className)}>
       <div className="min-w-0 flex-1">
-        <DataTable
-          {...props}
-          data={data}
-          columns={columns}
-          onRowClick={handleRowClick}
-        />
+        <DataTable {...props} data={data} columns={columns} onRowClick={handleRowClick} />
       </div>
 
       {renderDetail && selectedRow && (
         <div
           className={cn(
             "bg-background border-border h-full shrink-0 rounded-lg border transition-all duration-200 ease-in-out",
-            isAnimating
-              ? "translate-x-0 opacity-100"
-              : "translate-x-4 opacity-0"
+            isAnimating ? "translate-x-0 opacity-100" : "translate-x-4 opacity-0"
           )}
           style={{ width: detailPanelWidth }}
         >
           <div className="flex h-full flex-col">
             <div className="border-border flex shrink-0 items-center justify-end border-b p-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                className="h-8 w-8"
-              >
+              <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8">
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
               </Button>
             </div>
 
-            <div className="min-h-0 flex-1 p-4">
-              {renderDetail(selectedRow)}
-            </div>
+            <div className="min-h-0 flex-1 p-4">{renderDetail(selectedRow)}</div>
           </div>
         </div>
       )}

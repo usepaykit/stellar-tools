@@ -8,10 +8,7 @@ import { nanoid } from "nanoid";
 import { resolveOrgContext } from "./organization";
 
 export const postTeamInvite = async (
-  params: Omit<
-    TeamInvite,
-    "id" | "organizationId" | "environment" | "expiresAt" | "status"
-  >,
+  params: Omit<TeamInvite, "id" | "organizationId" | "environment" | "expiresAt" | "status">,
   orgId?: string,
   env?: Network
 ) => {
@@ -39,18 +36,11 @@ export const retrieveTeamInvites = async (orgId?: string, env?: Network) => {
     .select()
     .from(teamInvites)
     .where(
-      and(
-        eq(teamInvites.organizationId, organizationId),
-        eq(teamInvites.environment, environment)
-      )
+      and(eq(teamInvites.organizationId, organizationId), eq(teamInvites.environment, environment))
     );
 };
 
-export const retrieveTeamInvite = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const retrieveTeamInvite = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [teamInvite] = await db
@@ -95,11 +85,7 @@ export const putTeamInvite = async (
   return teamInvite;
 };
 
-export const deleteTeamInvite = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const deleteTeamInvite = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   await db

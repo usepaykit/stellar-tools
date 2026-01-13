@@ -6,14 +6,7 @@ import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useOrgContext } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import {
-  Bell,
-  HelpCircle,
-  LayoutGrid,
-  Plus,
-  Search,
-  Settings,
-} from "lucide-react";
+import { Bell, HelpCircle, LayoutGrid, Plus, Search, Settings } from "lucide-react";
 
 interface NavIconButtonProps {
   icon: React.ReactNode;
@@ -38,18 +31,12 @@ function NavIconButton({
       size="icon"
       onClick={onClick}
       aria-label={ariaLabel}
-      className={cn(
-        "bg-muted/50 hover:bg-muted relative rounded-md transition-colors",
-        className
-      )}
+      className={cn("bg-muted/50 hover:bg-muted relative rounded-md transition-colors", className)}
     >
       {icon}
       {notificationCount !== undefined && notificationCount > 0 && (
         <span
-          className={cn(
-            "absolute -top-0.5 -right-0.5 size-2 rounded-full",
-            notificationColor
-          )}
+          className={cn("absolute -top-0.5 -right-0.5 size-2 rounded-full", notificationColor)}
           aria-label={`${notificationCount} notifications`}
         />
       )}
@@ -63,9 +50,7 @@ export default function DashboardHeader() {
 
   return (
     <header>
-      {currentEnvironment && (
-        <EnvironmentToggle currentEnvironment={currentEnvironment} />
-      )}
+      {currentEnvironment && <EnvironmentToggle currentEnvironment={currentEnvironment} />}
       <div className="container flex h-14 items-center justify-between gap-4 px-4">
         {/* Search Bar */}
         <SidebarTrigger className="-ml-1" />
@@ -97,16 +82,10 @@ export default function DashboardHeader() {
           />
 
           {/* Create/Add Grid Icon */}
-          <NavIconButton
-            icon={<LayoutGrid className="size-4" />}
-            aria-label="Create new"
-          />
+          <NavIconButton icon={<LayoutGrid className="size-4" />} aria-label="Create new" />
 
           {/* Help Icon */}
-          <NavIconButton
-            icon={<HelpCircle className="size-4" />}
-            aria-label="Help and support"
-          />
+          <NavIconButton icon={<HelpCircle className="size-4" />} aria-label="Help and support" />
 
           {/* Notifications Bell */}
           <NavIconButton
@@ -117,10 +96,7 @@ export default function DashboardHeader() {
           />
 
           {/* Settings Icon */}
-          <NavIconButton
-            icon={<Settings className="size-4" />}
-            aria-label="Settings"
-          />
+          <NavIconButton icon={<Settings className="size-4" />} aria-label="Settings" />
 
           {/* Primary Action Button */}
           <Button

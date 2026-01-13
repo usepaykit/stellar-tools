@@ -8,13 +8,13 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextField } from "@/components/text-field";
 import {
   PhoneNumber,
   PhoneNumberPicker,
   phoneNumberFromString,
   phoneNumberToString,
 } from "@/components/phone-number-picker";
+import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -50,10 +50,7 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown
-              className="ml-1 h-4 w-4 opacity-50"
-              aria-hidden="true"
-            />
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
         </Button>
       );
@@ -78,25 +75,18 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown
-              className="ml-1 h-4 w-4 opacity-50"
-              aria-hidden="true"
-            />
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
         </Button>
       );
     },
-    cell: ({ row }) => (
-      <div className="text-muted-foreground">{row.original.email}</div>
-    ),
+    cell: ({ row }) => <div className="text-muted-foreground">{row.original.email}</div>,
     enableSorting: true,
   },
   {
     accessorKey: "phone",
     header: "Phone",
-    cell: ({ row }) => (
-      <div className="text-muted-foreground">{row.original.phone}</div>
-    ),
+    cell: ({ row }) => <div className="text-muted-foreground">{row.original.phone}</div>,
   },
   {
     accessorKey: "walletAddress",
@@ -115,10 +105,7 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown
-              className="ml-1 h-4 w-4 opacity-50"
-              aria-hidden="true"
-            />
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
         </Button>
       );
@@ -147,10 +134,7 @@ const columns: ColumnDef<Customer>[] = [
           ) : isSorted === "desc" ? (
             <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
           ) : (
-            <ArrowUpDown
-              className="ml-1 h-4 w-4 opacity-50"
-              aria-hidden="true"
-            />
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
           )}
         </Button>
       );
@@ -209,9 +193,8 @@ export default function CustomersPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const router = useRouter();
 
-  const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(
-    ["customers"],
-    () => retrieveCustomers()
+  const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () =>
+    retrieveCustomers()
   );
 
   const handleRowClick = (customer: Customer) => {
@@ -241,10 +224,7 @@ export default function CustomersPage() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold">Customers</h1>
-                <Button
-                  className="gap-2 shadow-none"
-                  onClick={() => setIsCreateModalOpen(true)}
-                >
+                <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Add customer
                 </Button>
@@ -280,10 +260,7 @@ export default function CustomersPage() {
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      <CustomerModal
-        open={isCreateModalOpen}
-        onOpenChange={setIsCreateModalOpen}
-      />
+      <CustomerModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
     </div>
   );
 }
@@ -317,9 +294,7 @@ export function CustomerModal({
 
   React.useEffect(() => {
     if (open && customer) {
-      const phoneNumber = customer.phone
-        ? phoneNumberFromString(customer.phone)
-        : undefined;
+      const phoneNumber = customer.phone ? phoneNumberFromString(customer.phone) : undefined;
 
       const metadataArray = customer.appMetadata
         ? Object.entries(customer.appMetadata).map(([key, value]) => ({
@@ -346,9 +321,7 @@ export function CustomerModal({
 
   const upsertCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
-      const phoneString = data.phoneNumber.number
-        ? phoneNumberToString(data.phoneNumber)
-        : "";
+      const phoneString = data.phoneNumber.number ? phoneNumberToString(data.phoneNumber) : "";
 
       const metadataRecord = (data.metadata || []).reduce(
         (acc, item) => {
@@ -372,22 +345,14 @@ export function CustomerModal({
       } as Customer);
     },
     onSuccess: (customer) => {
-      invalidateOrgQuery(
-        isEditMode ? ["customers", customer?.id] : ["customers"]
-      );
+      invalidateOrgQuery(isEditMode ? ["customers", customer?.id] : ["customers"]);
 
-      toast.success(
-        isEditMode
-          ? "Customer updated successfully"
-          : "Customer created successfully"
-      );
+      toast.success(isEditMode ? "Customer updated successfully" : "Customer created successfully");
       form.reset();
       onOpenChange(false);
     },
     onError: () => {
-      toast.error(
-        isEditMode ? "Failed to update customer" : "Failed to create customer"
-      );
+      toast.error(isEditMode ? "Failed to update customer" : "Failed to create customer");
     },
   });
 
@@ -408,9 +373,7 @@ export function CustomerModal({
       onOpenChange={handleOpenChange}
       title={isEditMode ? "Edit customer" : "Create customer"}
       description={
-        isEditMode
-          ? "Update customer information"
-          : "Add a new customer to your organization"
+        isEditMode ? "Update customer information" : "Add a new customer to your organization"
       }
       size="full"
       showCloseButton={true}
@@ -437,10 +400,7 @@ export function CustomerModal({
         </div>
       }
     >
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex h-full flex-col gap-8"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex h-full flex-col gap-8">
         <div className="flex flex-1 gap-8 overflow-hidden">
           <div className="flex-1 space-y-6 overflow-y-auto">
             <div>
@@ -515,8 +475,7 @@ export function CustomerModal({
             <div>
               <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
               <p className="text-muted-foreground text-sm">
-                Add custom key-value pairs to store additional information about
-                this customer.
+                Add custom key-value pairs to store additional information about this customer.
               </p>
             </div>
 
@@ -525,23 +484,16 @@ export function CustomerModal({
                 <div className="space-y-4">
                   {fields.length === 0 ? (
                     <div className="text-muted-foreground py-8 text-center text-sm">
-                      No metadata entries. Click &quot;Add metadata&quot; to add
-                      one.
+                      No metadata entries. Click &quot;Add metadata&quot; to add one.
                     </div>
                   ) : (
                     fields.map((field, index) => (
-                      <div
-                        key={field.id}
-                        className="flex items-start gap-3 rounded-lg border p-4"
-                      >
+                      <div key={field.id} className="flex items-start gap-3 rounded-lg border p-4">
                         <div className="grid flex-1 grid-cols-2 gap-3">
                           <RHF.Controller
                             control={form.control}
                             name={`metadata.${index}.key`}
-                            render={({
-                              field: fieldProps,
-                              fieldState: { error },
-                            }) => (
+                            render={({ field: fieldProps, fieldState: { error } }) => (
                               <TextField
                                 id={`metadata-key-${index}`}
                                 value={fieldProps.value || ""}
@@ -556,10 +508,7 @@ export function CustomerModal({
                           <RHF.Controller
                             control={form.control}
                             name={`metadata.${index}.value`}
-                            render={({
-                              field: fieldProps,
-                              fieldState: { error },
-                            }) => (
+                            render={({ field: fieldProps, fieldState: { error } }) => (
                               <TextField
                                 id={`metadata-value-${index}`}
                                 value={fieldProps.value || ""}

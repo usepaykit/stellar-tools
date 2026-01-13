@@ -6,13 +6,7 @@ import { toast } from "@/components/ui/toast";
 export function useCopy() {
   const [copied, setCopied] = React.useState(false);
 
-  const handleCopy = async ({
-    text,
-    message,
-  }: {
-    text: string;
-    message: string;
-  }) => {
+  const handleCopy = async ({ text, message }: { text: string; message: string }) => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     toast.success(message);

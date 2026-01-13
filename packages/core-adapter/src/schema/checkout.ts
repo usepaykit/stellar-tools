@@ -3,12 +3,7 @@ import { z } from "zod";
 import { schemaFor } from "../utils";
 import { Environment, environmentSchema } from "./shared";
 
-export const checkoutStatusEnum = z.enum([
-  "open",
-  "completed",
-  "expired",
-  "failed",
-]);
+export const checkoutStatusEnum = z.enum(["open", "completed", "expired", "failed"]);
 
 type CheckoutStatus = z.infer<typeof checkoutStatusEnum>;
 
@@ -128,14 +123,10 @@ export const createCheckoutSchema = checkoutSchema
     message: "Either productId or amount must be specified",
     path: ["productId"],
   })
-  .refine(
-    (data) =>
-      data.successUrl !== undefined || data.successMessage !== undefined,
-    {
-      message: "Either successUrl or successMessage must be provided",
-      path: ["successUrl", "successMessage"],
-    }
-  )
+  .refine((data) => data.successUrl !== undefined || data.successMessage !== undefined, {
+    message: "Either successUrl or successMessage must be provided",
+    path: ["successUrl", "successMessage"],
+  })
   .and(
     z.object({
       /**

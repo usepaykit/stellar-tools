@@ -46,8 +46,8 @@ export default function WidgetSection() {
         </h4>
 
         <p className="text-muted-foreground mx-auto my-4 max-w-2xl text-center text-sm font-normal lg:text-base">
-          Metered billing, subscriptions, one-time payments, and credit systems.
-          All the APIs you need for crypto payments.
+          Metered billing, subscriptions, one-time payments, and credit systems. All the APIs you
+          need for crypto payments.
         </p>
       </div>
 
@@ -73,11 +73,7 @@ const FeatureCard = ({
   children?: React.ReactNode;
   className?: string;
 }) => {
-  return (
-    <div className={cn(`relative overflow-hidden p-4 sm:p-8`, className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn(`relative overflow-hidden p-4 sm:p-8`, className)}>{children}</div>;
 };
 
 const FeatureTitle = ({ children }: { children?: React.ReactNode }) => {
@@ -201,12 +197,8 @@ export const SkeletonTwo = () => {
   ];
 
   // Generate rotations once using useState with lazy initializer to avoid calling Math.random during render
-  const [firstRowRotations] = useState(() =>
-    generateRotations(topRowPlatforms.length)
-  );
-  const [secondRowRotations] = useState(() =>
-    generateRotations(bottomRowPlatforms.length)
-  );
+  const [firstRowRotations] = useState(() => generateRotations(topRowPlatforms.length));
+  const [secondRowRotations] = useState(() => generateRotations(bottomRowPlatforms.length));
 
   const cardVariants = {
     whileHover: {

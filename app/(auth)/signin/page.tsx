@@ -7,11 +7,7 @@ import { Google } from "@/components/icon";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
@@ -46,9 +42,7 @@ export const AuthErrorAlert = ({
       <div className="flex items-start gap-3">
         <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
         <div className="flex-1 space-y-1">
-          <h3 className="text-destructive text-sm font-semibold">
-            Authentication Error
-          </h3>
+          <h3 className="text-destructive text-sm font-semibold">Authentication Error</h3>
           <p className="text-destructive/90 text-sm">
             An error occured during authentication. Please try again.
           </p>
@@ -168,28 +162,23 @@ export default function SignIn() {
 
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs.
-                Centralized control with enterprise reliability.
+                The cloud platform for managing Stellar payment SDKs. Centralized control with
+                enterprise reliability.
               </p>
 
               <div className="flex flex-col gap-4 pt-2">
                 <div className="group flex items-start gap-4">
                   <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">
-                      Cloud-Native
-                    </h4>
+                    <h4 className="mb-1 text-sm font-semibold text-white">Cloud-Native</h4>
                     <p className="text-sm leading-relaxed text-white/60">
-                      Unified dashboard to deploy, monitor, and scale—zero
-                      infrastructure overhead.
+                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
                     </p>
                   </div>
                 </div>
 
                 <div className="group flex items-start gap-4">
                   <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">
-                      Global Infrastructure
-                    </h4>
+                    <h4 className="mb-1 text-sm font-semibold text-white">Global Infrastructure</h4>
                     <p className="text-sm leading-relaxed text-white/60">
                       99.9% uptime with enterprise-grade security by default.
                     </p>
@@ -209,8 +198,7 @@ export default function SignIn() {
                 </h3>
               </div>
               <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of
-                applications worldwide.
+                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
               </p>
             </div>
           </div>
@@ -223,15 +211,10 @@ export default function SignIn() {
           className="mx-auto flex w-full max-w-md flex-col items-center justify-center space-y-4 px-6 py-12"
         >
           <div className="w-full space-y-2 text-center">
-            <h2 className="f text-3xl tracking-tighter">
-              Sign in to your account
-            </h2>
+            <h2 className="f text-3xl tracking-tighter">Sign in to your account</h2>
           </div>
 
-          <AuthErrorAlert
-            error={error}
-            onDismissError={() => setDismissedError(true)}
-          />
+          <AuthErrorAlert error={error} onDismissError={() => setDismissedError(true)} />
 
           <Button
             type="button"
@@ -241,9 +224,7 @@ export default function SignIn() {
             disabled={signinMutation.isPending}
           >
             <Google className="h-5 w-5" />
-            <span className="text-foreground text-sm font-semibold">
-              Continue with Google
-            </span>
+            <span className="text-foreground text-sm font-semibold">Continue with Google</span>
           </Button>
 
           <div className="my-6 flex w-full items-center">
@@ -306,9 +287,7 @@ export default function SignIn() {
                         size="icon"
                         className="h-6 w-6 shadow-none hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                       >
                         {showPassword ? (
                           <EyeOff className="text-muted-foreground h-4 w-4" />
@@ -318,9 +297,7 @@ export default function SignIn() {
                       </Button>
                     </InputGroupAddon>
                   </InputGroup>
-                  {error?.message && (
-                    <p className="text-destructive text-sm">{error.message}</p>
-                  )}
+                  {error?.message && <p className="text-destructive text-sm">{error.message}</p>}
                 </div>
               )}
             />
@@ -337,10 +314,7 @@ export default function SignIn() {
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
-                  <Label
-                    htmlFor="remember-me"
-                    className="cursor-pointer text-sm font-semibold"
-                  >
+                  <Label htmlFor="remember-me" className="cursor-pointer text-sm font-semibold">
                     Remember me
                   </Label>
                 </div>
@@ -359,17 +333,11 @@ export default function SignIn() {
           <div className="my-6 w-full">
             <p className="text-muted-foreground text-center text-sm">
               By continuing you agree to our{" "}
-              <Link
-                href="/terms"
-                className="hover:text-foreground underline transition-colors"
-              >
+              <Link href="/terms" className="hover:text-foreground underline transition-colors">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link
-                href="/privacy"
-                className="hover:text-foreground underline transition-colors"
-              >
+              <Link href="/privacy" className="hover:text-foreground underline transition-colors">
                 Privacy Policy
               </Link>
             </p>

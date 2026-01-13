@@ -32,9 +32,7 @@ export class CreditApi {
     );
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to refund credits: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to refund credits: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -62,11 +60,7 @@ export class CreditApi {
     }>(`/api/customers/${customerId}/credit/transactions?${params}`);
 
     if (!response.ok) {
-      return ERR(
-        new Error(
-          `Failed to get transaction history: ${response.error?.message}`
-        )
-      );
+      return ERR(new Error(`Failed to get transaction history: ${response.error?.message}`));
     }
 
     return OK(response.value.data.data);
@@ -81,18 +75,13 @@ export class CreditApi {
     );
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to get transaction: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to get transaction: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
   }
 
-  async check(
-    customerId: string,
-    params: CheckCreditsParams
-  ): Promise<Result<boolean, Error>> {
+  async check(customerId: string, params: CheckCreditsParams): Promise<Result<boolean, Error>> {
     const { error, data } = checkCreditSchema.safeParse(params);
 
     if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
@@ -106,9 +95,7 @@ export class CreditApi {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to check credits: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to check credits: ${response.error?.message}`));
     }
 
     return OK(response.value.data.isSufficient);
@@ -132,9 +119,7 @@ export class CreditApi {
     );
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to deduct credits: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to deduct credits: ${response.error?.message}`));
     }
 
     return OK(response.value.data);

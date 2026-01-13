@@ -17,9 +17,7 @@ export class RefundApi {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to create refund: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to create refund: ${response.error?.message}`));
     }
 
     return OK(response.value.data);

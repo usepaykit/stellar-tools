@@ -29,9 +29,7 @@ export class CustomerApi {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to create customer: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to create customer: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -49,9 +47,7 @@ export class CustomerApi {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to list customers: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to list customers: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -61,18 +57,13 @@ export class CustomerApi {
     const response = await this.apiClient.get<Customer>(`/customers/${id}`);
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to retrieve customer: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to retrieve customer: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
   }
 
-  async update(
-    id: string,
-    params: UpdateCustomer
-  ): Promise<Result<Customer, Error>> {
+  async update(id: string, params: UpdateCustomer): Promise<Result<Customer, Error>> {
     const { error, data } = updateCustomerSchema.safeParse(params);
 
     if (error) {
@@ -84,9 +75,7 @@ export class CustomerApi {
     });
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to update customer: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to update customer: ${response.error?.message}`));
     }
 
     return OK(response.value.data);
@@ -96,9 +85,7 @@ export class CustomerApi {
     const response = await this.apiClient.delete<Customer>(`/customers/${id}`);
 
     if (!response.ok) {
-      return ERR(
-        new Error(`Failed to delete customer: ${response.error?.message}`)
-      );
+      return ERR(new Error(`Failed to delete customer: ${response.error?.message}`));
     }
 
     return OK(response.value.data);

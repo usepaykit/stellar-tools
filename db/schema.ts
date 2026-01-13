@@ -187,11 +187,7 @@ export const assets = pgTable(
     metadata: jsonb("metadata").$type<object | null>(),
   },
   (table) => ({
-    uniqueCodeIssuerNetwork: unique().on(
-      table.code,
-      table.issuer,
-      table.network
-    ),
+    uniqueCodeIssuerNetwork: unique().on(table.code, table.issuer, table.network),
   })
 );
 
@@ -223,27 +219,15 @@ export const customers = pgTable(
   })
 );
 
-export const productStatusEnum = pgEnum("product_status", [
-  "active",
-  "archived",
-]);
+export const productStatusEnum = pgEnum("product_status", ["active", "archived"]);
 
 export type ProductStatus = (typeof productStatusEnum.enumValues)[number];
 
-export const recurringPeriodEnum = pgEnum("recurring_period", [
-  "day",
-  "week",
-  "month",
-  "year",
-]);
+export const recurringPeriodEnum = pgEnum("recurring_period", ["day", "week", "month", "year"]);
 
 export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
-export const productTypeEnum = pgEnum("product_type", [
-  "subscription",
-  "one_time",
-  "metered",
-]);
+export const productTypeEnum = pgEnum("product_type", ["subscription", "one_time", "metered"]);
 
 export type ProductType = (typeof productTypeEnum.enumValues)[number];
 
@@ -342,11 +326,7 @@ export const subscriptions = pgTable("subscription", {
   environment: networkEnum("network").notNull(),
 });
 
-export const paymentStatusEnum = pgEnum("payment_status", [
-  "pending",
-  "confirmed",
-  "failed",
-]);
+export const paymentStatusEnum = pgEnum("payment_status", ["pending", "confirmed", "failed"]);
 
 export const payments = pgTable("payment", {
   id: text("id").primaryKey(),
@@ -401,11 +381,7 @@ export const webhookLogs = pgTable("webhook_log", {
   description: text("description").notNull(),
 });
 
-export const refundStatusEnum = pgEnum("refund_status", [
-  "pending",
-  "succeeded",
-  "failed",
-]);
+export const refundStatusEnum = pgEnum("refund_status", ["pending", "succeeded", "failed"]);
 
 export const refunds = pgTable(
   "refund",
@@ -452,15 +428,8 @@ export const creditBalances = pgTable(
   },
   (table) => ({
     // One balance per customer per product
-    uniqueCustomerProduct: unique().on(
-      table.customerId,
-      table.productId,
-      table.environment
-    ),
-    balanceIndex: index("credit_balance_customer_idx").on(
-      table.customerId,
-      table.organizationId
-    ),
+    uniqueCustomerProduct: unique().on(table.customerId, table.productId, table.environment),
+    balanceIndex: index("credit_balance_customer_idx").on(table.customerId, table.organizationId),
   })
 );
 
@@ -492,10 +461,7 @@ export const creditTransactions = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
-    customerIdx: index("credit_tx_customer_idx").on(
-      table.customerId,
-      table.productId
-    ),
+    customerIdx: index("credit_tx_customer_idx").on(table.customerId, table.productId),
     balanceIdx: index("credit_tx_balance_idx").on(table.balanceId),
     createdAtIdx: index("credit_tx_created_at_idx").on(table.createdAt),
   })

@@ -5,22 +5,16 @@ import React from "react";
 import { AreaChart } from "@/components/area-chart";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { SelectPicker } from "@/components/select-picker";
-import { LineChart, type ChartColor } from "@/components/line-chart";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { FullScreenModal } from "@/components/fullscreen-modal";
+import { type ChartColor, LineChart } from "@/components/line-chart";
+import { SelectPicker } from "@/components/select-picker";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, Plus, Search, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Check, Search, Sparkles } from "lucide-react";
 
 type Integration = {
   id: string;
@@ -248,13 +242,10 @@ const overviewChartConfig = {
   },
 };
 
-
 export default function DashboardPage() {
   const router = useRouter();
   const [dateRange, setDateRange] = React.useState("7");
-  const [activeIntegrations, setActiveIntegrations] = React.useState<string[]>(
-    []
-  );
+  const [activeIntegrations, setActiveIntegrations] = React.useState<string[]>([]);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
 
@@ -265,18 +256,14 @@ export default function DashboardPage() {
   });
 
   const activeIntegrationData = React.useMemo(() => {
-    return allIntegrations.filter((integration) =>
-      activeIntegrations.includes(integration.id)
-    );
+    return allIntegrations.filter((integration) => activeIntegrations.includes(integration.id));
   }, [activeIntegrations]);
 
   const filteredMarketplaceIntegrations = React.useMemo(() => {
     return allIntegrations.filter((integration) => {
       const matchesSearch =
         integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        integration.description
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
+        integration.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         integration.category.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesSearch;
     });
@@ -289,7 +276,6 @@ export default function DashboardPage() {
       router.push("/dashboard");
     }
   };
-
 
   return (
     <div className="w-full">
@@ -305,13 +291,9 @@ export default function DashboardPage() {
                 <Card className="shadow-none">
                   <CardContent className="pt-6">
                     <div className="space-y-1">
-                      <p className="text-muted-foreground text-sm">
-                        Gross volume
-                      </p>
+                      <p className="text-muted-foreground text-sm">Gross volume</p>
                       <p className="text-2xl font-semibold">1,613.60 XLM</p>
-                      <p className="text-muted-foreground text-xs">
-                        as of {currentTime}
-                      </p>
+                      <p className="text-muted-foreground text-xs">as of {currentTime}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -331,13 +313,8 @@ export default function DashboardPage() {
                   <CardContent className="pt-6">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <p className="text-muted-foreground text-sm">
-                          XLM balance
-                        </p>
-                        <Link
-                          href="#"
-                          className="text-primary text-xs hover:underline"
-                        >
+                        <p className="text-muted-foreground text-sm">XLM balance</p>
+                        <Link href="#" className="text-primary text-xs hover:underline">
                           View
                         </Link>
                       </div>
@@ -352,17 +329,12 @@ export default function DashboardPage() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <p className="text-muted-foreground text-sm">Payouts</p>
-                        <Link
-                          href="#"
-                          className="text-primary text-xs hover:underline"
-                        >
+                        <Link href="#" className="text-primary text-xs hover:underline">
                           View
                         </Link>
                       </div>
                       <p className="text-2xl font-semibold">2,343.36 XLM</p>
-                      <p className="text-muted-foreground text-xs">
-                        Expected tomorrow
-                      </p>
+                      <p className="text-muted-foreground text-xs">Expected tomorrow</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -371,9 +343,7 @@ export default function DashboardPage() {
 
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Your overview
-                </h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Your overview</h2>
 
                 <SelectPicker
                   id="date-range"
@@ -401,9 +371,7 @@ export default function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Gross volume</CardTitle>
-                      <CardDescription>
-                        Total volume over the last 7 days
-                      </CardDescription>
+                      <CardDescription>Total volume over the last 7 days</CardDescription>
                     </div>
                     <Button variant="ghost" size="sm">
                       Explore
@@ -423,9 +391,7 @@ export default function DashboardPage() {
               </Card>
 
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Integrations
-                </h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Integrations</h2>
                 <Button
                   variant="outline"
                   className="gap-2"
@@ -446,24 +412,22 @@ export default function DashboardPage() {
               >
                 <div className="flex flex-col gap-6">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                     <input
                       type="text"
                       placeholder="Search integrations..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-4 h-10 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="border-input bg-background focus-visible:ring-ring h-10 w-full rounded-md border pr-4 pl-9 text-sm focus-visible:ring-2 focus-visible:outline-none"
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredMarketplaceIntegrations.map((integration) => {
-                      const isActive = activeIntegrations.includes(
-                        integration.id
-                      );
+                      const isActive = activeIntegrations.includes(integration.id);
                       return (
                         <Card
                           key={integration.id}
-                          className="shadow-none border hover:border-primary/50 transition-colors cursor-pointer group"
+                          className="hover:border-primary/50 group cursor-pointer border shadow-none transition-colors"
                           onClick={() => {
                             if (!isActive) {
                               handleAddIntegration(integration.id);
@@ -472,7 +436,7 @@ export default function DashboardPage() {
                         >
                           <CardHeader className="pb-3">
                             <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="flex min-w-0 flex-1 items-center gap-3">
                                 <div className="border-border bg-background flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border">
                                   <Image
                                     src={integration.icon}
@@ -482,11 +446,11 @@ export default function DashboardPage() {
                                     className="object-contain"
                                   />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <CardTitle className="text-base truncate">
+                                <div className="min-w-0 flex-1">
+                                  <CardTitle className="truncate text-base">
                                     {integration.name}
                                   </CardTitle>
-                                  <CardDescription className="text-xs line-clamp-2">
+                                  <CardDescription className="line-clamp-2 text-xs">
                                     {integration.description}
                                   </CardDescription>
                                 </div>
@@ -503,7 +467,7 @@ export default function DashboardPage() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="shrink-0 gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="shrink-0 gap-1.5 opacity-0 transition-opacity group-hover:opacity-100"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleAddIntegration(integration.id);
@@ -515,10 +479,7 @@ export default function DashboardPage() {
                               )}
                             </div>
                             <div className="mt-2">
-                              <Badge
-                                variant="outline"
-                                className="text-xs font-normal"
-                              >
+                              <Badge variant="outline" className="text-xs font-normal">
                                 {integration.category}
                               </Badge>
                             </div>
@@ -529,12 +490,10 @@ export default function DashboardPage() {
                   </div>
                   {filteredMarketplaceIntegrations.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <div className="bg-muted flex h-16 w-16 items-center justify-center rounded-full mx-auto mb-4">
-                        <Search className="h-8 w-8 text-muted-foreground" />
+                      <div className="bg-muted mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+                        <Search className="text-muted-foreground h-8 w-8" />
                       </div>
-                      <p className="text-sm font-medium mb-1">
-                        No integrations found
-                      </p>
+                      <p className="mb-1 text-sm font-medium">No integrations found</p>
                       <p className="text-muted-foreground text-xs">
                         Try adjusting your search query
                       </p>
@@ -544,22 +503,17 @@ export default function DashboardPage() {
               </FullScreenModal>
 
               {activeIntegrationData.length === 0 ? (
-                <Card className="shadow-none border-dashed">
+                <Card className="border-dashed shadow-none">
                   <CardContent className="flex flex-col items-center justify-center py-16">
-                    <div className="bg-primary/10 text-primary flex h-16 w-16 items-center justify-center rounded-full mb-6">
+                    <div className="bg-primary/10 text-primary mb-6 flex h-16 w-16 items-center justify-center rounded-full">
                       <Sparkles className="h-8 w-8" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      No integrations yet
-                    </h3>
-                    <p className="text-muted-foreground text-sm text-center max-w-md mb-6">
-                      Connect your favorite tools and services to start tracking
-                      your data and streamline your workflow
+                    <h3 className="mb-2 text-lg font-semibold">No integrations yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-md text-center text-sm">
+                      Connect your favorite tools and services to start tracking your data and
+                      streamline your workflow
                     </p>
-                    <Button
-                      className="gap-2"
-                      onClick={() => setIsMarketplaceOpen(true)}
-                    >
+                    <Button className="gap-2" onClick={() => setIsMarketplaceOpen(true)}>
                       <Plus className="h-4 w-4" />
                       Browse Integrations
                     </Button>
@@ -582,9 +536,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex-1">
                             <CardTitle>{integration.name}</CardTitle>
-                            <CardDescription>
-                              {integration.description}
-                            </CardDescription>
+                            <CardDescription>{integration.description}</CardDescription>
                           </div>
                         </div>
                       </CardHeader>

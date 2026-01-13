@@ -65,12 +65,7 @@ export const FullScreenModal = ({
 }: FullScreenModalProps) => {
   const { dialog, scrollArea } = splitProps(mixProps, "dialog", "scrollArea");
 
-  const {
-    initialScale = 0.8,
-    stiffness = 300,
-    damping = 30,
-    duration = 0.3,
-  } = animationConfig;
+  const { initialScale = 0.8, stiffness = 300, damping = 30, duration = 0.3 } = animationConfig;
 
   const sizeClasses = {
     small: cn(
@@ -125,21 +120,15 @@ export const FullScreenModal = ({
             >
               {/* Header */}
               <DialogHeader className="shrink-0 border-b px-6 pt-8 pb-6">
-                <DialogTitle className="text-3xl font-bold">
-                  {title}
-                </DialogTitle>
+                <DialogTitle className="text-3xl font-bold">{title}</DialogTitle>
                 {description && (
-                  <DialogDescription className="mt-2 text-base">
-                    {description}
-                  </DialogDescription>
+                  <DialogDescription className="mt-2 text-base">{description}</DialogDescription>
                 )}
               </DialogHeader>
 
               {/* Content - Scrollable */}
               {size === "full" ? (
-                <ScrollArea
-                  className={cn("min-h-0 flex-1", scrollArea.className)}
-                >
+                <ScrollArea className={cn("min-h-0 flex-1", scrollArea.className)}>
                   <div className="px-6 py-6">{children}</div>
                 </ScrollArea>
               ) : (

@@ -17,10 +17,7 @@ type HelpTextProps = React.ComponentProps<"p">;
 
 interface TagInputPickerProps
   extends
-    MixinProps<
-      "input",
-      Omit<React.ComponentProps<typeof Input>, "value" | "onChange">
-    >,
+    MixinProps<"input", Omit<React.ComponentProps<typeof Input>, "value" | "onChange">>,
     MixinProps<"tag", Omit<React.ComponentProps<typeof Badge>, "children">>,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
@@ -35,10 +32,7 @@ interface TagInputPickerProps
   className?: string;
 }
 
-export const TagInputPicker = React.forwardRef<
-  HTMLInputElement,
-  TagInputPickerProps
->(
+export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerProps>(
   (
     {
       id,
@@ -102,25 +96,14 @@ export const TagInputPicker = React.forwardRef<
         {helpText && (
           <p
             {...helpTextProps}
-            className={cn(
-              "text-muted-foreground text-sm",
-              helpTextProps.className
-            )}
+            className={cn("text-muted-foreground text-sm", helpTextProps.className)}
           >
             {helpText}
           </p>
         )}
-        <InputGroup
-          className={cn("h-auto min-h-10 flex-wrap gap-2 p-2", className)}
-          {...rest}
-        >
+        <InputGroup className={cn("h-auto min-h-10 flex-wrap gap-2 p-2", className)} {...rest}>
           {value.map((t) => (
-            <Badge
-              key={t}
-              variant="secondary"
-              className={cn("gap-1 pr-1", tag.className)}
-              {...tag}
-            >
+            <Badge key={t} variant="secondary" className={cn("gap-1 pr-1", tag.className)} {...tag}>
               {t}
               <Button
                 variant="ghost"

@@ -46,9 +46,7 @@ export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
 
-  const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () =>
-    retrieveApiKeys()
-  );
+  const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () => retrieveApiKeys());
 
   const { handleCopy } = useCopy();
 
@@ -56,9 +54,7 @@ export default function ApiKeysPage() {
     {
       accessorKey: "name",
       header: "NAME",
-      cell: ({ row }) => (
-        <span className="text-sm font-medium">{row.original.name}</span>
-      ),
+      cell: ({ row }) => <span className="text-sm font-medium">{row.original.name}</span>,
       enableSorting: true,
     },
     {
@@ -118,8 +114,7 @@ export default function ApiKeysPage() {
       header: "LAST USED",
       cell: ({ row }) => {
         const date = row.original.lastUsedAt;
-        if (!date)
-          return <span className="text-muted-foreground text-sm">—</span>;
+        if (!date) return <span className="text-muted-foreground text-sm">—</span>;
         return (
           <span className="text-sm">
             {date.toLocaleDateString("en-US", {
@@ -229,8 +224,7 @@ export default function ApiKeysPage() {
                 <div className="space-y-1">
                   <h2 className="text-xl font-semibold">Standard keys</h2>
                   <p className="text-muted-foreground text-sm">
-                    Use these keys for server-side requests to the Stellar Tools
-                    API.{" "}
+                    Use these keys for server-side requests to the Stellar Tools API.{" "}
                     <Link href="#" className="text-primary hover:underline">
                       Learn more
                     </Link>
@@ -243,12 +237,7 @@ export default function ApiKeysPage() {
                 </Button>
               </div>
 
-              <DataTable
-                columns={columns}
-                data={apiKeys}
-                actions={actions}
-                isLoading={isLoading}
-              />
+              <DataTable columns={columns} data={apiKeys} actions={actions} isLoading={isLoading} />
             </div>
           </div>
         </DashboardSidebarInset>
@@ -381,17 +370,15 @@ function ApiKeyModal({
         <div className="space-y-4">
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
-              <strong className="text-foreground">Important:</strong> Make sure
-              to copy your API key now. You won’t be able to see it again!
+              <strong className="text-foreground">Important:</strong> Make sure to copy your API key
+              now. You won’t be able to see it again!
             </p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Your API key</label>
             <div className="flex items-center gap-2">
               <div className="bg-muted border-border flex-1 rounded-md border p-3">
-                <code className="font-mono text-sm break-all">
-                  {createdApiKey}
-                </code>
+                <code className="font-mono text-sm break-all">{createdApiKey}</code>
               </div>
               <Button
                 type="button"
@@ -434,9 +421,8 @@ function ApiKeyModal({
 
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
-              <strong className="text-foreground">Note:</strong> API keys have
-              full API access. Make sure to keep your secret keys secure and
-              never expose them in client-side code.
+              <strong className="text-foreground">Note:</strong> API keys have full API access. Make
+              sure to keep your secret keys secure and never expose them in client-side code.
             </p>
           </div>
         </form>

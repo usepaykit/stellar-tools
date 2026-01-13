@@ -52,12 +52,7 @@ export class StellarTools {
 export * from "./types";
 export { WebhookSigner } from "./resources/webhooks";
 export { ApiClient };
-export {
-  schemaFor,
-  tryCatchAsync,
-  tryCatchSync,
-  validateRequiredKeys,
-} from "./utils";
+export { schemaFor, tryCatchAsync, tryCatchSync, validateRequiredKeys } from "./utils";
 export { raceAsyncIterator, batchProcess } from "./promisify";
 export type { LooseAutoComplete } from "./types";
 export * from "./schema/customer";

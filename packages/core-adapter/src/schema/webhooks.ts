@@ -81,9 +81,7 @@ export const webhookSchema = schemaFor<Webhook>()(
     organizationId: z.string(),
     url: z.string(),
     secret: z.string(),
-    events: z.array(
-      z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))
-    ),
+    events: z.array(z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))),
     name: z.string(),
     description: z.string().optional(),
     isDisabled: z.boolean(),

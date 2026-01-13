@@ -48,10 +48,7 @@ export const buildError = (message: string, cause?: unknown): Error => {
 
 export const executeWithRetryWithHandler = async <T>(
   apiCall: () => Promise<T>,
-  errorHandler: (
-    error: unknown,
-    attempt: number
-  ) => { retry: boolean; data: unknown },
+  errorHandler: (error: unknown, attempt: number) => { retry: boolean; data: unknown },
   maxRetries: number = 3,
   baseDelay: number = 1000,
   currentAttempt: number = 1
@@ -64,10 +61,7 @@ export const executeWithRetryWithHandler = async <T>(
     if (!handledError.retry) return handledError.data as T;
 
     if (handledError.retry && currentAttempt <= maxRetries) {
-      const delay =
-        baseDelay *
-        Math.pow(2, currentAttempt - 1) *
-        (0.5 + Math.random() * 0.5);
+      const delay = baseDelay * Math.pow(2, currentAttempt - 1) * (0.5 + Math.random() * 0.5);
 
       await setTimeout(delay);
 
@@ -124,6 +118,5 @@ export const validateRequiredKeys = <K extends string>(
 };
 
 export const schemaFor = <TInterface>() => {
-  return <TSchema extends z.ZodType<TInterface>>(schema: TSchema): TSchema =>
-    schema;
+  return <TSchema extends z.ZodType<TInterface>>(schema: TSchema): TSchema => schema;
 };

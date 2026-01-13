@@ -13,10 +13,9 @@ export interface StellarToolsMedusaAdapterOptions {
   debug?: boolean;
 }
 
-export const stellarToolsMedusaAdapterOptionsSchema =
-  schemaFor<StellarToolsMedusaAdapterOptions>()(
-    z.object({
-      apiKey: z.string(),
-      debug: z.boolean().optional(),
-    })
-  );
+export const stellarToolsMedusaAdapterOptionsSchema = schemaFor<StellarToolsMedusaAdapterOptions>()(
+  z.object({
+    apiKey: z.string(),
+    debug: z.boolean().optional(),
+  })
+);

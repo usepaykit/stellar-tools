@@ -1,15 +1,11 @@
-import {
-  retrieveOrganization,
-  retrieveOrganizationIdAndSecret,
-} from "@/actions/organization";
+import { retrieveOrganization, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrieveActiveProductsWithAsset } from "@/actions/product";
 import { Network } from "@/db";
 import TOML from "@iarna/toml";
 
 const DEFAULT_LOGO_URL = "https://stellartools.io/default-logo.png";
 const PLATFORM_WEB_AUTH_ENDPOINT = "https://api.stellartools.io/auth";
-const PLATFORM_PHYSICAL_ADDRESS =
-  "123 Stellar Way, San Francisco, CA 94102, United States";
+const PLATFORM_PHYSICAL_ADDRESS = "123 Stellar Way, San Francisco, CA 94102, United States";
 const PLATFORM_OFFICIAL_EMAIL = "support@stellartools.io";
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
@@ -27,24 +23,16 @@ export async function GET(request: Request) {
 
   try {
     const org = await retrieveOrganization(orgId);
-    const { secret } = await retrieveOrganizationIdAndSecret(
-      orgId,
-      environment
-    );
+    const { secret } = await retrieveOrganizationIdAndSecret(orgId, environment);
 
-    const productsWithAssets = await retrieveActiveProductsWithAsset(
-      org.id,
-      environment
-    );
+    const productsWithAssets = await retrieveActiveProductsWithAsset(org.id, environment);
 
-    const networkPassphrase =
-      environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
+    const networkPassphrase = environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
 
     const orgLogo = org.logoUrl || DEFAULT_LOGO_URL;
     const orgUrl = `https://${orgId}.stellartools.io`;
     const orgSupportEmail = `${orgId}@stellartools.io`;
-    const orgDescription =
-      org.description || `${org.name} - Powered by Stellar Tools`;
+    const orgDescription = org.description || `${org.name} - Powered by Stellar Tools`;
 
     const currencies = productsWithAssets.map(({ product, asset }) => {
       const issuer = asset.issuer;
@@ -85,15 +73,11 @@ export async function GET(request: Request) {
         ORG_OFFICIAL_EMAIL: PLATFORM_OFFICIAL_EMAIL,
         ORG_SUPPORT_EMAIL: orgSupportEmail,
       },
-      PRINCIPALS: [
-        { name: "Stellar Tools Support", email: PLATFORM_OFFICIAL_EMAIL },
-      ],
+      PRINCIPALS: [{ name: "Stellar Tools Support", email: PLATFORM_OFFICIAL_EMAIL }],
       CURRENCIES: currencies,
     };
 
-    const tomlString = TOML.stringify(
-      tomlData as Parameters<typeof TOML.stringify>[0]
-    );
+    const tomlString = TOML.stringify(tomlData as Parameters<typeof TOML.stringify>[0]);
 
     return new Response(tomlString, {
       headers: {

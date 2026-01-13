@@ -59,11 +59,7 @@ export const retrievePayments = async (
     .where(and(...conditions));
 };
 
-export const retrievePayment = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const retrievePayment = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [payment] = await db
@@ -82,10 +78,7 @@ export const retrievePayment = async (
   return payment;
 };
 
-export const retrievePaymentsWithDetails = async (
-  orgId?: string,
-  env?: Network
-) => {
+export const retrievePaymentsWithDetails = async (orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const result = await db
@@ -107,28 +100,17 @@ export const retrievePaymentsWithDetails = async (
     .leftJoin(products, eq(checkouts.productId, products.id))
     .leftJoin(assets, eq(products.assetId, assets.id))
     .leftJoin(refunds, eq(payments.id, refunds.paymentId))
-    .where(
-      and(
-        eq(payments.organizationId, organizationId),
-        eq(payments.environment, environment)
-      )
-    )
+    .where(and(eq(payments.organizationId, organizationId), eq(payments.environment, environment)))
     .orderBy(desc(payments.createdAt));
 
   return result;
 };
 
-export const putPayment = async (
-  id: string,
-  organizationId: string,
-  params: Partial<Payment>
-) => {
+export const putPayment = async (id: string, organizationId: string, params: Partial<Payment>) => {
   const [payment] = await db
     .update(payments)
     .set({ ...params, updatedAt: new Date() })
-    .where(
-      and(eq(payments.id, id), eq(payments.organizationId, organizationId))
-    )
+    .where(and(eq(payments.id, id), eq(payments.organizationId, organizationId)))
     .returning();
 
   if (!payment) throw new Error("Payment not found");
@@ -139,9 +121,7 @@ export const putPayment = async (
 export const deletePayment = async (id: string, organizationId: string) => {
   await db
     .delete(payments)
-    .where(
-      and(eq(payments.id, id), eq(payments.organizationId, organizationId))
-    )
+    .where(and(eq(payments.id, id), eq(payments.organizationId, organizationId)))
     .returning();
 
   return null;

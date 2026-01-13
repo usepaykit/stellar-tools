@@ -9,12 +9,7 @@ import {
   switchEnvironment,
 } from "@/actions/organization";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,10 +35,11 @@ import {
   SidebarProvider,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { Network } from "@/db";
 import { useOrgContext } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { Network } from "@/db";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -137,8 +133,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isSwitching, setIsSwitching] = React.useState(false);
-  const [isSwitchingEnvironment, setIsSwitchingEnvironment] =
-    React.useState(false);
+  const [isSwitchingEnvironment, setIsSwitchingEnvironment] = React.useState(false);
 
   // Get current organization context (includes environment)
   const { data: orgContext } = useOrgContext();
@@ -226,9 +221,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         await switchEnvironment(newEnvironment);
         // Invalidate org-context query to update the banner in real-time
         await queryClient.invalidateQueries({ queryKey: ["org-context"] });
-        toast.success(
-          `Switched to ${checked ? "Live" : "Test"} mode successfully`
-        );
+        toast.success(`Switched to ${checked ? "Live" : "Test"} mode successfully`);
         router.refresh();
       } catch (error) {
         console.error("Failed to switch environment:", error);
@@ -336,9 +329,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       <div className="bg-background flex size-6 items-center justify-center rounded-md border">
                         <Plus className="size-4" />
                       </div>
-                      <div className="text-muted-foreground font-medium">
-                        Create organization
-                      </div>
+                      <div className="text-muted-foreground font-medium">Create organization</div>
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -352,9 +343,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
               {navMain.map((item) => {
                 const itemActive = isActive(item.url);
                 if (item.items && item.items.length > 0) {
-                  const hasActiveSubItem = item.items.some((subItem) =>
-                    isActive(subItem.url)
-                  );
+                  const hasActiveSubItem = item.items.some((subItem) => isActive(subItem.url));
                   return (
                     <Collapsible
                       key={item.title}
@@ -375,18 +364,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                           >
                             {item.icon && (
                               <item.icon
-                                className={cn(
-                                  itemActive || hasActiveSubItem
-                                    ? "text-primary"
-                                    : ""
-                                )}
+                                className={cn(itemActive || hasActiveSubItem ? "text-primary" : "")}
                               />
                             )}
                             <span
                               className={cn(
-                                itemActive || hasActiveSubItem
-                                  ? "text-primary font-medium"
-                                  : ""
+                                itemActive || hasActiveSubItem ? "text-primary font-medium" : ""
                               )}
                             >
                               {item.title}
@@ -412,9 +395,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                     <Link href={subItem.url}>
                                       <span
                                         className={cn(
-                                          subItemActive
-                                            ? "text-primary font-medium"
-                                            : ""
+                                          subItemActive ? "text-primary font-medium" : ""
                                         )}
                                       >
                                         {subItem.title}
@@ -426,7 +407,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                             })}
                             {item.title === "Developers" && (
                               <>
-                                <div className="mx-2 my-2 h-px bg-sidebar-border" />
+                                <div className="bg-sidebar-border mx-2 my-2 h-px" />
                                 <SidebarMenuSubItem>
                                   <div className="flex items-center justify-between gap-4 px-2 py-1.5">
                                     <div className="flex flex-col gap-0.5">
@@ -455,22 +436,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                 }
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      tooltip={item.title}
-                      isActive={itemActive}
-                    >
+                    <SidebarMenuButton asChild tooltip={item.title} isActive={itemActive}>
                       <Link href={item.url}>
                         {item.icon && (
-                          <item.icon
-                            className={cn(itemActive ? "text-primary" : "")}
-                          />
+                          <item.icon className={cn(itemActive ? "text-primary" : "")} />
                         )}
-                        <span
-                          className={cn(
-                            itemActive ? "text-primary font-medium" : ""
-                          )}
-                        >
+                        <span className={cn(itemActive ? "text-primary font-medium" : "")}>
                           {item.title}
                         </span>
                       </Link>
@@ -491,19 +462,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage
-                        src={user?.profile.avatarUrl || undefined}
-                        alt={userName}
-                      />
-                      <AvatarFallback className="rounded-lg">
-                        {userInitials}
-                      </AvatarFallback>
+                      <AvatarImage src={user?.profile.avatarUrl || undefined} alt={userName} />
+                      <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">{userName}</span>
-                      <span className="truncate text-xs">
-                        {user?.email || ""}
-                      </span>
+                      <span className="truncate text-xs">{user?.email || ""}</span>
                     </div>
                     <ChevronsUpDown className="ml-auto size-4" />
                   </SidebarMenuButton>
@@ -517,21 +481,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="h-8 w-8 rounded-lg">
-                        <AvatarImage
-                          src={user?.profile.avatarUrl || undefined}
-                          alt={userName}
-                        />
-                        <AvatarFallback className="rounded-lg">
-                          {userInitials}
-                        </AvatarFallback>
+                        <AvatarImage src={user?.profile.avatarUrl || undefined} alt={userName} />
+                        <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">
-                          {userName}
-                        </span>
-                        <span className="truncate text-xs">
-                          {user?.email || ""}
-                        </span>
+                        <span className="truncate font-semibold">{userName}</span>
+                        <span className="truncate text-xs">{user?.email || ""}</span>
                       </div>
                     </div>
                   </DropdownMenuLabel>

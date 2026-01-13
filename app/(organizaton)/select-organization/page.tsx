@@ -7,10 +7,7 @@ import {
   retrieveOrganizations,
   setCurrentOrganization,
 } from "@/actions/organization";
-import {
-  FileUploadPicker,
-  type FileWithPreview,
-} from "@/components/file-upload-picker";
+import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   PhoneNumber,
@@ -19,11 +16,7 @@ import {
 } from "@/components/phone-number-picker";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
@@ -42,9 +35,7 @@ export default function SelectOrganizationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const showCreate = searchParams.get("create") === "true";
-  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(
-    showCreate ? true : false
-  );
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(showCreate ? true : false);
 
   const {
     data: organizations,
@@ -74,12 +65,8 @@ export default function SelectOrganizationPage() {
       <div className="bg-background flex min-h-screen items-center justify-center p-4">
         <div className="w-full max-w-2xl space-y-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Select Organization
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Choose an organization to continue
-            </p>
+            <h1 className="text-3xl font-bold tracking-tight">Select Organization</h1>
+            <p className="text-muted-foreground mt-2">Choose an organization to continue</p>
           </div>
 
           <div className="space-y-4">
@@ -124,9 +111,7 @@ export default function SelectOrganizationPage() {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold">Create New Organization</h3>
-                <p className="text-muted-foreground text-sm">
-                  Start a new workspace
-                </p>
+                <p className="text-muted-foreground text-sm">Start a new workspace</p>
               </div>
             </div>
           </div>
@@ -147,12 +132,8 @@ const LoadingSkeleton = () => {
     <div className="bg-background flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Select Organization
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Choose an organization to continue
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">Select Organization</h1>
+          <p className="text-muted-foreground mt-2">Choose an organization to continue</p>
         </div>
 
         <div className="w-full space-y-4">
@@ -185,9 +166,7 @@ const createOrganizationSchema = z.object({
   description: z.string().optional(),
   physicalAddress: z.string().optional(),
   supportEmail: z.email(),
-  twitterHandle: z
-    .string()
-    .regex(/^@?[a-zA-Z0-9_]{1,15}$/, "Please enter a valid Twitter handle"),
+  twitterHandle: z.string().regex(/^@?[a-zA-Z0-9_]{1,15}$/, "Please enter a valid Twitter handle"),
   githubHandle: z
     .string()
     .regex(
@@ -307,25 +286,19 @@ const CreateOrganizationModal = ({
             )}
             <Button
               type="button"
-              onClick={() =>
-                form.handleSubmit((data) => createOrgMutation.mutateAsync(data))
-              }
+              onClick={() => form.handleSubmit((data) => createOrgMutation.mutateAsync(data))}
               disabled={createOrgMutation.isPending}
               isLoading={createOrgMutation.isPending}
               className="gap-2"
             >
-              {createOrgMutation.isPending
-                ? "Creating..."
-                : "Create Organization"}
+              {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
             </Button>
           </div>
         </div>
       }
     >
       <form
-        onSubmit={form.handleSubmit((data) =>
-          createOrgMutation.mutateAsync(data)
-        )}
+        onSubmit={form.handleSubmit((data) => createOrgMutation.mutateAsync(data))}
         className="grid h-full w-full gap-8 lg:grid-cols-2"
         noValidate
       >
@@ -475,10 +448,7 @@ const CreateOrganizationModal = ({
 
                   return (
                     <div className="space-y-2">
-                      <Label
-                        htmlFor={field.name}
-                        className="text-sm font-medium"
-                      >
+                      <Label htmlFor={field.name} className="text-sm font-medium">
                         Twitter Handle
                       </Label>
                       <InputGroup
@@ -487,9 +457,7 @@ const CreateOrganizationModal = ({
                           "w-full shadow-none"
                         )}
                       >
-                        <InputGroupAddon align="inline-start">
-                          {twitterPrefix}
-                        </InputGroupAddon>
+                        <InputGroupAddon align="inline-start">{twitterPrefix}</InputGroupAddon>
                         <InputGroupInput
                           id={field.name}
                           type="text"
@@ -522,10 +490,7 @@ const CreateOrganizationModal = ({
 
                   return (
                     <div className="space-y-2">
-                      <Label
-                        htmlFor={field.name}
-                        className="text-sm font-medium"
-                      >
+                      <Label htmlFor={field.name} className="text-sm font-medium">
                         GitHub Handle
                       </Label>
                       <InputGroup
@@ -534,9 +499,7 @@ const CreateOrganizationModal = ({
                           "w-full shadow-none"
                         )}
                       >
-                        <InputGroupAddon align="inline-start">
-                          {githubPrefix}
-                        </InputGroupAddon>
+                        <InputGroupAddon align="inline-start">{githubPrefix}</InputGroupAddon>
                         <InputGroupInput
                           id={field.name}
                           type="text"

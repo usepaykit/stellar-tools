@@ -18,14 +18,13 @@ export interface StellarToolsUploadthingOptions {
   debug?: boolean;
 }
 
-export const stellarToolsUploadthingOptionsSchema =
-  schemaFor<StellarToolsUploadthingOptions>()(
-    z.object({
-      apiKey: z.string(),
-      productId: z.string(),
-      debug: z.boolean().optional(),
-    })
-  );
+export const stellarToolsUploadthingOptionsSchema = schemaFor<StellarToolsUploadthingOptions>()(
+  z.object({
+    apiKey: z.string(),
+    productId: z.string(),
+    debug: z.boolean().optional(),
+  })
+);
 
 export interface StellarToolsMetadata {
   __stellar: {

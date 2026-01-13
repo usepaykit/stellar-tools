@@ -39,10 +39,7 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: "Invalid state" }, { status: 400 });
   }
 
-  const { secret } = await retrieveOrganizationIdAndSecret(
-    organizationId,
-    environment
-  );
+  const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 
   if (!secret) {
     return NextResponse.json(
@@ -102,9 +99,7 @@ export const POST = async (req: NextRequest) => {
     environment
   );
 
-  await tryCatchAsync(
-    triggerWebhooks("refund.succeeded", { refund }, organizationId, environment)
-  );
+  await tryCatchAsync(triggerWebhooks("refund.succeeded", { refund }, organizationId, environment));
 
   return NextResponse.json({ data: refund });
 };

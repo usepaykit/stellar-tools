@@ -1,16 +1,7 @@
 import { StellarTools } from "@stellartools/core";
-import {
-  InvalidArgumentError,
-  generateObject,
-  generateText,
-  streamObject,
-  streamText,
-} from "ai";
+import { InvalidArgumentError, generateObject, generateText, streamObject, streamText } from "ai";
 
-import {
-  StellarToolsAISDKOptions,
-  stellarToolsAISDKOptionsSchema,
-} from "./schema";
+import { StellarToolsAISDKOptions, stellarToolsAISDKOptionsSchema } from "./schema";
 
 export class StellarToolsAISDK {
   private stellar: StellarTools;

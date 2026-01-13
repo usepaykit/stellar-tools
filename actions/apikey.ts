@@ -6,9 +6,7 @@ import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
-export const postApiKey = async (
-  params: Omit<ApiKey, "id" | "organizationId" | "environment">
-) => {
+export const postApiKey = async (params: Omit<ApiKey, "id" | "organizationId" | "environment">) => {
   const { organizationId, environment } = await resolveOrgContext();
 
   const [apiKey] = await db
@@ -30,19 +28,10 @@ export const retrieveApiKeys = async (orgId?: string, env?: Network) => {
   return await db
     .select()
     .from(apiKeys)
-    .where(
-      and(
-        eq(apiKeys.organizationId, organizationId),
-        eq(apiKeys.environment, environment)
-      )
-    );
+    .where(and(eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)));
 };
 
-export const retrieveApiKey = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const retrieveApiKey = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [apiKey] = await db
@@ -87,11 +76,7 @@ export const putApiKey = async (
   return apiKey;
 };
 
-export const deleteApiKey = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-) => {
+export const deleteApiKey = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   await db
@@ -109,11 +94,7 @@ export const deleteApiKey = async (
 };
 
 export const resolveApiKey = async (apiKey: string) => {
-  const [record] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.token, apiKey))
-    .limit(1);
+  const [record] = await db.select().from(apiKeys).where(eq(apiKeys.token, apiKey)).limit(1);
 
   if (!record) throw new Error("Invalid apiKey");
 

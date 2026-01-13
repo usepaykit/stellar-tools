@@ -7,8 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
 
-  if (!apiKey)
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
 
   const { error, data } = createCustomerSchema.safeParse(await req.json());
 
@@ -29,12 +28,7 @@ export const POST = async (req: NextRequest) => {
   );
 
   await tryCatchAsync(
-    triggerWebhooks(
-      "customer.created",
-      { customer },
-      organizationId,
-      environment
-    )
+    triggerWebhooks("customer.created", { customer }, organizationId, environment)
   );
 
   return NextResponse.json({ data: customer });
