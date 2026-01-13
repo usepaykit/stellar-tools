@@ -82,6 +82,16 @@ export interface Checkout {
    * The environment of the checkout.
    */
   environment: Environment;
+
+  /**
+   * The success URL of the checkout.
+   */
+  successUrl?: string;
+
+  /**
+   * The success message of the checkout.
+   */
+  successMessage?: string;
 }
 
 export const checkoutSchema = schemaFor<Checkout>()(
@@ -99,6 +109,8 @@ export const checkoutSchema = schemaFor<Checkout>()(
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}),
     environment: environmentSchema,
+    successUrl: z.string().optional(),
+    successMessage: z.string().optional(),
   })
 );
 
@@ -110,11 +122,21 @@ export const createCheckoutSchema = checkoutSchema
     description: true,
     metadata: true,
     assetCode: true,
+    successUrl: true,
+    successMessage: true,
   })
   .refine((data) => data.productId !== undefined || data.amount !== undefined, {
     message: "Either productId or amount must be specified",
     path: ["productId"],
-  });
+  })
+  .refine(
+    (data) =>
+      data.successUrl !== undefined || data.successMessage !== undefined,
+    {
+      message: "Either successUrl or successMessage must be provided",
+      path: ["successUrl", "successMessage"],
+    }
+  );
 
 export type CreateCheckout = Pick<
   Checkout,
@@ -125,6 +147,8 @@ export type CreateCheckout = Pick<
   | "metadata"
   | "description"
   | "assetCode"
+  | "successUrl"
+  | "successMessage"
 >;
 
 export const updateCheckoutSchema = checkoutSchema.pick({

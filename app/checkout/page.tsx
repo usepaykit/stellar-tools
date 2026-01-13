@@ -128,7 +128,7 @@ export default function CheckoutPage() {
       const uri = stellar.makePaymentURI({
         destination: process.env.NEXT_PUBLIC_MERCHANT_STELLAR_ADDRESS!,
         amount: PRICE.toString(),
-        memo: checkoutId, // MEMO_TEXT
+        memo: `ORD-${checkoutId}`, // MEMO_TEXT
         message: "Unlimited Monthly Subscription Payment",
         callback: `${window.location.origin}/api/payment/callback`,
       });

@@ -58,6 +58,7 @@ export {
   tryCatchSync,
   validateRequiredKeys,
 } from "./utils";
+export { raceAsyncIterator, batchProcess } from "./promisify";
 export type { LooseAutoComplete } from "./types";
 export * from "./schema/customer";
 export * from "./schema/checkout";

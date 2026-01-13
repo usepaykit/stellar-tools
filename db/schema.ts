@@ -257,11 +257,17 @@ export const checkouts = pgTable(
     metadata: jsonb("metadata").$type<object | null>(),
     environment: networkEnum("network").notNull(),
     assetCode: text("asset_code"),
+    successUrl: text("success_url"),
+    successMessage: text("success_message"),
   },
   (table) => ({
     amountOrProductCheck: check(
       "amount_or_product_check",
       sql`${table.productId} IS NOT NULL OR ${table.amount} IS NOT NULL`
+    ),
+    successUrlOrMessageCheck: check(
+      "success_url_or_message_check",
+      sql`${table.successUrl} IS NOT NULL OR ${table.successMessage} IS NOT NULL`
     ),
   })
 );
