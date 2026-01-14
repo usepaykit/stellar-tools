@@ -296,8 +296,8 @@ export function CustomerModal({
     if (open && customer) {
       const phoneNumber = customer.phone ? phoneNumberFromString(customer.phone) : undefined;
 
-      const metadataArray = customer.appMetadata
-        ? Object.entries(customer.appMetadata).map(([key, value]) => ({
+      const metadataArray = customer.metadata
+        ? Object.entries(customer.metadata).map(([key, value]) => ({
             key,
             value: value || "",
           }))
@@ -337,7 +337,7 @@ export function CustomerModal({
         name: data.name,
         email: data.email,
         phone: phoneString,
-        appMetadata: metadataRecord,
+        metadata: metadataRecord,
         environment: "testnet",
         createdAt: new Date(),
         updatedAt: new Date(),

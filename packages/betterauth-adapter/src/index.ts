@@ -79,7 +79,7 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
                 const newCustomer = await client.customers.create({
                   email: user.email,
                   name: user.name,
-                  appMetadata: { source: "betterauth-adapter" },
+                  metadata: { source: "betterauth-adapter" },
                 });
 
                 if (newCustomer.ok) {

@@ -23,7 +23,7 @@ export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Pro
   const result = await stellar.customers.create({
     email: session.user.email,
     name: session.user.name,
-    appMetadata: { source: "betterauth-adapter" },
+    metadata: { source: "betterauth-adapter" },
   });
 
   if (!result.ok) {
@@ -69,7 +69,7 @@ export const createCustomer = (options: StellarToolsBetterAuthOptions) => {
       const result = await stellar.customers.create({
         email: session.user.email,
         name: session.user.name,
-        appMetadata: { source: "betterauth-adapter" },
+        metadata: { source: "betterauth-adapter" },
       });
 
       if (!result.ok) {
@@ -136,7 +136,7 @@ export const updateCustomer = (options: StellarToolsBetterAuthOptions) => {
         email: z.email().optional(),
         name: z.string().optional(),
         phone: z.string().optional(),
-        appMetadata: z.record(z.string(), z.unknown()).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
       }),
       metadata: {
         openapi: {
@@ -158,13 +158,13 @@ export const updateCustomer = (options: StellarToolsBetterAuthOptions) => {
       const email = ctx.body.email;
       const name = ctx.body.name;
       const phone = ctx.body.phone;
-      const appMetadata = ctx.body.appMetadata;
+      const metadata = ctx.body.metadata;
 
       const result = await stellar.customers.update(customerId, {
         ...(email && { email }),
         ...(name && { name }),
         ...(phone && { phone }),
-        ...(appMetadata && { appMetadata }),
+        ...(metadata && { metadata }),
       });
 
       if (!result.ok) {

@@ -286,7 +286,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       email: customer?.email,
       name: `${customer?.first_name} ${customer?.last_name}`,
       phone: customer?.phone ?? undefined,
-      appMetadata: { source: "medusa-adapter", ...(metadata ?? {}) },
+      metadata: { source: "medusa-adapter", ...(metadata ?? {}) },
     });
 
     if (!stellarCustomer.ok) {
@@ -322,7 +322,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       email: customer.email,
       name: `${customer.first_name} ${customer.last_name}`,
       phone: customer.phone ?? undefined,
-      appMetadata: data?.metadata as Record<string, unknown>,
+      metadata: data?.metadata as Record<string, unknown>,
     });
 
     if (!updatedCustomer.ok) {

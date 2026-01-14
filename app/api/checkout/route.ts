@@ -1,6 +1,6 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
-import { postCustomer, retrieveCustomer } from "@/actions/customers";
+import { postCustomers, retrieveCustomer } from "@/actions/customers";
 import { triggerWebhooks } from "@/actions/webhook";
 import { Customer } from "@/db";
 import { createCheckoutSchema, tryCatchAsync } from "@stellartools/core";
@@ -25,16 +25,18 @@ export const POST = async (req: NextRequest) => {
   if (data?.customerId) {
     customer = await retrieveCustomer({ id: data.customerId }, organizationId, environment);
   } else if (data?.customerEmail) {
-    customer = await postCustomer(
-      {
-        email: data.customerEmail as string,
-        name: data.customerEmail?.split("@")[0],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        phone: null,
-        walletAddresses: null,
-        appMetadata: data?.metadata ?? null,
-      },
+    customer = await postCustomers(
+      [
+        {
+          email: data.customerEmail as string,
+          name: data.customerEmail?.split("@")[0],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          phone: null,
+          walletAddresses: null,
+          metadata: data?.metadata ?? null,
+        },
+      ],
       organizationId,
       environment
     );

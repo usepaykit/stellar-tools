@@ -523,14 +523,14 @@ export default function CustomerDetailPage() {
                     </Button>
                   </div>
 
-                  {customer?.appMetadata && Object.keys(customer?.appMetadata).length > 0 ? (
+                  {customer?.metadata && Object.keys(customer?.metadata).length > 0 ? (
                     <CodeBlock
                       language="json"
                       showCopyButton={true}
                       maxHeight="none"
                       className="w-full"
                     >
-                      {JSON.stringify(customer?.appMetadata, null, 2)}
+                      {JSON.stringify(customer?.metadata, null, 2)}
                     </CodeBlock>
                   ) : (
                     <div className="border-muted-foreground/20 hover:border-muted-foreground/30 flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors">
@@ -614,7 +614,7 @@ export default function CustomerDetailPage() {
         maxHeight="none"
         className="w-full"
       >
-        {JSON.stringify(customer?.appMetadata || {}, null, 2)}
+        {JSON.stringify(customer?.metadata || {}, null, 2)}
       </CodeBlock>
     </div>
   );

@@ -31,7 +31,7 @@ export interface Customer {
   /**
    * The application metadata for the customer.
    */
-  appMetadata: Record<string, unknown>;
+  metadata: Record<string, unknown>;
 
   /**
    * The created at timestamp for the customer.
@@ -56,7 +56,7 @@ export const customerSchema = schemaFor<Customer>()(
     email: z.email(),
     name: z.string(),
     phone: z.string().optional(),
-    appMetadata: z.record(z.string(), z.any()).default({}),
+    metadata: z.record(z.string(), z.any()).default({}),
     createdAt: z.string(),
     updatedAt: z.string(),
     environment: environmentSchema,
@@ -67,23 +67,20 @@ export const createCustomerSchema = customerSchema.pick({
   email: true,
   name: true,
   phone: true,
-  appMetadata: true,
+  metadata: true,
 });
 
-export interface CreateCustomer extends Pick<
-  Customer,
-  "email" | "name" | "phone" | "appMetadata"
-> {}
+export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata"> {}
 
 export const updateCustomerSchema = customerSchema.partial().pick({
   email: true,
   name: true,
   phone: true,
-  appMetadata: true,
+  metadata: true,
 });
 
 export interface UpdateCustomer extends Partial<
-  Pick<Customer, "email" | "name" | "phone" | "appMetadata">
+  Pick<Customer, "email" | "name" | "phone" | "metadata">
 > {}
 
 export interface ListCustomers extends Partial<Pick<Customer, "email" | "phone">> {}

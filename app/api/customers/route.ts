@@ -1,5 +1,5 @@
 import { resolveApiKey } from "@/actions/apikey";
-import { postCustomer, retrieveCustomers } from "@/actions/customers";
+import { postCustomers, retrieveCustomers } from "@/actions/customers";
 import { triggerWebhooks } from "@/actions/webhook";
 import { createCustomerSchema, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -15,14 +15,16 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const customer = await postCustomer(
-    {
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      walletAddresses: null,
-      phone: data?.phone ?? null,
-    },
+  const customer = await postCustomers(
+    [
+      {
+        ...data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        walletAddresses: null,
+        phone: data?.phone ?? null,
+      },
+    ],
     organizationId,
     environment
   );

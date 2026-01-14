@@ -6,21 +6,21 @@ import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
-export const postCustomer = async (
-  params: Omit<Customer, "id" | "organizationId" | "environment">,
+export const postCustomers = async (
+  params: Omit<Customer, "id" | "organizationId" | "environment">[],
   orgId?: string,
   env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [customer] = await db
+  const [result] = await db
     .insert(customers)
-    .values({ ...params, id: `cus_${nanoid(25)}`, organizationId, environment })
+    .values(
+      params.map((param) => ({ ...param, id: `cus_${nanoid(25)}`, organizationId, environment }))
+    )
     .returning();
 
-  if (!customer) throw new Error("Customer not created");
-
-  return customer;
+  return result;
 };
 
 export const upsertCustomer = async (params: Partial<Customer>, orgId?: string, env?: Network) => {
@@ -58,7 +58,7 @@ export const upsertCustomer = async (params: Partial<Customer>, orgId?: string, 
     await putCustomer(customer.id, params, organizationId, environment);
     return customer;
   } else {
-    return await postCustomer(params as Customer, organizationId, environment);
+    return await postCustomers([params as Customer], organizationId, environment);
   }
 };
 
