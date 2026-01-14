@@ -2,7 +2,7 @@ import { Resend as ResendClient } from "resend";
 
 const resend = new ResendClient(process.env.RESEND_API_KEY);
 
-export class Resend {
+export class EmailApi {
   constructor() {}
 
   async sendEmail(email: string, subject: string, html: string) {

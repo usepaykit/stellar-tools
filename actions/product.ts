@@ -1,14 +1,24 @@
 "use server";
 
 import { Network, Product, assets, db, products } from "@/db";
+import { FileUploadApi } from "@/integrations/file-upload";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
 export const postProduct = async (
-  params: Omit<Product, "id" | "organizationId" | "environment">
+  params: Omit<Product, "id" | "organizationId" | "environment">,
+  formDataWithFiles?: FormData
 ) => {
+  const imageFiles = formDataWithFiles?.getAll("images");
+
+  if (imageFiles) {
+    const imageUploadResult = await new FileUploadApi().upload(imageFiles as File[]);
+
+    params.images = imageUploadResult || [];
+  }
+
   const { organizationId, environment } = await resolveOrgContext();
 
   const [product] = await db

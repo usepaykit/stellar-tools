@@ -2,8 +2,8 @@
 
 import { Account, Auth, PasswordReset, auth, db, passwordReset } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
+import { EmailApi } from "@/integrations/email";
 import { JWT } from "@/integrations/jwt";
-import { Resend } from "@/integrations/resend";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import moment from "moment";
@@ -201,7 +201,7 @@ export const forgotPassword = async (email: string) => {
 
   const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken.token}`;
 
-  new Resend().sendEmail(email, "Reset Password", `<a href="${resetLink}">Reset Password</a>`);
+  new EmailApi().sendEmail(email, "Reset Password", `<a href="${resetLink}">Reset Password</a>`);
 
   return { success: true };
 };

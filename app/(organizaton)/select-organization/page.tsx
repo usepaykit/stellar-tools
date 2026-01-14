@@ -14,7 +14,6 @@ import {
   PhoneNumberPicker,
   phoneNumberToString,
 } from "@/components/phone-number-picker";
-import { FileUpload } from "@/integrations/uploadthing";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -174,10 +173,12 @@ const createOrganizationSchema = z.object({
       /^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/,
       "Please enter a valid GitHub username"
     ),
-  logo: z.custom<FileWithPreview[]>((val) => {
-    if (!Array.isArray(val)) return false;
-    return val.every((item) => item instanceof File);
-  }),
+  logo: z
+    .custom<FileWithPreview[]>((val) => {
+      if (!Array.isArray(val)) return false;
+      return val.every((item) => item instanceof File);
+    })
+    .nullable(),
 });
 
 type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
@@ -192,7 +193,6 @@ const CreateOrganizationModal = ({
   hasOrganizations: boolean;
 }) => {
   const router = useRouter();
-  const [logoFiles, setLogoFiles] = React.useState<FileWithPreview[]>([]);
 
   const form = RHF.useForm<CreateOrganizationFormData>({
     resolver: zodResolver(createOrganizationSchema),
@@ -200,48 +200,46 @@ const CreateOrganizationModal = ({
       name: "",
       phoneNumber: { number: "", countryCode: "US" },
       description: "",
-      logo: [],
+      logo: null,
     },
   });
 
   const createOrgMutation = useMutation({
     mutationFn: async (data: CreateOrganizationFormData) => {
-      const fileUpload = new FileUpload();
-      const logo = await fileUpload.upload(logoFiles, "organization-logos");
-      const logoUrl = logo?.[0]?.data?.ufsUrl || null;
+      const formData = new FormData();
 
-      const org = await postOrganization({
-        name: data.name,
-        phoneNumber: phoneNumberToString(data.phoneNumber),
-        description: data.description || null,
-        logoUrl,
-        settings: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: null,
-        address: null,
-        socialLinks: null,
-      });
+      if (data.logo?.[0]) formData.append("logo", data.logo[0]);
+
+      const org = await postOrganization(
+        {
+          name: data.name,
+          phoneNumber: phoneNumberToString(data.phoneNumber),
+          description: data.description || null,
+          logoUrl: null, // will be set after upload
+          settings: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          metadata: null,
+          address: null,
+          socialLinks: null,
+        },
+        formData
+      );
 
       return org;
     },
     onSuccess: async (org) => {
       toast.success("Organization created successfully");
-      // Set the new org as selected
       await setCurrentOrganization(org.id);
       form.reset();
-      setLogoFiles([]);
       onOpenChange(false);
       router.push("/dashboard");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error(error);
       toast.error("Failed to create organization");
     },
   });
-
-  const handleLogoChange = (files: FileWithPreview[]) => {
-    form.setValue("logo", files);
-  };
 
   const handleLogoRejected = (rejections: FileRejection[]) => {
     const firstError = rejections[0]?.errors[0];
@@ -288,7 +286,10 @@ const CreateOrganizationModal = ({
             )}
             <Button
               type="button"
-              onClick={() => form.handleSubmit((data) => createOrgMutation.mutateAsync(data))}
+              onClick={async () => {
+                const isValid = await form.trigger();
+                if (isValid) createOrgMutation.mutateAsync(form.getValues());
+              }}
               disabled={createOrgMutation.isPending}
               isLoading={createOrgMutation.isPending}
               className="gap-2"
@@ -315,10 +316,9 @@ const CreateOrganizationModal = ({
                   <FileUploadPicker
                     label="Organization Logo"
                     id="organization-logo"
-                    value={field.value || []}
+                    value={field.value ?? []}
                     onFilesChange={(files) => {
                       field.onChange(files);
-                      handleLogoChange(files);
                     }}
                     onFilesRejected={handleLogoRejected}
                     placeholder="Drag & drop your logo here, or click to select"

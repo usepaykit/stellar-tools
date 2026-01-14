@@ -13,6 +13,7 @@ import {
 } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
 import { Encryption } from "@/integrations/encryption";
+import { FileUploadApi } from "@/integrations/file-upload";
 import { JWT } from "@/integrations/jwt";
 import { and, eq, lt, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -20,12 +21,26 @@ import { nanoid } from "nanoid";
 import { resolveAccountContext } from "./account";
 import { postTeamMember } from "./team-member";
 
-export const postOrganization = async (params: Omit<Organization, "id" | "accountId">) => {
+export const postOrganization = async (
+  params: Omit<Organization, "id" | "accountId">,
+  formDataWithFiles?: FormData
+) => {
+  const organizationId = `org_${nanoid(25)}`;
+  const logoFile = formDataWithFiles?.get("logo");
+
+  if (logoFile) {
+    const logoUploadResult = await new FileUploadApi().upload([logoFile as File]);
+
+    const [logoUrl] = logoUploadResult || [];
+
+    params.logoUrl = logoUrl;
+  }
+
   const { accountId } = await resolveAccountContext();
 
   const [organization] = await db
     .insert(organizations)
-    .values({ ...params, id: `org_${nanoid(25)}`, accountId })
+    .values({ ...params, id: organizationId, accountId })
     .returning();
 
   await postTeamMember({

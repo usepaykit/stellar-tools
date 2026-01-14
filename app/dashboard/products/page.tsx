@@ -393,12 +393,18 @@ function ProductsModal({
         metadata.recurringPeriod = data.recurringPeriod;
       }
 
-      const images: Array<string> = []; // todo: upload images to storage and get the url
+      const formData = new FormData();
+
+      if (data.images?.[0]) {
+        data.images.forEach((file) => {
+          formData.append("images", file);
+        });
+      }
 
       const productData: Parameters<typeof postProduct>[0] = {
         name: data.name,
         description: data.description ?? null,
-        images,
+        images: [],
         type: data.type,
         assetId: data.price.asset,
         status: "active" as const,
@@ -414,7 +420,7 @@ function ProductsModal({
         updatedAt: new Date(),
       };
 
-      return await postProduct(productData);
+      return await postProduct(productData, formData);
     },
     onSuccess: () => {
       invalidateOrgQuery(["products"]);
