@@ -11,6 +11,8 @@ import { nanoid } from "nanoid";
 
 import { postAccount, putAccount, retrieveAccount } from "./account";
 
+const BCRYPT_SALT_ROUNDS = 10;
+
 // -- Auth --
 
 export const postAuth = async (params: Partial<Auth>): Promise<Auth> => {
@@ -136,7 +138,7 @@ export const accountValidator = async (
       throw new Error("No account found with this email. Please sign up first.");
     }
 
-    const sub = provider === "local" ? await bcrypt.hash(rawSub, 10) : rawSub;
+    const sub = provider === "local" ? await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS) : rawSub;
 
     account = await postAccount({
       email,
@@ -155,7 +157,7 @@ export const accountValidator = async (
         const isValid = await bcrypt.compare(rawSub, existingSso.sub);
         if (!isValid) throw new Error("Invalid credentials");
       } else {
-        const hashedSub = await bcrypt.hash(rawSub, 10);
+        const hashedSub = await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS);
         await putAccount(account.id, {
           sso: {
             values: [...account.sso.values, { provider, sub: hashedSub }],
@@ -217,7 +219,7 @@ export const resetPassword = async (token: string, newPassword: string) => {
 
   if (!account) throw new Error("Account not found");
 
-  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
 
   await putAccount(account.id, {
     sso: {

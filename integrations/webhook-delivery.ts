@@ -51,7 +51,7 @@ export class WebhookDelivery {
       const response = result?.value;
       const statusCode = response?.status ?? null;
       const responseText = response?.text ?? null;
-      const responseData = response?.data ?? null;
+      const responseData = response?.data as Record<string, unknown> | null;
       const isSuccess = response?.ok ?? false;
 
       await postWebhookLog(
@@ -63,7 +63,7 @@ export class WebhookDelivery {
           statusCode,
           errorMessage: isSuccess ? null : responseText,
           responseTime: duration,
-          response: responseData,
+          response: responseData ?? null,
           description: `Webhook delivery to ${webhook.url}`,
           createdAt: new Date(),
           updatedAt: new Date(),
