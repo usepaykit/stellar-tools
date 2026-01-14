@@ -14,6 +14,7 @@ import {
   PhoneNumberPicker,
   phoneNumberToString,
 } from "@/components/phone-number-picker";
+import { FileUpload } from "@/integrations/uploadthing";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -205,8 +206,9 @@ const CreateOrganizationModal = ({
 
   const createOrgMutation = useMutation({
     mutationFn: async (data: CreateOrganizationFormData) => {
-      // In a real implementation, you'd upload the logo and get the URL
-      const logoUrl = logoFiles[0]?.preview || null;
+      const fileUpload = new FileUpload();
+      const logo = await fileUpload.upload(logoFiles, "organization-logos");
+      const logoUrl = logo?.[0]?.data?.ufsUrl || null;
 
       const org = await postOrganization({
         name: data.name,
