@@ -15,8 +15,9 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { Banknote, Calendar, CheckCircle2, Clock, Coins, Plus, Wallet } from "lucide-react";
+import { Banknote, Calendar, CheckCircle2, Circle, Clock, Coins, Plus, Wallet } from "lucide-react";
 import moment from "moment";
+import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
@@ -145,7 +146,7 @@ const columns: ColumnDef<Payout>[] = [
     accessorKey: "status",
     header: () => (
       <div className="flex items-center gap-2">
-        <CheckCircle2 className="text-muted-foreground h-4 w-4" />
+        <Circle className="text-muted-foreground h-4 w-4" />
         <span>Status</span>
       </div>
     ),
@@ -370,13 +371,14 @@ function RequestPayoutModal({
 // --- Main Page Component ---
 
 export default function PayoutPage() {
+  const router = useRouter();
   const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
 
   const tableActions: TableAction<Payout>[] = [
     {
       label: "View Details",
       onClick: (row) => {
-        toast.info(`Viewing payout ${row.id}`);
+        router.push(`/dashboard/payout/${row.id}`);
       },
     },
     {
@@ -409,6 +411,9 @@ export default function PayoutPage() {
             columns={columns}
             data={mockPayouts}
             actions={tableActions}
+            onRowClick={(row) => {
+              router.push(`/dashboard/payout/${row.id}`);
+            }}
           />
 
           <div className="text-muted-foreground text-sm">
