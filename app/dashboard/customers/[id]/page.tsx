@@ -11,7 +11,7 @@ import { RefundModal } from "@/app/dashboard/transactions/page";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data-table";
+import { DataTable } from "@/components/data-table";
 import { DateTimePicker } from "@/components/date-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectPicker } from "@/components/select-picker";
@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
@@ -54,51 +55,50 @@ import {
   Plus,
   XCircle,
 } from "lucide-react";
-import moment from "moment";
 import Image from "next/image";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
+// --- Helpers ---
+
+const formatXLM = (amt: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "XLM" }).format(amt);
+const formatUSD = (amt: number) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amt);
+const formatDate = (date: Date) =>
+  date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+// --- Reusable Internal Components ---
+
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
     confirmed: {
-      className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      cls: "bg-green-500/10 text-green-700 border-green-500/20",
       icon: CheckCircle2,
       label: "Confirmed",
     },
     pending: {
-      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+      cls: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
       icon: Clock,
       label: "Pending",
     },
-    failed: {
-      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-      icon: XCircle,
-      label: "Failed",
-    },
+    failed: { cls: "bg-red-500/10 text-red-700 border-red-500/20", icon: XCircle, label: "Failed" },
   };
-
-  const variant = variants[status];
-  const Icon = variant.icon;
-
+  const { cls, icon: Icon, label } = variants[status as keyof typeof variants] || variants.pending;
   return (
-    <Badge variant="outline" className={cn("gap-1.5 border", variant.className)}>
-      <Icon className="h-3 w-3" />
-      {variant.label}
+    <Badge variant="outline" className={cn("gap-1.5 border", cls)}>
+      <Icon className="h-3 w-3" /> {label}
     </Badge>
   );
 };
 
-const CopyButton = ({ text, label }: { text: string; label?: string }) => {
+const CopyBtn = ({ text }: { text: string }) => {
   const { copied, handleCopy } = useCopy();
-
   return (
     <button
-      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
-      className="hover:bg-muted inline-flex items-center justify-center rounded-md p-1 transition-colors"
-      aria-label={label || "Copy to clipboard"}
+      onClick={() => handleCopy({ text, message: "Copied" })}
+      className="hover:bg-muted rounded-md p-1 transition-colors"
     >
       {copied ? (
         <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -109,20 +109,23 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   );
 };
 
+const DetailRow = ({ label, value, action, mono }: any) => (
+  <div className="flex items-start justify-between gap-2">
+    <div className="min-w-0 flex-1">
+      <p className="text-muted-foreground mb-1 text-xs">{label}</p>
+      <div className={cn("text-sm", mono && "font-mono break-all")}>{value}</div>
+    </div>
+    {action}
+  </div>
+);
+
+// --- Table Config ---
+
 const paymentColumns: ColumnDef<Payment>[] = [
   {
     accessorKey: "amount",
     header: "Amount",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <span className="font-medium">
-          {new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "xlm",
-          }).format(row.original.amount)}
-        </span>
-      </div>
-    ),
+    cell: ({ row }) => <span className="font-medium">{formatXLM(row.original.amount)}</span>,
   },
   {
     accessorKey: "checkoutId",
@@ -134,533 +137,259 @@ const paymentColumns: ColumnDef<Payment>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => <StatusBadge status={row.original.status as Payment["status"]} />,
+    cell: ({ row }) => <StatusBadge status={row.original.status as any} />,
   },
   {
     accessorKey: "createdAt",
     header: "Date",
     cell: ({ row }) => (
-      <div className="text-muted-foreground">
-        {row.original.createdAt.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })}{" "}
-        {row.original.createdAt.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })}
-      </div>
+      <div className="text-muted-foreground text-xs">{formatDate(row.original.createdAt)}</div>
     ),
   },
 ];
 
+// --- Page Component ---
+
 export default function CustomerDetailPage() {
   const router = useRouter();
-  const params = useParams();
-  const customerId = params?.id as string;
-
+  const { id: customerId } = useParams() as { id: string };
   const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(new Set());
-  const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
-  const [selectedPaymentId, setSelectedPaymentId] = React.useState<string | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
-  const [isDeleting, setIsDeleting] = React.useState(false);
-  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = React.useState(false);
 
-  const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments"], () =>
-    retrievePayments(undefined, { customerId }, undefined)
+  const [modal, setModal] = React.useState<{
+    type: "refund" | "edit" | "delete" | "checkout" | null;
+    id?: string | null;
+  }>({ type: null });
+
+  const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(
+    ["payments", customerId],
+    () => retrievePayments(undefined, { customerId: customerId }, undefined)
   );
-
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
     retrieveCustomer({ id: customerId })
   );
 
-  const handleToggleWalletVisibility = (walletId: string) => {
-    const newHidden = new Set(hiddenWallets);
-    if (newHidden.has(walletId)) newHidden.delete(walletId);
-    else newHidden.add(walletId);
-    setHiddenWallets(newHidden);
-  };
-
-  const handleDeleteCustomer = async () => {
-    setIsDeleting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Customer deleted successfully");
-      setIsDeleteModalOpen(false);
-      router.push("/dashboard/customers");
-    } catch (error) {
-      console.error("Failed to delete customer:", error);
-      toast.error("Failed to delete customer");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const paymentActions: TableAction<Payment>[] = React.useMemo(
-    () => [
-      {
-        label: "Refund payment",
-        onClick: (payment: Payment) => {
-          setSelectedPaymentId(payment.id);
-          setIsRefundModalOpen(true);
-        },
-      },
-      {
-        label: "Send receipt",
-        onClick: (payment: Payment) => {
-          console.log("Send receipt:", payment.id);
-        },
-      },
-      {
-        label: "Copy payment ID",
-        onClick: (payment: Payment) => {
-          navigator.clipboard.writeText(payment.id);
-          toast.success("Payment ID copied to clipboard");
-        },
-      },
-      {
-        label: "View payment details",
-        onClick: (payment: Payment) => {
-          console.log("View payment details:", payment.id);
-        },
-      },
-    ],
-    []
+  const totalSpent = React.useMemo(
+    () =>
+      payments
+        ?.filter((p) => p.status === "confirmed")
+        .reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0,
+    [payments]
   );
 
-  if (customerLoading) {
-    return <div>Loading...</div>;
-  }
+  const isNew =
+    customer && new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
 
-  if (!customer) {
-    return (
-      <div className="w-full">
-        <DashboardSidebar>
-          <DashboardSidebarInset>
-            <div className="flex flex-col gap-6 p-6">
-              <div className="py-12 text-center">
-                <h1 className="mb-2 text-2xl font-bold">Customer not found</h1>
-                <p className="text-muted-foreground mb-4">
-                  The customer you’re looking for doesn’t exist.
-                </p>
-                <Button onClick={() => router.push("/dashboard/customers")}>
-                  Back to Customers
-                </Button>
-              </div>
-            </div>
-          </DashboardSidebarInset>
-        </DashboardSidebar>
-      </div>
-    );
-  }
-
-  const totalSpent = payments
-    ?.filter((p) => p.status === "confirmed")
-    .reduce((sum, p) => sum + (p.amount ?? 0), 0);
-
-  const isNewCustomer =
-    new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
+  if (customerLoading) return <CustomerDetailSkeleton />;
+  if (!customer) return <NotFound router={router} />;
 
   return (
-    <div className="w-full">
-      <DashboardSidebar>
-        <DashboardSidebarInset>
-          <div className="flex flex-col gap-6 p-4 sm:p-6">
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link href="/dashboard/customers">Customers</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator>
-                  <ChevronRight className="h-4 w-4" />
-                </BreadcrumbSeparator>
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{customer.name}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
+    <DashboardSidebar>
+      <DashboardSidebarInset>
+        <div className="flex flex-col gap-6 p-4 sm:p-6">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/dashboard/customers">Customers</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbPage>{customer.name}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
 
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                    <h1 className="text-2xl font-bold sm:text-3xl">{customer.name}</h1>
-                    {isNewCustomer && (
-                      <Badge variant="secondary" className="text-xs">
-                        New customer
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-muted-foreground text-sm sm:text-base">{customer.email}</p>
-                </div>
-                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 shadow-none sm:w-auto"
-                    onClick={() => setIsCheckoutModalOpen(true)}
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold sm:text-3xl">{customer.name}</h1>
+                {isNew && <Badge variant="secondary">New customer</Badge>}
+              </div>
+              <p className="text-muted-foreground text-sm">{customer.email}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="gap-2 shadow-none"
+                onClick={() => setModal({ type: "checkout" })}
+              >
+                <CreditCard className="h-4 w-4" /> <span>Checkout</span>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="shadow-none">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setModal({ type: "edit" })}>
+                    Edit customer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => setModal({ type: "delete" })}
                   >
-                    <CreditCard className="h-4 w-4" />
-                    <span className="hidden sm:inline">Create checkout</span>
-                    <span className="sm:hidden">Checkout</span>
-                  </Button>
-                  <Button variant="outline" className="w-full gap-2 shadow-none sm:w-auto">
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <section className="space-y-3">
+                <h3 className="text-lg font-semibold">Payments</h3>
+                <DataTable
+                  columns={paymentColumns}
+                  data={payments ?? []}
+                  isLoading={isLoadingPayments}
+                  actions={[
+                    {
+                      label: "Refund payment",
+                      onClick: (p) => setModal({ type: "refund", id: p.id }),
+                    },
+                    {
+                      label: "Copy ID",
+                      onClick: (p) => {
+                        navigator.clipboard.writeText(p.id);
+                        toast.success("Copied");
+                      },
+                    },
+                  ]}
+                />
+              </section>
+
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Wallet Addresses</h3>
+                  <Button variant="ghost" size="icon-sm">
                     <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Create invoice</span>
-                    <span className="sm:hidden">Invoice</span>
                   </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="size-8 cursor-pointer shadow-none"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">More options</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditModalOpen(true)}>
-                        Edit customer
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() =>
-                          router.push(`/dashboard/transactions?customerId=${customerId}`)
-                        }
-                      >
-                        {" "}
-                        View transactions
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => setIsDeleteModalOpen(true)}
-                      >
-                        Delete customer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
                 </div>
-              </div>
+                <div className="space-y-3">
+                  {customer.walletAddresses?.map(({ address, memo }) => (
+                    <div
+                      key={address}
+                      className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4"
+                    >
+                      <Image
+                        src="/images/integrations/stellar-official.png"
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="h-5 w-5"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-mono text-xs break-all sm:text-sm">
+                          {hiddenWallets.has(address) ? "•".repeat(20) : address}
+                        </div>
+                        {memo && <p className="text-muted-foreground text-[10px]">{memo}</p>}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => {
+                            const next = new Set(hiddenWallets);
+                            next.has(address) ? next.delete(address) : next.add(address);
+                            setHiddenWallets(next);
+                          }}
+                        >
+                          {hiddenWallets.has(address) ? (
+                            <Eye className="h-4 w-4" />
+                          ) : (
+                            <EyeOff className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <CopyBtn text={address} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <div className="space-y-6 lg:col-span-2">
-                <div className="space-y-3">
-                  <h3 className="text-lg font-semibold sm:text-xl">Payments</h3>
-                  <DataTable
-                    columns={paymentColumns}
-                    data={payments ?? []}
-                    enableBulkSelect={false}
-                    actions={paymentActions}
-                    isLoading={isLoadingPayments}
-                    skeletonRowCount={3}
-                  />
-                </div>
-
-                {/* Wallet Address Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold sm:text-xl">Wallet Address</h3>
-                    <Button variant="ghost" size="icon-sm" className="h-8 w-8">
-                      <Plus className="h-4 w-4" />
-                      <span className="sr-only">Add wallet address</span>
-                    </Button>
-                  </div>
-                  {customer.walletAddresses && customer.walletAddresses.length > 0 ? (
-                    <div className="space-y-3">
-                      {customer.walletAddresses.map(({ address, memo }) => {
-                        const isHidden = hiddenWallets.has(address);
-                        return (
-                          <div
-                            key={address}
-                            className="bg-muted/50 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center"
-                          >
-                            <div className="flex min-w-0 flex-1 items-center gap-3">
-                              <Image
-                                src="/images/integrations/stellar-official.png"
-                                alt="Stellar"
-                                width={20}
-                                height={20}
-                                className="h-5 w-5 shrink-0 object-contain"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <div className="font-mono text-xs break-all sm:text-sm">
-                                  {isHidden ? "•".repeat(20) : address}
-                                </div>
-                                {memo && (
-                                  <div className="text-muted-foreground mt-1 text-xs">{memo}</div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2 sm:self-center">
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                className="h-8 w-8"
-                                onClick={() => handleToggleWalletVisibility(address)}
-                                aria-label={
-                                  isHidden ? "Show wallet address" : "Hide wallet address"
-                                }
-                              >
-                                {isHidden ? (
-                                  <Eye className="h-4 w-4" />
-                                ) : (
-                                  <EyeOff className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <CopyButton text={address} label="Copy wallet address" />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="py-8 text-center">
-                      <p className="text-muted-foreground">No wallet address</p>
-                    </div>
-                  )}
-                </div>
+            <aside className="space-y-8">
+              <div>
+                <h3 className="mb-2 text-lg font-semibold">Insights</h3>
+                <p className="text-xl font-bold">{formatUSD(totalSpent)}</p>
+                <p className="text-muted-foreground text-xs">Total spent</p>
               </div>
 
-              {/* Right Column - Sidebar */}
-              <div className="space-y-6">
-                {/* Insights Section */}
-                <div className="mb-8 space-y-3">
-                  <h3 className="text-lg font-semibold sm:text-xl">Insights</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-baseline gap-2">
-                      <div>
-                        <div className="text-base font-bold">
-                          {new Intl.NumberFormat("en-US", {
-                            style: "currency",
-                            currency: "USD",
-                          }).format(totalSpent ?? 0)}
-                        </div>
-                        <div className="text-muted-foreground text-sm">Total spent</div>
-                      </div>
-                    </div>
-                  </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">Details</h3>
+                  <Button variant="ghost" size="icon-sm" onClick={() => setModal({ type: "edit" })}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
                 </div>
-
-                {/* Details Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold sm:text-xl">Details</h3>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="h-8 w-8"
-                      onClick={() => setIsEditModalOpen(true)}
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit details</span>
-                    </Button>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">Customer ID</div>
-                        <div className="font-mono text-sm break-all">{customer.id}</div>
-                      </div>
-                      <CopyButton text={customer.id} label="Copy customer ID" />
-                    </div>
-
-                    <Separator />
-
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">Customer since</div>
-                        <div className="text-sm">
-                          {customer.createdAt.toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </div>
-                      </div>
-                      <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
-                    </div>
-
-                    <Separator />
-
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-muted-foreground mb-1 text-xs">Billing email</div>
-                        <div className="text-sm break-all">{customer.email}</div>
-                      </div>
-                      <CopyButton text={customer?.email || ""} label="Copy email" />
-                    </div>
-
-                    <Separator />
-
-                    <div>
-                      <div className="text-muted-foreground mb-1 text-xs">Full Name</div>
-                      <div className="text-muted-foreground text-sm">{customer?.name || "-"}</div>
-                    </div>
-                  </div>
-                  <div className="pt-2">
-                    <button className="text-primary hover:text-primary/80 text-sm underline-offset-4 transition-colors hover:underline">
-                      Show more
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold sm:text-xl">Metadata</h3>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="h-8 w-8"
-                      onClick={() => setIsEditModalOpen(true)}
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span className="sr-only">Edit metadata</span>
-                    </Button>
-                  </div>
-
-                  {customer?.metadata && Object.keys(customer?.metadata).length > 0 ? (
-                    <CodeBlock
-                      language="json"
-                      showCopyButton={true}
-                      maxHeight="none"
-                      className="w-full"
-                    >
-                      {JSON.stringify(customer?.metadata, null, 2)}
-                    </CodeBlock>
-                  ) : (
-                    <div className="border-muted-foreground/20 hover:border-muted-foreground/30 flex min-h-[120px] items-center justify-center rounded-lg border-2 border-dashed p-6 transition-colors">
-                      <div className="space-y-1 text-center">
-                        <div className="text-muted-foreground text-sm font-medium">No metadata</div>
-                        <p className="text-muted-foreground/70 text-xs">
-                          Add custom metadata to track additional information
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <DetailRow
+                  label="Customer ID"
+                  value={customer.id}
+                  mono
+                  action={<CopyBtn text={customer.id} />}
+                />
+                <Separator />
+                <DetailRow label="Customer since" value={formatDate(customer.createdAt)} />
+                <Separator />
+                <DetailRow
+                  label="Billing email"
+                  value={customer.email}
+                  action={<CopyBtn text={customer.email!} />}
+                />
               </div>
-            </div>
+
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">Metadata</h3>
+                {customer.metadata ? (
+                  <CodeBlock language="json">
+                    {JSON.stringify(customer.metadata, null, 2)}
+                  </CodeBlock>
+                ) : (
+                  <div className="text-muted-foreground rounded-lg border-2 border-dashed p-6 text-center text-xs">
+                    No metadata
+                  </div>
+                )}
+              </div>
+            </aside>
           </div>
-        </DashboardSidebarInset>
-      </DashboardSidebar>
+        </div>
+      </DashboardSidebarInset>
 
       <RefundModal
-        open={isRefundModalOpen}
-        onOpenChange={(open) => {
-          setIsRefundModalOpen(open);
-          if (!open) {
-            setSelectedPaymentId(null);
-          }
-        }}
-        initialPaymentId={selectedPaymentId || undefined}
+        open={modal.type === "refund"}
+        onOpenChange={() => setModal({ type: null })}
+        initialPaymentId={modal.id!}
       />
-
       <CustomerModal
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        customer={customer ?? null}
+        open={modal.type === "edit"}
+        onOpenChange={() => setModal({ type: null })}
+        customer={customer}
       />
-
-      <FullScreenModal
-        open={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        title="Delete Customer"
-        description={`Are you sure you want to delete ${customer.name}? This action cannot be undone.`}
-        size="small"
-        footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsDeleteModalOpen(false)}
-              disabled={isDeleting}
-            >
-              No, Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteCustomer}
-              disabled={isDeleting}
-            >
-              {isDeleting ? "Deleting..." : "Yes, Delete"}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <p className="text-muted-foreground">
-            This will permanently delete the customer and all associated data.
-          </p>
-        </div>
-      </FullScreenModal>
-
       <CheckoutModal
-        open={isCheckoutModalOpen}
-        onOpenChange={setIsCheckoutModalOpen}
+        open={modal.type === "checkout"}
+        onOpenChange={() => setModal({ type: null })}
         customerId={customerId}
-        customerName={customer.name || ""}
       />
-
-      <CodeBlock
-        language="json"
-        filename="metadata.json"
-        showCopyButton={true}
-        maxHeight="none"
-        className="w-full"
-      >
-        {JSON.stringify(customer?.metadata || {}, null, 2)}
-      </CodeBlock>
-    </div>
+    </DashboardSidebar>
   );
 }
 
+// --- Checkout Modal ---
+
 const checkoutSchema = z.object({
-  productId: z.string().min(1, "Please select a product"),
+  productId: z.string().min(1, "Product required"),
   description: z.string().optional(),
-  expiresAt: z
-    .object({
-      date: z.date({
-        message: "Expiration date is required",
-      }),
-      time: z.string().min(1, "Expiration time is required"),
-    })
-    .refine((data) => data.date !== undefined, {
-      message: "Expiration date is required",
-      path: ["date"],
-    }),
+  expiresAt: z.object({ date: z.date(), time: z.string() }),
 });
 
-type CheckoutFormData = z.infer<typeof checkoutSchema>;
-
-function CheckoutModal({
-  open,
-  onOpenChange,
-  customerId,
-  customerName,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  customerId: string;
-  customerName: string;
-}) {
-  const invalidateOrgQuery = useInvalidateOrgQuery();
-
-  const form = RHF.useForm<CheckoutFormData>({
+function CheckoutModal({ open, onOpenChange, customerId }: any) {
+  const invalidate = useInvalidateOrgQuery();
+  const form = RHF.useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      productId: "",
-      description: "",
-      expiresAt: {
-        date: undefined,
-        time: "",
-      },
-    },
+    defaultValues: { productId: "", description: "" },
   });
 
   const { data: products, isLoading: isLoadingProducts } = useOrgQuery(
@@ -670,182 +399,202 @@ function CheckoutModal({
       select: (data) =>
         data
           .filter((p) => p.status === "active")
-          .map((p) => ({
-            value: p.id,
-            label: `${p.name} - ${p.priceAmount} ${p.assetId}`,
-          })),
+          .map((p) => ({ value: p.id, label: `${p.name} - ${p.priceAmount} ${p.assetId}` })),
     }
   );
 
-  const createCheckoutMutation = useMutation({
-    mutationFn: async (data: CheckoutFormData) => {
-      const expiresAt = moment(data.expiresAt.date).add(data.expiresAt.time, "hours").toDate();
-
-      return await postCheckout({
+  const mutation = useMutation({
+    mutationFn: (data: any) => {
+      const expires = new Date(data.expiresAt.date);
+      expires.setHours(expires.getHours() + parseInt(data.expiresAt.time || "0"));
+      return postCheckout({
+        ...data,
         customerId,
-        productId: data.productId,
-        description: data.description || null,
+        expiresAt: expires,
         status: "open",
-        expiresAt,
         createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: {},
-        amount: null,
-        successUrl: null,
-        successMessage: "Thank you for your purchase! 🎉",
       });
     },
     onSuccess: () => {
-      invalidateOrgQuery(["payments", customerId]);
-      toast.success("Checkout created successfully");
-      form.reset();
+      invalidate(["payments", customerId]);
+      toast.success("Checkout created");
       onOpenChange(false);
     },
-    onError: () => {
-      toast.error("Failed to create checkout");
-    },
   });
-
-  const onSubmit = async (data: CheckoutFormData) => {
-    createCheckoutMutation.mutate(data);
-  };
-
-  // Reset form when modal closes
-  React.useEffect(() => {
-    if (!open) {
-      form.reset();
-    }
-  }, [open, form]);
 
   return (
     <FullScreenModal
       open={open}
       onOpenChange={onOpenChange}
       title="Create Checkout"
-      description={`Create a new checkout session for ${customerName}`}
       footer={
-        <div className="flex w-full justify-between">
-          <div />
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={createCheckoutMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={createCheckoutMutation.isPending || isLoadingProducts}
-              isLoading={createCheckoutMutation.isPending}
-              className="gap-2"
-            >
-              {createCheckoutMutation.isPending ? "Creating..." : "Create Checkout"}
-            </Button>
-          </div>
+        <div className="flex w-full justify-end gap-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={form.handleSubmit((d) => mutation.mutate(d))}
+            isLoading={mutation.isPending}
+          >
+            Create
+          </Button>
         </div>
       }
     >
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="grid w-full gap-6 lg:grid-cols-2"
-        noValidate
-      >
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold">Checkout Details</h3>
-            <p className="text-muted-foreground text-sm">Configure the checkout session</p>
-          </div>
-
+      <form className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
           <RHF.Controller
             control={form.control}
             name="productId"
-            render={({ field, fieldState: { error } }) => (
+            render={({ field }) => (
               <SelectPicker
                 id="productId"
+                label="Product"
+                items={products ?? []}
                 value={field.value}
                 onChange={field.onChange}
-                items={products ?? []}
                 isLoading={isLoadingProducts}
-                triggerValuePlaceholder="Select a product"
-                triggerClassName="w-full shadow-none"
-                label="Product"
-                error={error?.message || null}
-                helpText="Choose the product for this checkout"
-                disabled={isLoadingProducts || createCheckoutMutation.isPending}
               />
             )}
           />
-
           <RHF.Controller
             control={form.control}
             name="description"
             render={({ field, fieldState: { error } }) => (
               <TextAreaField
                 id="description"
-                label="Description (Optional)"
+                label="Description"
+                {...field}
                 value={field.value || ""}
-                onChange={field.onChange}
-                placeholder="Add notes or additional details about this checkout..."
-                error={error?.message || null}
-                disabled={createCheckoutMutation.isPending}
-                className="w-full shadow-none"
-                rows={4}
+                error={error?.message}
               />
             )}
           />
         </div>
-
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold">Expiration</h3>
-            <p className="text-muted-foreground text-sm">Set when this checkout session expires</p>
-          </div>
-
+        <div className="space-y-4">
           <RHF.Controller
             control={form.control}
             name="expiresAt"
-            render={({ field, fieldState: { error } }) => (
+            render={({ field }) => (
               <DateTimePicker
                 id="expiresAt"
-                label="Expiration Date & Time"
+                label="Expiration"
                 value={field.value}
                 onChange={field.onChange}
-                error={error?.message || null}
-                disabled={createCheckoutMutation.isPending}
-                layout="vertical"
-                dateFormat="PPP"
               />
             )}
           />
-
-          <div className="bg-muted/50 space-y-2 rounded-lg border p-4">
-            <div className="flex items-start gap-2">
-              <Clock className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Checkout Link</p>
-                <p className="text-muted-foreground text-xs">
-                  A unique checkout link will be generated after creation. The customer can use this
-                  link to complete their payment before the expiration time.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-muted/50 space-y-2 rounded-lg border p-4">
-            <div className="flex items-start gap-2">
-              <CreditCard className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Customer</p>
-                <p className="text-muted-foreground text-xs">{customerName}</p>
-                <p className="text-muted-foreground font-mono text-xs">{customerId}</p>
-              </div>
-            </div>
-          </div>
         </div>
       </form>
     </FullScreenModal>
+  );
+}
+
+function NotFound({ router }: any) {
+  return (
+    <DashboardSidebar>
+      <DashboardSidebarInset>
+        <div className="py-24 text-center">
+          <h1 className="text-xl font-bold">Customer not found</h1>
+          <Button onClick={() => router.push("/dashboard/customers")} className="mt-4">
+            Back
+          </Button>
+        </div>
+      </DashboardSidebarInset>
+    </DashboardSidebar>
+  );
+}
+
+function CustomerDetailSkeleton() {
+  return (
+    <DashboardSidebar>
+      <DashboardSidebarInset>
+        <div className="flex flex-col gap-6 p-4 sm:p-6">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-5 w-24 rounded-full" />
+              </div>
+              <Skeleton className="h-5 w-64" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-9" />
+            </div>
+          </header>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <section className="space-y-3">
+                <Skeleton className="h-6 w-24" />
+                <div className="space-y-2 rounded-lg border p-4">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+                <div className="space-y-3">
+                  {[1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4"
+                    >
+                      <Skeleton className="h-5 w-5 rounded-full" />
+                      <Skeleton className="h-4 flex-1" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <aside className="space-y-8">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-7 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+                {[1, 2, 3].map((i) => (
+                  <div key={i}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-4 w-full" />
+                      </div>
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                    {i < 3 && <Separator className="mt-4" />}
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-24 w-full rounded-lg" />
+              </div>
+            </aside>
+          </div>
+        </div>
+      </DashboardSidebarInset>
+    </DashboardSidebar>
   );
 }

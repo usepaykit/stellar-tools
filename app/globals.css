@@ -106,6 +106,24 @@
   --shadow-opacity: var(--shadow-opacity);
   --color-shadow-color: var(--shadow-color);
   --color-destructive-foreground: var(--destructive-foreground);
+
+  --stellar-wallet-background: var(--background);
+  --stellar-wallet-background-secondary: var(--secondary);
+  --stellar-wallet-foreground-strong: var(--foreground);
+  --stellar-wallet-foreground: var(--foreground);
+  --stellar-wallet-foreground-secondary: var(--muted-foreground);
+  --stellar-wallet-primary: var(--primary);
+  --stellar-wallet-primary-foreground: var(--primary-foreground);
+  --stellar-wallet-transparent: transparent;
+  --stellar-wallet-lighter: var(--background);
+  --stellar-wallet-light: var(--secondary);
+  --stellar-wallet-light-gray: var(--muted-foreground);
+  --stellar-wallet-gray: var(--muted-foreground);
+  --stellar-wallet-danger: var(--destructive);
+  --stellar-wallet-border: var(--border);
+  --stellar-wallet-shadow: var(--shadow-lg);
+  --stellar-wallet-border-radius: var(--radius);
+  --stellar-wallet-font-family: var(--font-sans);
 }
 
 h1,
@@ -244,6 +262,24 @@ h6 {
   --shadow-xl:
     0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 8px 10px -1px hsl(222.2 47.4% 11.2% / 0.1);
   --shadow-2xl: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.25);
+
+  --stellar-wallet-background: var(--background);
+  --stellar-wallet-background-secondary: var(--secondary);
+  --stellar-wallet-foreground-strong: var(--foreground);
+  --stellar-wallet-foreground: var(--foreground);
+  --stellar-wallet-foreground-secondary: var(--muted-foreground);
+  --stellar-wallet-primary: var(--primary);
+  --stellar-wallet-primary-foreground: var(--primary-foreground);
+  --stellar-wallet-transparent: transparent;
+  --stellar-wallet-lighter: var(--background);
+  --stellar-wallet-light: var(--secondary);
+  --stellar-wallet-light-gray: var(--muted-foreground);
+  --stellar-wallet-gray: var(--muted-foreground);
+  --stellar-wallet-danger: var(--destructive);
+  --stellar-wallet-border: var(--border);
+  --stellar-wallet-shadow: var(--shadow-lg);
+  --stellar-wallet-border-radius: var(--radius);
+  --stellar-wallet-font-family: var(--font-sans);
 }
 
 @theme inline {

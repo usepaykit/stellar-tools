@@ -11,7 +11,7 @@ import {
   products,
   refunds,
 } from "@/db";
-import { Stellar } from "@/integrations/stellar";
+import { StellarCoreApi } from "@/integrations/stellar-core";
 import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -135,7 +135,7 @@ export const refreshTxStatus = async (
   organizationId: string,
   environment: Network
 ): Promise<void> => {
-  const stellar = new Stellar(environment);
+  const stellar = new StellarCoreApi(environment);
 
   const txResult = await stellar.retrieveTx(transactionHash);
 

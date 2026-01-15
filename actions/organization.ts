@@ -47,6 +47,7 @@ export const postOrganization = async (
     organizationId: organization.id,
     accountId,
     role: "owner",
+    metadata: null,
   });
 
   return organization;
@@ -184,8 +185,8 @@ export const resolveOrgContext = async (
   }
 
   return {
-    organizationId: organizationId ?? orgContext.id,
-    environment: environment ?? orgContext.environment,
+    organizationId: orgContext.id,
+    environment: orgContext.environment,
   };
 };
 

@@ -3,7 +3,7 @@ import { ApiResponse } from "@/types";
 import * as StellarSDK from "@stellar/stellar-sdk";
 import { Sep7Pay, Sep7Tx } from "@stellar/typescript-wallet-sdk";
 
-export class Stellar {
+export class StellarCoreApi {
   constructor(private network: Network) {}
 
   private getServerAndNetwork() {
@@ -95,6 +95,157 @@ export class Stellar {
       const result = await server.submitTransaction(transaction);
 
       return { data: result };
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Submits a signed transaction to the Stellar network
+   * To be used after a wallet has signed the transaction
+   * @param signedTxXdr Signed transaction XDR string
+   * @returns Transaction submission result
+   */
+  async submitSignedTransaction(
+    signedTxXdr: string
+  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> {
+    try {
+      const { server, networkPassphrase } = this.getServerAndNetwork();
+
+      // Parse the signed transaction
+      const signedTx = StellarSDK.TransactionBuilder.fromXDR(signedTxXdr, networkPassphrase);
+
+      // Submit to network
+      const result = await server.submitTransaction(signedTx);
+
+      return { data: result };
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Builds an unsigned payment transaction for wallet signing
+   * Use this when you want the user's wallet to sign the transaction
+   * @param params Payment transaction parameters
+   * @returns Unsigned transaction XDR string ready for wallet signing
+   */
+  async buildPaymentTransaction(params: {
+    sourcePublicKey: string;
+    destination: string;
+    amount: string;
+    assetCode?: string;
+    assetIssuer?: string;
+    memo?: string | number;
+    memoType?: "text" | "id" | "hash" | "return";
+    timeout?: number;
+  }): Promise<ApiResponse<string | null, string>> {
+    try {
+      const { server, networkPassphrase } = this.getServerAndNetwork();
+
+      if (!StellarSDK.StrKey.isValidEd25519PublicKey(params.sourcePublicKey)) {
+        return {
+          data: null,
+          error: "Invalid source public key",
+        };
+      }
+
+      if (!StellarSDK.StrKey.isValidEd25519PublicKey(params.destination)) {
+        return {
+          data: null,
+          error: "Invalid destination public key",
+        };
+      }
+
+      const account = await server.loadAccount(params.sourcePublicKey);
+
+      const asset =
+        !params.assetCode || params.assetCode === "XLM"
+          ? StellarSDK.Asset.native()
+          : new StellarSDK.Asset(params.assetCode, params.assetIssuer!);
+
+      const txBuilder = new StellarSDK.TransactionBuilder(account, {
+        fee: StellarSDK.BASE_FEE,
+        networkPassphrase,
+      }).addOperation(
+        StellarSDK.Operation.payment({
+          destination: params.destination,
+          asset,
+          amount: params.amount,
+        })
+      );
+
+      if (params.memo) {
+        const memoType = params.memoType || "text";
+        switch (memoType) {
+          case "text":
+            txBuilder.addMemo(StellarSDK.Memo.text(params.memo as string));
+            break;
+          case "id":
+            txBuilder.addMemo(StellarSDK.Memo.id(parseInt(params.memo as string)!.toString()));
+            break;
+          case "hash":
+            txBuilder.addMemo(StellarSDK.Memo.hash(Buffer.from(params.memo as string)));
+            break;
+          case "return":
+            txBuilder.addMemo(
+              StellarSDK.Memo.return(Buffer.from(params.memo as string).toString())
+            );
+            break;
+        }
+      }
+
+      const transaction = txBuilder.setTimeout(params.timeout || 30).build();
+      const xdr = transaction.toXDR();
+
+      return { data: xdr };
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  /**
+   * Complete wallet-based payment flow
+   * Builds transaction, signs with wallet, and submits
+   * @param params Payment parameters
+   * @param signTransaction Function to sign transaction with wallet (returns signed XDR)
+   * @returns Transaction submission result
+   */
+  async processWalletPayment(
+    params: {
+      sourcePublicKey: string;
+      destination: string;
+      amount: string;
+      assetCode?: string;
+      assetIssuer?: string;
+      memo?: string;
+      memoType?: "text" | "id" | "hash" | "return";
+      timeout?: number;
+    },
+    signTransaction: (xdr: string) => Promise<string>
+  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> {
+    try {
+      const buildResult = await this.buildPaymentTransaction(params);
+
+      if (buildResult.error || !buildResult.data) {
+        return {
+          data: null,
+          error: buildResult.error || "Failed to build transaction",
+        };
+      }
+
+      const signedTxXdr = await signTransaction(buildResult.data);
+
+      return await this.submitSignedTransaction(signedTxXdr);
     } catch (error) {
       return {
         data: null,

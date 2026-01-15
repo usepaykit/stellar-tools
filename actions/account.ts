@@ -36,7 +36,7 @@ export const retrieveAccount = async (
 
   const [account] = await db.select().from(accounts).where(whereClause).limit(1);
 
-  return account || null;
+  return account ?? null;
 };
 
 export const putAccount = async (id: string, params: Partial<Account>) => {
