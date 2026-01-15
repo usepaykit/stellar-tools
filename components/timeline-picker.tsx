@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { MixinProps, splitProps } from "@/lib/mixin";
@@ -27,8 +26,6 @@ export interface TimelinePickerProps
     MixinProps<"dot", React.ComponentProps<"div">>,
     MixinProps<"title", React.ComponentProps<"h4">>,
     MixinProps<"date", React.ComponentProps<"h5">>,
-    MixinProps<"card", React.ComponentProps<typeof Card>>,
-    MixinProps<"cardContent", React.ComponentProps<typeof CardContent>>,
     MixinProps<"content", React.ComponentProps<"div">> {
   id: string;
   data: TimelineEntry[];
@@ -53,8 +50,6 @@ const TimelineEntryItem = React.memo(
     dotProps,
     titleProps,
     dateProps,
-    cardProps,
-    cardContentProps,
     contentProps,
   }: {
     entry: TimelineEntry;
@@ -65,8 +60,6 @@ const TimelineEntryItem = React.memo(
     dotProps?: React.ComponentProps<"div">;
     titleProps?: React.ComponentProps<"h4">;
     dateProps?: React.ComponentProps<"h5">;
-    cardProps?: React.ComponentProps<typeof Card>;
-    cardContentProps?: React.ComponentProps<typeof CardContent>;
     contentProps?: React.ComponentProps<"div">;
   }) => {
     const contentId = `${entryId}-content`;
@@ -76,65 +69,63 @@ const TimelineEntryItem = React.memo(
     return (
       <div
         {...entryProps}
-        className={cn("relative mb-0 pl-8", entryProps?.className, isLast && "mb-0")}
+        className={cn("relative mb-3 pl-6", entryProps?.className, isLast && "mb-0")}
         role="listitem"
       >
         {!isLast && (
           <Separator
             {...separatorProps}
             orientation="vertical"
-            className={cn("absolute left-2 top-2 bg-muted", separatorProps?.className)}
-            style={{ height: "calc(100% + 0.5rem)" }}
+            className={cn("absolute left-1.5 top-1.5 bg-muted", separatorProps?.className)}
+            style={{ height: "calc(100% + 0.75rem)" }}
             aria-hidden="true"
           />
         )}
         <div
           {...dotProps}
           className={cn(
-            "absolute left-0 top-0 z-10 flex size-4 items-center justify-center rounded-full bg-primary",
+            "absolute left-0 top-0.5 z-10 flex size-3 items-center justify-center rounded-full bg-primary",
             dotProps?.className
           )}
           aria-hidden="true"
         />
 
-        <h4
-          {...titleProps}
-          className={cn("text-lg font-bold tracking-tight", titleProps?.className)}
-          id={titleId}
-        >
-          {entryData.title}
-        </h4>
-
-        <h5
-          {...dateProps}
-          className={cn(
-            "text-sm mb-0 tracking-tight text-muted-foreground",
-            dateProps?.className
-          )}
-          id={dateId}
-        >
-          {entryData.date}
-        </h5>
-
-        <Card {...cardProps} className={cn("border-none shadow-none", cardProps?.className)}>
-          <CardContent
-            {...cardContentProps}
-            className={cn("px-0", cardContentProps?.className)}
+        <div className="space-y-0.5">
+          <h4
+            {...titleProps}
+            className={cn("text-sm font-semibold leading-tight", titleProps?.className)}
+            id={titleId}
           >
-            <div
-              {...contentProps}
-              className={cn("prose text-foreground dark:prose-invert", contentProps?.className)}
-              id={contentId}
-              aria-labelledby={`${titleId} ${dateId}`}
-            >
-              {typeof entryData.content === "string" ? (
-                <div dangerouslySetInnerHTML={{ __html: entryData.content }} />
-              ) : (
-                entryData.content
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            {entryData.title}
+          </h4>
+
+          <h5
+            {...dateProps}
+            className={cn(
+              "text-xs leading-tight text-muted-foreground",
+              dateProps?.className
+            )}
+            id={dateId}
+          >
+            {entryData.date}
+          </h5>
+        </div>
+
+        <div
+          {...contentProps}
+          className={cn(
+            "text-muted-foreground mt-1 text-xs leading-relaxed",
+            contentProps?.className
+          )}
+          id={contentId}
+          aria-labelledby={`${titleId} ${dateId}`}
+        >
+          {typeof entryData.content === "string" ? (
+            <div dangerouslySetInnerHTML={{ __html: entryData.content }} />
+          ) : (
+            entryData.content
+          )}
+        </div>
       </div>
     );
   }
@@ -185,23 +176,9 @@ export const TimelinePicker = React.forwardRef<HTMLDivElement, TimelinePickerPro
       dot,
       title,
       date,
-      card,
-      cardContent,
       content,
       label: labelProps,
-    } = splitProps(
-      restProps,
-      "container",
-      "entry",
-      "separator",
-      "dot",
-      "title",
-      "date",
-      "card",
-      "cardContent",
-      "content",
-      "label"
-    );
+    } = splitProps(restProps, "container", "entry", "separator", "dot", "title", "date", "content", "label");
 
     const hasData = data.length > 0;
 
@@ -250,8 +227,6 @@ export const TimelinePicker = React.forwardRef<HTMLDivElement, TimelinePickerPro
                 dotProps={dot}
                 titleProps={title}
                 dateProps={date}
-                cardProps={card}
-                cardContentProps={cardContent}
                 contentProps={content}
               />
             );
