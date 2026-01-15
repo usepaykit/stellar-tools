@@ -3,6 +3,7 @@ import {
   authProviderEnum as authProviderEnum$1,
   checkoutStatus,
   networkEnum as networkEnum$1,
+  payoutStatusEnum as payoutStatusEnum$1,
   roles,
 } from "@/constant/schema.client";
 import { WebhookEvent } from "@stellartools/core";
@@ -345,6 +346,24 @@ export const payments = pgTable("payment", {
   environment: networkEnum("network").notNull(),
 });
 
+export const payoutStatusEnum = pgEnum("payout_status", payoutStatusEnum$1);
+
+export const payouts = pgTable("payout", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  amount: integer("amount").notNull(),
+  status: payoutStatusEnum("status").notNull(),
+  walletAddress: text("wallet_address").notNull(),
+  memo: text("memo"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+  environment: networkEnum("network").notNull(),
+  transactionHash: text("transaction_hash").notNull().unique(),
+});
+
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
@@ -508,3 +527,4 @@ export type Auth = InferSelectModel<typeof auth>;
 export type PasswordReset = InferSelectModel<typeof passwordReset>;
 export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
+export type Payout = InferSelectModel<typeof payouts>;

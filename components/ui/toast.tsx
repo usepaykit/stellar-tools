@@ -96,6 +96,20 @@ export const toast = {
       className: cn("border-border bg-card", options?.className),
     });
   },
+  promise: <T,>(
+    promise: Promise<T>,
+    options: {
+      loading: string;
+      success: string | ((data: T) => string);
+      error: string | ((error: unknown) => string);
+    }
+  ) => {
+    return sonnerToast.promise(promise, {
+      loading: options.loading,
+      success: options.success,
+      error: options.error,
+    });
+  },
 };
 
 export { Toaster };

@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { PayoutReceipt } from "@/components/payout/payout-receipt";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -22,8 +23,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
+import { PayoutStatus } from "@/constant/schema.client";
+import { Payout } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
+import { pdf } from "@react-pdf/renderer";
+import { saveAs } from "file-saver";
 import {
   CheckCircle2,
   ChevronRight,
@@ -34,6 +39,7 @@ import {
   MoreHorizontal,
   RefreshCw,
   Wallet,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -48,17 +54,22 @@ const getExplorerUrl = (hash: string, env?: string) =>
 
 // --- Shared Internal Components ---
 
-const StatusBadge = ({ status }: { status: "pending" | "paid" }) => {
+const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const config = {
     pending: {
       cls: "bg-orange-500/10 text-orange-700 border-orange-500/20",
       icon: Clock,
       label: "Pending",
     },
-    paid: {
+    succeeded: {
       cls: "bg-green-500/10 text-green-700 border-green-500/20",
       icon: CheckCircle2,
-      label: "Paid",
+      label: "Succeeded",
+    },
+    failed: {
+      cls: "bg-red-500/10 text-red-700 border-red-500/20",
+      icon: XCircle,
+      label: "Failed",
     },
   };
   const { cls, icon: Icon, label } = config[status];
@@ -104,6 +115,18 @@ export default function PayoutDetailPage() {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   const payout = mockPayouts.find((p) => p.id === id);
+
+  const handleDownloadReceipt = React.useCallback(async () => {
+    if (!payout) return;
+
+    const downloadPromise = generateAndDownloadReceipt(payout, "StellarTools");
+
+    toast.promise(downloadPromise, {
+      loading: "Generating receipt...",
+      success: "Receipt downloaded successfully",
+      error: "Failed to download receipt",
+    });
+  }, [payout]);
 
   const onRefresh = async () => {
     setIsRefreshing(true);
@@ -170,7 +193,7 @@ export default function PayoutDetailPage() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => toast.info("Downloading...")}
+                onClick={handleDownloadReceipt}
                 className="gap-2 shadow-none"
               >
                 <Download className="h-4 w-4" /> Receipt
@@ -204,11 +227,11 @@ export default function PayoutDetailPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
-              { label: "Payout Amount", value: `${payout.amount} ${payout.asset}` },
+              { label: "Payout Amount", value: `${payout.amount} XLM` },
               { label: "Status", value: <StatusBadge status={payout.status as any} /> },
               {
                 label: "Network",
-                value: payout.environment === "live" ? "Live Mode" : "Test Mode",
+                value: payout.environment === "mainnet" ? "Live Mode" : "Test Mode",
               },
             ].map((card, i) => (
               <div key={i} className="bg-card rounded-lg border p-4">
@@ -223,19 +246,14 @@ export default function PayoutDetailPage() {
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold">Payout Information</h3>
                 <div className="bg-card space-y-4 rounded-lg border p-4">
-                  <DetailRow label="Amount" value={`${payout.amount} ${payout.asset}`} />
-                  {payout.fees && (
-                    <p className="text-muted-foreground -mt-3 text-xs">
-                      Fees: {payout.fees} • Net: {payout.netAmount}
-                    </p>
-                  )}
+                  <DetailRow label="Amount" value={`${payout.amount} XLM`} />
                   <Separator />
                   <DetailRow
                     label="Payout Method"
-                    value={payout.payoutMethod.address}
+                    value={payout.walletAddress}
                     icon={Wallet}
                     mono
-                    action={<CopyBtn text={payout.payoutMethod.address} />}
+                    action={<CopyBtn text={payout.walletAddress} />}
                   />
                   {payout.transactionHash && (
                     <>
@@ -267,19 +285,19 @@ export default function PayoutDetailPage() {
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold">Timeline</h3>
                 <div className="bg-card space-y-4 rounded-lg border p-4">
-                  {payout.requestedAt && (
+                  {payout.createdAt && (
                     <DetailRow
                       label="Requested At"
-                      value={formatDate(payout.requestedAt)}
+                      value={formatDate(payout.createdAt)}
                       icon={Clock}
                     />
                   )}
-                  {payout.processedAt && (
+                  {payout.completedAt && (
                     <>
                       <Separator />
                       <DetailRow
                         label="Processed At"
-                        value={formatDate(payout.processedAt)}
+                        value={formatDate(payout.completedAt)}
                         icon={CheckCircle2}
                       />
                     </>
@@ -298,7 +316,7 @@ export default function PayoutDetailPage() {
                   action={<CopyBtn text={payout.id} />}
                 />
                 <Separator />
-                <DetailRow label="Asset" value={payout.asset} />
+                <DetailRow label="Asset" value="XLM" />
               </div>
             </div>
           </div>
@@ -308,30 +326,58 @@ export default function PayoutDetailPage() {
   );
 }
 
-const mockPayouts = [
+export async function generateAndDownloadReceipt(
+  payout: Payout,
+  organizationName?: string,
+  organizationAddress?: string,
+  organizationEmail?: string
+): Promise<void> {
+  try {
+    const doc = (
+      <PayoutReceipt
+        payout={payout}
+        organizationName={organizationName}
+        organizationAddress={organizationAddress}
+        organizationEmail={organizationEmail}
+      />
+    );
+
+    const blob = await pdf(doc).toBlob();
+
+    const dateStr = new Date().toISOString().split("T")[0];
+    const filename = `payout-receipt-${payout.id}-${dateStr}.pdf`;
+    saveAs(blob, filename);
+  } catch (error) {
+    console.error("Error generating receipt:", error);
+    throw new Error("Failed to generate receipt");
+  }
+}
+
+const mockPayouts: Array<Payout> = [
   {
     id: "1",
-    date: new Date(),
-    payoutMethod: { address: "GABC...ABCD" },
+    organizationId: "1",
+    walletAddress: "GABC...ABCD",
+    memo: null,
     status: "pending",
-    amount: "91.94",
-    asset: "XLM",
-    environment: "test",
-    requestedAt: new Date(),
-    processedAt: new Date(),
+    amount: 91.94,
+    environment: "testnet",
+    transactionHash: "0xabc...",
+    createdAt: new Date(),
+    completedAt: new Date(),
+    metadata: null,
   },
   {
     id: "2",
-    date: new Date(),
-    payoutMethod: { address: "GXYZ...CDEF" },
-    status: "paid",
-    amount: "76.45",
-    asset: "XLM",
-    environment: "test",
+    organizationId: "1",
+    walletAddress: "GXYZ...CDEF",
+    memo: null,
+    status: "succeeded",
+    amount: 76.45,
+    environment: "testnet",
     transactionHash: "0xabc...",
-    fees: "0.01",
-    netAmount: "76.44",
-    requestedAt: new Date(),
-    processedAt: new Date(),
+    createdAt: new Date(),
+    completedAt: new Date(),
+    metadata: null,
   },
 ];

@@ -98,9 +98,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     queryKey: ["sidebar-organizations"],
     queryFn: async () => await retrieveOrganizations(),
   });
-
+ const [LiveMode, setLiveMode] = React.useState(orgContext?.environment === "mainnet");
   const currentOrg = organizations?.[0] || null;
-  const isLiveMode = orgContext?.environment === "mainnet";
 
   const userName = user?.profile.firstName
     ? `${user.profile.firstName} ${user.profile.lastName || ""}`.trim()
@@ -126,6 +125,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   };
 
   const handleSwitchEnvironment = async (checked: boolean) => {
+    setLiveMode(checked);
     setIsSwitchingEnv(true);
     const newEnv: Network = checked ? "mainnet" : "testnet";
     try {
@@ -149,7 +149,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton size="lg" disabled={isSwitching}>
-                    <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
+                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
                       {currentOrg?.logoUrl ? (
                         <Image
                           src={currentOrg.logoUrl}
@@ -210,6 +210,22 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       </DropdownMenuItem>
                     ))
                   )}
+
+                  <div className="mt-2 flex items-center justify-between gap-4 border-t px-4 py-2">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground text-[10px] font-medium uppercase">
+                        Mode
+                      </span>
+                      <span className="text-xs">{ LiveMode ? "Live" : "Test"}</span>
+                    </div>
+                    <Switch
+                      checked={LiveMode }
+                      onCheckedChange={handleSwitchEnvironment}
+                      disabled={isSwitchingEnv}
+                      className="h-4 w-7 [&>span]:size-3 [&>span]:data-[state=checked]:translate-x-[calc(100%-0.125rem)]"
+                    />
+                  </div>
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/select-organization?create=true" className="gap-2">
@@ -269,21 +285,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                             ))}
-                            {item.title === "Developers" && (
-                              <div className="mt-2 flex items-center justify-between gap-4 border-t px-4 py-2">
-                                <div className="flex flex-col">
-                                  <span className="text-muted-foreground text-[10px] font-medium uppercase">
-                                    Mode
-                                  </span>
-                                  <span className="text-xs">{isLiveMode ? "Live" : "Test"}</span>
-                                </div>
-                                <Switch
-                                  checked={isLiveMode}
-                                  onCheckedChange={handleSwitchEnvironment}
-                                  disabled={isSwitchingEnv}
-                                />
-                              </div>
-                            )}
                           </SidebarMenuSub>
                         </CollapsibleContent>
                       </SidebarMenuItem>
