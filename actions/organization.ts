@@ -47,6 +47,7 @@ export const postOrganization = async (
     organizationId: organization.id,
     accountId,
     role: "owner",
+    metadata: null,
   });
 
   return organization;

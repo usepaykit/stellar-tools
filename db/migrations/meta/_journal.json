@@ -8,6 +8,13 @@
       "when": 1768389096161,
       "tag": "0000_stiff_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1768435142219,
+      "tag": "0001_special_onslaught",
+      "breakpoints": true
     }
   ]
 }

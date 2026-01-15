@@ -156,7 +156,7 @@ export const teamInvites = pgTable("team_invite", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-  environment: networkEnum("network").notNull(),
+  role: roleEnum("role").notNull(),
 });
 
 export const apiKeys = pgTable("api_key", {

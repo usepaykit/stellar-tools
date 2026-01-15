@@ -4,10 +4,12 @@ import { TeamMember, db, teamMembers } from "@/db";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-export const postTeamMember = async (params: Partial<TeamMember>) => {
+export const postTeamMember = async (
+  params: Omit<TeamMember, "id" | "createdAt" | "updatedAt">
+) => {
   const [teamMember] = await db
     .insert(teamMembers)
-    .values({ id: `tm_${nanoid(25)}`, ...params } as TeamMember)
+    .values({ ...params, id: `tm_${nanoid(25)}` })
     .returning();
 
   return teamMember;
