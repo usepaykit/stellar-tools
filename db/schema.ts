@@ -527,4 +527,4 @@ export type Auth = InferSelectModel<typeof auth>;
 export type PasswordReset = InferSelectModel<typeof passwordReset>;
 export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
-export type Payout = InferSelectModel<typeof payouts>;
+export type  Payout = InferSelectModel<typeof payouts>;
