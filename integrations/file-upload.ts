@@ -8,7 +8,9 @@ export class FileUploadApi {
   private api = new UTApi();
 
   async upload(filesWithMetadata: FileWithMetadata[]): Promise<Array<string> | null> {
-    const utFiles = filesWithMetadata.map((file) => new UTFile([file], file.name));
+    const utFiles = filesWithMetadata.map(
+      (file) => new UTFile([file], file.name, { customId: JSON.stringify(file.metadata) })
+    );
 
     const response = await this.api.uploadFiles(utFiles);
 

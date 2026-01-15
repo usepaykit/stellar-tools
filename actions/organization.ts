@@ -185,8 +185,8 @@ export const resolveOrgContext = async (
   }
 
   return {
-    organizationId: organizationId ?? orgContext.id,
-    environment: environment ?? orgContext.environment,
+    organizationId: orgContext.id,
+    environment: orgContext.environment,
   };
 };
 
