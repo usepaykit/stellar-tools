@@ -6,6 +6,8 @@ export const checkoutStatus = ["open", "completed", "expired", "failed"] as cons
 
 export const authProviderEnum = ["google", "local"] as const;
 
+export const payoutStatusEnum = ["pending", "succeeded", "failed"] as const;
+
 export type Role = (typeof roles)[number];
 
 export type CheckoutStatus = (typeof checkoutStatus)[number];
@@ -13,3 +15,5 @@ export type CheckoutStatus = (typeof checkoutStatus)[number];
 export type Network = (typeof networkEnum)[number];
 
 export type AuthProvider = (typeof authProviderEnum)[number];
+
+export type PayoutStatus = (typeof payoutStatusEnum)[number];

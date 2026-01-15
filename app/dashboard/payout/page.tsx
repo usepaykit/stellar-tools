@@ -11,74 +11,82 @@ import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { generateAndDownloadReceipt } from "@/lib/payout-receipt-utils";
+import { PayoutStatus } from "@/constant/schema.client";
+import { Payout } from "@/db";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { Banknote, Calendar, CheckCircle2, Circle, Clock, Coins, Plus, Wallet } from "lucide-react";
+import {
+  Banknote,
+  Calendar,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Coins,
+  Plus,
+  Wallet,
+  XCircle,
+} from "lucide-react";
 import moment from "moment";
 import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-// --- Types ---
-
-type PayoutStatus = "pending" | "paid";
-
-type Payout = {
-  id: string;
-  date: Date;
-  payoutMethod: {
-    address: string;
-  };
-  status: PayoutStatus;
-  amount: string;
-  asset: string;
-  memo?: string;
-};
+import { generateAndDownloadReceipt } from "./[id]/page";
 
 const mockPayouts: Payout[] = [
   {
     id: "1",
-    date: new Date("2026-01-14"),
-    payoutMethod: {
-      address: "GABCDEF1234567890ABCDEF1234567890ABCD",
-    },
+    organizationId: "1",
+    walletAddress: "GABC...ABCD",
+    memo: null,
     status: "pending",
-    amount: "91.94",
-    asset: "XLM",
+    amount: 91.94,
+    environment: "testnet",
+    transactionHash: "0xabc...",
+    createdAt: new Date(),
+    completedAt: new Date(),
+    metadata: null,
   },
   {
     id: "2",
-    date: new Date("2025-09-14"),
-    payoutMethod: {
-      address: "GXYZ9876543210ABCDEF1234567890ABCDEF",
-    },
-    status: "paid",
-    amount: "76.45",
-    asset: "XLM",
+    organizationId: "1",
+    walletAddress: "GXYZ...CDEF",
+    memo: null,
+    status: "succeeded",
+    amount: 76.45,
+    environment: "testnet",
+    transactionHash: "0xabc...",
+    createdAt: new Date(),
+    completedAt: new Date(),
+    metadata: null,
   },
   {
     id: "3",
-    date: new Date("2025-08-20"),
-    payoutMethod: {
-      address: "GABCDEF1234567890ABCDEF1234567890ABCD",
-    },
-    status: "paid",
-    amount: "150.00",
-    asset: "XLM",
-    memo: "Monthly payout",
+    organizationId: "1",
+    walletAddress: "GABC...ABCD",
+    memo: null,
+    status: "succeeded",
+    amount: 150.0,
+    environment: "testnet",
+    transactionHash: "0xabc...",
+    createdAt: new Date(),
+    completedAt: new Date(),
+    metadata: null,
   },
   {
     id: "4",
-    date: new Date("2025-07-15"),
-    payoutMethod: {
-      address: "GXYZ9876543210ABCDEF1234567890ABCDEF",
-    },
-    status: "paid",
-    amount: "200.50",
-    asset: "XLM",
+    organizationId: "1",
+    walletAddress: "GXYZ...CDEF",
+    memo: null,
+    status: "succeeded",
+    amount: 200.5,
+    environment: "testnet",
+    transactionHash: "0xabc...",
+    createdAt: new Date(),
+    completedAt: new Date(),
+    metadata: null,
   },
 ];
 
@@ -89,10 +97,15 @@ const StatusBadge = ({ status }: { status: PayoutStatus }) => {
       icon: Clock,
       label: "Pending",
     },
-    paid: {
+    succeeded: {
       className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       icon: CheckCircle2,
-      label: "Paid",
+      label: "Succeeded",
+    },
+    failed: {
+      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      icon: XCircle,
+      label: "Failed",
     },
   };
 
@@ -109,12 +122,12 @@ const StatusBadge = ({ status }: { status: PayoutStatus }) => {
 
 // --- Payout Method Display Component ---
 
-const PayoutMethodDisplay = ({ method }: { method: Payout["payoutMethod"] }) => {
+const PayoutMethodDisplay = ({ method }: { method: Payout["walletAddress"] }) => {
   return (
     <div className="flex items-center gap-2">
       <Wallet className="text-muted-foreground h-4 w-4" />
       <span className="font-mono text-sm">
-        {method.address.slice(0, 8)}...{method.address.slice(-4)}
+        {method.slice(0, 8)}...{method.slice(-4)}
       </span>
     </div>
   );
@@ -130,18 +143,18 @@ const columns: ColumnDef<Payout>[] = [
       </div>
     ),
     cell: ({ row }) => (
-      <div className="text-sm">{moment(row.original.date).format("DD MMM YYYY")}</div>
+      <div className="text-sm">{moment(row.original.createdAt).format("DD MMM YYYY")}</div>
     ),
   },
   {
-    accessorKey: "payoutMethod",
+    accessorKey: "walletAddress",
     header: () => (
       <div className="flex items-center gap-2">
         <Wallet className="text-muted-foreground h-4 w-4" />
         <span>Payout method</span>
       </div>
     ),
-    cell: ({ row }) => <PayoutMethodDisplay method={row.original.payoutMethod} />,
+    cell: ({ row }) => <PayoutMethodDisplay method={row.original.walletAddress} />,
   },
   {
     accessorKey: "status",
@@ -152,7 +165,7 @@ const columns: ColumnDef<Payout>[] = [
       </div>
     ),
     cell: ({ row }) => {
-      return <StatusBadge status={row.original.status} />;
+      return <StatusBadge status={row.original.status as PayoutStatus} />;
     },
   },
   {
@@ -163,11 +176,7 @@ const columns: ColumnDef<Payout>[] = [
         <span>Amount</span>
       </div>
     ),
-    cell: ({ row }) => (
-      <div className="text-sm font-medium">
-        {row.original.amount} {row.original.asset}
-      </div>
-    ),
+    cell: ({ row }) => <div className="text-sm font-medium">{row.original.amount} XLM</div>,
   },
 ];
 
@@ -276,7 +285,6 @@ function RequestPayoutModal({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          {/* Wallet Address Button */}
           <Button
             type="button"
             variant={paymentMethod === "wallet" ? "default" : "outline"}
@@ -294,7 +302,6 @@ function RequestPayoutModal({
             {paymentMethod === "wallet" && <CheckCircle2 className="ml-1 h-4 w-4" />}
           </Button>
 
-          {/* Local Bank Button */}
           <Button
             type="button"
             variant="outline"
@@ -312,7 +319,6 @@ function RequestPayoutModal({
           </Button>
         </div>
 
-        {/* Wallet Form Fields - Only show when wallet is selected */}
         {paymentMethod === "wallet" && (
           <div className="max-w-2xl space-y-5 border-t pt-6">
             <RHF.Controller

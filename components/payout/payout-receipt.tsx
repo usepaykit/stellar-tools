@@ -1,6 +1,6 @@
 "use client";
 
-import { Payout } from "@/app/dashboard/payout/[id]/page";
+import { Payout } from "@/db";
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import moment from "moment";
 
@@ -41,10 +41,6 @@ export const PayoutReceipt = ({
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            {/**
-             * ESLint Disable: jsx-a11y/alt-text
-             * Reason: @react-pdf/renderer Image component doesn't support the `alt` prop.
-             */}
             {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image src={getLogoUrl()} style={styles.logo} />
             <Text style={styles.companyName}>{organizationName}</Text>
@@ -63,30 +59,32 @@ export const PayoutReceipt = ({
               <Text
                 style={[
                   styles.statusBadge,
-                  payout.status === "paid" ? styles.statusBadgePaid : styles.statusBadgePending,
+                  payout.status === "succeeded"
+                    ? styles.statusBadgePaid
+                    : styles.statusBadgePending,
                 ]}
               >
-                {payout.status === "paid" ? "Paid" : "Pending"}
+                {payout.status === "succeeded" ? "Succeeded" : "Pending"}
               </Text>
             </View>
           </View>
 
           <View style={styles.row}>
             <Text style={styles.label}>Date</Text>
-            <Text style={styles.value}>{formatDate(payout.date)}</Text>
+            <Text style={styles.value}>{formatDate(payout.createdAt)}</Text>
           </View>
 
-          {payout.requestedAt && (
+          {payout.completedAt && (
             <View style={styles.row}>
-              <Text style={styles.label}>Requested At</Text>
-              <Text style={styles.value}>{formatDate(payout.requestedAt)}</Text>
+              <Text style={styles.label}>Completed At</Text>
+              <Text style={styles.value}>{formatDate(payout.completedAt)}</Text>
             </View>
           )}
 
-          {payout.processedAt && (
+          {payout.completedAt && (
             <View style={styles.row}>
               <Text style={styles.label}>Processed At</Text>
-              <Text style={styles.value}>{formatDate(payout.processedAt)}</Text>
+              <Text style={styles.value}>{formatDate(payout.completedAt)}</Text>
             </View>
           )}
 
@@ -94,57 +92,33 @@ export const PayoutReceipt = ({
             <View style={styles.row}>
               <Text style={styles.label}>Network</Text>
               <Text style={styles.value}>
-                {payout.environment === "live" ? "Live Mode" : "Test Mode"}
+                {payout.environment === "mainnet" ? "Live Mode" : "Test Mode"}
               </Text>
             </View>
           )}
         </View>
 
-        {/* Payment Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Information</Text>
 
           <View style={styles.row}>
             <Text style={styles.label}>Amount</Text>
-            <Text style={styles.valueBold}>
-              {payout.amount} {payout.asset}
-            </Text>
+            <Text style={styles.valueBold}>{payout.amount} XLM</Text>
           </View>
-
-          {payout.fees && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Transaction Fees</Text>
-              <Text style={styles.value}>
-                {payout.fees} {payout.asset}
-              </Text>
-            </View>
-          )}
-
-          {payout.netAmount && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Net Amount</Text>
-              <Text style={styles.valueBold}>
-                {payout.netAmount} {payout.asset}
-              </Text>
-            </View>
-          )}
 
           <View style={styles.amountRow}>
             <Text style={styles.amountLabel}>Total Payout</Text>
-            <Text style={styles.amountValue}>
-              {payout.amount} {payout.asset}
-            </Text>
+            <Text style={styles.amountValue}>{payout.amount} XLM</Text>
           </View>
         </View>
 
-        {/* Payout Method */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payout Method</Text>
 
           <View style={styles.rowLast}>
             <Text style={styles.label}>Wallet Address</Text>
             <Text style={[styles.value, styles.addressText]}>
-              {formatAddress(payout.payoutMethod.address)}
+              {formatAddress(payout.walletAddress)}
             </Text>
           </View>
 
@@ -165,7 +139,6 @@ export const PayoutReceipt = ({
           )}
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           {organizationAddress && <Text>{organizationAddress}</Text>}
           {organizationEmail && <Text>{organizationEmail}</Text>}
