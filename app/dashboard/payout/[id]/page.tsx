@@ -23,6 +23,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
+import { generateAndDownloadReceipt } from "@/lib/payout-receipt-utils";
 import { cn } from "@/lib/utils";
 import {
   Calendar,
@@ -204,9 +205,16 @@ export default function PayoutDetailPage() {
 
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  const handleDownloadReceipt = React.useCallback(() => {
+  const handleDownloadReceipt = React.useCallback(async () => {
     if (!payout) return;
-    toast.info("Downloading receipt...");
+
+    const downloadPromise = generateAndDownloadReceipt(payout, "StellarTools");
+
+    toast.promise(downloadPromise, {
+      loading: "Generating receipt...",
+      success: "Receipt downloaded successfully",
+      error: "Failed to download receipt",
+    });
   }, [payout]);
 
   const handleRefreshStatus = React.useCallback(async () => {
@@ -233,9 +241,7 @@ export default function PayoutDetailPage() {
               <p className="text-muted-foreground mb-4">
                 The payout you&apos;re looking for doesn&apos;t exist.
               </p>
-              <Button onClick={() => router.push("/dashboard/payout")}>
-                Back to Payouts
-              </Button>
+              <Button onClick={() => router.push("/dashboard/payout")}>Back to Payouts</Button>
             </div>
           </div>
         </DashboardSidebarInset>
@@ -397,10 +403,7 @@ export default function PayoutDetailPage() {
                           </span>
                         </div>
                       </div>
-                      <CopyButton
-                        text={payout.payoutMethod.address}
-                        label="Copy wallet address"
-                      />
+                      <CopyButton text={payout.payoutMethod.address} label="Copy wallet address" />
                     </div>
 
                     {payout.memo && (
@@ -509,7 +512,8 @@ export default function PayoutDetailPage() {
                       )}
 
                       {payout.createdAt &&
-                        (!payout.requestedAt || payout.createdAt.getTime() !== payout.requestedAt.getTime()) && (
+                        (!payout.requestedAt ||
+                          payout.createdAt.getTime() !== payout.requestedAt.getTime()) && (
                           <>
                             {(payout.requestedAt || payout.processedAt) && <Separator />}
                             <div className="flex items-start justify-between gap-2">
@@ -531,7 +535,9 @@ export default function PayoutDetailPage() {
                             <Separator />
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
-                                <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
+                                <div className="text-muted-foreground mb-1 text-xs">
+                                  Last Updated
+                                </div>
                                 <div className="text-sm">
                                   {moment(payout.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
                                 </div>

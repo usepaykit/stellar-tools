@@ -11,6 +11,7 @@ import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { generateAndDownloadReceipt } from "@/lib/payout-receipt-utils";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -383,8 +384,13 @@ export default function PayoutPage() {
     },
     {
       label: "Download Receipt",
-      onClick: (row) => {
-        toast.info(`Downloading receipt for payout ${row.id}`);
+      onClick: async (row) => {
+        const downloadPromise = generateAndDownloadReceipt(row, "StellarTools");
+        toast.promise(downloadPromise, {
+          loading: "Generating receipt...",
+          success: "Receipt downloaded successfully",
+          error: "Failed to download receipt",
+        });
       },
     },
   ];
