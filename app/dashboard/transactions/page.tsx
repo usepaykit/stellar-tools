@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn } from "@/lib/utils";
+import { cn, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
@@ -84,7 +84,7 @@ const StatusBadge = ({ status }: { status: TransactionStatus }) => {
 const CopyWalletAddress = ({ address }: { address: string }) => {
   const { copied, handleCopy } = useCopy();
 
-  const displayAddress = `${address.slice(0, 4)}...${address.slice(-4)}`;
+  const displayAddress = truncate(address, { start: 4, end: 4 });
 
   return (
     <div className="flex items-center gap-2">

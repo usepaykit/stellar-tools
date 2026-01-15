@@ -15,6 +15,13 @@
       "when": 1768435142219,
       "tag": "0001_special_onslaught",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768498781941,
+      "tag": "0002_magenta_chameleon",
+      "breakpoints": true
     }
   ]
 }

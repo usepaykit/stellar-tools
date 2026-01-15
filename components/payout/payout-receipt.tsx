@@ -1,6 +1,7 @@
 "use client";
 
 import { Payout } from "@/db";
+import { truncate } from "@/lib/utils";
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import moment from "moment";
 
@@ -19,13 +20,6 @@ export const PayoutReceipt = ({
 }: PayoutReceiptProps) => {
   const formatDate = (date: Date) => {
     return moment(date).format("MMMM DD, YYYY [at] h:mm A");
-  };
-
-  const formatAddress = (address: string) => {
-    if (address.length > 40) {
-      return `${address.slice(0, 20)}...${address.slice(-10)}`;
-    }
-    return address;
   };
 
   const getLogoUrl = () => {
@@ -118,7 +112,7 @@ export const PayoutReceipt = ({
           <View style={styles.rowLast}>
             <Text style={styles.label}>Wallet Address</Text>
             <Text style={[styles.value, styles.addressText]}>
-              {formatAddress(payout.walletAddress)}
+              {truncate(payout.walletAddress, { start: 20, end: 10 })}
             </Text>
           </View>
 
@@ -133,7 +127,7 @@ export const PayoutReceipt = ({
             <View style={styles.rowLast}>
               <Text style={styles.label}>Transaction Hash</Text>
               <Text style={[styles.value, styles.addressText]}>
-                {formatAddress(payout.transactionHash)}
+                {truncate(payout.transactionHash, { start: 20, end: 10 })}
               </Text>
             </View>
           )}
