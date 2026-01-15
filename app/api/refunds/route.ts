@@ -5,7 +5,7 @@ import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { triggerWebhooks } from "@/actions/webhook";
 import { Encryption } from "@/integrations/encryption";
-import { Stellar } from "@/integrations/stellar";
+import { StellarCoreApi } from "@/integrations/stellar-core";
 import { createRefundSchema, tryCatchAsync } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -48,7 +48,7 @@ export const POST = async (req: NextRequest) => {
     );
   }
 
-  const stellar = new Stellar(environment);
+  const stellar = new StellarCoreApi(environment);
 
   const txMemo = JSON.stringify({
     checkoutId: payment.checkoutId,

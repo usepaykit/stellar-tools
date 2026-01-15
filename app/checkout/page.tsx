@@ -2,21 +2,23 @@
 
 import * as React from "react";
 
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { PhoneNumber, PhoneNumberPicker } from "@/components/phone-number-picker";
 import { TextField } from "@/components/text-field";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Stellar } from "@/integrations/stellar";
-import { cn } from "@/lib/utils";
+import { StellarCoreApi } from "@/integrations/stellar-core";
+import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
+import { cn, truncate } from "@/lib/utils";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import * as StellarSDK from "@stellar/stellar-sdk";
+import { ApiClient } from "@stellartools/core";
 import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
+import { toast } from "sonner";
 import { z } from "zod";
 
 const PRICE = 200;
@@ -29,79 +31,26 @@ const checkoutSchema = z.object({
   }),
 });
 
+const orgId = "org_1234567890";
+const env = "testnet";
+
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
-
-interface Wallet {
-  id: string;
-  name: string;
-  icon: string;
-  available: boolean;
-  color: string;
-}
-
-const wallets: Wallet[] = [
-  {
-    id: "albedo",
-    name: "Albedo",
-    icon: "https://stellar.creit.tech/wallet-icons/albedo.png",
-    available: true,
-    color: "#4A90E2",
-  },
-  {
-    id: "xbull",
-    name: "xBull",
-    icon: "https://stellar.creit.tech/wallet-icons/xbull.png",
-    available: true,
-    color: "#9B59B6",
-  },
-  {
-    id: "freighter",
-    name: "Freighter",
-    icon: "https://stellar.creit.tech/wallet-icons/freighter.png",
-    available: false,
-    color: "#9B59B6",
-  },
-  {
-    id: "rabet",
-    name: "Rabet",
-    icon: "https://stellar.creit.tech/wallet-icons/rabet.png",
-    available: false,
-    color: "#000000",
-  },
-  {
-    id: "lobstr",
-    name: "LOBSTR",
-    icon: "https://stellar.creit.tech/wallet-icons/lobstr.png",
-    available: false,
-    color: "#4A90E2",
-  },
-  {
-    id: "hana",
-    name: "Hana Wallet",
-    icon: "https://stellar.creit.tech/wallet-icons/hana.png",
-    available: false,
-    color: "#6B46C1",
-  },
-];
-
-// Wallet Icon Component
-const WalletIcon = ({ wallet }: { wallet: Wallet }) => {
-  return (
-    <Image
-      src={wallet.icon}
-      alt={wallet.name}
-      width={32}
-      height={32}
-      className="h-8 w-8 object-contain"
-      unoptimized
-    />
-  );
-};
 
 export default function CheckoutPage() {
   const [showBanner, setShowBanner] = React.useState(true);
-  const [isWalletModalOpen, setIsWalletModalOpen] = React.useState(false);
+  const [connectedAddress, setConnectedAddress] = React.useState<string | null>(null);
   const [paymentURI, setPaymentURI] = React.useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+
+  const stellarWalletsKit = StellarWalletsKitApi.getInstance();
+
+  React.useEffect(() => {
+    const unsubscribe = stellarWalletsKit.onConnectionChange((address) => {
+      setConnectedAddress(address);
+    });
+
+    return unsubscribe;
+  }, [stellarWalletsKit]);
 
   const form = RHF.useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -111,8 +60,98 @@ export default function CheckoutPage() {
     },
   });
 
-  const onSubmit = (data: CheckoutFormData) => {
-    console.log({ data });
+  const handleConnectWallet = async () => {
+    try {
+      const isFormValid = await form.trigger();
+      if (!isFormValid) return;
+      const { address } = await stellarWalletsKit.connectWallet();
+      toast.success(`Connected: ${truncate(address, { start: 6, end: 4 })}`);
+    } catch (error: any) {
+      if (error?.code !== -1) {
+        // -1 means user closed modal, not an error
+        toast.error(error?.message || "Failed to connect wallet");
+      }
+    }
+  };
+
+  const handleSubmit = async (data: CheckoutFormData) => {
+    if (!stellarWalletsKit.isConnected()) {
+      toast.error("Please connect a wallet first");
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const address = stellarWalletsKit.getAddressSync();
+
+      const isFormValid = await form.trigger();
+
+      if (!isFormValid) return;
+
+      console.log({ data });
+
+      if (!address) {
+        throw new Error("No wallet connected");
+      }
+
+      const stellar = new StellarCoreApi(env);
+
+      const result = await stellar.processWalletPayment(
+        {
+          sourcePublicKey: address,
+          destination: process.env.NEXT_PUBLIC_MERCHANT_STELLAR_ADDRESS!,
+          amount: PRICE.toString(),
+          memo: `ORD-${checkoutId}`,
+          memoType: "text",
+        },
+        async (xdr) => {
+          const { signedTxXdr } = await stellarWalletsKit.signTransaction(xdr, {
+            networkPassphrase: StellarSDK.Networks.TESTNET,
+            address,
+          });
+          return signedTxXdr;
+        }
+      );
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      console.log("Transaction result:", result.data);
+
+      const apiClient = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_API_KEY!,
+        },
+        retryOptions: { max: 3, baseDelay: 1000, debug: false },
+      });
+
+      const response = await apiClient.post<{ message: string; success: boolean }>(
+        "/api/verify-wallet-payment",
+        {
+          body: JSON.stringify({ txHash: result.data?.hash, checkoutId, orgId, env }),
+        }
+      );
+
+      if (!response.ok) {
+        console.log(response.error);
+        throw new Error("Failed to verify payment");
+      }
+
+      if (!response.value.data?.success) {
+        throw new Error(response.value.data?.message);
+      }
+
+      toast.success("Payment successful!");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("Payment error:", errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const isFormValid = form.formState.isValid;
@@ -121,7 +160,7 @@ export default function CheckoutPage() {
 
   React.useEffect(() => {
     if (isFormValid) {
-      const stellar = new Stellar("testnet");
+      const stellar = new StellarCoreApi("testnet");
       const uri = stellar.makePaymentURI({
         destination: process.env.NEXT_PUBLIC_MERCHANT_STELLAR_ADDRESS!,
         amount: PRICE.toString(),
@@ -193,7 +232,7 @@ export default function CheckoutPage() {
 
             <Card className="shadow-none">
               <CardContent className="space-y-6 pt-6 pb-6">
-                <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+                <form className="space-y-6" onSubmit={form.handleSubmit(handleSubmit)}>
                   <RHF.Controller
                     control={form.control}
                     name="email"
@@ -271,12 +310,15 @@ export default function CheckoutPage() {
                       variant="default"
                       className="h-12 w-full shadow-none"
                       size="lg"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setIsWalletModalOpen(true);
-                      }}
+                      onClick={handleConnectWallet}
+                      disabled={isProcessing}
+                      isLoading={isProcessing}
                     >
-                      Continue with Wallet
+                      {isProcessing
+                        ? "Processing..."
+                        : connectedAddress
+                          ? `Connected: ${truncate(connectedAddress, { start: 6, end: 4, separator: "..." })}`
+                          : "Connect Wallet"}
                     </Button>
                   </div>
 
@@ -337,92 +379,6 @@ export default function CheckoutPage() {
           </footer>
         </div>
       </div>
-
-      {/* Wallet Connection Modal */}
-      <FullScreenModal
-        open={isWalletModalOpen}
-        onOpenChange={setIsWalletModalOpen}
-        title="Connect a Wallet"
-        size="small"
-        showCloseButton={true}
-      >
-        <div className="space-y-2">
-          {wallets.map((wallet) => (
-            <button
-              key={wallet.id}
-              onClick={() => {
-                if (wallet.available) {
-                  console.log(`Connecting to ${wallet.name}...`);
-                  // Handle wallet connection here
-                  setIsWalletModalOpen(false);
-                }
-              }}
-              disabled={!wallet.available}
-              className={cn(
-                "group relative flex w-full items-center justify-between rounded-lg border p-4 transition-all duration-200",
-                "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                wallet.available
-                  ? "border-border bg-card hover:border-primary/50 hover:bg-accent/50 cursor-pointer"
-                  : "border-border/50 bg-muted/30 cursor-not-allowed opacity-60"
-              )}
-            >
-              <div className="flex items-center gap-4">
-                <div
-                  className={cn(
-                    "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition-all duration-200",
-                    wallet.available
-                      ? "border-border bg-background group-hover:border-primary/30 group-hover:bg-muted/50"
-                      : "border-border/50 bg-muted/50"
-                  )}
-                >
-                  <div className="relative h-8 w-8">
-                    <WalletIcon wallet={wallet} />
-                  </div>
-                </div>
-                <div className="flex flex-col items-start">
-                  <span
-                    className={cn(
-                      "font-medium transition-colors",
-                      wallet.available
-                        ? "text-foreground group-hover:text-foreground"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {wallet.name}
-                  </span>
-                </div>
-              </div>
-              {!wallet.available && (
-                <Badge
-                  variant="secondary"
-                  className="bg-muted text-muted-foreground border-border/50 shrink-0 rounded-md px-2.5 py-1 text-xs font-normal"
-                >
-                  Not available
-                </Badge>
-              )}
-              {wallet.available && (
-                <div className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M6 12L10 8L6 4"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-      </FullScreenModal>
     </div>
   );
 }

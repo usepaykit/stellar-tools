@@ -5,19 +5,6 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "stellar.creit.tech",
-        pathname: "/wallet-icons/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-      {
-        protocol: "https",
-        hostname: "assets.aceternity.com",
-      },
-      {
-        protocol: "https",
         hostname: "*.ufs.sh",
       },
     ],
