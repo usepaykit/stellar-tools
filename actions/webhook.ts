@@ -1,7 +1,7 @@
 "use server";
 
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
-import { Stellar } from "@/integrations/stellar";
+import { StellarCoreApi } from "@/integrations/stellar-core";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { parseJSON } from "@/lib/utils";
 import { WebhookEvent } from "@stellartools/core";
@@ -299,7 +299,7 @@ export const processStellarWebhook = async (
   organizationId: string,
   checkoutId: string
 ) => {
-  const stellar = new Stellar(environment);
+  const stellar = new StellarCoreApi(environment);
 
   stellar.streamTx(accountPublicKey, {
     onError: (error) => {
