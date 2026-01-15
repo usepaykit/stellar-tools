@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { TimelinePicker, TimelineEntry } from "@/components/timeline-picker";
 import { toast } from "@/components/ui/toast";
 import { PayoutStatus } from "@/constant/schema.client";
 import { Payout } from "@/db";
@@ -29,6 +30,7 @@ import { useCopy } from "@/hooks/use-copy";
 import { cn } from "@/lib/utils";
 import { pdf } from "@react-pdf/renderer";
 import { saveAs } from "file-saver";
+import moment from "moment";
 import {
   CheckCircle2,
   ChevronRight,
@@ -44,15 +46,10 @@ import {
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-const formatDate = (date?: Date) =>
-  date
-    ? new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeStyle: "short" }).format(date)
-    : "";
 
 const getExplorerUrl = (hash: string, env?: string) =>
   `https://stellar.expert/explorer/${env === "live" ? "public" : "testnet"}/tx/${hash}`;
 
-// --- Shared Internal Components ---
 
 const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const config = {
@@ -115,6 +112,30 @@ export default function PayoutDetailPage() {
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   const payout = mockPayouts.find((p) => p.id === id);
+
+  const timelineData = React.useMemo<TimelineEntry[]>(() => {
+    if (!payout) return [];
+
+    const entries: TimelineEntry[] = [];
+
+    if (payout.createdAt) {
+      entries.push({
+        date: moment(payout.createdAt).format("MMM DD, YYYY"),
+        title: "Requested",
+        content: `Payout was requested on ${moment(payout.createdAt).format("MMMM DD, YYYY [at] h:mm A")}`,
+      });
+    }
+
+    if (payout.completedAt) {
+      entries.push({
+        date: moment(payout.completedAt).format("MMM DD, YYYY"),
+        title: "Processed",
+        content: `Payout was processed on ${moment(payout.completedAt).format("MMMM DD, YYYY [at] h:mm A")}`,
+      });
+    }
+
+    return entries;
+  }, [payout]);
 
   const handleDownloadReceipt = React.useCallback(async () => {
     if (!payout) return;
@@ -284,25 +305,11 @@ export default function PayoutDetailPage() {
 
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold">Timeline</h3>
-                <div className="bg-card space-y-4 rounded-lg border p-4">
-                  {payout.createdAt && (
-                    <DetailRow
-                      label="Requested At"
-                      value={formatDate(payout.createdAt)}
-                      icon={Clock}
-                    />
-                  )}
-                  {payout.completedAt && (
-                    <>
-                      <Separator />
-                      <DetailRow
-                        label="Processed At"
-                        value={formatDate(payout.completedAt)}
-                        icon={CheckCircle2}
-                      />
-                    </>
-                  )}
-                </div>
+                <TimelinePicker
+                  id="payout-timeline"
+                  data={timelineData}
+                  containerClassName={cn("bg-card rounded-lg border p-4")}
+                />
               </div>
             </div>
 
