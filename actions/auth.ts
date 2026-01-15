@@ -134,8 +134,8 @@ export const accountValidator = async (
   const isNewUser = !account;
 
   if (!account) {
-    if (intent === "SIGN_IN" && provider === "local") {
-      throw new Error("No account found with this email. Please sign up first.");
+    if (intent === "SIGN_IN") {
+      throw new Error("No account found. Please sign up first.");
     }
 
     const sub = provider === "local" ? await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS) : rawSub;
@@ -146,31 +146,31 @@ export const accountValidator = async (
       profile: profile ?? null,
     });
   } else {
-    if (intent === "SIGN_UP" && provider === "local") {
-      throw new Error("An account with this email already exists. Please sign in.");
-    }
-
     const existingSso = account.sso?.values?.find((s) => s.provider === provider);
 
     if (provider === "local") {
-      if (existingSso) {
-        const isValid = await bcrypt.compare(rawSub, existingSso.sub);
-        if (!isValid) throw new Error("Invalid credentials");
-      } else {
-        const hashedSub = await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS);
+      if (intent === "SIGN_UP") {
+        throw new Error("An account with this email already exists.");
+      }
+
+      if (!existingSso) {
+        throw new Error("This account was created using social login");
+      }
+
+      const isValid = await bcrypt.compare(rawSub, existingSso.sub);
+      if (!isValid) throw new Error("Invalid email or password.");
+    } else {
+      // SSO Provider (Google, GitHub, etc.)
+      // We trust SSO providers to verify email. If account exists but this SSO isn't linked, link it.
+      if (!existingSso) {
         await putAccount(account.id, {
-          sso: {
-            values: [...account.sso.values, { provider, sub: hashedSub }],
-          },
+          sso: { values: [...account.sso.values, { provider, sub: rawSub }] },
         });
       }
-    } else if (!existingSso) {
-      await putAccount(account.id, {
-        sso: { values: [...account.sso.values, { provider, sub: rawSub }] },
-      });
     }
   }
 
+  // 3. Session Generation
   const { accessToken, refreshToken } = await generateAndSetSession(account);
 
   await postAuth({
@@ -178,17 +178,12 @@ export const accountValidator = async (
     provider,
     accessToken,
     refreshToken,
-    expiresAt: moment().add(30, "days").toDate(),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     isRevoked: false,
     ...(sessionMetadata && { metadata: sessionMetadata }),
   });
 
-  return {
-    accountId: account.id,
-    accessToken,
-    refreshToken,
-    isNewUser,
-  };
+  return { accountId: account.id, accessToken, refreshToken, isNewUser };
 };
 
 export const forgotPassword = async (email: string) => {
