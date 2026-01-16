@@ -2,9 +2,11 @@
 
 import * as React from "react";
 
+import { retrieveEvents } from "@/actions/event";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { PayoutReceipt } from "@/components/payout/payout-receipt";
+import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -22,15 +24,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { TimelinePicker, TimelineEntry } from "@/components/timeline-picker";
 import { toast } from "@/components/ui/toast";
 import { PayoutStatus } from "@/constant/schema.client";
 import { Payout } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { pdf } from "@react-pdf/renderer";
 import { saveAs } from "file-saver";
-import moment from "moment";
+import _ from "lodash";
 import {
   CheckCircle2,
   ChevronRight,
@@ -43,13 +45,12 @@ import {
   Wallet,
   XCircle,
 } from "lucide-react";
+import moment from "moment";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-
 const getExplorerUrl = (hash: string, env?: string) =>
   `https://stellar.expert/explorer/${env === "live" ? "public" : "testnet"}/tx/${hash}`;
-
 
 const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const config = {
@@ -113,29 +114,9 @@ export default function PayoutDetailPage() {
 
   const payout = mockPayouts.find((p) => p.id === id);
 
-  const timelineData = React.useMemo<TimelineEntry[]>(() => {
-    if (!payout) return [];
-
-    const entries: TimelineEntry[] = [];
-
-    if (payout.createdAt) {
-      entries.push({
-        date: moment(payout.createdAt).format("MMM DD, YYYY"),
-        title: "Requested",
-        content: `Payout was requested on ${moment(payout.createdAt).format("MMMM DD, YYYY [at] h:mm A")}`,
-      });
-    }
-
-    if (payout.completedAt) {
-      entries.push({
-        date: moment(payout.completedAt).format("MMM DD, YYYY"),
-        title: "Processed",
-        content: `Payout was processed on ${moment(payout.completedAt).format("MMMM DD, YYYY [at] h:mm A")}`,
-      });
-    }
-
-    return entries;
-  }, [payout]);
+  const { data: payoutEvents } = useOrgQuery(["payout-events", id], () =>
+    retrieveEvents({ merchantId: "current" }, ["payout::requested", "payout::processed"])
+  );
 
   const handleDownloadReceipt = React.useCallback(async () => {
     if (!payout) return;
@@ -305,10 +286,13 @@ export default function PayoutDetailPage() {
 
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold">Timeline</h3>
-                <TimelinePicker
-                  id="payout-timeline"
-                  data={timelineData}
-                  containerClassName={cn("bg-card rounded-lg border p-4")}
+                <Timeline
+                  items={payoutEvents ?? []}
+                  renderItem={(evt) => ({
+                    title: _.startCase(evt.type.replace(/[::$]/g, " ")),
+                    date: moment(evt.createdAt).format("MMM DD, YYYY"),
+                    data: evt.data,
+                  })}
                 />
               </div>
             </div>
@@ -352,7 +336,7 @@ export async function generateAndDownloadReceipt(
     const blob = await pdf(doc).toBlob();
 
     const dateStr = new Date().toISOString().split("T")[0];
-    const filename = `payout-receipt-${payout.id}-${dateStr}.pdf`;
+    const filename = `stellartools-payout-receipt-${payout.id}-${dateStr}.pdf`;
     saveAs(blob, filename);
   } catch (error) {
     console.error("Error generating receipt:", error);

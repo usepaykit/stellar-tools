@@ -1,9 +1,11 @@
 import { putCheckout, retrieveCheckout } from "@/actions/checkout";
+import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { postPayment } from "@/actions/payment";
 import { triggerWebhooks } from "@/actions/webhook";
 import { networkEnum } from "@/constant/schema.client";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -55,28 +57,49 @@ export const POST = async (req: NextRequest) => {
 
     const amountInStroops = parseInt(paymentOp.amount || "0");
 
-    await Promise.all([
-      putCheckout(
-        checkoutId,
-        { status: "completed", updatedAt: new Date() },
-        organizationId,
-        environment
-      ),
-      postPayment(
-        {
+    await withEvent(
+      async () => {
+        const paymentId = `pay_${nanoid(25)}`;
+        await Promise.all([
+          putCheckout(
+            checkoutId,
+            { status: "completed", updatedAt: new Date() },
+            organizationId,
+            environment
+          ),
+          postPayment(
+            {
+              id: paymentId,
+              checkoutId: checkout.id,
+              customerId: checkout.customerId ?? null,
+              amount: amountInStroops,
+              transactionHash: txHash,
+              status: "confirmed",
+              createdAt: new Date(transaction.created_at),
+              updatedAt: new Date(),
+            },
+            organizationId,
+            environment
+          ),
+          triggerWebhooks("payment.confirmed", { checkoutId }, organizationId, environment),
+        ]);
+
+        return {
+          paymentId,
+          amount: amountInStroops,
+          txHash,
           checkoutId: checkout.id,
           customerId: checkout.customerId ?? null,
-          amount: amountInStroops,
-          transactionHash: txHash,
-          status: "confirmed",
-          createdAt: new Date(transaction.created_at),
-          updatedAt: new Date(),
-        },
-        organizationId,
-        environment
-      ),
-      triggerWebhooks("payment.confirmed", { checkoutId }, organizationId, environment),
-    ]);
+        };
+      },
+      {
+        type: "payment::completed",
+        map: ({ amount, txHash, checkoutId, customerId, paymentId }) => ({
+          customerId: customerId ?? undefined,
+          data: { amount, txHash, checkoutId, paymentId },
+        }),
+      }
+    );
 
     return NextResponse.json({ message: "Payment verified", success: true });
   } catch (error: unknown) {

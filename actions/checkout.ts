@@ -1,10 +1,11 @@
 "use server";
 
+import { withEvent } from "@/actions/event";
+import { resolveOrgContext } from "@/actions/organization";
 import { Checkout, Network, checkouts, db } from "@/db";
+import { computeDiff } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-
-import { resolveOrgContext } from "./organization";
 
 export const postCheckout = async (
   params: Omit<Checkout, "id" | "organizationId" | "environment">,
@@ -13,12 +14,25 @@ export const postCheckout = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [checkout] = await db
-    .insert(checkouts)
-    .values({ id: `cz_${nanoid(25)}`, organizationId, environment, ...params })
-    .returning();
+  const checkoutId = `cz_${nanoid(25)}`;
 
-  return checkout;
+  return withEvent(
+    async () => {
+      const [checkout] = await db
+        .insert(checkouts)
+        .values({ id: checkoutId, organizationId, environment, ...params })
+        .returning();
+
+      return checkout;
+    },
+    {
+      type: "checkout::created",
+      map: ({ productId, expiresAt, amount }) => ({
+        checkoutId,
+        data: { productId, expiresAt, amount },
+      }),
+    }
+  );
 };
 
 export const retrieveCheckouts = async (orgId?: string, env?: Network) => {
@@ -59,21 +73,32 @@ export const putCheckout = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [checkout] = await db
-    .update(checkouts)
-    .set({ ...params, updatedAt: new Date() })
-    .where(
-      and(
-        eq(checkouts.id, id),
-        eq(checkouts.organizationId, organizationId),
-        eq(checkouts.environment, environment)
-      )
-    )
-    .returning();
+  return withEvent(
+    async () => {
+      const [checkout] = await db
+        .update(checkouts)
+        .set({ ...params, updatedAt: new Date() })
+        .where(
+          and(
+            eq(checkouts.id, id),
+            eq(checkouts.organizationId, organizationId),
+            eq(checkouts.environment, environment)
+          )
+        )
+        .returning();
 
-  if (!checkout) throw new Error("Checkout not found");
+      if (!checkout) throw new Error("Checkout not found");
 
-  return checkout;
+      return checkout;
+    },
+    {
+      type: "checkout::updated",
+      map: (checkout) => ({
+        checkoutId: checkout.id,
+        data: { $changes: computeDiff(checkout, params) },
+      }),
+    }
+  );
 };
 
 export const deleteCheckout = async (id: string, orgId?: string, env?: Network) => {

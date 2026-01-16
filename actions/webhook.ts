@@ -327,6 +327,7 @@ export const processStellarWebhook = async (
         ),
         postPayment(
           {
+            id: `pay_${nanoid(25)}`,
             checkoutId: checkout.id,
             customerId: checkout.customerId,
             amount: amount * 10_000_000, // XLM to stroops

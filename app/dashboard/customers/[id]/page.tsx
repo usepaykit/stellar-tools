@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { postCheckout } from "@/actions/checkout";
 import { retrieveCustomer } from "@/actions/customers";
+import { retrieveEvents } from "@/actions/event";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
 import { CustomerModal } from "@/app/dashboard/customers/page";
@@ -16,6 +17,7 @@ import { DateTimePicker } from "@/components/date-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectPicker } from "@/components/select-picker";
 import { TextAreaField } from "@/components/text-field";
+import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -42,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
+import _ from "lodash";
 import {
   CheckCircle2,
   ChevronRight,
@@ -55,6 +58,7 @@ import {
   Plus,
   XCircle,
 } from "lucide-react";
+import moment from "moment";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
@@ -66,8 +70,6 @@ const formatXLM = (amt: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "XLM" }).format(amt);
 const formatUSD = (amt: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amt);
-const formatDate = (date: Date) =>
-  date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 // --- Reusable Internal Components ---
 
@@ -143,7 +145,9 @@ const paymentColumns: ColumnDef<Payment>[] = [
     accessorKey: "createdAt",
     header: "Date",
     cell: ({ row }) => (
-      <div className="text-muted-foreground text-xs">{formatDate(row.original.createdAt)}</div>
+      <div className="text-muted-foreground text-xs">
+        {moment(row.original.createdAt).format("MMM DD, YYYY")}
+      </div>
     ),
   },
 ];
@@ -167,6 +171,9 @@ export default function CustomerDetailPage() {
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
     retrieveCustomer({ id: customerId })
   );
+  const { data: customerEvents } = useOrgQuery(["customer-events", customerId], () =>
+    retrieveEvents({ customerId })
+  );
 
   const totalSpent = React.useMemo(
     () =>
@@ -180,6 +187,7 @@ export default function CustomerDetailPage() {
     customer && new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
 
   if (customerLoading) return <CustomerDetailSkeleton />;
+
   if (!customer) return <NotFound router={router} />;
 
   return (
@@ -262,6 +270,20 @@ export default function CustomerDetailPage() {
               </section>
 
               <section className="space-y-3">
+                <h3 className="text-lg font-semibold">Timeline</h3>
+
+                <Timeline
+                  limit={3}
+                  items={customerEvents ?? []}
+                  renderItem={(evt) => ({
+                    title: _.startCase(evt.type.replace(/[::$]/g, " ")),
+                    date: moment(evt.createdAt).format("MMM DD, YYYY"),
+                    data: evt.data,
+                  })}
+                />
+              </section>
+
+              <section className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Wallet Addresses</h3>
                   <Button variant="ghost" size="icon-sm">
@@ -332,7 +354,10 @@ export default function CustomerDetailPage() {
                   action={<CopyBtn text={customer.id} />}
                 />
                 <Separator />
-                <DetailRow label="Customer since" value={formatDate(customer.createdAt)} />
+                <DetailRow
+                  label="Customer since"
+                  value={moment(customer.createdAt).format("MMM DD, YYYY")}
+                />
                 <Separator />
                 <DetailRow
                   label="Billing email"
