@@ -158,7 +158,7 @@ export function Timeline<T>({
         })}
 
         {limit > 0 && items.length > limit && !isExpanded && (
-          <div className="from-background via-background/90 pointer-events-none absolute inset-x-0 bottom-0 flex h-32 items-end justify-center bg-gradient-to-t to-transparent pb-1">
+          <div className="from-background via-background/90 pointer-events-none absolute inset-x-0 bottom-0 flex h-32 items-end justify-center bg-linear-to-t to-transparent pb-1">
             <Button
               variant="secondary"
               size="sm"

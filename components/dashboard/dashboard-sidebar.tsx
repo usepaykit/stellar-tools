@@ -98,7 +98,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     queryKey: ["sidebar-organizations"],
     queryFn: async () => await retrieveOrganizations(),
   });
- const [LiveMode, setLiveMode] = React.useState(orgContext?.environment === "mainnet");
+  const [LiveMode, setLiveMode] = React.useState(orgContext?.environment === "mainnet");
   const currentOrg = organizations?.[0] || null;
 
   const userName = user?.profile.firstName
@@ -216,10 +216,10 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       <span className="text-muted-foreground text-[10px] font-medium uppercase">
                         Mode
                       </span>
-                      <span className="text-xs">{ LiveMode ? "Live" : "Test"}</span>
+                      <span className="text-xs">{LiveMode ? "Live" : "Test"}</span>
                     </div>
                     <Switch
-                      checked={LiveMode }
+                      checked={LiveMode}
                       onCheckedChange={handleSwitchEnvironment}
                       disabled={isSwitchingEnv}
                       className="h-4 w-7 [&>span]:size-3 [&>span]:data-[state=checked]:translate-x-[calc(100%-0.125rem)]"

@@ -27,7 +27,6 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
           <span className="text-accent text-sm">
             You are in <span className="font-medium">Test mode</span>
           </span>
-   
         </div>
 
         <div />
