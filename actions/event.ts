@@ -2,7 +2,7 @@
 
 import { resolveOrgContext } from "@/actions/organization";
 import { EventType } from "@/constant/schema.client";
-import { Network, db, events } from "@/db";
+import { Event, Network, db, events } from "@/db";
 import { LooseAutoComplete } from "@stellartools/core";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -46,12 +46,16 @@ export const emitEvent = async (params: EmitParams, orgId?: string, env?: Networ
   });
 };
 
-export const retrieveEvents = async (
+type NarrowedEvent<T extends EventType> = Event & { type: T };
+
+type NarrowedEvents<T extends readonly EventType[]> = Array<NarrowedEvent<T[number]>>;
+
+export const retrieveEvents = async <T extends readonly EventType[]>(
   filters: { customerId?: string; merchantId?: LooseAutoComplete<"current"> },
-  eventTypes?: Array<EventType>,
+  eventTypes?: T,
   orgId?: string,
   env?: Network
-) => {
+): Promise<NarrowedEvents<T>> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const merchantId = filters.merchantId === "current" ? organizationId : filters.merchantId;
