@@ -13,12 +13,11 @@ import {
 } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { and, desc, eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
 export const postPayment = async (
-  params: Omit<Payment, "id" | "organizationId" | "environment">,
+  params: Omit<Payment, "organizationId" | "environment">,
   orgId?: string,
   env?: Network
 ) => {
@@ -26,12 +25,7 @@ export const postPayment = async (
 
   const [payment] = await db
     .insert(payments)
-    .values({
-      ...params,
-      id: `pay_${nanoid(25)}`,
-      organizationId,
-      environment,
-    })
+    .values({ ...params, organizationId, environment })
     .returning();
 
   return payment;

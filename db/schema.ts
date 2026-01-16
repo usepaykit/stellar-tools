@@ -2,6 +2,7 @@ import {
   AuthProvider,
   authProviderEnum as authProviderEnum$1,
   checkoutStatus,
+  eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
   roles,
@@ -506,6 +507,24 @@ export const passwordReset = pgTable(
   })
 );
 
+export const eventTypeEnum = pgEnum("event_type", eventTypeEnum$1);
+export const events = pgTable("event", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  environment: networkEnum("network").notNull(),
+  type: eventTypeEnum("type").notNull(),
+
+  customerId: text("customer_id").references(() => customers.id), // for end users
+  merchantId: text("merchant_id").references(() => organizations.id), // for merchants
+
+  // Payload for the timeline UI (e.g., { "amount": 50, "currency": "USD" })
+  data: jsonb("data").$type<Record<string, unknown>>(),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type TeamMember = InferSelectModel<typeof teamMembers>;
@@ -527,4 +546,5 @@ export type Auth = InferSelectModel<typeof auth>;
 export type PasswordReset = InferSelectModel<typeof passwordReset>;
 export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
-export type  Payout = InferSelectModel<typeof payouts>;
+export type Payout = InferSelectModel<typeof payouts>;
+export type Event = InferSelectModel<typeof events>;

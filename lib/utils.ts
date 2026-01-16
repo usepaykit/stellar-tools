@@ -46,3 +46,27 @@ export const getInitials = (name: string): string => {
     .toUpperCase()
     .slice(0, 2);
 };
+
+export function computeDiff<T extends Record<string, any>>(
+  oldData: T,
+  newData: Partial<T>,
+  ignoreKeys: string[] = ["updatedAt", "createdAt", "id"]
+) {
+  const diff: Record<string, { from: any; to: any }> = {};
+
+  Object.keys(newData).forEach((key) => {
+    if (ignoreKeys.includes(key)) return;
+
+    const oldVal = oldData[key as keyof T];
+    const newVal = newData[key as keyof T];
+
+    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+      diff[key] = {
+        from: oldVal ?? null,
+        to: newVal ?? null,
+      };
+    }
+  });
+
+  return Object.keys(diff).length > 0 ? diff : null;
+}

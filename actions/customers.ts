@@ -1,26 +1,40 @@
 "use server";
 
+import { withEvent } from "@/actions/event";
+import { resolveOrgContext } from "@/actions/organization";
 import { Customer, Network, customers, db } from "@/db";
+import { computeDiff } from "@/lib/utils";
 import { SQL, and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
-
-import { resolveOrgContext } from "./organization";
 
 export const postCustomers = async (
   params: Omit<Customer, "id" | "organizationId" | "environment">[],
   orgId?: string,
   env?: Network
 ) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+  return withEvent(
+    async () => {
+      const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [result] = await db
-    .insert(customers)
-    .values(
-      params.map((param) => ({ ...param, id: `cus_${nanoid(25)}`, organizationId, environment }))
-    )
-    .returning();
+      const [result] = await db
+        .insert(customers)
+        .values(params.map((p) => ({ ...p, id: `cus_${nanoid(25)}`, organizationId, environment })))
+        .returning();
 
-  return result;
+      return result;
+    },
+    {
+      type: "customer::created",
+      map: (customer) => ({
+        customerId: customer.id,
+        data: {
+          name: customer.name,
+          email: customer.email,
+          metadata: JSON.stringify(customer.metadata),
+        },
+      }),
+    }
+  );
 };
 
 export const upsertCustomer = async (params: Partial<Customer>, orgId?: string, env?: Network) => {
@@ -119,23 +133,34 @@ export const putCustomer = async (
   orgId?: string,
   env?: Network
 ) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+  return withEvent(
+    async () => {
+      const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [customer] = await db
-    .update(customers)
-    .set({ ...retUpdate, updatedAt: new Date() })
-    .where(
-      and(
-        eq(customers.id, id),
-        eq(customers.organizationId, organizationId),
-        eq(customers.environment, environment)
-      )
-    )
-    .returning();
+      const [customer] = await db
+        .update(customers)
+        .set({ ...retUpdate, updatedAt: new Date() })
+        .where(
+          and(
+            eq(customers.id, id),
+            eq(customers.organizationId, organizationId),
+            eq(customers.environment, environment)
+          )
+        )
+        .returning();
 
-  if (!customer) throw new Error("Customer not found");
+      if (!customer) throw new Error("Customer not found");
 
-  return customer;
+      return customer;
+    },
+    {
+      type: "customer::updated",
+      map: (customer) => ({
+        customerId: customer.id,
+        data: { $changes: computeDiff(customer, retUpdate) },
+      }),
+    }
+  );
 };
 
 export const deleteCustomer = async (id: string, orgId?: string, env?: Network) => {
