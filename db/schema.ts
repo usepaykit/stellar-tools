@@ -525,6 +525,13 @@ export const events = pgTable("event", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const waitlist = pgTable("waitlist", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  phoneNumber: text("phone_number"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type TeamMember = InferSelectModel<typeof teamMembers>;
@@ -548,3 +555,4 @@ export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
+export type Waitlist = InferSelectModel<typeof waitlist>;
