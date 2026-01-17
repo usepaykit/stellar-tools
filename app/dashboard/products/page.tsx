@@ -177,7 +177,7 @@ const columns: ColumnDef<Product>[] = [
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isModalOpen, setIsModalOpen] = React.useState(searchParams.get("active") === "true");
+  const [isModalOpen, setIsModalOpen] = React.useState(searchParams.get("mode") === "create");
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
 
   const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
@@ -220,12 +220,12 @@ function ProductsPageContent() {
       const params = new URLSearchParams(searchParams.toString());
 
       if (value) {
-        params.set("active", "true");
+        params.set("mode", "create");
         router.replace(
           `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
         );
       } else {
-        params.delete("active");
+        params.delete("mode");
         router.replace(
           `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
         );

@@ -28,7 +28,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
@@ -189,8 +189,9 @@ const customerSchema = z.object({
 type CustomerFormData = z.infer<typeof customerSchema>;
 
 export default function CustomersPage() {
+  const searchParams = useSearchParams();
   const [selectedFilter, setSelectedFilter] = useState<number>(0);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams.get("mode") === "create");
   const router = useRouter();
 
   const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () =>

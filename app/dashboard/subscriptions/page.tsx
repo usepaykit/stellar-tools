@@ -2,41 +2,38 @@
 
 import * as React from "react";
 
-// import { retrieveCustomers } from "@/actions/customers";
-// import { retrieveProducts } from "@/actions/product";
-// import { postSubscription } from "@/actions/subscription";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { DatePicker } from "@/components/date-picker";
-import { EntityPicker } from "@/components/entity-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
+import { ResourcePicker } from "@/components/resource-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Subscription } from "@/db";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Box,
   Calendar,
   CheckCircle2,
   Clock,
-  Package,
   Pause,
   Plus,
-  User,
+  ShieldCheck,
+  Users,
   XCircle,
 } from "lucide-react";
 import moment from "moment";
-import { DateRange } from "react-day-picker";
+import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
@@ -375,257 +372,237 @@ export default function SubscriptionsPage() {
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      <AddSubscriptionModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <CreateSubscriptionModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
     </div>
   );
 }
 
-function AddSubscriptionModal({
+export function CreateSubscriptionModal({
   open,
   onOpenChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const router = useRouter();
   const form = RHF.useForm<SubscriptionFormData>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
       customerIds: [],
       productId: "",
-      billingPeriod: {
-        from: new Date(),
-        to: moment().add(1, "month").toDate(),
-      },
+      billingPeriod: { from: new Date(), to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
       cancelAtPeriodEnd: false,
     },
   });
 
-  const customerIds = form.watch("customerIds");
-  const productId = form.watch("productId");
+  const { customerIds, productId, billingPeriod, cancelAtPeriodEnd } = form.watch();
 
-  const selectedCustomer = React.useMemo(() => {
-    return mockCustomers.filter((c) => customerIds.includes(c.id));
-  }, [customerIds]);
+  const selectedCustomers = React.useMemo(
+    () => mockCustomers.filter((c) => customerIds.includes(c.id)),
+    [customerIds]
+  );
+  const selectedProduct = React.useMemo(
+    () => mockProducts.find((p) => p.id === productId),
+    [productId]
+  );
 
-  const selectedProduct = React.useMemo(() => {
-    return mockProducts.find((p) => p.id === productId);
-  }, [productId]);
+  const formatDate = (date?: Date) =>
+    date?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  const createSubscriptionMutation = useMutation({
-    mutationFn: async (data: SubscriptionFormData) => {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const product = mockProducts.find((p) => p.id === data.productId);
-      if (!product) throw new Error("Product not found");
-
-      // Mock success response
-      return {
-        id: `sub_${Math.random().toString(36).substring(7)}`,
-        customerIds: data.customerIds,
-        productId: data.productId,
-        periodStart: data.billingPeriod.from,
-        periodEnd: data.billingPeriod.to,
-        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
-        product,
-      };
-    },
-    onSuccess: () => {
-      toast.success("Subscription created successfully!");
-      form.reset();
-      onOpenChange(false);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to create subscription");
-    },
-  });
-
-  const onSubmit = async (data: SubscriptionFormData) => {
-    createSubscriptionMutation.mutate(data);
+  const handleSubmit = async (data: SubscriptionFormData) => {
+    console.log(data);
   };
-
-  React.useEffect(() => {
-    if (open) {
-      form.reset({
-        customerIds: [],
-        productId: "",
-        billingPeriod: {
-          from: new Date(),
-          to: moment().add(1, "month").toDate(),
-        },
-        cancelAtPeriodEnd: false,
-      });
-    }
-  }, [open, form]);
 
   return (
     <FullScreenModal
       open={open}
       onOpenChange={onOpenChange}
-      title="Create Subscription"
-      description="Select a customer and product to create a new subscription"
+      title="New Subscription"
+      description="Configure billing and access for your customers."
       footer={
         <div className="flex w-full items-center justify-between">
-          <div className="text-muted-foreground text-sm">
-            {selectedCustomer && selectedProduct
-              ? "Review the details and click Create to proceed"
-              : "Please fill in all required fields to continue"}
+          <div className="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wider uppercase">
+            <ShieldCheck className="text-primary size-3.5" />
+            {selectedCustomers.length > 0 && selectedProduct
+              ? `Processing ${selectedCustomers.length} client(s) • ${selectedProduct.name}`
+              : "Awaiting configuration"}
           </div>
           <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={createSubscriptionMutation.isPending}
-              className="shadow-none"
-            >
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button
-              type="button"
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={createSubscriptionMutation.isPending || !form.formState.isValid}
-              isLoading={createSubscriptionMutation.isPending}
-              className="gap-2 shadow-none"
+              size="sm"
+              onClick={async () => {
+                const isValid = await form.trigger();
+                if (!isValid) return;
+                const data = form.getValues();
+                await handleSubmit(data);
+              }}
             >
-              {createSubscriptionMutation.isPending ? "Creating..." : "Create Subscription"}
+              Create Subscription
             </Button>
           </div>
         </div>
       }
     >
-      <form className="space-y-6">
-        {/* Customer and Product Selection */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Customer Selection */}
-          <Card className="shadow-none">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <User className="text-muted-foreground h-5 w-5" />
-                <CardTitle className="text-lg">Customer</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <RHF.Controller
-                control={form.control}
-                name="customerIds"
-                render={({ field, fieldState: { error } }) => (
-                  <EntityPicker
-                    id="customer-selector"
-                    label="Select Customer"
-                    data={mockCustomers}
-                    isLoading={false}
-                    multiple
-                    getItemId={(customer) => customer.id}
-                    getTagLabel={(customer) => customer.name}
-                    value={field.value}
-                    onChange={field.onChange}
-                    searchKeys={["name", "email"]}
-                    columns={[
-                      { header: "Name", accessorKey: "name" },
-                      { header: "Email", accessorKey: "email" },
-                    ]}
-                    tableSkeletonRowCount={3}
-                    tableClassName="max-h-[300px] overflow-auto"
-                    error={error?.message}
-                  />
-                )}
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="mx-auto max-w-6xl space-y-12 pt-4 pb-20">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
+          <RHF.Controller
+            control={form.control}
+            name="customerIds"
+            render={({ field }) => (
+              <ResourcePicker
+                label="Target Customers"
+                items={mockCustomers}
+                multiple
+                value={field.value}
+                onChange={field.onChange}
+                placeholder="Search..."
+                renderItem={(c) => ({
+                  id: c.id,
+                  title: c.name,
+                  subtitle: c.email,
+                  searchValue: `${c.name} ${c.email}`,
+                })}
+                onAddNew={() => router.push("/dashboard/customers?mode=create")}
               />
-            </CardContent>
-          </Card>
+            )}
+          />
 
-          {/* Product Selection */}
-          <Card className="shadow-none">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <Package className="text-muted-foreground h-5 w-5" />
-                <CardTitle className="text-lg">Product</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <RHF.Controller
-                control={form.control}
-                name="productId"
-                render={({ field, fieldState: { error } }) => (
-                  <EntityPicker
-                    id="product-selector"
-                    label="Select Product"
-                    data={mockProducts}
-                    isLoading={false}
-                    getItemId={(product) => product.id}
-                    getTagLabel={(product) => product.name}
-                    value={field.value ? [field.value] : []}
-                    onChange={(val) => {
-                      const lastSelected = val[val.length - 1];
-                      field.onChange(lastSelected || "");
-                    }}
-                    searchKeys={["name", "description"]}
-                    columns={[
-                      { header: "Name", accessorKey: "name" },
-                      { header: "Description", accessorKey: "description" },
-                    ]}
-                    tableSkeletonRowCount={3}
-                    tableClassName="max-h-[50px] overflow-auto"
-                    error={error?.message}
-                  />
-                )}
+          <RHF.Controller
+            control={form.control}
+            name="productId"
+            render={({ field }) => (
+              <ResourcePicker
+                label="Subscription Plan"
+                items={mockProducts}
+                value={field.value ? [field.value] : []}
+                onChange={(val) => field.onChange(val[0] || "")}
+                placeholder="Select plan..."
+                renderItem={(p) => ({
+                  id: p.id,
+                  title: p.name,
+                  subtitle: `${p.priceAmount} ${p.assetId} per period`,
+                  searchValue: p.name,
+                })}
+                onAddNew={() => router.push("/dashboard/products?mode=create")}
               />
-            </CardContent>
-          </Card>
+            )}
+          />
         </div>
 
-        {/* Subscription Details */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 px-1">
-            <Calendar className="text-muted-foreground h-5 w-5" />
-            <h3 className="text-lg font-semibold">Subscription Details</h3>
-          </div>
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
+          <div className="space-y-8 lg:col-span-2">
+            <div className="flex items-center gap-2 border-b pb-2">
+              <Calendar className="text-muted-foreground size-4" />
+              <h3 className="text-foreground/70 text-sm font-bold tracking-widest uppercase">
+                Schedule
+              </h3>
+            </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Billing Period */}
-            <RHF.Controller
-              control={form.control}
-              name="billingPeriod"
-              render={({ field, fieldState: { error } }) => (
-                <DatePicker
-                  id="billing-period"
-                  mode="range"
-                  label="Billing Period"
-                  value={field.value as DateRange}
-                  onChange={(value) => field.onChange(value)}
-                  error={error?.message || null}
-                  helpText="Select the start and end dates for the subscription billing period"
-                  dateFormat="MMM DD, YYYY"
-                />
-              )}
-            />
-
-            {/* Cancel at Period End */}
-            <div className="flex flex-col justify-center">
+            <div className="space-y-6">
               <RHF.Controller
                 control={form.control}
-                name="cancelAtPeriodEnd"
+                name="billingPeriod"
                 render={({ field }) => (
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id="cancel-at-period-end"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                    <div className="space-y-1">
-                      <Label
-                        htmlFor="cancel-at-period-end"
-                        className="cursor-pointer text-sm font-medium"
-                      >
-                        Cancel at period end
-                      </Label>
-                      <p className="text-muted-foreground text-sm">
-                        The subscription will be canceled at the end of the current billing period
-                      </p>
-                    </div>
-                  </div>
+                  <DatePicker
+                    id="billing-period"
+                    mode="range"
+                    label="Active Duration"
+                    value={field.value as any}
+                    onChange={field.onChange}
+                  />
                 )}
               />
+
+              <div className="flex items-start gap-3">
+                <RHF.Controller
+                  control={form.control}
+                  name="cancelAtPeriodEnd"
+                  render={({ field }) => (
+                    <Checkbox
+                      id="cancel"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="mt-1"
+                    />
+                  )}
+                />
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="cancel"
+                    className="hover:text-primary cursor-pointer text-sm font-bold transition-colors"
+                  >
+                    Auto-expire
+                  </Label>
+                  <p className="text-muted-foreground text-[11px] leading-tight">
+                    Access will be revoked automatically at the end of the billing period.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-muted/10 space-y-6 self-start rounded-xl border p-6 shadow-xs">
+            <div className="border-border/50 flex items-center justify-between border-b pb-3">
+              <h4 className="text-muted-foreground/60 text-[10px] font-black tracking-[0.2em] uppercase">
+                Order Summary
+              </h4>
+              <Badge variant="outline" className="bg-background text-[9px]">
+                Draft
+              </Badge>
+            </div>
+
+            <div className="space-y-5">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <Box className="text-muted-foreground/50 size-3.5" />
+                  <span className="text-muted-foreground text-xs font-semibold">Plan</span>
+                </div>
+                <span className="text-foreground text-right text-xs font-bold">
+                  {selectedProduct?.name || "None Selected"}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <Users className="text-muted-foreground/50 size-3.5" />
+                  <span className="text-muted-foreground text-xs font-semibold">Volume</span>
+                </div>
+                <span className="text-foreground text-xs font-bold">
+                  {selectedCustomers.length} customer(s)
+                </span>
+              </div>
+
+              <Separator className="opacity-30" />
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground/70 font-medium">Activation Date</span>
+                  <span className="text-foreground/80 font-mono">
+                    {formatDate(billingPeriod.from) || "---"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground/70 font-medium">Expiry Date</span>
+                  <span className="text-foreground/80 font-mono">
+                    {formatDate(billingPeriod.to) || "---"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground/70 font-medium">Auto-renew</span>
+                  <span
+                    className={cn(
+                      "font-bold tracking-tighter uppercase",
+                      cancelAtPeriodEnd ? "text-destructive" : "text-accent-foreground"
+                    )}
+                  >
+                    {cancelAtPeriodEnd ? "Off" : "On"}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
