@@ -1,6 +1,7 @@
 "use client";
+
+import { AuroraBackground } from "@/components/aurora-background";
 import FooterSection from "@/components/landing/footer-section";
-import { HeroBackground } from "@/components/landing/hero-background";
 import SubscriptionCalc from "@/components/landing/subscription-calc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,7 @@ const data = [
 
 export default function PricingPage() {
   return (
-    <HeroBackground>
+    <AuroraBackground>
       <div className="bg-background min-h-screen scroll-smooth">
         <Header />
 
@@ -173,6 +174,6 @@ export default function PricingPage() {
         </main>
         <FooterSection />
       </div>
-    </HeroBackground>
+    </AuroraBackground>
   );
 }

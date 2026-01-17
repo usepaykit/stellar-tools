@@ -1,19 +1,20 @@
 "use client";
-import React, { ReactNode } from "react";
+
+import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-interface HeroBackgroundProps extends React.HTMLProps<HTMLDivElement> {
-  children: ReactNode;
+interface AuroraBackgroundProps extends React.HTMLProps<HTMLDivElement> {
+  children: React.ReactNode;
   showRadialGradient?: boolean;
 }
 
-export const HeroBackground = ({
+export const AuroraBackground = ({
   className,
   children,
   showRadialGradient = true,
   ...props
-}: HeroBackgroundProps) => {
+}: AuroraBackgroundProps) => {
   return (
     <main>
       <div
