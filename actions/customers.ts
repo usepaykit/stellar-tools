@@ -37,45 +37,6 @@ export const postCustomers = async (
   );
 };
 
-export const upsertCustomer = async (params: Partial<Customer>, orgId?: string, env?: Network) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  let whereClause: SQL<unknown>;
-
-  if (!params) {
-    throw new Error("Invalid customer identifier");
-  }
-
-  if (params?.id) {
-    whereClause = eq(customers.id, params.id);
-  } else if (params?.email) {
-    whereClause = eq(customers.email, params.email);
-  } else if (params?.phone) {
-    whereClause = sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
-  } else {
-    throw new Error("Invalid customer identifier");
-  }
-
-  const [customer] = await db
-    .select()
-    .from(customers)
-    .where(
-      and(
-        whereClause,
-        eq(customers.organizationId, organizationId),
-        eq(customers.environment, environment)
-      )
-    )
-    .limit(1);
-
-  if (customer) {
-    await putCustomer(customer.id, params, organizationId, environment);
-    return customer;
-  } else {
-    return await postCustomers([params as Customer], organizationId, environment);
-  }
-};
-
 export const retrieveCustomers = async (orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
@@ -133,6 +94,8 @@ export const putCustomer = async (
   orgId?: string,
   env?: Network
 ) => {
+  const oldCustomer = await retrieveCustomer({ id }, orgId, env);
+
   return withEvent(
     async () => {
       const { organizationId, environment } = await resolveOrgContext(orgId, env);
@@ -155,9 +118,9 @@ export const putCustomer = async (
     },
     {
       type: "customer::updated",
-      map: (customer) => ({
-        customerId: customer.id,
-        data: { $changes: computeDiff(customer, retUpdate) },
+      map: (newCustomer) => ({
+        customerId: newCustomer.id,
+        data: { $changes: computeDiff(oldCustomer, newCustomer) },
       }),
     }
   );

@@ -3,6 +3,7 @@
 import { resolveOrgContext } from "@/actions/organization";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
+import { computeDiff } from "@/lib/utils";
 import { LooseAutoComplete } from "@stellartools/core";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -11,7 +12,16 @@ interface EmitParams {
   type: EventType;
   customerId?: string; // for customer operations
   merchantId?: string; // for merchant operations
-  data?: Record<string, any>;
+  data?: Record<
+    string,
+    | string
+    | number
+    | boolean
+    | null
+    | undefined
+    | Date
+    | { $changes?: Record<string, ReturnType<typeof computeDiff>> }
+  >;
 }
 
 export async function withEvent<T>(

@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 
+import { Skeleton } from "./ui/skeleton";
+
 const ROUTE_MAP = {
   customerId: (id: string) => `/dashboard/customers/${id}`,
   productId: (id: string) => `/dashboard/products/${id}`,
@@ -25,7 +27,9 @@ interface TimelineProps<T> {
   renderItem: (item: T, index: number) => TimelineEntry;
   className?: string;
   emptyMessage?: string;
+  isLoading?: boolean;
   limit?: number;
+  skeletonRowCount?: number;
 }
 
 // --- Internal Helpers ---
@@ -108,11 +112,42 @@ function TimelineDiff({ changes }: { changes: any }) {
 export function Timeline<T>({
   items,
   renderItem,
+  isLoading,
   limit = 0,
   className,
   emptyMessage = "No history found",
+  skeletonRowCount = 3,
 }: TimelineProps<T>) {
   const [isExpanded, setIsExpanded] = React.useState(false);
+
+  if (isLoading) {
+    return (
+      <div className={cn("relative flex flex-col", className)}>
+        <ul className="relative m-0 list-none p-0">
+          <div
+            className="bg-border absolute top-2 left-[7px] w-px"
+            style={{ height: "calc(100% - 20px)" }}
+            aria-hidden="true"
+          />
+          {Array.from({ length: skeletonRowCount }).map((_, i) => (
+            <li key={i} className="relative pb-8 pl-7 last:pb-0">
+              <div className="bg-muted ring-background absolute top-1.5 left-0 z-10 size-3 rounded-full ring-4" />
+              <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="mt-1 h-3 w-20 sm:mt-0" />
+                </div>
+                <div className="mt-1.5 space-y-1">
+                  <Skeleton className="h-3 w-full max-w-md" />
+                  <Skeleton className="h-3 w-3/4 max-w-xs" />
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   if (!items?.length) {
     return (

@@ -171,8 +171,9 @@ export default function CustomerDetailPage() {
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
     retrieveCustomer({ id: customerId })
   );
-  const { data: customerEvents } = useOrgQuery(["customer-events", customerId], () =>
-    retrieveEvents({ customerId })
+  const { data: customerEvents, isLoading: isLoadingCustomerEvents } = useOrgQuery(
+    ["customer-events", customerId],
+    () => retrieveEvents({ customerId })
   );
 
   const totalSpent = React.useMemo(
@@ -274,10 +275,11 @@ export default function CustomerDetailPage() {
 
                 <Timeline
                   limit={3}
+                  isLoading={isLoadingCustomerEvents}
                   items={customerEvents ?? []}
                   renderItem={(evt) => ({
                     title: _.startCase(evt.type.replace(/[::$]/g, " ")),
-                    date: moment(evt.createdAt).format("MMM DD, YYYY"),
+                    date: moment(evt.createdAt).format("MMM DD, YYYY hh:mm A"),
                     data: evt.data,
                   })}
                 />
@@ -440,7 +442,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
         createdAt: new Date(),
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       invalidate(["payments", customerId]);
       toast.success("Checkout created");
       onOpenChange(false);

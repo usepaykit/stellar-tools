@@ -409,7 +409,6 @@ export function CreateSubscriptionModal({
   const formatDate = (date?: Date) =>
     date?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-
   const handleSubmit = async (data: SubscriptionFormData) => {
     console.log(data);
   };
@@ -447,7 +446,10 @@ export function CreateSubscriptionModal({
         </div>
       }
     >
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="mx-auto max-w-6xl space-y-12 pt-4 pb-20">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="mx-auto max-w-6xl space-y-12 pt-4 pb-20"
+      >
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
           <RHF.Controller
             control={form.control}
@@ -466,6 +468,7 @@ export function CreateSubscriptionModal({
                   subtitle: c.email,
                   searchValue: `${c.name} ${c.email}`,
                 })}
+                isLoading
                 onAddNew={() => router.push("/dashboard/customers?mode=create")}
               />
             )}

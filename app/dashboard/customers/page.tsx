@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 
-import { retrieveCustomers, upsertCustomer } from "@/actions/customers";
+import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -275,7 +275,7 @@ export function CustomerModal({
   onOpenChange: (open: boolean) => void;
   customer?: Partial<Customer> | null;
 }) {
-  const invalidateOrgQuery = useInvalidateOrgQuery();
+  const invalidate = useInvalidateOrgQuery();
 
   const isEditMode = !!customer;
   const form = RHF.useForm<CustomerFormData>({
@@ -320,7 +320,7 @@ export function CustomerModal({
     }
   }, [open, customer, form]);
 
-  const upsertCustomerMutation = useMutation({
+  const putCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
       const phoneString = data.phoneNumber.number ? phoneNumberToString(data.phoneNumber) : "";
 
@@ -334,25 +334,39 @@ export function CustomerModal({
         {} as Record<string, string>
       );
 
-      return await upsertCustomer({
-        name: data.name,
-        email: data.email,
-        phone: phoneString,
-        metadata: metadataRecord,
-        environment: "testnet",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        walletAddresses: null,
-      } as Customer);
+      if (isEditMode) {
+        return await putCustomer(customer!.id!, {
+          name: data.name,
+          email: data.email,
+          phone: phoneString,
+          metadata: metadataRecord,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      return await postCustomers([
+        {
+          name: data.name,
+          email: data.email,
+          phone: phoneString,
+          walletAddresses: null,
+          metadata: metadataRecord,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
     },
     onSuccess: (customer) => {
-      invalidateOrgQuery(isEditMode ? ["customers", customer?.id] : ["customers"]);
+      invalidate(isEditMode ? ["customers", customer?.id] : ["customers"]);
+      invalidate(["customer-events", customer?.id]);
 
       toast.success(isEditMode ? "Customer updated successfully" : "Customer created successfully");
       form.reset();
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error(error);
       toast.error(isEditMode ? "Failed to update customer" : "Failed to create customer");
     },
   });
@@ -365,7 +379,7 @@ export function CustomerModal({
   };
 
   const onSubmit = (data: CustomerFormData) => {
-    upsertCustomerMutation.mutate(data);
+    putCustomerMutation.mutate(data);
   };
 
   return (
@@ -390,11 +404,11 @@ export function CustomerModal({
             Cancel
           </Button>
           <Button
-            isLoading={upsertCustomerMutation.isPending}
+            isLoading={putCustomerMutation.isPending}
             type="button"
             onClick={form.handleSubmit(onSubmit)}
             className="gap-2 shadow-none"
-            disabled={upsertCustomerMutation.isPending}
+            disabled={putCustomerMutation.isPending}
           >
             {isEditMode ? "Update customer" : "Create customer"}
           </Button>

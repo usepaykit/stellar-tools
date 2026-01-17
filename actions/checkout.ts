@@ -73,6 +73,8 @@ export const putCheckout = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
+  const oldCheckout = await retrieveCheckout(id, orgId, env);
+
   return withEvent(
     async () => {
       const [checkout] = await db
@@ -93,9 +95,9 @@ export const putCheckout = async (
     },
     {
       type: "checkout::updated",
-      map: (checkout) => ({
-        checkoutId: checkout.id,
-        data: { $changes: computeDiff(checkout, params) },
+      map: (newCheckout) => ({
+        checkoutId: newCheckout.id,
+        data: { $changes: computeDiff(oldCheckout, newCheckout) },
       }),
     }
   );

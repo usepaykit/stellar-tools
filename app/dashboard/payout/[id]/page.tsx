@@ -114,8 +114,9 @@ export default function PayoutDetailPage() {
 
   const payout = mockPayouts.find((p) => p.id === id);
 
-  const { data: payoutEvents } = useOrgQuery(["payout-events", id], () =>
-    retrieveEvents({ merchantId: "current" }, ["payout::requested", "payout::processed"])
+  const { data: payoutEvents, isLoading: isLoadingPayoutEvents } = useOrgQuery(
+    ["payout-events", id],
+    () => retrieveEvents({ merchantId: "current" }, ["payout::requested", "payout::processed"])
   );
 
   const handleDownloadReceipt = React.useCallback(async () => {
@@ -287,6 +288,7 @@ export default function PayoutDetailPage() {
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold">Timeline</h3>
                 <Timeline
+                  isLoading={isLoadingPayoutEvents}
                   items={payoutEvents ?? []}
                   renderItem={(evt) => ({
                     title: _.startCase(evt.type.replace(/[::$]/g, " ")),
