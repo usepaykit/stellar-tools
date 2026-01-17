@@ -99,7 +99,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     queryFn: async () => await retrieveOrganizations(),
   });
   const [LiveMode, setLiveMode] = React.useState(orgContext?.environment === "mainnet");
-  const currentOrg = organizations?.[0] || null;
+  const currentOrg = organizations?.find((org) => org.id === orgContext?.id) || null;
 
   const userName = user?.profile.firstName
     ? `${user.profile.firstName} ${user.profile.lastName || ""}`.trim()
@@ -115,6 +115,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     setIsSwitching(true);
     try {
       await setCurrentOrganization(orgId, orgContext?.environment || "testnet");
+      queryClient.invalidateQueries({ queryKey: ["org-context"] });
       toast.success("Organization switched");
       router.refresh();
     } catch {
