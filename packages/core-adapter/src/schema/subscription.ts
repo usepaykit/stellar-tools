@@ -136,6 +136,4 @@ export const updateSubscriptionSchema = subscriptionSchema.pick({
   nextBillingDate: true,
 });
 
-export type UpdateSubscription = Partial<
-  Pick<Subscription, "metadata" | "cancelAtPeriodEnd" | "nextBillingDate">
->;
+export type UpdateSubscription = Partial<Pick<Subscription, "metadata" | "cancelAtPeriodEnd" | "nextBillingDate">>;

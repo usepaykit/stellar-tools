@@ -91,12 +91,7 @@ export const FullScreenModal = ({
         {open && (
           <DialogContent
             {...dialog}
-            className={cn(
-              "gap-0 p-0",
-              "grid-rows-none! rounded-md",
-              sizeClasses[size],
-              dialog.className
-            )}
+            className={cn("gap-0 p-0", "grid-rows-none! rounded-md", sizeClasses[size], dialog.className)}
             showCloseButton={showCloseButton}
           >
             <motion.div
@@ -121,9 +116,7 @@ export const FullScreenModal = ({
               {/* Header */}
               <DialogHeader className="shrink-0 border-b px-6 pt-8 pb-6">
                 <DialogTitle className="text-3xl font-bold">{title}</DialogTitle>
-                {description && (
-                  <DialogDescription className="mt-2 text-base">{description}</DialogDescription>
-                )}
+                {description && <DialogDescription className="mt-2 text-base">{description}</DialogDescription>}
               </DialogHeader>
 
               {/* Content - Scrollable */}
@@ -144,9 +137,7 @@ export const FullScreenModal = ({
 
               {/* Footer */}
               {footer && (
-                <DialogFooter className="bg-background shrink-0 rounded-b-md border-t px-6 py-4">
-                  {footer}
-                </DialogFooter>
+                <DialogFooter className="bg-background shrink-0 rounded-b-md border-t px-6 py-4">{footer}</DialogFooter>
               )}
             </motion.div>
           </DialogContent>

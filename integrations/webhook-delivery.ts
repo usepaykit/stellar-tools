@@ -6,11 +6,7 @@ import { nanoid } from "nanoid";
 export class WebhookDelivery {
   constructor() {}
 
-  deliver = async (
-    webhook: WebhookSchema,
-    eventType: WebhookEvent,
-    payload: Record<string, unknown>
-  ) => {
+  deliver = async (webhook: WebhookSchema, eventType: WebhookEvent, payload: Record<string, unknown>) => {
     const startTime = Date.now();
     const webhookEventId = `wh+evt_${nanoid(52)}`;
     const requestId = `wh+req_${nanoid(52)}`;
@@ -23,10 +19,7 @@ export class WebhookDelivery {
       data: payload,
     };
 
-    const signature = new WebhookSigner().generateSignature(
-      JSON.stringify(webhookPayload),
-      webhook.secret
-    );
+    const signature = new WebhookSigner().generateSignature(JSON.stringify(webhookPayload), webhook.secret);
 
     try {
       const apiClient = new ApiClient({
@@ -105,10 +98,7 @@ export class WebhookDelivery {
         webhook.environment
       );
 
-      console.error(
-        `❌ Webhook delivery failed to ${webhook.url} after ${duration}ms:`,
-        errorMessage
-      );
+      console.error(`❌ Webhook delivery failed to ${webhook.url} after ${duration}ms:`, errorMessage);
 
       throw error;
     }

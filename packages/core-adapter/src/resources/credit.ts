@@ -16,10 +16,7 @@ import { ERR, OK, Result } from "../utils";
 export class CreditApi {
   constructor(private apiClient: ApiClient) {}
 
-  async refund(
-    customerId: string,
-    params: CreditTransactionParams
-  ): Promise<Result<CreditBalance, Error>> {
+  async refund(customerId: string, params: CreditTransactionParams): Promise<Result<CreditBalance, Error>> {
     const { error, data } = creditTransactionSchema.safeParse(params);
 
     if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
@@ -66,10 +63,7 @@ export class CreditApi {
     return OK(response.value.data.data);
   }
 
-  async getTransaction(
-    transactionId: string,
-    customerId: string
-  ): Promise<Result<CreditTransaction, Error>> {
+  async getTransaction(transactionId: string, customerId: string): Promise<Result<CreditTransaction, Error>> {
     const response = await this.apiClient.get<CreditTransaction>(
       `/api/customers/${customerId}/credit/transactions/${transactionId}`
     );
@@ -101,10 +95,7 @@ export class CreditApi {
     return OK(response.value.data.isSufficient);
   }
 
-  async consume(
-    customerId: string,
-    params: ConsumeCreditParams
-  ): Promise<Result<CreditBalance, Error>> {
+  async consume(customerId: string, params: ConsumeCreditParams): Promise<Result<CreditBalance, Error>> {
     const { error, data } = consumeCreditSchema.safeParse(params);
 
     if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));

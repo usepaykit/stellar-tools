@@ -3,11 +3,7 @@
 import { postWaitlist } from "@/actions/waitlist";
 import { AuroraBackground } from "@/components/aurora-background";
 import { GitHub } from "@/components/icon";
-import {
-  type PhoneNumber,
-  PhoneNumberPicker,
-  phoneNumberToString,
-} from "@/components/phone-number-picker";
+import { type PhoneNumber, PhoneNumberPicker, phoneNumberToString } from "@/components/phone-number-picker";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -65,9 +61,7 @@ export default function WaitlistPage() {
               <h1 className="from-foreground to-foreground/70 bg-linear-to-b bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
                 Join the Waitlist
               </h1>
-              <p className="text-muted-foreground text-base">
-                Be among the first to know when we launch
-              </p>
+              <p className="text-muted-foreground text-base">Be among the first to know when we launch</p>
             </div>
 
             <div className="bg-card border-border rounded-lg border p-6 shadow-sm">

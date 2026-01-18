@@ -89,9 +89,7 @@ export default function ForgotPassword() {
 
               {/* Typography with refined hierarchy */}
               <div className="space-y-3">
-                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">
-                  Stellar Tools
-                </h1>
+                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">Stellar Tools</h1>
                 <div className="from-primary/50 h-px w-16 bg-linear-to-r to-transparent" />
               </div>
             </div>
@@ -99,8 +97,7 @@ export default function ForgotPassword() {
             {/* Value Proposition - Concise and impactful */}
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs. Centralized control with
-                enterprise reliability.
+                The cloud platform for managing Stellar payment SDKs. Centralized control with enterprise reliability.
               </p>
 
               {/* Feature highlights - Minimal and elegant */}
@@ -133,9 +130,7 @@ export default function ForgotPassword() {
 
             <div className="space-y-4 pt-8">
               <div className="flex items-center gap-3">
-                <h3 className="text-base font-semibold tracking-wide text-white">
-                  Trusted Cloud Platform
-                </h3>
+                <h3 className="text-base font-semibold tracking-wide text-white">Trusted Cloud Platform</h3>
               </div>
               <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
                 Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
@@ -189,10 +184,7 @@ export default function ForgotPassword() {
           <div className="my-6 w-full">
             <p className="text-muted-foreground text-center text-sm">
               Remember your password?{" "}
-              <Link
-                href="/signin"
-                className="hover:text-foreground font-semibold underline transition-colors"
-              >
+              <Link href="/signin" className="hover:text-foreground font-semibold underline transition-colors">
                 Sign in
               </Link>
             </p>

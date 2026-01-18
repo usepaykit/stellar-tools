@@ -11,11 +11,7 @@ export const postCreditBalance = async (params: Partial<CreditBalance>) => {
   return creditBalance;
 };
 
-export const retrieveCreditBalance = async (
-  customerId: string,
-  productId: string,
-  organizationId: string
-) => {
+export const retrieveCreditBalance = async (customerId: string, productId: string, organizationId: string) => {
   const [creditBalance] = await db
     .select()
     .from(creditBalances)
@@ -34,11 +30,7 @@ export const retrieveCreditBalance = async (
 };
 
 export const retrieveCreditBalanceById = async (id: string) => {
-  const [creditBalance] = await db
-    .select()
-    .from(creditBalances)
-    .where(eq(creditBalances.id, id))
-    .limit(1);
+  const [creditBalance] = await db.select().from(creditBalances).where(eq(creditBalances.id, id)).limit(1);
 
   if (!creditBalance) throw new Error("Credit balance not found");
 
@@ -78,9 +70,7 @@ export const retrieveCreditTransaction = async (id: string, organizationId: stri
   const [creditTransaction] = await db
     .select()
     .from(creditTransactions)
-    .where(
-      and(eq(creditTransactions.id, id), eq(creditTransactions.organizationId, organizationId))
-    )
+    .where(and(eq(creditTransactions.id, id), eq(creditTransactions.organizationId, organizationId)))
     .limit(1);
 
   if (!creditTransaction) throw new Error("Credit transaction not found");
@@ -88,10 +78,7 @@ export const retrieveCreditTransaction = async (id: string, organizationId: stri
   return creditTransaction;
 };
 
-export const putCreditTransaction = async (
-  id: string,
-  returnUpdate: Partial<CreditTransaction>
-) => {
+export const putCreditTransaction = async (id: string, returnUpdate: Partial<CreditTransaction>) => {
   const [record] = await db
     .update(creditTransactions)
     .set({ ...returnUpdate, updatedAt: new Date() })

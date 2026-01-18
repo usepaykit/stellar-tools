@@ -5,10 +5,7 @@ import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
-export const GET = async (
-  req: NextRequest,
-  context: { params: Promise<{ customerId: string }> }
-) => {
+export const GET = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
 
   if (!apiKey) {
@@ -32,10 +29,7 @@ const putCustomerSchema = schemaFor<Partial<Customer>>()(
   })
 );
 
-export const PUT = async (
-  req: NextRequest,
-  context: { params: Promise<{ customerId: string }> }
-) => {
+export const PUT = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
 
   if (!apiKey) {
@@ -55,10 +49,7 @@ export const PUT = async (
   return NextResponse.json({ data: customer });
 };
 
-export const DELETE = async (
-  req: NextRequest,
-  context: { params: Promise<{ customerId: string }> }
-) => {
+export const DELETE = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
 
   if (!apiKey) {

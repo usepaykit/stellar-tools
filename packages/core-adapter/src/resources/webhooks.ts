@@ -1,13 +1,7 @@
 import crypto from "crypto";
 
 import { ApiClient } from "../api-client";
-import {
-  CreateWebhook,
-  UpdateWebhook,
-  Webhook,
-  createWebhookSchema,
-  updateWebhookSchema,
-} from "../schema/webhooks";
+import { CreateWebhook, UpdateWebhook, Webhook, createWebhookSchema, updateWebhookSchema } from "../schema/webhooks";
 import { ERR, OK, Result } from "../utils";
 
 export class WebhookSigner {
@@ -22,12 +16,7 @@ export class WebhookSigner {
     return `t=${timestamp},v1=${hmac}`;
   }
 
-  verifySignature(
-    payload: string,
-    signature: string,
-    secret: string,
-    tolerance: number = 300
-  ): boolean {
+  verifySignature(payload: string, signature: string, secret: string, tolerance: number = 300): boolean {
     try {
       const parts = signature.split(",");
       const timestamp = parseInt(parts[0].split("=")[1]);
@@ -39,10 +28,7 @@ export class WebhookSigner {
 
       const signedPayload = `${timestamp}.${payload}`;
 
-      const expectedSignature = crypto
-        .createHmac("sha256", secret)
-        .update(signedPayload)
-        .digest("hex");
+      const expectedSignature = crypto.createHmac("sha256", secret).update(signedPayload).digest("hex");
 
       return crypto.timingSafeEqual(Buffer.from(receivedSignature), Buffer.from(expectedSignature));
     } catch {

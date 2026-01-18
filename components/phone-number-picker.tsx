@@ -3,14 +3,7 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -91,19 +84,15 @@ const COUNTRIES_DATA = countries.flatMap((countryCode) => {
   }));
 });
 
-const CountryFlag = React.memo(
-  ({ countryCode, className }: { countryCode: string; className?: string }) => {
-    const FlagComponent = CountryFlags[countryCode as TCountryCode];
+const CountryFlag = React.memo(({ countryCode, className }: { countryCode: string; className?: string }) => {
+  const FlagComponent = CountryFlags[countryCode as TCountryCode];
 
-    return FlagComponent ? (
-      <FlagComponent
-        className={cn("border-border/40 h-4 w-6 shrink-0 rounded border object-cover", className)}
-      />
-    ) : (
-      <CountryFlags.US className={className} />
-    );
-  }
-);
+  return FlagComponent ? (
+    <FlagComponent className={cn("border-border/40 h-4 w-6 shrink-0 rounded border object-cover", className)} />
+  ) : (
+    <CountryFlags.US className={className} />
+  );
+});
 
 CountryFlag.displayName = "CountryFlag";
 
@@ -169,11 +158,7 @@ export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberP
     return (
       <div className="space-y-2">
         {label && (
-          <Label
-            className={cn("text-sm font-medium", labelProps.className)}
-            htmlFor={id}
-            {...labelProps}
-          >
+          <Label className={cn("text-sm font-medium", labelProps.className)} htmlFor={id} {...labelProps}>
             {label}
           </Label>
         )}
@@ -195,9 +180,7 @@ export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberP
                 className="border-input hover:bg-accent hover:text-accent-foreground flex h-full gap-2 rounded-r-none border-r bg-transparent px-3"
               >
                 <CountryFlag countryCode={value.countryCode || "US"} className={flag.className} />
-                <span className="text-foreground font-mono text-sm">
-                  {selectedCountry?.prefix || "+1"}
-                </span>
+                <span className="text-foreground font-mono text-sm">{selectedCountry?.prefix || "+1"}</span>
               </Button>
             </PopoverTrigger>
 
@@ -218,18 +201,13 @@ export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberP
                         onSelect={() => handleCountrySelect(country.countryCode)}
                         className={cn(
                           "gap-3",
-                          value.countryCode === country.countryCode &&
-                            "bg-primary/10 hover:bg-primary/20"
+                          value.countryCode === country.countryCode && "bg-primary/10 hover:bg-primary/20"
                         )}
                       >
                         <CountryFlag countryCode={country.countryCode} className={flag.className} />
                         <span className="flex-1 truncate">{country.name}</span>
-                        <span className="text-muted-foreground font-mono text-sm">
-                          {country.prefix}
-                        </span>
-                        {value.countryCode === country.countryCode && (
-                          <Check className="ml-auto h-4 w-4 opacity-100" />
-                        )}
+                        <span className="text-muted-foreground font-mono text-sm">{country.prefix}</span>
+                        {value.countryCode === country.countryCode && <Check className="ml-auto h-4 w-4 opacity-100" />}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -257,10 +235,7 @@ export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberP
         {error && (
           <p
             {...errorProps}
-            className={cn(
-              "text-destructive flex items-start gap-1.5 text-sm",
-              errorProps.className
-            )}
+            className={cn("text-destructive flex items-start gap-1.5 text-sm", errorProps.className)}
             role="alert"
           >
             {error}

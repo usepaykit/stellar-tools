@@ -67,20 +67,13 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
     return (
       <div ref={ref} className="space-y-2">
         {label && (
-          <Label
-            {...labelProps}
-            htmlFor={`${id}-date`}
-            className={cn("text-sm font-medium", labelProps.className)}
-          >
+          <Label {...labelProps} htmlFor={`${id}-date`} className={cn("text-sm font-medium", labelProps.className)}>
             {label}
           </Label>
         )}
 
         {helpText && (
-          <p
-            {...helpTextProps}
-            className={cn("text-muted-foreground text-sm", helpTextProps.className)}
-          >
+          <p {...helpTextProps} className={cn("text-muted-foreground text-sm", helpTextProps.className)}>
             {helpText}
           </p>
         )}
@@ -94,16 +87,10 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
                   variant="outline"
                   disabled={disabled}
                   data-empty={!value.date}
-                  className={cn(
-                    "data-[empty=true]:text-muted-foreground w-full justify-start text-left font-normal"
-                  )}
+                  className={cn("data-[empty=true]:text-muted-foreground w-full justify-start text-left font-normal")}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {value.date ? (
-                    moment(value.date).format(dateFormat)
-                  ) : (
-                    <span>{datePlaceholder}</span>
-                  )}
+                  {value.date ? moment(value.date).format(dateFormat) : <span>{datePlaceholder}</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -139,11 +126,7 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
         </div>
 
         {error && (
-          <p
-            {...errorProps}
-            className={cn("text-destructive text-sm", errorProps.className)}
-            role="alert"
-          >
+          <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)} role="alert">
             {error}
           </p>
         )}

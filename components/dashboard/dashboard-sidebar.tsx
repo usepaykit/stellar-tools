@@ -3,11 +3,7 @@
 import * as React from "react";
 
 import { getCurrentUser } from "@/actions/auth";
-import {
-  retrieveOrganizations,
-  setCurrentOrganization,
-  switchEnvironment,
-} from "@/actions/organization";
+import { retrieveOrganizations, setCurrentOrganization, switchEnvironment } from "@/actions/organization";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -107,8 +103,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
   const userInitials = (user?.profile.firstName?.[0] || user?.email?.[0] || "?").toUpperCase();
 
-  const isActive = (url: string) =>
-    url === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(url);
+  const isActive = (url: string) => (url === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(url));
 
   const handleSwitchOrganization = async (orgId: string) => {
     if (!currentOrg || orgId === currentOrg.id) return;
@@ -164,12 +159,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       )}
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">
-                        {currentOrg?.name || "Loading..."}
-                      </span>
-                      <span className="truncate text-xs capitalize">
-                        {currentOrg?.role || "Member"}
-                      </span>
+                      <span className="truncate font-semibold">{currentOrg?.name || "Loading..."}</span>
+                      <span className="truncate text-xs capitalize">{currentOrg?.role || "Member"}</span>
                     </div>
                     <ChevronsUpDown className="ml-auto" />
                   </SidebarMenuButton>
@@ -179,9 +170,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   align="start"
                   side="bottom"
                 >
-                  <DropdownMenuLabel className="text-muted-foreground text-xs">
-                    Organizations
-                  </DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-muted-foreground text-xs">Organizations</DropdownMenuLabel>
                   {isLoadingOrgs ? (
                     <DropdownMenuItem disabled>
                       <div className="flex size-6 items-center justify-center">
@@ -205,18 +194,14 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                           )}
                         </div>
                         <span className="flex-1 truncate">{org.name}</span>
-                        {currentOrg?.id === org.id && (
-                          <DropdownMenuShortcut>✓</DropdownMenuShortcut>
-                        )}
+                        {currentOrg?.id === org.id && <DropdownMenuShortcut>✓</DropdownMenuShortcut>}
                       </DropdownMenuItem>
                     ))
                   )}
 
                   <div className="mt-2 flex items-center justify-between gap-4 border-t px-4 py-2">
                     <div className="flex flex-col">
-                      <span className="text-muted-foreground text-[10px] font-medium uppercase">
-                        Mode
-                      </span>
+                      <span className="text-muted-foreground text-[10px] font-medium uppercase">Mode</span>
                       <span className="text-xs">{LiveMode ? "Live" : "Test"}</span>
                     </div>
                     <Switch
@@ -249,21 +234,12 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
                 if (hasSubItems) {
                   return (
-                    <Collapsible
-                      key={item.title}
-                      asChild
-                      defaultOpen={subActive}
-                      className="group/collapsible"
-                    >
+                    <Collapsible key={item.title} asChild defaultOpen={subActive} className="group/collapsible">
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton tooltip={item.title} isActive={active || subActive}>
-                            {item.icon && (
-                              <item.icon className={cn((active || subActive) && "text-primary")} />
-                            )}
-                            <span
-                              className={cn((active || subActive) && "text-primary font-medium")}
-                            >
+                            {item.icon && <item.icon className={cn((active || subActive) && "text-primary")} />}
+                            <span className={cn((active || subActive) && "text-primary font-medium")}>
                               {item.title}
                             </span>
                             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -275,11 +251,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                               <SidebarMenuSubItem key={sub.title}>
                                 <SidebarMenuSubButton asChild isActive={isActive(sub.url)}>
                                   <Link href={sub.url}>
-                                    <span
-                                      className={cn(
-                                        isActive(sub.url) && "text-primary font-medium"
-                                      )}
-                                    >
+                                    <span className={cn(isActive(sub.url) && "text-primary font-medium")}>
                                       {sub.title}
                                     </span>
                                   </Link>
@@ -298,9 +270,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     <SidebarMenuButton asChild tooltip={item.title} isActive={active}>
                       <Link href={item.url}>
                         {item.icon && <item.icon className={cn(active && "text-primary")} />}
-                        <span className={cn(active && "text-primary font-medium")}>
-                          {item.title}
-                        </span>
+                        <span className={cn(active && "text-primary font-medium")}>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

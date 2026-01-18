@@ -1,6 +1,4 @@
-export async function* raceAsyncIterator<T>(
-  promises: Promise<T>[]
-): AsyncGenerator<T, void, undefined> {
+export async function* raceAsyncIterator<T>(promises: Promise<T>[]): AsyncGenerator<T, void, undefined> {
   const pending = new Set(promises);
 
   while (pending.size > 0) {

@@ -69,9 +69,7 @@ export class CheckoutApi {
   }
 
   async retrieveEmbedDetails(id: string): Promise<Result<CheckoutEmbedDetails, Error>> {
-    const response = await this.apiClient.get<CheckoutEmbedDetails>(
-      `/checkouts/${id}/embed-details`
-    );
+    const response = await this.apiClient.get<CheckoutEmbedDetails>(`/checkouts/${id}/embed-details`);
 
     if (!response.ok) {
       return ERR(new Error(`Failed to get checkout embed details: ${response.error?.message}`));

@@ -2,11 +2,7 @@ import { StellarTools } from "@stellartools/core";
 import { UploadThingError, createUploadthing } from "uploadthing/server";
 import type { ExpandedRouteConfig } from "uploadthing/types";
 
-import {
-  StellarToolsMetadata,
-  StellarToolsUploadthingOptions,
-  stellarToolsUploadthingOptionsSchema,
-} from "./schema";
+import { StellarToolsMetadata, StellarToolsUploadthingOptions, stellarToolsUploadthingOptionsSchema } from "./schema";
 
 export class StellarToolsUploadThingAdapter {
   private stellar: StellarTools;
@@ -123,11 +119,7 @@ export class StellarToolsUploadThingAdapter {
       },
 
       onUploadError: (
-        fn?: (opts: {
-          req: Request;
-          error: UploadThingError;
-          fileKey: string;
-        }) => Promise<void> | void
+        fn?: (opts: { req: Request; error: UploadThingError; fileKey: string }) => Promise<void> | void
       ) => {
         const wrappedOnUploadError = async (opts: any) => {
           // Only refund if the error contains the __stellar data we attached in middleware
@@ -135,9 +127,7 @@ export class StellarToolsUploadThingAdapter {
 
           if (refundData?.customerId && refundData?.requiredCredits) {
             if (this.options.debug) {
-              console.log(
-                `[Stellar] Refunding ${refundData.requiredCredits} to ${refundData.customerId}`
-              );
+              console.log(`[Stellar] Refunding ${refundData.requiredCredits} to ${refundData.customerId}`);
             }
 
             await this.stellar.credits.refund(refundData.customerId, {
@@ -158,9 +148,7 @@ export class StellarToolsUploadThingAdapter {
       ) => {
         const wrappedOnUploadComplete = async (opts: any) => {
           if (this.options.debug)
-            console.log(
-              `[Stellar] Successfully used ${opts.metadata.__stellar?.requiredCredits} credits.`
-            );
+            console.log(`[Stellar] Successfully used ${opts.metadata.__stellar?.requiredCredits} credits.`);
           return await fn(opts);
         };
         return baseBuilder.onUploadComplete(wrappedOnUploadComplete as any);

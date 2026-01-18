@@ -212,11 +212,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
     header: "Events from",
     cell: ({ row }) => {
       const source = row.original.eventsFrom;
-      return (
-        <div className="text-muted-foreground text-sm">
-          {source === "account" ? "Your account" : "Test"}
-        </div>
-      );
+      return <div className="text-muted-foreground text-sm">{source === "account" ? "Your account" : "Test"}</div>;
     },
     enableSorting: false,
   },
@@ -243,9 +239,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
   {
     accessorKey: "errorRate",
     header: "Error rate",
-    cell: ({ row }) => (
-      <div className="text-muted-foreground text-sm">{row.original.errorRate} %</div>
-    ),
+    cell: ({ row }) => <div className="text-muted-foreground text-sm">{row.original.errorRate} %</div>,
     enableSorting: false,
   },
 ];
@@ -255,22 +249,18 @@ function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { data: webhooks = [], isLoading } = useOrgQuery(
-    ["webhooks"],
-    () => getWebhooksWithAnalytics(),
-    {
-      select: (webhooksData) => {
-        return webhooksData.map((webhook) => ({
-          ...webhook,
-          logsCount: webhook.logsCount,
-          eventsFrom: "account" as const,
-          eventCount: webhook.events.length,
-          errorRate: 0,
-          activity: [],
-        }));
-      },
-    }
-  );
+  const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics(), {
+    select: (webhooksData) => {
+      return webhooksData.map((webhook) => ({
+        ...webhook,
+        logsCount: webhook.logsCount,
+        eventsFrom: "account" as const,
+        eventCount: webhook.events.length,
+        errorRate: 0,
+        activity: [],
+      }));
+    },
+  });
 
   React.useEffect(() => {
     if (searchParams.get("create") === "true") {
@@ -286,9 +276,7 @@ function WebhooksPageContent() {
     } else {
       params.delete("create");
     }
-    router.replace(
-      `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
-    );
+    router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const tableActions: TableAction<WebhookDestination>[] = [
@@ -363,16 +351,13 @@ function WebhooksPageContent() {
                         <h2 className="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text text-3xl font-bold text-transparent sm:text-4xl">
                           Webhook Overview
                         </h2>
-                        <Badge
-                          variant="secondary"
-                          className="bg-primary/10 text-primary border-primary/20"
-                        >
+                        <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                           Coming Soon
                         </Badge>
                       </div>
                       <p className="text-muted-foreground/80 mx-auto max-w-md text-sm">
-                        We’re building a comprehensive overview dashboard that will give you
-                        insights into your webhook performance, analytics, and real-time monitoring.
+                        We’re building a comprehensive overview dashboard that will give you insights into your webhook
+                        performance, analytics, and real-time monitoring.
                       </p>
                     </div>
 
@@ -384,9 +369,7 @@ function WebhooksPageContent() {
                           </div>
                           <h3 className="text-sm font-semibold">Real-time Monitoring</h3>
                         </div>
-                        <p className="text-muted-foreground text-xs">
-                          Track webhook events and responses in real-time
-                        </p>
+                        <p className="text-muted-foreground text-xs">Track webhook events and responses in real-time</p>
                       </div>
 
                       <div className="group bg-card/50 hover:bg-card/80 hover:border-primary/20 relative rounded-lg border p-6 backdrop-blur-sm transition-all duration-300">
@@ -396,9 +379,7 @@ function WebhooksPageContent() {
                           </div>
                           <h3 className="text-sm font-semibold">Analytics & Insights</h3>
                         </div>
-                        <p className="text-muted-foreground text-xs">
-                          Detailed analytics and performance metrics
-                        </p>
+                        <p className="text-muted-foreground text-xs">Detailed analytics and performance metrics</p>
                       </div>
 
                       <div className="group bg-card/50 hover:bg-card/80 hover:border-primary/20 relative rounded-lg border p-6 backdrop-blur-sm transition-all duration-300">
@@ -408,9 +389,7 @@ function WebhooksPageContent() {
                           </div>
                           <h3 className="text-sm font-semibold">Historical Data</h3>
                         </div>
-                        <p className="text-muted-foreground text-xs">
-                          View past events and historical trends
-                        </p>
+                        <p className="text-muted-foreground text-xs">View past events and historical trends</p>
                       </div>
                     </div>
                   </div>
@@ -556,11 +535,7 @@ const schema = z.object({
       message: "Endpoint URL must use HTTPS protocol",
     }
   ),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters")
-    .optional()
-    .or(z.literal("")),
+  description: z.string().max(500, "Description must be less than 500 characters").optional().or(z.literal("")),
   events: z
     .array(z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent)))
     .min(1, "Please select at least one event"),
@@ -677,12 +652,7 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
         Cancel
       </Button>
       <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          className="gap-2"
-        >
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
@@ -772,9 +742,7 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 {events.length === WEBHOOK_EVENTS.length ? "Deselect all" : "Select all"}
               </Button>
             </div>
-            <p className="text-muted-foreground text-sm">
-              Choose which events this webhook should listen to.
-            </p>
+            <p className="text-muted-foreground text-sm">Choose which events this webhook should listen to.</p>
             <RHF.Controller
               control={form.control}
               name="events"
@@ -824,16 +792,11 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
                 onClick={handleCopySecret}
                 className="shrink-0 shadow-none"
               >
-                {copied ? (
-                  <Check className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              Use this secret to verify webhook signatures. Keep it secure and never expose it in
-              client-side code.
+              Use this secret to verify webhook signatures. Keep it secure and never expose it in client-side code.
             </p>
           </div>
 
@@ -846,17 +809,11 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
 
           <Tabs defaultValue="typescript" className="w-full">
             <TabsList className="w-fit">
-              <TabsTrigger
-                value="typescript"
-                className="min-w-[120px] px-4 py-2 data-[state=active]:shadow-none"
-              >
+              <TabsTrigger value="typescript" className="min-w-[120px] px-4 py-2 data-[state=active]:shadow-none">
                 <TypeScript className="h-4 w-4" />
                 TypeScript
               </TabsTrigger>
-              <TabsTrigger
-                value="curl"
-                className="min-w-[120px] px-4 py-2 data-[state=active]:shadow-none"
-              >
+              <TabsTrigger value="curl" className="min-w-[120px] px-4 py-2 data-[state=active]:shadow-none">
                 <Curl className="h-4 w-4" />
                 cURL
               </TabsTrigger>
@@ -865,11 +822,7 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
             <TabsContent value="typescript" className="mt-4">
               <div className="space-y-2">
                 <Label>TypeScript Example</Label>
-                <CodeBlock
-                  language="typescript"
-                  filename="app/api/webhooks/route.ts"
-                  maxHeight="400px"
-                >
+                <CodeBlock language="typescript" filename="app/api/webhooks/route.ts" maxHeight="400px">
                   {WEBHOOK_TYPESCRIPT_EXAMPLE}
                 </CodeBlock>
               </div>

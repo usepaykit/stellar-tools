@@ -24,9 +24,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
 const putWebhookSchema = schemaFor<Partial<Webhook>>()(
   z.object({
     url: z.string().optional(),
-    events: z
-      .array(z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent)))
-      .optional(),
+    events: z.array(z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))).optional(),
     isDisabled: z.boolean().default(false).optional(),
     name: z.string().optional(),
     description: z.string().optional(),

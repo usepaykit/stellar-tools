@@ -8,18 +8,7 @@ import {
 } from "@/constant/schema.client";
 import { WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
-import {
-  boolean,
-  check,
-  index,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-} from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
 export const networkEnum = pgEnum("network", networkEnum$1);
 
@@ -97,11 +86,7 @@ export const organizationSecrets = pgTable("organization_secret", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const secretAccessLogActionEnum = pgEnum("secret_access_log_action", [
-  "decrypt",
-  "rotate",
-  "backup",
-]);
+export const secretAccessLogActionEnum = pgEnum("secret_access_log_action", ["decrypt", "rotate", "backup"]);
 
 export const secretAccessLog = pgTable("secret_access_log", {
   id: text("id").primaryKey(),
@@ -140,11 +125,7 @@ export const teamMembers = pgTable(
   })
 );
 
-export const teamInviteStatusEnum = pgEnum("team_invite_status", [
-  "pending",
-  "accepted",
-  "rejected",
-]);
+export const teamInviteStatusEnum = pgEnum("team_invite_status", ["pending", "accepted", "rejected"]);
 
 export const teamInvites = pgTable("team_invite", {
   id: text("id").primaryKey(),
@@ -296,12 +277,7 @@ export const checkouts = pgTable(
   })
 );
 
-export const subscriptionStatusEnum = pgEnum("subscription_status", [
-  "active",
-  "past_due",
-  "canceled",
-  "paused",
-]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "past_due", "canceled", "paused"]);
 
 export const subscriptions = pgTable("subscription", {
   id: text("id").primaryKey(),
@@ -454,11 +430,7 @@ export const creditBalances = pgTable(
   })
 );
 
-export const creditTransactionTypeEnum = pgEnum("credit_transaction_type", [
-  "deduct",
-  "refund",
-  "grant",
-]);
+export const creditTransactionTypeEnum = pgEnum("credit_transaction_type", ["deduct", "refund", "grant"]);
 
 export const creditTransactions = pgTable(
   "credit_transaction",

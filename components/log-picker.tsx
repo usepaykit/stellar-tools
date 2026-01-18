@@ -8,9 +8,7 @@ import { cn } from "@/lib/utils";
 import { FileSearch, X } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 
-interface LogPickerProps<TData, TValue> extends React.ComponentProps<
-  typeof DataTable<TData, TValue>
-> {
+interface LogPickerProps<TData, TValue> extends React.ComponentProps<typeof DataTable<TData, TValue>> {
   renderDetail?: (row: TData) => React.ReactNode;
   emptyMessage?: string;
   detailPanelWidth?: number;

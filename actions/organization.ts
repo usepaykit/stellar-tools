@@ -75,11 +75,7 @@ export const retrieveOrganizations = async (accId?: string) => {
 };
 
 export const retrieveOrganization = async (id: string) => {
-  const [organization] = await db
-    .select()
-    .from(organizations)
-    .where(eq(organizations.id, id))
-    .limit(1);
+  const [organization] = await db.select().from(organizations).where(eq(organizations.id, id)).limit(1);
 
   if (!organization) throw new Error("Organization not found");
 
@@ -202,11 +198,7 @@ export const retrieveOrganizationSecrets = async (organizationId: string) => {
 };
 
 export const retrieveOrganizationSecret = async (id: string) => {
-  const [secret] = await db
-    .select()
-    .from(organizationSecrets)
-    .where(eq(organizationSecrets.id, id))
-    .limit(1);
+  const [secret] = await db.select().from(organizationSecrets).where(eq(organizationSecrets.id, id)).limit(1);
 
   return secret;
 };
@@ -285,11 +277,7 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
           // Re-encrypt mainnet (Optional field in your schema)
           const hasMainnet = secret.mainnetSecretEncrypted && secret.mainnetSecretVersion;
           const mainnetReencrypted = hasMainnet
-            ? encryption.reencrypt(
-                secret.mainnetSecretEncrypted!,
-                secret.mainnetSecretVersion!,
-                newVersion
-              )
+            ? encryption.reencrypt(secret.mainnetSecretEncrypted!, secret.mainnetSecretVersion!, newVersion)
             : null;
 
           await db.transaction(async (tx) => {

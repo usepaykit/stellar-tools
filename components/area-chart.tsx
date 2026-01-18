@@ -2,24 +2,14 @@
 
 import React from "react";
 
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import { Area, CartesianGrid, AreaChart as RechartsAreaChart, XAxis } from "recharts";
 
 export type BaseChartData = Record<string, string | number>;
 
-export type ChartColor =
-  | "var(--chart-1)"
-  | "var(--chart-2)"
-  | "var(--chart-3)"
-  | "var(--chart-4)"
-  | "var(--chart-5)";
+export type ChartColor = "var(--chart-1)" | "var(--chart-2)" | "var(--chart-3)" | "var(--chart-4)" | "var(--chart-5)";
 
 interface AreaChartProps<T extends BaseChartData>
   extends
@@ -27,10 +17,7 @@ interface AreaChartProps<T extends BaseChartData>
     MixinProps<"xAxis", Omit<React.ComponentProps<typeof XAxis>, "dataKey" | "key" | "ref">>,
     MixinProps<
       "tooltip",
-      Omit<
-        React.ComponentProps<typeof ChartTooltipContent>,
-        "nameKey" | "labelFormatter" | "key" | "ref"
-      >
+      Omit<React.ComponentProps<typeof ChartTooltipContent>, "nameKey" | "labelFormatter" | "key" | "ref">
     >,
     MixinProps<"area", Omit<React.ComponentProps<typeof Area>, "dataKey" | "key" | "ref">>,
     MixinProps<"grid", React.ComponentProps<typeof CartesianGrid>> {
@@ -70,20 +57,10 @@ export function AreaChart<T extends BaseChartData>({
   const formatX = xAxisFormatter || defaultFormatter;
   const formatTooltip = tooltipLabelFormatter || defaultFormatter;
 
-  const { xAxis, tooltip, area, rest, grid } = splitProps(
-    mixinProps,
-    "xAxis",
-    "tooltip",
-    "area",
-    "grid"
-  );
+  const { xAxis, tooltip, area, rest, grid } = splitProps(mixinProps, "xAxis", "tooltip", "area", "grid");
 
   return (
-    <ChartContainer
-      {...rest}
-      config={config}
-      className={cn("aspect-auto h-[250px] w-full", className)}
-    >
+    <ChartContainer {...rest} config={config} className={cn("aspect-auto h-[250px] w-full", className)}>
       <RechartsAreaChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} {...grid} />
 

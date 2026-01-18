@@ -79,9 +79,7 @@ export const updateCustomerSchema = customerSchema.partial().pick({
   metadata: true,
 });
 
-export interface UpdateCustomer extends Partial<
-  Pick<Customer, "email" | "name" | "phone" | "metadata">
-> {}
+export interface UpdateCustomer extends Partial<Pick<Customer, "email" | "name" | "phone" | "metadata">> {}
 
 export interface ListCustomers extends Partial<Pick<Customer, "email" | "phone">> {}
 

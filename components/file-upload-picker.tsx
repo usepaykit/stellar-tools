@@ -62,11 +62,7 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
     },
     ref
   ) => {
-    const {
-      dropzone,
-      label: labelProps,
-      error: errorProps,
-    } = splitProps(mixinProps, "dropzone", "label", "error");
+    const { dropzone, label: labelProps, error: errorProps } = splitProps(mixinProps, "dropzone", "label", "error");
     const [isTransforming, setIsTransforming] = React.useState(false);
 
     const onDrop = React.useCallback(
@@ -190,11 +186,7 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
         </div>
 
         {error && (
-          <p
-            {...errorProps}
-            className={cn("text-destructive text-sm", errorProps.className)}
-            role="alert"
-          >
+          <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)} role="alert">
             {error}
           </p>
         )}

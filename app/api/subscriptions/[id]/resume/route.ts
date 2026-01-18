@@ -14,12 +14,7 @@ export const POST = async (req: NextRequest, context: { params: Promise<{ id: st
 
     const { organizationId, environment } = await resolveApiKey(apiKey);
 
-    const subscription = await putSubscription(
-      id,
-      { status: "active", pausedAt: null },
-      organizationId,
-      environment
-    );
+    const subscription = await putSubscription(id, { status: "active", pausedAt: null }, organizationId, environment);
 
     return NextResponse.json({ data: subscription });
   } catch (error) {

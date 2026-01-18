@@ -10,10 +10,7 @@ const querySchema = z.object({
   offset: z.coerce.number().default(0),
 });
 
-export const GET = async (
-  req: NextRequest,
-  context: { params: Promise<{ customerId: string }> }
-) => {
+export const GET = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const { customerId } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");

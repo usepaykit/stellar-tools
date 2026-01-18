@@ -4,14 +4,7 @@ import * as React from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import {
@@ -27,12 +20,7 @@ import {
 import { MoreHorizontal } from "lucide-react";
 
 import { Button } from "./ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 export interface TableAction<TData> {
   label: string;
@@ -71,14 +59,7 @@ export const DataTable = <TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
-  const { row, checkbox, body, cell, ...rest } = splitProps(
-    mixProps,
-    "row",
-    "checkbox",
-    "body",
-    "head",
-    "cell"
-  );
+  const { row, checkbox, body, cell, ...rest } = splitProps(mixProps, "row", "checkbox", "body", "head", "cell");
 
   const tableColumns = React.useMemo(() => {
     let cols = columns;
@@ -147,9 +128,7 @@ export const DataTable = <TData, TValue>({
                     }}
                     className={cn(
                       "py-1",
-                      action.variant === "destructive"
-                        ? "text-destructive focus:text-destructive"
-                        : undefined
+                      action.variant === "destructive" ? "text-destructive focus:text-destructive" : undefined
                     )}
                   >
                     {action.label}
@@ -211,9 +190,7 @@ export const DataTable = <TData, TValue>({
                         width: header.getSize() !== 150 ? header.getSize() : undefined,
                       }}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}
@@ -238,11 +215,7 @@ export const DataTable = <TData, TValue>({
               ))
             ) : (
               <TableRow {...row}>
-                <TableCell
-                  {...cell}
-                  colSpan={tableColumns.length}
-                  className={cn("h-24 text-center", cell.className)}
-                >
+                <TableCell {...cell} colSpan={tableColumns.length} className={cn("h-24 text-center", cell.className)}>
                   {emptyMessage}
                 </TableCell>
               </TableRow>
@@ -255,8 +228,8 @@ export const DataTable = <TData, TValue>({
         <div className="text-muted-foreground flex-1 text-sm">
           {enableBulkSelect && (
             <>
-              {reactTable.getFilteredSelectedRowModel().rows.length} of{" "}
-              {reactTable.getFilteredRowModel().rows.length} row(s) selected.
+              {reactTable.getFilteredSelectedRowModel().rows.length} of {reactTable.getFilteredRowModel().rows.length}{" "}
+              row(s) selected.
             </>
           )}
         </div>

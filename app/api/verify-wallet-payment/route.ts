@@ -47,9 +47,7 @@ export const POST = async (req: NextRequest) => {
       throw new Error("Checkout not found");
     }
 
-    const paymentOp = (await stellar.retrievePayment(txHash)).data.records.find(
-      (op) => op.type_i === 1
-    );
+    const paymentOp = (await stellar.retrievePayment(txHash)).data.records.find((op) => op.type_i === 1);
 
     if (!paymentOp) {
       throw new Error("Payment operation not found in transaction");
@@ -61,12 +59,7 @@ export const POST = async (req: NextRequest) => {
       async () => {
         const paymentId = `pay_${nanoid(25)}`;
         const resolvedPromises = await Promise.allSettled([
-          putCheckout(
-            checkoutId,
-            { status: "completed", updatedAt: new Date() },
-            organizationId,
-            environment
-          ),
+          putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment),
           postPayment(
             {
               id: paymentId,
@@ -83,9 +76,7 @@ export const POST = async (req: NextRequest) => {
           ),
         ]);
 
-        const errors = resolvedPromises.map((result) =>
-          result.status === "rejected" ? result.reason : null
-        );
+        const errors = resolvedPromises.map((result) => (result.status === "rejected" ? result.reason : null));
 
         if (errors.length > 0) return { error: errors.join(", ") };
 
@@ -110,11 +101,7 @@ export const POST = async (req: NextRequest) => {
         environment,
         payload: (result) => {
           if (result?.error) {
-            return {
-              error: result?.error,
-              success: false,
-              timestamp: new Date(),
-            };
+            return { error: result?.error, success: false, timestamp: new Date() };
           }
 
           return {

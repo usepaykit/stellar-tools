@@ -296,9 +296,7 @@ const columns: ColumnDef<SubscriptionWithDetails>[] = [
     cell: ({ row }) => {
       const date = row.original.createdAt;
       if (!date) return <span className="text-muted-foreground">-</span>;
-      return (
-        <div className="text-muted-foreground text-sm">{moment(date).format("MMM DD, YYYY")}</div>
-      );
+      return <div className="text-muted-foreground text-sm">{moment(date).format("MMM DD, YYYY")}</div>;
     },
     enableSorting: true,
   },
@@ -397,14 +395,8 @@ export function CreateSubscriptionModal({
 
   const { customerIds, productId, billingPeriod, cancelAtPeriodEnd } = form.watch();
 
-  const selectedCustomers = React.useMemo(
-    () => mockCustomers.filter((c) => customerIds.includes(c.id)),
-    [customerIds]
-  );
-  const selectedProduct = React.useMemo(
-    () => mockProducts.find((p) => p.id === productId),
-    [productId]
-  );
+  const selectedCustomers = React.useMemo(() => mockCustomers.filter((c) => customerIds.includes(c.id)), [customerIds]);
+  const selectedProduct = React.useMemo(() => mockProducts.find((p) => p.id === productId), [productId]);
 
   const formatDate = (date?: Date) =>
     date?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -446,10 +438,7 @@ export function CreateSubscriptionModal({
         </div>
       }
     >
-      <form
-        onSubmit={form.handleSubmit(handleSubmit)}
-        className="mx-auto max-w-6xl space-y-12 pt-4 pb-20"
-      >
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="mx-auto max-w-6xl space-y-12 pt-4 pb-20">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
           <RHF.Controller
             control={form.control}
@@ -500,9 +489,7 @@ export function CreateSubscriptionModal({
           <div className="space-y-8 lg:col-span-2">
             <div className="flex items-center gap-2 border-b pb-2">
               <Calendar className="text-muted-foreground size-4" />
-              <h3 className="text-foreground/70 text-sm font-bold tracking-widest uppercase">
-                Schedule
-              </h3>
+              <h3 className="text-foreground/70 text-sm font-bold tracking-widest uppercase">Schedule</h3>
             </div>
 
             <div className="space-y-6">
@@ -525,12 +512,7 @@ export function CreateSubscriptionModal({
                   control={form.control}
                   name="cancelAtPeriodEnd"
                   render={({ field }) => (
-                    <Checkbox
-                      id="cancel"
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      className="mt-1"
-                    />
+                    <Checkbox id="cancel" checked={field.value} onCheckedChange={field.onChange} className="mt-1" />
                   )}
                 />
                 <div className="grid gap-1">
@@ -574,9 +556,7 @@ export function CreateSubscriptionModal({
                   <Users className="text-muted-foreground/50 size-3.5" />
                   <span className="text-muted-foreground text-xs font-semibold">Volume</span>
                 </div>
-                <span className="text-foreground text-xs font-bold">
-                  {selectedCustomers.length} customer(s)
-                </span>
+                <span className="text-foreground text-xs font-bold">{selectedCustomers.length} customer(s)</span>
               </div>
 
               <Separator className="opacity-30" />
@@ -584,15 +564,11 @@ export function CreateSubscriptionModal({
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-muted-foreground/70 font-medium">Activation Date</span>
-                  <span className="text-foreground/80 font-mono">
-                    {formatDate(billingPeriod.from) || "---"}
-                  </span>
+                  <span className="text-foreground/80 font-mono">{formatDate(billingPeriod.from) || "---"}</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-muted-foreground/70 font-medium">Expiry Date</span>
-                  <span className="text-foreground/80 font-mono">
-                    {formatDate(billingPeriod.to) || "---"}
-                  </span>
+                  <span className="text-foreground/80 font-mono">{formatDate(billingPeriod.to) || "---"}</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-muted-foreground/70 font-medium">Auto-renew</span>

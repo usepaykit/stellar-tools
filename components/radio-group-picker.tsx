@@ -15,10 +15,7 @@ interface RadioGroupPickerProps
     Omit<React.ComponentProps<typeof RadioGroup>, "value" | "onChange">,
     MixinProps<
       "item",
-      Omit<
-        React.ComponentProps<typeof RadioGroupItem>,
-        "children" | "value" | "itemRef" | "ref" | "type"
-      >
+      Omit<React.ComponentProps<typeof RadioGroupItem>, "children" | "value" | "itemRef" | "ref" | "type">
     >,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
@@ -66,21 +63,10 @@ export const RadioGroupPicker = ({
       )}
 
       <RadioGroup {...rest} value={value} onValueChange={onChange}>
-        <div
-          className={cn(
-            "flex flex-col gap-2",
-            itemLayout === "horizontal" ? "flex-row" : "flex-col"
-          )}
-        >
+        <div className={cn("flex flex-col gap-2", itemLayout === "horizontal" ? "flex-row" : "flex-col")}>
           {items.map((item) => (
             <div key={item.value} className="flex items-center space-x-2">
-              <RadioGroupItem
-                {...itemProps}
-                id={item.value}
-                type="button"
-                ref={undefined}
-                value={item.value}
-              />
+              <RadioGroupItem {...itemProps} id={item.value} type="button" ref={undefined} value={item.value} />
               <Label htmlFor={item.value} className="font-normal">
                 {item.label}
               </Label>
@@ -90,11 +76,7 @@ export const RadioGroupPicker = ({
       </RadioGroup>
 
       {error && (
-        <p
-          {...errorProps}
-          role="alert"
-          className={cn("text-destructive text-sm font-medium", errorProps.className)}
-        >
+        <p {...errorProps} role="alert" className={cn("text-destructive text-sm font-medium", errorProps.className)}>
           {error}
         </p>
       )}

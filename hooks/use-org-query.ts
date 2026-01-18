@@ -33,8 +33,7 @@ export function useOrgQuery<TQueryFnData = unknown, TError = Error, TData = TQue
   const result = useQuery<TQueryFnData, TError, TData>({
     queryKey,
     queryFn,
-    enabled:
-      !isLoadingOrgContext && !!organizationId && !!environment && (options?.enabled ?? true),
+    enabled: !isLoadingOrgContext && !!organizationId && !!environment && (options?.enabled ?? true),
     ...options,
   });
 

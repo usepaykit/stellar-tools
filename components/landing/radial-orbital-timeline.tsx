@@ -213,9 +213,7 @@ export default function RadialOrbitalTimeline({ timelineData }: RadialOrbitalTim
                 }}
               >
                 <div
-                  className={`absolute -inset-1 rounded-full ${
-                    isPulsing ? "animate-pulse duration-1000" : ""
-                  }`}
+                  className={`absolute -inset-1 rounded-full ${isPulsing ? "animate-pulse duration-1000" : ""}`}
                   style={{
                     background: `radial-gradient(circle, hsl(var(--primary) / 0.2) 0%, hsl(var(--primary) / 0) 70%)`,
                     width: `${item.adoption * 0.5 + 40}px`,
@@ -255,15 +253,9 @@ export default function RadialOrbitalTimeline({ timelineData }: RadialOrbitalTim
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <Badge className={`px-2 text-xs ${getStatusStyles(item.status)}`}>
-                          {item.status === "available"
-                            ? "AVAILABLE"
-                            : item.status === "beta"
-                              ? "BETA"
-                              : "COMING SOON"}
+                          {item.status === "available" ? "AVAILABLE" : item.status === "beta" ? "BETA" : "COMING SOON"}
                         </Badge>
-                        <span className="text-muted-foreground font-mono text-xs">
-                          {item.category}
-                        </span>
+                        <span className="text-muted-foreground font-mono text-xs">{item.category}</span>
                       </div>
                       <div className="mt-2 flex items-center gap-2">
                         <div className="bg-muted flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
@@ -290,10 +282,7 @@ export default function RadialOrbitalTimeline({ timelineData }: RadialOrbitalTim
                           <span className="text-foreground font-mono">{item.adoption}%</span>
                         </div>
                         <div className="bg-muted h-1 w-full overflow-hidden rounded-full">
-                          <div
-                            className="bg-primary h-full"
-                            style={{ width: `${item.adoption}%` }}
-                          ></div>
+                          <div className="bg-primary h-full" style={{ width: `${item.adoption}%` }}></div>
                         </div>
                       </div>
 

@@ -12,10 +12,7 @@ export const UnderlineTabsList = React.forwardRef<
   return (
     <TabsList
       ref={ref}
-      className={cn(
-        "border-border h-auto gap-0 rounded-none border-b bg-transparent p-0",
-        className
-      )}
+      className={cn("border-border h-auto gap-0 rounded-none border-b bg-transparent p-0", className)}
       {...props}
     />
   );

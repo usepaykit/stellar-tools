@@ -20,10 +20,7 @@ interface TagInputPickerProps
   extends
     MixinProps<
       "input",
-      OverrideProps<
-        React.ComponentProps<typeof Input>,
-        { value?: string; onChange?: (value: string) => void }
-      >
+      OverrideProps<React.ComponentProps<typeof Input>, { value?: string; onChange?: (value: string) => void }>
     >,
     MixinProps<"tag", Omit<React.ComponentProps<typeof Badge>, "children">>,
     MixinProps<"label", Omit<LabelProps, "children">>,
@@ -39,109 +36,91 @@ interface TagInputPickerProps
   className?: string;
 }
 
-export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerProps>(
-  (props, ref) => {
-    const {
-      id,
-      className,
-      value = [],
-      onChange,
-      placeholder,
-      label,
-      error,
-      helpText,
-      ...restProps
-    } = props;
+export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerProps>((props, ref) => {
+  const { id, className, value = [], onChange, placeholder, label, error, helpText, ...restProps } = props;
 
-    const {
-      input,
-      tag,
-      label: labelProps,
-      error: errorProps,
-      helpText: helpTextProps,
-      rest,
-    } = splitProps(restProps, "input", "tag", "label", "error", "helpText");
+  const {
+    input,
+    tag,
+    label: labelProps,
+    error: errorProps,
+    helpText: helpTextProps,
+    rest,
+  } = splitProps(restProps, "input", "tag", "label", "error", "helpText");
 
-    const [internalPending, setInternalPending] = React.useState("");
-    const pendingData = input?.value !== undefined ? input?.value : internalPending;
+  const [internalPending, setInternalPending] = React.useState("");
+  const pendingData = input?.value !== undefined ? input?.value : internalPending;
 
-    const setPendingData = (value: string) => {
-      if (input?.onChange) input.onChange(value);
-      else setInternalPending(value);
-    };
+  const setPendingData = (value: string) => {
+    if (input?.onChange) input.onChange(value);
+    else setInternalPending(value);
+  };
 
-    const addPendingData = () => {
-      if (pendingData.trim()) {
-        onChange(Array.from(new Set([...value, pendingData.trim()])));
-        setPendingData("");
-      }
-    };
+  const addPendingData = () => {
+    if (pendingData.trim()) {
+      onChange(Array.from(new Set([...value, pendingData.trim()])));
+      setPendingData("");
+    }
+  };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter" || e.key === ",") {
-        e.preventDefault();
-        addPendingData();
-      } else if (e.key === "Backspace" && !pendingData && value.length > 0) {
-        onChange(value.slice(0, -1));
-      }
-    };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addPendingData();
+    } else if (e.key === "Backspace" && !pendingData && value.length > 0) {
+      onChange(value.slice(0, -1));
+    }
+  };
 
-    return (
-      <div className="flex flex-col gap-2">
-        {label && (
-          <Label {...labelProps} htmlFor={id}>
-            {label}
-          </Label>
-        )}
-        {helpText && (
-          <p
-            {...helpTextProps}
-            className={cn("text-muted-foreground text-sm", helpTextProps.className)}
-          >
-            {helpText}
-          </p>
-        )}
+  return (
+    <div className="flex flex-col gap-2">
+      {label && (
+        <Label {...labelProps} htmlFor={id}>
+          {label}
+        </Label>
+      )}
+      {helpText && (
+        <p {...helpTextProps} className={cn("text-muted-foreground text-sm", helpTextProps.className)}>
+          {helpText}
+        </p>
+      )}
 
-        <InputGroup
-          className={cn("bg-background h-auto min-h-10 flex-wrap gap-2 p-2", className)}
-          {...rest}
-        >
-          {value.map((t) => (
-            <Badge key={t} variant="secondary" {...tag} className={cn("gap-1 pr-1", tag.className)}>
-              {t}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 hover:bg-transparent"
-                onClick={() => onChange(value.filter((val) => val !== t))}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
-          ))}
+      <InputGroup className={cn("bg-background h-auto min-h-10 flex-wrap gap-2 p-2", className)} {...rest}>
+        {value.map((t) => (
+          <Badge key={t} variant="secondary" {...tag} className={cn("gap-1 pr-1", tag.className)}>
+            {t}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 hover:bg-transparent"
+              onClick={() => onChange(value.filter((val) => val !== t))}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </Badge>
+        ))}
 
-          <Input
-            {...input}
-            ref={ref}
-            className={cn(
-              "h-7 min-w-[80px] flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0",
-              input.className
-            )}
-            value={pendingData}
-            onChange={(e) => setPendingData(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={addPendingData}
-            placeholder={value.length === 0 ? placeholder : ""}
-          />
-        </InputGroup>
-        {error && (
-          <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)}>
-            {error}
-          </p>
-        )}
-      </div>
-    );
-  }
-);
+        <Input
+          {...input}
+          ref={ref}
+          className={cn(
+            "h-7 min-w-[80px] flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0",
+            input.className
+          )}
+          value={pendingData}
+          onChange={(e) => setPendingData(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={addPendingData}
+          placeholder={value.length === 0 ? placeholder : ""}
+        />
+      </InputGroup>
+      {error && (
+        <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)}>
+          {error}
+        </p>
+      )}
+    </div>
+  );
+});
 
 TagInputPicker.displayName = "TagInputPicker";

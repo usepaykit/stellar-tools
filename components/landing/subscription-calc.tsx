@@ -77,8 +77,7 @@ const calculatePrice = (transactions: number): PricingResult => {
   const paidTransactions = transactions - PRICING_CONFIG.FREE_TIER;
   const basePrice = (paidTransactions / 1000) * PRICING_CONFIG.BASE_PRICE_PER_1K;
 
-  const discount =
-    PRICING_CONFIG.VOLUME_DISCOUNTS.find((vd) => transactions >= vd.threshold)?.discount ?? 0;
+  const discount = PRICING_CONFIG.VOLUME_DISCOUNTS.find((vd) => transactions >= vd.threshold)?.discount ?? 0;
 
   const totalCost = basePrice * (1 - discount);
   const per1K = PRICING_CONFIG.BASE_PRICE_PER_1K * (1 - discount);
@@ -86,10 +85,7 @@ const calculatePrice = (transactions: number): PricingResult => {
   return { totalCost, per1K };
 };
 
-const findSliderIndex = (
-  volumeInMillions: number,
-  milestones: readonly TransactionMilestone[]
-): number => {
+const findSliderIndex = (volumeInMillions: number, milestones: readonly TransactionMilestone[]): number => {
   const index = milestones.findIndex((m) => m.value >= volumeInMillions);
   return index === -1 ? milestones.length - 1 : index;
 };
@@ -110,8 +106,8 @@ const PriceDisplay = React.memo<PriceDisplayProps>(({ totalCost, per1K, isMaxVol
       <div className="space-y-4 py-4 text-left">
         <h3 className="text-foreground text-3xl font-bold">Let&apos;s Chat</h3>
         <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
-          Higher volume plans are just better served with a human touch and volume discounts. Get in
-          touch for pricing that best serves your business goals.
+          Higher volume plans are just better served with a human touch and volume discounts. Get in touch for pricing
+          that best serves your business goals.
         </p>
       </div>
     );
@@ -174,76 +170,74 @@ interface VolumeSliderProps {
   onValueChange: (value: number[]) => void;
 }
 
-const VolumeSlider = React.memo<VolumeSliderProps>(
-  ({ milestones, currentIndex, onValueChange }) => {
-    const activeTrackWidth = React.useMemo(
-      () => `${(currentIndex / (milestones.length - 1)) * 100}%`,
-      [currentIndex, milestones.length]
-    );
+const VolumeSlider = React.memo<VolumeSliderProps>(({ milestones, currentIndex, onValueChange }) => {
+  const activeTrackWidth = React.useMemo(
+    () => `${(currentIndex / (milestones.length - 1)) * 100}%`,
+    [currentIndex, milestones.length]
+  );
 
-    return (
+  return (
+    <div className="space-y-6">
       <div className="space-y-6">
-        <div className="space-y-6">
-          <div className="relative pb-8">
-            <div className="relative mb-6 h-1.5 w-full">
-              <div className="bg-muted/60 absolute inset-0 rounded-full" />
-              <div
-                className="bg-primary absolute h-full rounded-full transition-all duration-300 ease-out"
-                style={{ width: activeTrackWidth }}
-              />
-              <div className="absolute inset-0 flex items-center justify-between">
-                {milestones.map((_, index) => {
-                  const isActive = index <= currentIndex;
-                  return (
-                    <div
-                      key={index}
-                      className={cn(
-                        "relative z-10 rounded-full transition-all duration-300",
-                        isActive ? "bg-primary size-2" : "bg-muted-foreground/50 size-2"
-                      )}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="absolute top-7 right-0 left-0">
-              {milestones.map((milestone, index) => {
-                const totalMilestones = milestones.length;
-                const dotPosition = (index / (totalMilestones - 1)) * 100;
-
+        <div className="relative pb-8">
+          <div className="relative mb-6 h-1.5 w-full">
+            <div className="bg-muted/60 absolute inset-0 rounded-full" />
+            <div
+              className="bg-primary absolute h-full rounded-full transition-all duration-300 ease-out"
+              style={{ width: activeTrackWidth }}
+            />
+            <div className="absolute inset-0 flex items-center justify-between">
+              {milestones.map((_, index) => {
+                const isActive = index <= currentIndex;
                 return (
-                  <span
+                  <div
                     key={index}
                     className={cn(
-                      "absolute -translate-x-1/2 text-xs whitespace-nowrap transition-all duration-300",
-                      index === currentIndex ? "text-foreground font-bold" : "text-muted-foreground"
+                      "relative z-10 rounded-full transition-all duration-300",
+                      isActive ? "bg-primary size-2" : "bg-muted-foreground/50 size-2"
                     )}
-                    style={{ left: `${dotPosition}%` }}
-                  >
-                    {milestone.label}
-                  </span>
+                  />
                 );
               })}
             </div>
+          </div>
 
-            <div className="absolute top-0 right-0 left-0 flex h-1.5 items-center">
-              <Slider
-                value={[currentIndex]}
-                onValueChange={onValueChange}
-                min={0}
-                max={milestones.length - 1}
-                step={1}
-                className="[&_[data-slot=slider-thumb]]:border-background [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:shadow-primary/30 [&_[data-slot=slider-thumb]]:ring-background/50 w-full [&_[data-slot=slider-range]]:bg-transparent [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:shadow-lg [&_[data-slot=slider-thumb]]:ring-2 [&_[data-slot=slider-thumb]]:transition-all [&_[data-slot=slider-thumb]]:hover:scale-110 [&_[data-slot=slider-track]]:bg-transparent"
-              />
-            </div>
+          <div className="absolute top-7 right-0 left-0">
+            {milestones.map((milestone, index) => {
+              const totalMilestones = milestones.length;
+              const dotPosition = (index / (totalMilestones - 1)) * 100;
+
+              return (
+                <span
+                  key={index}
+                  className={cn(
+                    "absolute -translate-x-1/2 text-xs whitespace-nowrap transition-all duration-300",
+                    index === currentIndex ? "text-foreground font-bold" : "text-muted-foreground"
+                  )}
+                  style={{ left: `${dotPosition}%` }}
+                >
+                  {milestone.label}
+                </span>
+              );
+            })}
+          </div>
+
+          <div className="absolute top-0 right-0 left-0 flex h-1.5 items-center">
+            <Slider
+              value={[currentIndex]}
+              onValueChange={onValueChange}
+              min={0}
+              max={milestones.length - 1}
+              step={1}
+              className="[&_[data-slot=slider-thumb]]:border-background [&_[data-slot=slider-thumb]]:bg-primary [&_[data-slot=slider-thumb]]:shadow-primary/30 [&_[data-slot=slider-thumb]]:ring-background/50 w-full [&_[data-slot=slider-range]]:bg-transparent [&_[data-slot=slider-thumb]]:size-5 [&_[data-slot=slider-thumb]]:border-2 [&_[data-slot=slider-thumb]]:shadow-lg [&_[data-slot=slider-thumb]]:ring-2 [&_[data-slot=slider-thumb]]:transition-all [&_[data-slot=slider-thumb]]:hover:scale-110 [&_[data-slot=slider-track]]:bg-transparent"
+            />
           </div>
         </div>
-        <Label className="block text-start text-sm font-medium">Select event volume</Label>
       </div>
-    );
-  }
-);
+      <Label className="block text-start text-sm font-medium">Select event volume</Label>
+    </div>
+  );
+});
 
 VolumeSlider.displayName = "VolumeSlider";
 
@@ -287,11 +281,7 @@ export default function SubscriptionCalc({
 
         <Card className="border-primary/20 from-card via-card to-primary/5 w-full bg-linear-to-br shadow-none">
           <CardContent className="space-y-8 p-8">
-            <PriceDisplay
-              totalCost={pricing.totalCost}
-              per1K={pricing.per1K}
-              isMaxVolume={isMaxVolume}
-            />
+            <PriceDisplay totalCost={pricing.totalCost} per1K={pricing.per1K} isMaxVolume={isMaxVolume} />
 
             <VolumeSlider
               milestones={TRANSACTION_MILESTONES}

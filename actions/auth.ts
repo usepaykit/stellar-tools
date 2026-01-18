@@ -27,8 +27,7 @@ export const postAuth = async (params: Partial<Auth>): Promise<Auth> => {
 };
 
 export const retrieveAuth = async (params: { id: string } | { accountId: string }) => {
-  const whereClause =
-    "id" in params ? eq(auth.id, params.id) : eq(auth.accountId, params.accountId);
+  const whereClause = "id" in params ? eq(auth.id, params.id) : eq(auth.accountId, params.accountId);
 
   const [response] = await db.select().from(auth).where(whereClause).limit(1);
 
@@ -76,8 +75,7 @@ export const createPasswordResetToken = async (params: Partial<PasswordReset>) =
 };
 
 export const retrievePasswordReset = async (params: { id: string } | { token: string }) => {
-  const whereClause =
-    "id" in params ? eq(passwordReset.id, params.id) : eq(passwordReset.token, params.token);
+  const whereClause = "id" in params ? eq(passwordReset.id, params.id) : eq(passwordReset.token, params.token);
 
   const [result] = await db.select().from(passwordReset).where(whereClause).limit(1);
 
@@ -218,10 +216,7 @@ export const resetPassword = async (token: string, newPassword: string) => {
 
   await putAccount(account.id, {
     sso: {
-      values: [
-        ...account.sso.values.filter((s) => s.provider !== "local"),
-        { provider: "local", sub: passwordHash },
-      ],
+      values: [...account.sso.values.filter((s) => s.provider !== "local"), { provider: "local", sub: passwordHash }],
     },
   });
 

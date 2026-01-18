@@ -3,12 +3,7 @@
 import { defaultModules } from "@creit-tech/stellar-wallets-kit/modules/utils";
 import { StellarWalletsKit } from "@creit-tech/stellar-wallets-kit/sdk";
 import { activeAddress } from "@creit-tech/stellar-wallets-kit/state";
-import {
-  KitEventStateUpdated,
-  KitEventType,
-  Networks,
-  SwkAppTheme,
-} from "@creit-tech/stellar-wallets-kit/types";
+import { KitEventStateUpdated, KitEventType, Networks, SwkAppTheme } from "@creit-tech/stellar-wallets-kit/types";
 
 type WalletConnectionCallback = (address: string | null) => void;
 
@@ -64,13 +59,10 @@ export class StellarWalletsKitApi {
       network: options?.network || Networks.TESTNET,
     });
 
-    this.eventUnsubscriber = StellarWalletsKit.on(
-      KitEventType.STATE_UPDATED,
-      (event: KitEventStateUpdated) => {
-        const address = event.payload.address || null;
-        this.connectionCallbacks.forEach((cb) => cb(address));
-      }
-    );
+    this.eventUnsubscriber = StellarWalletsKit.on(KitEventType.STATE_UPDATED, (event: KitEventStateUpdated) => {
+      const address = event.payload.address || null;
+      this.connectionCallbacks.forEach((cb) => cb(address));
+    });
 
     this.isInitialized = true;
   }

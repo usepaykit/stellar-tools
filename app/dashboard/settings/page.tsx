@@ -22,13 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import {
   UnderlineTabs,
@@ -41,18 +35,7 @@ import { useCopy } from "@/hooks/use-copy";
 import { cn, getInitials } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  Calendar,
-  Camera,
-  ChevronRight,
-  Copy,
-  ExternalLink,
-  Loader2,
-  Mail,
-  Plus,
-  Save,
-  User,
-} from "lucide-react";
+import { Calendar, Camera, ChevronRight, Copy, ExternalLink, Loader2, Mail, Plus, Save, User } from "lucide-react";
 import moment from "moment";
 import { nanoid } from "nanoid";
 import Link from "next/link";
@@ -166,16 +149,9 @@ const organizationSchema = z.object({
     .min(2)
     .max(50)
     .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens")
-    .refine(
-      (slug) => !slug.startsWith("-") && !slug.endsWith("-"),
-      "Slug cannot start or end with a hyphen"
-    )
+    .refine((slug) => !slug.startsWith("-") && !slug.endsWith("-"), "Slug cannot start or end with a hyphen")
     .trim(),
-  description: z
-    .string()
-    .max(500, "Description must be less than 500 characters")
-    .optional()
-    .or(z.literal("")),
+  description: z.string().max(500, "Description must be less than 500 characters").optional().or(z.literal("")),
 });
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
@@ -201,8 +177,7 @@ export default function SettingsPage() {
   const [organizationLogoPreview, setOrganizationLogoPreview] = React.useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
   const [isUpdateRoleModalOpen, setIsUpdateRoleModalOpen] = React.useState(false);
-  const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] =
-    React.useState<TeamMember | null>(null);
+  const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] = React.useState<TeamMember | null>(null);
   const [inviteLink, setInviteLink] = React.useState<string | null>(null);
 
   const { handleCopy } = useCopy();
@@ -356,9 +331,7 @@ export default function SettingsPage() {
       setInviteLink(link);
 
       const emailCount = data.emails.length;
-      toast.success(
-        `Invitation created successfully for ${emailCount} ${emailCount === 1 ? "person" : "people"}`
-      );
+      toast.success(`Invitation created successfully for ${emailCount} ${emailCount === 1 ? "person" : "people"}`);
 
       setTeamTab("pending");
     } catch (error) {
@@ -463,18 +436,10 @@ export default function SettingsPage() {
         cell: ({ row }) => {
           const member = row.original;
           if (member.status === "pending" && member.createdAt) {
-            return (
-              <p className="text-muted-foreground text-sm">
-                {moment(member.createdAt).format("MMM D, YYYY")}
-              </p>
-            );
+            return <p className="text-muted-foreground text-sm">{moment(member.createdAt).format("MMM D, YYYY")}</p>;
           }
           if (member.status === "active") {
-            return (
-              <p className="text-muted-foreground text-sm">
-                {moment(member.joinedAt).format("MMM D, YYYY")}
-              </p>
-            );
+            return <p className="text-muted-foreground text-sm">{moment(member.joinedAt).format("MMM D, YYYY")}</p>;
           }
           return <span className="text-muted-foreground text-sm">—</span>;
         },
@@ -489,9 +454,7 @@ export default function SettingsPage() {
                 const member = row.original;
                 if (member.status === "pending" && member.expiresAt) {
                   return (
-                    <p className="text-muted-foreground text-sm">
-                      {moment(member.expiresAt).format("MMM D, YYYY")}
-                    </p>
+                    <p className="text-muted-foreground text-sm">{moment(member.expiresAt).format("MMM D, YYYY")}</p>
                   );
                 }
                 return <span className="text-muted-foreground text-sm">—</span>;
@@ -584,13 +547,8 @@ export default function SettingsPage() {
                     <div className="flex items-start gap-6">
                       <div className="relative">
                         <Avatar className="h-20 w-20">
-                          <AvatarImage
-                            src={avatarPreview || mockUser.avatar || undefined}
-                            className="object-cover"
-                          />
-                          <AvatarFallback className="text-lg">
-                            {getInitials(mockUser.name)}
-                          </AvatarFallback>
+                          <AvatarImage src={avatarPreview || mockUser.avatar || undefined} className="object-cover" />
+                          <AvatarFallback className="text-lg">{getInitials(mockUser.name)}</AvatarFallback>
                         </Avatar>
                         <label
                           htmlFor="avatar-upload"
@@ -626,10 +584,7 @@ export default function SettingsPage() {
                     <CardDescription>Your core profile details</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form
-                      onSubmit={profileForm.handleSubmit(onProfileSubmit)}
-                      className="space-y-6"
-                    >
+                    <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-6">
                       <RHF.Controller
                         control={profileForm.control}
                         name="name"
@@ -741,15 +696,10 @@ export default function SettingsPage() {
                 <Card className="shadow-none">
                   <CardHeader>
                     <CardTitle>Organization Details</CardTitle>
-                    <CardDescription>
-                      Update your organization name, slug, and description
-                    </CardDescription>
+                    <CardDescription>Update your organization name, slug, and description</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form
-                      onSubmit={organizationForm.handleSubmit(onOrganizationSubmit)}
-                      className="space-y-6"
-                    >
+                    <form onSubmit={organizationForm.handleSubmit(onOrganizationSubmit)} className="space-y-6">
                       <RHF.Controller
                         control={organizationForm.control}
                         name="name"
@@ -823,18 +773,13 @@ export default function SettingsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-2xl font-semibold">Team Members</h2>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      Manage your team members and their permissions
-                    </p>
+                    <p className="text-muted-foreground mt-1 text-sm">Manage your team members and their permissions</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="secondary" className="text-sm">
                       {mockTeamMembers.length + mockPendingInvites.length} total members
                     </Badge>
-                    <Button
-                      onClick={() => setIsInviteModalOpen(true)}
-                      className="gap-2 shadow-none"
-                    >
+                    <Button onClick={() => setIsInviteModalOpen(true)} className="gap-2 shadow-none">
                       <Plus className="h-4 w-4" />
                       Invite Member
                     </Button>
@@ -847,9 +792,7 @@ export default function SettingsPage() {
                     onClick={() => setTeamTab("members")}
                     className={cn(
                       "text-muted-foreground hover:text-foreground flex items-center gap-2 border-b-2 px-4 pb-3 text-sm font-medium transition-colors",
-                      teamTab === "members"
-                        ? "border-primary text-foreground"
-                        : "border-transparent"
+                      teamTab === "members" ? "border-primary text-foreground" : "border-transparent"
                     )}
                   >
                     <User className="h-4 w-4" />
@@ -860,9 +803,7 @@ export default function SettingsPage() {
                     onClick={() => setTeamTab("pending")}
                     className={cn(
                       "text-muted-foreground hover:text-foreground flex items-center gap-2 border-b-2 px-4 pb-3 text-sm font-medium transition-colors",
-                      teamTab === "pending"
-                        ? "border-primary text-foreground"
-                        : "border-transparent"
+                      teamTab === "pending" ? "border-primary text-foreground" : "border-transparent"
                     )}
                   >
                     <Mail className="h-4 w-4" />
@@ -885,11 +826,7 @@ export default function SettingsPage() {
 
                 {teamTableData.length > 0 ? (
                   <div className="[&_tr:hover]:bg-muted/50 [&_th]:text-muted-foreground [&_table]:bg-transparent [&_tbody]:bg-transparent [&_td]:py-4 [&_th]:pb-3 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_thead]:bg-transparent [&_tr]:border-b [&>div]:bg-transparent [&>div>div]:rounded-none [&>div>div]:border-0 [&>div>div]:shadow-none">
-                    <DataTable
-                      columns={teamColumns}
-                      data={teamTableData}
-                      actions={teamTableActions}
-                    />
+                    <DataTable columns={teamColumns} data={teamTableData} actions={teamTableActions} />
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
@@ -912,15 +849,12 @@ export default function SettingsPage() {
                 <Card className="shadow-none">
                   <CardHeader>
                     <CardTitle>API Keys</CardTitle>
-                    <CardDescription>
-                      Manage your API keys for authenticating requests
-                    </CardDescription>
+                    <CardDescription>Manage your API keys for authenticating requests</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <p className="text-muted-foreground text-sm">
-                        Create and manage API keys to authenticate your requests to the Stellar
-                        Tools API.
+                        Create and manage API keys to authenticate your requests to the Stellar Tools API.
                       </p>
                       <Link href="/dashboard/api-keys">
                         <Button variant="outline" className="gap-2 shadow-none">
@@ -935,15 +869,12 @@ export default function SettingsPage() {
                 <Card className="shadow-none">
                   <CardHeader>
                     <CardTitle>Webhooks</CardTitle>
-                    <CardDescription>
-                      Configure webhook destinations for event notifications
-                    </CardDescription>
+                    <CardDescription>Configure webhook destinations for event notifications</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <p className="text-muted-foreground text-sm">
-                        Set up webhooks to receive real-time notifications about events in your
-                        account.
+                        Set up webhooks to receive real-time notifications about events in your account.
                       </p>
                       <Link href="/dashboard/webhooks">
                         <Button variant="outline" className="gap-2 shadow-none">
@@ -999,10 +930,7 @@ export default function SettingsPage() {
         }
       >
         {!inviteLink ? (
-          <form
-            onSubmit={inviteMemberForm.handleSubmit(onInviteMemberSubmit)}
-            className="space-y-6"
-          >
+          <form onSubmit={inviteMemberForm.handleSubmit(onInviteMemberSubmit)} className="space-y-6">
             <RHF.Controller
               control={inviteMemberForm.control}
               name="emails"
@@ -1041,9 +969,7 @@ export default function SettingsPage() {
                       {error.message}
                     </p>
                   )}
-                  <p className="text-muted-foreground text-xs">
-                    Choose the permission level for this team member
-                  </p>
+                  <p className="text-muted-foreground text-xs">Choose the permission level for this team member</p>
                 </div>
               )}
             />
@@ -1140,9 +1066,7 @@ export default function SettingsPage() {
                     {error.message}
                   </p>
                 )}
-                <p className="text-muted-foreground text-xs">
-                  Choose the permission level for this team member
-                </p>
+                <p className="text-muted-foreground text-xs">Choose the permission level for this team member</p>
               </div>
             )}
           />

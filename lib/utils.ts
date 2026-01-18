@@ -8,11 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export const truncate = (
   text: string,
-  {
-    start = 6,
-    end = 4,
-    separator = "...",
-  }: { start?: number; end?: number; separator?: string } = {}
+  { start = 6, end = 4, separator = "..." }: { start?: number; end?: number; separator?: string } = {}
 ): string => {
   if (!text) return "";
 
@@ -47,12 +43,12 @@ export const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
-export function computeDiff<T extends Record<string, any>>(
+export function computeDiff<T extends Record<string, unknown>>(
   oldData: T,
   newData: Partial<T>,
   ignoreKeys: string[] = ["updatedAt", "createdAt", "id"]
 ) {
-  const diff: Record<string, { from: any; to: any }> = {};
+  const diff: Record<string, { from: unknown; to: unknown }> = {};
 
   Object.keys(newData).forEach((key) => {
     if (ignoreKeys.includes(key)) return;

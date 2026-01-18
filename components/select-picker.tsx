@@ -17,14 +17,8 @@ interface SelectPickerProps
   extends
     Omit<React.ComponentProps<typeof SelectPrimitive.Select>, "value" | "onChange">,
     MixinProps<"trigger", Omit<SelectTriggerProps, "children">>,
-    MixinProps<
-      "triggerValue",
-      Omit<React.ComponentProps<typeof SelectPrimitive.SelectValue>, "children">
-    >,
-    MixinProps<
-      "item",
-      Omit<React.ComponentProps<typeof SelectPrimitive.SelectItem>, "children" | "value">
-    >,
+    MixinProps<"triggerValue", Omit<React.ComponentProps<typeof SelectPrimitive.SelectValue>, "children">>,
+    MixinProps<"item", Omit<React.ComponentProps<typeof SelectPrimitive.SelectItem>, "children" | "value">>,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
     MixinProps<"helpText", Omit<HelpTextProps, "children">> {
@@ -91,11 +85,7 @@ export const SelectPicker = ({
       </SelectPrimitive.Select>
 
       {error && (
-        <p
-          {...errorProps}
-          role="alert"
-          className={cn("text-destructive text-sm font-medium", errorProps.className)}
-        >
+        <p {...errorProps} role="alert" className={cn("text-destructive text-sm font-medium", errorProps.className)}>
           {error}
         </p>
       )}

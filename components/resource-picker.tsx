@@ -49,14 +49,8 @@ const SelectionRibbon = ({ items, onRemove, onClear }: any) => (
         variant="secondary"
         className="bg-secondary/50 border-secondary-foreground/10 hover:bg-secondary h-6 gap-1 pr-1 pl-2 transition-colors"
       >
-        <span className="max-w-[150px] truncate text-[11px] font-semibold tracking-tight">
-          {item.title}
-        </span>
-        <button
-          type="button"
-          onClick={() => onRemove(item.id)}
-          className="hover:bg-foreground/10 rounded-full p-0.5"
-        >
+        <span className="max-w-[150px] truncate text-[11px] font-semibold tracking-tight">{item.title}</span>
+        <button type="button" onClick={() => onRemove(item.id)} className="hover:bg-foreground/10 rounded-full p-0.5">
           <X className="size-3 cursor-pointer" />
         </button>
       </Badge>
@@ -146,10 +140,7 @@ export function ResourcePicker<T>({
     return q ? mappedItems.filter((i) => i.searchValue.toLowerCase().includes(q)) : mappedItems;
   }, [mappedItems, query]);
 
-  const selectedItems = React.useMemo(
-    () => mappedItems.filter((i) => value.includes(i.id)),
-    [mappedItems, value]
-  );
+  const selectedItems = React.useMemo(() => mappedItems.filter((i) => value.includes(i.id)), [mappedItems, value]);
 
   const handleSelect = (id: string) => {
     if (multiple) {
@@ -176,18 +167,10 @@ export function ResourcePicker<T>({
       )}
 
       <InputGroup
-        className={cn(
-          "h-10 bg-transparent transition-all",
-          isFocused && "ring-primary/20 border-primary ring-2"
-        )}
+        className={cn("h-10 bg-transparent transition-all", isFocused && "ring-primary/20 border-primary ring-2")}
       >
         <InputGroupAddon>
-          <Search
-            className={cn(
-              "size-4 transition-colors",
-              isFocused ? "text-primary" : "text-muted-foreground"
-            )}
-          />
+          <Search className={cn("size-4 transition-colors", isFocused ? "text-primary" : "text-muted-foreground")} />
         </InputGroupAddon>
         <InputGroupInput
           value={query}
@@ -197,10 +180,7 @@ export function ResourcePicker<T>({
           aria-invalid={!!error}
         />
         {!isFocused && value.length > 0 && (
-          <InputGroupAddon
-            align="inline-end"
-            className="animate-in fade-in pointer-events-none scale-95"
-          >
+          <InputGroupAddon align="inline-end" className="animate-in fade-in pointer-events-none scale-95">
             <Badge variant="default" className="h-5 px-1.5 text-[10px] font-black uppercase">
               {value.length} {multiple ? "Selected" : "Picked"}
             </Badge>
@@ -226,16 +206,9 @@ export function ResourcePicker<T>({
                 </div>
               ) : filteredItems.length === 0 ? (
                 <div className="space-y-2 py-10 text-center">
-                  <p className="text-muted-foreground text-sm">
-                    No matches for &quot;{query}&quot;
-                  </p>
+                  <p className="text-muted-foreground text-sm">No matches for &quot;{query}&quot;</p>
                   {onAddNew && (
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={onAddNew}
-                      className="h-auto gap-1 p-0"
-                    >
+                    <Button variant="link" size="sm" onClick={onAddNew} className="h-auto gap-1 p-0">
                       <Plus className="size-3" /> Create new
                     </Button>
                   )}

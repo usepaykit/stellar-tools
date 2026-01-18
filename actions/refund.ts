@@ -35,13 +35,7 @@ export const getRefund = async (id: string, orgId?: string, env?: Network) => {
   const [refund] = await db
     .select()
     .from(refunds)
-    .where(
-      and(
-        eq(refunds.id, id),
-        eq(refunds.organizationId, organizationId),
-        eq(refunds.environment, environment)
-      )
-    )
+    .where(and(eq(refunds.id, id), eq(refunds.organizationId, organizationId), eq(refunds.environment, environment)))
     .limit(1);
 
   if (!refund) throw new Error("Refund not found");
@@ -49,24 +43,13 @@ export const getRefund = async (id: string, orgId?: string, env?: Network) => {
   return refund;
 };
 
-export const updateRefund = async (
-  id: string,
-  retUpdate: Partial<Refund>,
-  orgId?: string,
-  env?: Network
-) => {
+export const updateRefund = async (id: string, retUpdate: Partial<Refund>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [refund] = await db
     .update(refunds)
     .set({ ...retUpdate, updatedAt: new Date() } as Refund)
-    .where(
-      and(
-        eq(refunds.id, id),
-        eq(refunds.organizationId, organizationId),
-        eq(refunds.environment, environment)
-      )
-    )
+    .where(and(eq(refunds.id, id), eq(refunds.organizationId, organizationId), eq(refunds.environment, environment)))
     .returning();
 
   if (!refund) throw new Error("Failed to update refund");

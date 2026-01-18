@@ -53,9 +53,7 @@ export const PayoutReceipt = ({
               <Text
                 style={[
                   styles.statusBadge,
-                  payout.status === "succeeded"
-                    ? styles.statusBadgePaid
-                    : styles.statusBadgePending,
+                  payout.status === "succeeded" ? styles.statusBadgePaid : styles.statusBadgePending,
                 ]}
               >
                 {payout.status === "succeeded" ? "Succeeded" : "Pending"}
@@ -85,9 +83,7 @@ export const PayoutReceipt = ({
           {payout.environment && (
             <View style={styles.row}>
               <Text style={styles.label}>Network</Text>
-              <Text style={styles.value}>
-                {payout.environment === "mainnet" ? "Live Mode" : "Test Mode"}
-              </Text>
+              <Text style={styles.value}>{payout.environment === "mainnet" ? "Live Mode" : "Test Mode"}</Text>
             </View>
           )}
         </View>
@@ -136,9 +132,7 @@ export const PayoutReceipt = ({
         <View style={styles.footer}>
           {organizationAddress && <Text>{organizationAddress}</Text>}
           {organizationEmail && <Text>{organizationEmail}</Text>}
-          <Text style={{ marginTop: 10 }}>
-            This is an automated receipt. For questions, please contact support.
-          </Text>
+          <Text style={{ marginTop: 10 }}>This is an automated receipt. For questions, please contact support.</Text>
           <Text style={{ marginTop: 5 }}>Generated on {formatDate(new Date())}</Text>
         </View>
       </Page>

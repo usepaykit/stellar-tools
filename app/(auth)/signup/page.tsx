@@ -23,10 +23,7 @@ import { z } from "zod";
 const signUpSchema = z.object({
   name: z.string().min(1, "Name is required").min(3, "Name must be at least 3 characters"),
   email: z.email(),
-  password: z
-    .string()
-    .min(1, "Password is required")
-    .min(8, "Password must be at least 8 characters"),
+  password: z.string().min(1, "Password is required").min(8, "Password must be at least 8 characters"),
 });
 
 type SignUpFormData = z.infer<typeof signUpSchema>;
@@ -130,9 +127,7 @@ export default function SignUp() {
 
               {/* Typography with refined hierarchy */}
               <div className="space-y-3">
-                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">
-                  Stellar Tools
-                </h1>
+                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">Stellar Tools</h1>
                 <div className="from-primary/50 h-px w-16 bg-linear-to-r to-transparent" />
               </div>
             </div>
@@ -140,8 +135,7 @@ export default function SignUp() {
             {/* Value Proposition - Concise and impactful */}
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs. Centralized control with
-                enterprise reliability.
+                The cloud platform for managing Stellar payment SDKs. Centralized control with enterprise reliability.
               </p>
 
               {/* Feature highlights - Minimal and elegant */}
@@ -174,9 +168,7 @@ export default function SignUp() {
 
             <div className="space-y-4 pt-8">
               <div className="flex items-center gap-3">
-                <h3 className="text-base font-semibold tracking-wide text-white">
-                  Trusted Cloud Platform
-                </h3>
+                <h3 className="text-base font-semibold tracking-wide text-white">Trusted Cloud Platform</h3>
               </div>
               <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
                 Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
@@ -211,9 +203,7 @@ export default function SignUp() {
 
           <div className="my-6 flex w-full items-center">
             <Separator className="flex-1" />
-            <span className="text-muted-foreground px-4 text-sm whitespace-nowrap">
-              or continue with email
-            </span>
+            <span className="text-muted-foreground px-4 text-sm whitespace-nowrap">or continue with email</span>
             <Separator className="flex-1" />
           </div>
 
@@ -261,10 +251,7 @@ export default function SignUp() {
               name="password"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup
-                    className="w-full shadow-none"
-                    aria-invalid={error ? "true" : "false"}
-                  >
+                  <InputGroup className="w-full shadow-none" aria-invalid={error ? "true" : "false"}>
                     <InputGroupInput
                       {...field}
                       id="password"
@@ -322,10 +309,7 @@ export default function SignUp() {
           <div className="w-full text-center">
             <p className="text-muted-foreground text-sm">
               Already have an account?{" "}
-              <Link
-                href="/signin"
-                className="hover:text-foreground font-semibold underline transition-colors"
-              >
+              <Link href="/signin" className="hover:text-foreground font-semibold underline transition-colors">
                 Sign in
               </Link>
             </p>

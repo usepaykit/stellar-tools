@@ -148,9 +148,7 @@ const columns: ColumnDef<UsageRecord>[] = [
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <span className="font-medium">{record.consumed.toLocaleString()}</span>
-            <span className="text-muted-foreground text-sm">
-              / {record.granted.toLocaleString()}
-            </span>
+            <span className="text-muted-foreground text-sm">/ {record.granted.toLocaleString()}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
@@ -287,9 +285,7 @@ export default function UsagePage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Usage</h1>
-                <p className="text-muted-foreground mt-1.5 text-sm">
-                  Monitor metered billing and usage records
-                </p>
+                <p className="text-muted-foreground mt-1.5 text-sm">Monitor metered billing and usage records</p>
               </div>
             </div>
 

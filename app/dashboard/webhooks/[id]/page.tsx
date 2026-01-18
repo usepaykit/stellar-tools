@@ -17,11 +17,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import {
-  UnderlineTabs,
-  UnderlineTabsList,
-  UnderlineTabsTrigger,
-} from "@/components/underline-tabs";
+import { UnderlineTabs, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/underline-tabs";
 import { WebhookLog } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useOrgQuery } from "@/hooks/use-org-query";
@@ -248,9 +244,7 @@ export default function WebhookLogPage() {
           <LogDetailSection title="Response">
             {log.response ? (
               <CodeBlock language="json" showCopyButton={true} maxHeight="200px">
-                {typeof log.response === "string"
-                  ? log.response
-                  : JSON.stringify(log.response, null, 2)}
+                {typeof log.response === "string" ? log.response : JSON.stringify(log.response, null, 2)}
               </CodeBlock>
             ) : (
               <p className="text-muted-foreground text-sm">No data</p>
@@ -295,23 +289,14 @@ export default function WebhookLogPage() {
             <div className="flex items-center justify-between" />
 
             <div className="flex items-center justify-between gap-4">
-              <UnderlineTabs
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-                className="w-auto"
-              >
+              <UnderlineTabs value={statusFilter} onValueChange={setStatusFilter} className="w-auto">
                 <UnderlineTabsList>
                   <UnderlineTabsTrigger value="all">All</UnderlineTabsTrigger>
                   <UnderlineTabsTrigger value="succeeded">Succeeded</UnderlineTabsTrigger>
                   <UnderlineTabsTrigger value="failed">Failed</UnderlineTabsTrigger>
                 </UnderlineTabsList>
               </UnderlineTabs>
-              <Button
-                variant="outline"
-                size="sm"
-                className="cursor-pointer gap-2"
-                onClick={() => refetchWebhookLogs()}
-              >
+              <Button variant="outline" size="sm" className="cursor-pointer gap-2" onClick={() => refetchWebhookLogs()}>
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>

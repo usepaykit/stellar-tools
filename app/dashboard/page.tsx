@@ -392,11 +392,7 @@ export default function DashboardPage() {
 
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold tracking-tight">Integrations</h2>
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setIsMarketplaceOpen(true)}
-                >
+                <Button variant="outline" className="gap-2" onClick={() => setIsMarketplaceOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Add Integration
                 </Button>
@@ -447,9 +443,7 @@ export default function DashboardPage() {
                                   />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <CardTitle className="truncate text-base">
-                                    {integration.name}
-                                  </CardTitle>
+                                  <CardTitle className="truncate text-base">{integration.name}</CardTitle>
                                   <CardDescription className="line-clamp-2 text-xs">
                                     {integration.description}
                                   </CardDescription>
@@ -494,9 +488,7 @@ export default function DashboardPage() {
                         <Search className="text-muted-foreground h-8 w-8" />
                       </div>
                       <p className="mb-1 text-sm font-medium">No integrations found</p>
-                      <p className="text-muted-foreground text-xs">
-                        Try adjusting your search query
-                      </p>
+                      <p className="text-muted-foreground text-xs">Try adjusting your search query</p>
                     </div>
                   )}
                 </div>
@@ -510,8 +502,7 @@ export default function DashboardPage() {
                     </div>
                     <h3 className="mb-2 text-lg font-semibold">No integrations yet</h3>
                     <p className="text-muted-foreground mb-6 max-w-md text-center text-sm">
-                      Connect your favorite tools and services to start tracking your data and
-                      streamline your workflow
+                      Connect your favorite tools and services to start tracking your data and streamline your workflow
                     </p>
                     <Button className="gap-2" onClick={() => setIsMarketplaceOpen(true)}>
                       <Plus className="h-4 w-4" />

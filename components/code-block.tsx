@@ -118,18 +118,8 @@ export function CodeBlock({
         {showHeader && (
           <div className="bg-muted/50 sticky top-0 z-10 flex shrink-0 items-center justify-between border-b px-3 py-2 backdrop-blur-sm">
             <div className="flex items-center gap-2">
-              {logo && (
-                <Image
-                  src={logo}
-                  alt="Tech logo"
-                  width={14}
-                  height={14}
-                  className="object-contain"
-                />
-              )}
-              {filename && (
-                <span className="text-muted-foreground text-xs font-medium">{filename}</span>
-              )}
+              {logo && <Image src={logo} alt="Tech logo" width={14} height={14} className="object-contain" />}
+              {filename && <span className="text-muted-foreground text-xs font-medium">{filename}</span>}
             </div>
 
             {showCopyButton && !isShell && <CopyButton copied={copied} onCopy={copyToClipboard} />}
@@ -203,11 +193,7 @@ function CopyButton({
           )}
           onClick={onCopy}
         >
-          {copied ? (
-            <Check className="h-3.5 w-3.5 text-green-500" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}
+          {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
           <span className="sr-only">Copy code</span>
         </Button>
       </TooltipTrigger>

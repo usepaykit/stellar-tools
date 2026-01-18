@@ -89,12 +89,7 @@ export const listSubscriptions = async (customerId: string, orgId?: string, env?
   return subscriptionList;
 };
 
-export const putSubscription = async (
-  id: string,
-  retUpdate: Partial<Subscription>,
-  orgId?: string,
-  env?: Network
-) => {
+export const putSubscription = async (id: string, retUpdate: Partial<Subscription>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [record] = await db

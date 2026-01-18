@@ -17,9 +17,7 @@ export class FileUploadApi {
     const errors = response.filter((file) => file.error);
 
     if (errors.length > 0) {
-      throw new Error(
-        `Failed to upload files: ${errors.map((file) => file.error?.message).join(", ")}`
-      );
+      throw new Error(`Failed to upload files: ${errors.map((file) => file.error?.message).join(", ")}`);
     }
 
     return response

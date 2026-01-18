@@ -24,14 +24,12 @@ export default function FeaturesSection() {
     },
     {
       title: "Credit System",
-      description:
-        "Flexible credit-based billing with automatic balance tracking and consumption monitoring.",
+      description: "Flexible credit-based billing with automatic balance tracking and consumption monitoring.",
       icon: <Coins className="h-6 w-6" />,
     },
     {
       title: "Subscriptions",
-      description:
-        "Recurring billing with automatic renewals, pause/resume, and cancellation management.",
+      description: "Recurring billing with automatic renewals, pause/resume, and cancellation management.",
       icon: <Repeat className="h-6 w-6" />,
     },
     {
@@ -46,14 +44,12 @@ export default function FeaturesSection() {
     },
     {
       title: "Customer Management",
-      description:
-        "Complete customer lifecycle management with detailed profiles and transaction history.",
+      description: "Complete customer lifecycle management with detailed profiles and transaction history.",
       icon: <Users className="h-6 w-6" />,
     },
     {
       title: "Webhooks & Events",
-      description:
-        "Real-time event notifications for payments, subscriptions, and credit transactions.",
+      description: "Real-time event notifications for payments, subscriptions, and credit transactions.",
       icon: <Webhook className="h-6 w-6" />,
     },
     {
@@ -73,14 +69,12 @@ export default function FeaturesSection() {
     },
     {
       title: "Usage Analytics",
-      description:
-        "Monitor metered billing usage, credit consumption, and balance changes in real-time.",
+      description: "Monitor metered billing usage, credit consumption, and balance changes in real-time.",
       icon: <BarChart className="h-6 w-6" />,
     },
     {
       title: "Developer First",
-      description:
-        "Built for developers with TypeScript, comprehensive docs, and easy integration.",
+      description: "Built for developers with TypeScript, comprehensive docs, and easy integration.",
       icon: <Terminal className="h-6 w-6" />,
     },
   ];

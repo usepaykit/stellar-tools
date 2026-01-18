@@ -37,9 +37,7 @@ export const postCheckout = async (
       events: ["checkout.created"],
       organizationId,
       environment,
-      payload: ({ updatedAt: _$, organizationId: _$1, ...checkoutWithoutOrg }) => ({
-        ...checkoutWithoutOrg,
-      }),
+      payload: ({ updatedAt: _$, organizationId: _$1, ...checkoutWithoutOrg }) => checkoutWithoutOrg,
     }
   );
 };
@@ -50,9 +48,7 @@ export const retrieveCheckouts = async (orgId?: string, env?: Network) => {
   return await db
     .select()
     .from(checkouts)
-    .where(
-      and(eq(checkouts.organizationId, organizationId), eq(checkouts.environment, environment))
-    );
+    .where(and(eq(checkouts.organizationId, organizationId), eq(checkouts.environment, environment)));
 };
 
 export const retrieveCheckout = async (id: string, orgId?: string, env?: Network) => {
@@ -62,11 +58,7 @@ export const retrieveCheckout = async (id: string, orgId?: string, env?: Network
     .select()
     .from(checkouts)
     .where(
-      and(
-        eq(checkouts.id, id),
-        eq(checkouts.organizationId, organizationId),
-        eq(checkouts.environment, environment)
-      )
+      and(eq(checkouts.id, id), eq(checkouts.organizationId, organizationId), eq(checkouts.environment, environment))
     );
 
   if (!checkout) throw new Error("Checkout not found");
@@ -74,12 +66,7 @@ export const retrieveCheckout = async (id: string, orgId?: string, env?: Network
   return checkout;
 };
 
-export const putCheckout = async (
-  id: string,
-  params: Partial<Checkout>,
-  orgId?: string,
-  env?: Network
-) => {
+export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const oldCheckout = await retrieveCheckout(id, orgId, env);
@@ -118,11 +105,7 @@ export const deleteCheckout = async (id: string, orgId?: string, env?: Network) 
   await db
     .delete(checkouts)
     .where(
-      and(
-        eq(checkouts.id, id),
-        eq(checkouts.organizationId, organizationId),
-        eq(checkouts.environment, environment)
-      )
+      and(eq(checkouts.id, id), eq(checkouts.organizationId, organizationId), eq(checkouts.environment, environment))
     )
     .returning();
 
@@ -153,10 +136,7 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
 
   if (!result) throw new Error("Checkout not found");
 
-  const { secret } = await retrieveOrganizationIdAndSecret(
-    result.checkout.organizationId,
-    result.checkout.environment
-  );
+  const { secret } = await retrieveOrganizationIdAndSecret(result.checkout.organizationId, result.checkout.environment);
 
   if (!secret?.publicKey) throw new Error("Merchant wallet not configured");
 

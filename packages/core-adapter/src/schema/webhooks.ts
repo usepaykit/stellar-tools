@@ -103,10 +103,7 @@ export const createWebhookSchema = webhookSchema
     path: ["events"],
   });
 
-export type CreateWebhook = Pick<
-  Webhook,
-  "name" | "url" | "description" | "events" | "organizationId"
->;
+export type CreateWebhook = Pick<Webhook, "name" | "url" | "description" | "events" | "organizationId">;
 
 export const updateWebhookSchema = webhookSchema
   .partial()
@@ -128,6 +125,4 @@ export const updateWebhookSchema = webhookSchema
     }
   });
 
-export type UpdateWebhook = Partial<
-  Pick<Webhook, "name" | "url" | "description" | "events" | "isDisabled">
->;
+export type UpdateWebhook = Partial<Pick<Webhook, "name" | "url" | "description" | "events" | "isDisabled">>;

@@ -89,13 +89,9 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
 
                   await options.onCustomerCreated?.(newCustomer.value);
 
-                  ctx.context.logger.info(
-                    `Created new Stellar customer ${newCustomer.value.id} for user ${user.id}`
-                  );
+                  ctx.context.logger.info(`Created new Stellar customer ${newCustomer.value.id} for user ${user.id}`);
                 } else {
-                  ctx.context.logger.error(
-                    `Failed to create or link Stellar customer: ${newCustomer.error?.message}`
-                  );
+                  ctx.context.logger.error(`Failed to create or link Stellar customer: ${newCustomer.error?.message}`);
                 }
               },
             },

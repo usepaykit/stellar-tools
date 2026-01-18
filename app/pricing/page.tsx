@@ -5,14 +5,7 @@ import FooterSection from "@/components/landing/footer-section";
 import SubscriptionCalc from "@/components/landing/subscription-calc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/ui/navbar";
 import { cn } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
@@ -113,8 +106,7 @@ export default function PricingPage() {
               Simple, transparent pricing
             </h1>
             <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
-              Accept Stellar payments with ease. Start free, pay only for what you use. No hidden
-              fees, no surprises.
+              Accept Stellar payments with ease. Start free, pay only for what you use. No hidden fees, no surprises.
             </p>
           </div>
 
@@ -129,18 +121,14 @@ export default function PricingPage() {
               >
                 <CardHeader className="pb-4">
                   <CardTitle className="mb-1 text-2xl font-bold">{tier.name}</CardTitle>
-                  <CardDescription className="text-muted-foreground text-sm">
-                    {tier.subtitle}
-                  </CardDescription>
+                  <CardDescription className="text-muted-foreground text-sm">{tier.subtitle}</CardDescription>
                   <div className="mt-6">
                     <div className="text-3xl font-bold">{tier.price}</div>
                   </div>
                 </CardHeader>
 
                 <CardContent className="flex-1 pb-6">
-                  <p className="text-muted-foreground text-sm leading-relaxed">
-                    {tier.description}
-                  </p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{tier.description}</p>
                 </CardContent>
 
                 <CardFooter className="flex-col gap-3 pt-0">
@@ -155,9 +143,7 @@ export default function PricingPage() {
                         className="text-muted-foreground hover:text-foreground text-sm underline transition-colors"
                         onClick={(e) => {
                           e.preventDefault();
-                          document
-                            .getElementById("calculator")
-                            ?.scrollIntoView({ behavior: "smooth" });
+                          document.getElementById("calculator")?.scrollIntoView({ behavior: "smooth" });
                         }}
                       >
                         Calculate pricing

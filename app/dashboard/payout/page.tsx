@@ -17,17 +17,7 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  Banknote,
-  Calendar,
-  CheckCircle2,
-  Circle,
-  Clock,
-  Coins,
-  Plus,
-  Wallet,
-  XCircle,
-} from "lucide-react";
+import { Banknote, Calendar, CheckCircle2, Circle, Clock, Coins, Plus, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
 import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
@@ -142,9 +132,7 @@ const columns: ColumnDef<Payout>[] = [
         <span>Date</span>
       </div>
     ),
-    cell: ({ row }) => (
-      <div className="text-sm">{moment(row.original.createdAt).format("DD MMM YYYY")}</div>
-    ),
+    cell: ({ row }) => <div className="text-sm">{moment(row.original.createdAt).format("DD MMM YYYY")}</div>,
   },
   {
     accessorKey: "walletAddress",
@@ -202,13 +190,7 @@ const requestPayoutSchema = z
 
 type RequestPayoutFormData = z.infer<typeof requestPayoutSchema>;
 
-function RequestPayoutModal({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
+function RequestPayoutModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const form = RHF.useForm<RequestPayoutFormData>({
     resolver: zodResolver(requestPayoutSchema),
     defaultValues: {
@@ -263,11 +245,7 @@ function RequestPayoutModal({
       description="Request a payout to your preferred payment method"
       footer={
         <div className="flex justify-end gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={requestPayoutMutation.isPending}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={requestPayoutMutation.isPending}>
             Cancel
           </Button>
           <Button onClick={form.handleSubmit(onSubmit)} disabled={requestPayoutMutation.isPending}>
@@ -279,9 +257,7 @@ function RequestPayoutModal({
       <div className="space-y-6">
         <div>
           <h3 className="mb-1 text-sm font-semibold">Payment Method</h3>
-          <p className="text-muted-foreground text-xs">
-            Choose how you want to receive your payout
-          </p>
+          <p className="text-muted-foreground text-xs">Choose how you want to receive your payout</p>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -408,9 +384,7 @@ export default function PayoutPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">Payout history</h1>
-              <p className="text-muted-foreground mt-1 text-sm">
-                See the payout history for this store
-              </p>
+              <p className="text-muted-foreground mt-1 text-sm">See the payout history for this store</p>
             </div>
             <Button onClick={() => setIsRequestModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />

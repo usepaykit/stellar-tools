@@ -42,10 +42,7 @@ export const POST = async (req: NextRequest) => {
   const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 
   if (!secret) {
-    return NextResponse.json(
-      { error: "Stellar secret is not set, please contact support" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Stellar secret is not set, please contact support" }, { status: 400 });
   }
 
   const stellar = new StellarCoreApi(environment);

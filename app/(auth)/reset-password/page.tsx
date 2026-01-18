@@ -18,10 +18,7 @@ import { z } from "zod";
 
 const updatePasswordSchema = z
   .object({
-    newPassword: z
-      .string()
-      .min(1, "New password is required")
-      .min(8, "New password must be at least 8 characters"),
+    newPassword: z.string().min(1, "New password is required").min(8, "New password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your new password"),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
@@ -100,17 +97,14 @@ export default function UpdatePassword() {
               </div>
 
               <div className="space-y-3">
-                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">
-                  Stellar Tools
-                </h1>
+                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">Stellar Tools</h1>
                 <div className="from-primary/50 h-px w-16 bg-linear-to-r to-transparent" />
               </div>
             </div>
 
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs. Centralized control with
-                enterprise reliability.
+                The cloud platform for managing Stellar payment SDKs. Centralized control with enterprise reliability.
               </p>
 
               <div className="flex flex-col gap-4 pt-2">
@@ -140,9 +134,7 @@ export default function UpdatePassword() {
 
             <div className="space-y-4 pt-8">
               <div className="flex items-center gap-3">
-                <h3 className="text-base font-semibold tracking-wide text-white">
-                  Trusted Cloud Platform
-                </h3>
+                <h3 className="text-base font-semibold tracking-wide text-white">Trusted Cloud Platform</h3>
               </div>
               <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
                 Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
@@ -203,10 +195,7 @@ export default function UpdatePassword() {
               name="newPassword"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup
-                    className="w-full shadow-none"
-                    aria-invalid={error ? "true" : "false"}
-                  >
+                  <InputGroup className="w-full shadow-none" aria-invalid={error ? "true" : "false"}>
                     <InputGroupInput
                       {...field}
                       id="newPassword"
@@ -246,10 +235,7 @@ export default function UpdatePassword() {
               name="confirmPassword"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup
-                    className="w-full shadow-none"
-                    aria-invalid={error ? "true" : "false"}
-                  >
+                  <InputGroup className="w-full shadow-none" aria-invalid={error ? "true" : "false"}>
                     <InputGroupInput
                       {...field}
                       id="confirmPassword"
@@ -292,10 +278,7 @@ export default function UpdatePassword() {
           <div className="my-6 w-full">
             <p className="text-muted-foreground text-center text-sm">
               Remember your password?{" "}
-              <Link
-                href="/signin"
-                className="hover:text-foreground font-semibold underline transition-colors"
-              >
+              <Link href="/signin" className="hover:text-foreground font-semibold underline transition-colors">
                 Sign in
               </Link>
             </p>

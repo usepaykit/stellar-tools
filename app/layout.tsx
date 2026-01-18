@@ -25,8 +25,7 @@ const rosemary = localFont({
 
 export const metadata: Metadata = {
   title: "StellarTools | Stripe for Stellar",
-  description:
-    "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+  description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
 };
 
 export default function RootLayout({
@@ -36,9 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${rosemary.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} ${rosemary.variable} antialiased`}>
         <Providers>
           {children}
           <Toaster position="bottom-right" />

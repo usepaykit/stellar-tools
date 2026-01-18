@@ -3,14 +3,7 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -37,18 +30,7 @@ interface PricePickerProps {
 
 export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
   (
-    {
-      id,
-      value,
-      onChange,
-      assets = [],
-      isLoading = false,
-      label,
-      error,
-      disabled,
-      placeholder = "0.00",
-      className,
-    },
+    { id, value, onChange, assets = [], isLoading = false, label, error, disabled, placeholder = "0.00", className },
     ref
   ) => {
     const [open, setOpen] = React.useState(false);
@@ -102,28 +84,15 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
               </Button>
             </PopoverTrigger>
 
-            <PopoverContent
-              className="w-[200px] p-0"
-              align="start"
-              onWheel={(e) => e.stopPropagation()}
-            >
+            <PopoverContent className="w-[200px] p-0" align="start" onWheel={(e) => e.stopPropagation()}>
               <Command>
                 <CommandInput placeholder="Search asset..." />
                 <CommandList>
                   <CommandEmpty>No asset found.</CommandEmpty>
                   <CommandGroup>
                     {assets.map((asset) => (
-                      <CommandItem
-                        key={asset}
-                        value={asset}
-                        onSelect={() => handleAssetSelect(asset)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            value.asset === asset ? "opacity-100" : "opacity-0"
-                          )}
-                        />
+                      <CommandItem key={asset} value={asset} onSelect={() => handleAssetSelect(asset)}>
+                        <Check className={cn("mr-2 h-4 w-4", value.asset === asset ? "opacity-100" : "opacity-0")} />
                         {asset}
                       </CommandItem>
                     ))}

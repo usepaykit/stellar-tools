@@ -18,11 +18,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  UnderlineTabs,
-  UnderlineTabsList,
-  UnderlineTabsTrigger,
-} from "@/components/underline-tabs";
+import { UnderlineTabs, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/underline-tabs";
 import { useCopy } from "@/hooks/use-copy";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -341,9 +337,7 @@ const columns: ColumnDef<UsageRecord>[] = [
       return (
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-2">
-            <span className="text-muted-foreground text-xs">
-              {record.balanceBefore.toLocaleString()}
-            </span>
+            <span className="text-muted-foreground text-xs">{record.balanceBefore.toLocaleString()}</span>
             <ArrowRight className="text-muted-foreground h-3 w-3" />
             <span className="text-sm font-semibold">{record.balanceAfter.toLocaleString()}</span>
           </div>
@@ -397,9 +391,7 @@ export default function UsageDetailPage() {
   }, [statusFilter]);
 
   const usageMeter = React.useMemo(() => {
-    const sortedRecords = [...mockUsageRecords].sort(
-      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-    );
+    const sortedRecords = [...mockUsageRecords].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
     let totalGranted = 0;
     let totalConsumed = 0;
@@ -412,8 +404,7 @@ export default function UsageDetailPage() {
       }
     });
 
-    const currentBalance =
-      sortedRecords.length > 0 ? sortedRecords[sortedRecords.length - 1].balanceAfter : 0;
+    const currentBalance = sortedRecords.length > 0 ? sortedRecords[sortedRecords.length - 1].balanceAfter : 0;
 
     const remaining = currentBalance;
     const usagePercentage = totalGranted > 0 ? (totalConsumed / totalGranted) * 100 : 0;
@@ -495,10 +486,7 @@ export default function UsageDetailPage() {
                   <LogDetailItem
                     label="Product"
                     value={
-                      <Link
-                        href={`/dashboard/products/${record.productId}`}
-                        className="text-primary hover:underline"
-                      >
+                      <Link href={`/dashboard/products/${record.productId}`} className="text-primary hover:underline">
                         {record.product.name}
                       </Link>
                     }
@@ -572,9 +560,7 @@ export default function UsageDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Usage Records</h1>
-                <p className="text-muted-foreground mt-1.5 text-sm">
-                  View usage history and balance changes
-                </p>
+                <p className="text-muted-foreground mt-1.5 text-sm">View usage history and balance changes</p>
               </div>
             </div>
 
@@ -585,13 +571,9 @@ export default function UsageDetailPage() {
                   <div className="flex flex-col gap-2">
                     <p className="text-muted-foreground text-sm font-medium">Total Consumed</p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold">
-                        {usageMeter.consumed.toLocaleString()}
-                      </span>
+                      <span className="text-3xl font-bold">{usageMeter.consumed.toLocaleString()}</span>
                     </div>
-                    <p className="text-muted-foreground text-xs">
-                      of {usageMeter.granted.toLocaleString()} granted
-                    </p>
+                    <p className="text-muted-foreground text-xs">of {usageMeter.granted.toLocaleString()} granted</p>
                   </div>
                 </CardContent>
               </Card>
@@ -600,9 +582,7 @@ export default function UsageDetailPage() {
                   <div className="flex flex-col gap-2">
                     <p className="text-muted-foreground text-sm font-medium">Remaining Balance</p>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-bold">
-                        {usageMeter.remaining.toLocaleString()}
-                      </span>
+                      <span className="text-3xl font-bold">{usageMeter.remaining.toLocaleString()}</span>
                     </div>
                     <p className="text-muted-foreground text-xs">Available to use</p>
                   </div>
@@ -621,9 +601,7 @@ export default function UsageDetailPage() {
                           }}
                         />
                       </div>
-                      <span className="text-lg font-bold">
-                        {usageMeter.usagePercentage.toFixed(1)}%
-                      </span>
+                      <span className="text-lg font-bold">{usageMeter.usagePercentage.toFixed(1)}%</span>
                     </div>
                     <p className="text-muted-foreground text-xs">
                       {usageMeter.granted - usageMeter.consumed > 0
@@ -649,9 +627,7 @@ export default function UsageDetailPage() {
                 <CardContent className="p-4">
                   <div className="flex flex-col gap-1">
                     <p className="text-muted-foreground text-xs font-medium">Granted</p>
-                    <p className="text-xl font-bold">
-                      {filteredRecords.filter((r) => r.status === "granted").length}
-                    </p>
+                    <p className="text-xl font-bold">{filteredRecords.filter((r) => r.status === "granted").length}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -659,9 +635,7 @@ export default function UsageDetailPage() {
                 <CardContent className="p-4">
                   <div className="flex flex-col gap-1">
                     <p className="text-muted-foreground text-xs font-medium">Consumed</p>
-                    <p className="text-xl font-bold">
-                      {filteredRecords.filter((r) => r.status === "consumed").length}
-                    </p>
+                    <p className="text-xl font-bold">{filteredRecords.filter((r) => r.status === "consumed").length}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -669,9 +643,7 @@ export default function UsageDetailPage() {
                 <CardContent className="p-4">
                   <div className="flex flex-col gap-1">
                     <p className="text-muted-foreground text-xs font-medium">Revoked</p>
-                    <p className="text-xl font-bold">
-                      {filteredRecords.filter((r) => r.status === "revoked").length}
-                    </p>
+                    <p className="text-xl font-bold">{filteredRecords.filter((r) => r.status === "revoked").length}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -679,11 +651,7 @@ export default function UsageDetailPage() {
 
             {/* Filters */}
             <div className="flex items-center justify-between gap-4">
-              <UnderlineTabs
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-                className="w-auto"
-              >
+              <UnderlineTabs value={statusFilter} onValueChange={setStatusFilter} className="w-auto">
                 <UnderlineTabsList>
                   <UnderlineTabsTrigger value="all">All</UnderlineTabsTrigger>
                   <UnderlineTabsTrigger value="granted">Granted</UnderlineTabsTrigger>

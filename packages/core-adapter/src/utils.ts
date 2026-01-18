@@ -6,9 +6,7 @@ type Failure<E = Error> = [undefined, E];
 
 type TryCatchResult<T, E = Error> = Success<T> | Failure<E>;
 
-export async function tryCatchAsync<T, E = Error>(
-  promise: Promise<T>
-): Promise<TryCatchResult<T, E>> {
+export async function tryCatchAsync<T, E = Error>(promise: Promise<T>): Promise<TryCatchResult<T, E>> {
   try {
     const data = await promise;
     return [data as T, undefined];
@@ -26,9 +24,7 @@ export function tryCatchSync<T, E = Error>(fn: () => T): TryCatchResult<T, E> {
   }
 }
 
-export type Result<T, E = unknown> =
-  | { ok: true; value: T; error?: never }
-  | { ok: false; value?: never; error: E };
+export type Result<T, E = unknown> = { ok: true; value: T; error?: never } | { ok: false; value?: never; error: E };
 
 export const OK = <V>(value: V): Result<V, never> => ({ ok: true, value });
 
@@ -66,13 +62,7 @@ export const executeWithRetryWithHandler = async <T>(
 
       await sleep(delay);
 
-      return executeWithRetryWithHandler(
-        apiCall,
-        errorHandler,
-        maxRetries,
-        baseDelay,
-        currentAttempt + 1
-      );
+      return executeWithRetryWithHandler(apiCall, errorHandler, maxRetries, baseDelay, currentAttempt + 1);
     }
 
     return handledError.data as T;
@@ -108,9 +98,7 @@ export const validateRequiredKeys = <K extends string>(
   if (missingKeys.length > 0) {
     const missingKeysList = missingKeys.join(", ");
     const error =
-      typeof errorMessage === "function"
-        ? errorMessage(missingKeys)
-        : errorMessage.replace("{keys}", missingKeysList);
+      typeof errorMessage === "function" ? errorMessage(missingKeys) : errorMessage.replace("{keys}", missingKeysList);
 
     throw errorInstance?.(error) ?? new UnTraceableError(error);
   }

@@ -53,13 +53,10 @@ export default function FooterSection() {
                     className="hidden h-full w-full object-contain dark:block"
                   />
                 </div>
-                <span className="font-rosemary text-foreground text-xl font-semibold">
-                  Stellar Tools
-                </span>
+                <span className="font-rosemary text-foreground text-xl font-semibold">Stellar Tools</span>
               </Link>
               <p className="text-muted-foreground mb-6 max-w-sm text-sm leading-relaxed">
-                Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in
-                minutes.
+                Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes.
               </p>
               <div className="flex items-center gap-4">
                 <a
@@ -137,9 +134,7 @@ export default function FooterSection() {
             {/* CTA Section */}
             <div className="lg:col-span-2">
               <h3 className="text-foreground mb-4 text-sm font-semibold">Get Started</h3>
-              <p className="text-muted-foreground mb-4 text-sm">
-                Start accepting Stellar payments in minutes.
-              </p>
+              <p className="text-muted-foreground mb-4 text-sm">Start accepting Stellar payments in minutes.</p>
               <Link
                 href="/signup"
                 className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors"

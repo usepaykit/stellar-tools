@@ -194,9 +194,7 @@ export class StellarCoreApi {
             txBuilder.addMemo(StellarSDK.Memo.hash(Buffer.from(params.memo as string)));
             break;
           case "return":
-            txBuilder.addMemo(
-              StellarSDK.Memo.return(Buffer.from(params.memo as string).toString())
-            );
+            txBuilder.addMemo(StellarSDK.Memo.return(Buffer.from(params.memo as string).toString()));
             break;
         }
       }
@@ -254,9 +252,7 @@ export class StellarCoreApi {
     }
   }
 
-  retrieveAccount = async (
-    publicKey: string
-  ): Promise<ApiResponse<StellarSDK.Horizon.AccountResponse | null>> => {
+  retrieveAccount = async (publicKey: string): Promise<ApiResponse<StellarSDK.Horizon.AccountResponse | null>> => {
     const { server } = this.getServerAndNetwork();
     const account = await server.loadAccount(publicKey);
     return { data: account, error: undefined };
@@ -331,9 +327,7 @@ export class StellarCoreApi {
     assetIssuer: string,
     amount: string,
     memo?: string
-  ): Promise<
-    ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>
-  > => {
+  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> => {
     try {
       const keypair = StellarSDK.Keypair.fromSecret(sourceSecret);
 
@@ -341,10 +335,7 @@ export class StellarCoreApi {
 
       const account = await server.loadAccount(keypair.publicKey());
 
-      const asset =
-        assetCode === "XLM"
-          ? StellarSDK.Asset.native()
-          : new StellarSDK.Asset(assetCode, assetIssuer);
+      const asset = assetCode === "XLM" ? StellarSDK.Asset.native() : new StellarSDK.Asset(assetCode, assetIssuer);
 
       const txBuilder = new StellarSDK.TransactionBuilder(account, {
         fee: StellarSDK.BASE_FEE,
@@ -406,8 +397,7 @@ export class StellarCoreApi {
     callback?: string;
     originDomain?: string;
   }): string => {
-    const { destination, amount, assetCode, assetIssuer, memo, message, callback, originDomain } =
-      params;
+    const { destination, amount, assetCode, assetIssuer, memo, message, callback, originDomain } = params;
 
     const paymentRequest = Sep7Pay.forDestination(destination);
 

@@ -53,20 +53,13 @@ export const TimePicker = React.forwardRef<HTMLInputElement, TimePickerProps>(
     return (
       <div className="space-y-2">
         {label && (
-          <Label
-            {...labelProps}
-            htmlFor={id}
-            className={cn("text-sm font-medium", labelProps.className)}
-          >
+          <Label {...labelProps} htmlFor={id} className={cn("text-sm font-medium", labelProps.className)}>
             {label}
           </Label>
         )}
 
         {helpText && (
-          <p
-            {...helpTextProps}
-            className={cn("text-muted-foreground text-sm", helpTextProps.className)}
-          >
+          <p {...helpTextProps} className={cn("text-muted-foreground text-sm", helpTextProps.className)}>
             {helpText}
           </p>
         )}
@@ -88,11 +81,7 @@ export const TimePicker = React.forwardRef<HTMLInputElement, TimePickerProps>(
         />
 
         {error && (
-          <p
-            {...errorProps}
-            className={cn("text-destructive text-sm", errorProps.className)}
-            role="alert"
-          >
+          <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)} role="alert">
             {error}
           </p>
         )}

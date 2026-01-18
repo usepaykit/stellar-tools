@@ -28,13 +28,7 @@ const signInSchema = z.object({
 
 type SignInFormData = z.infer<typeof signInSchema>;
 
-export const AuthErrorAlert = ({
-  error,
-  onDismissError,
-}: {
-  error?: string | null;
-  onDismissError: () => void;
-}) => {
+export const AuthErrorAlert = ({ error, onDismissError }: { error?: string | null; onDismissError: () => void }) => {
   if (!error) return null;
 
   return (
@@ -43,9 +37,7 @@ export const AuthErrorAlert = ({
         <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
         <div className="flex-1 space-y-1">
           <h3 className="text-destructive text-sm font-semibold">Authentication Error</h3>
-          <p className="text-destructive/90 text-sm">
-            An error occured during authentication. Please try again.
-          </p>
+          <p className="text-destructive/90 text-sm">An error occured during authentication. Please try again.</p>
         </div>
         <Button
           variant="ghost"
@@ -81,13 +73,9 @@ export default function SignIn() {
 
   const signinMutation = useMutation({
     mutationFn: async (data: { email: string; password: string }) => {
-      return await accountValidator(
-        data.email,
-        { provider: "local", sub: data.password },
-        "SIGN_IN",
-        undefined,
-        { intent: "SIGN_IN" }
-      );
+      return await accountValidator(data.email, { provider: "local", sub: data.password }, "SIGN_IN", undefined, {
+        intent: "SIGN_IN",
+      });
     },
     onSuccess: () => {
       toast.success("Logged in successfully");
@@ -153,17 +141,14 @@ export default function SignIn() {
               </div>
 
               <div className="space-y-3">
-                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">
-                  Stellar Tools
-                </h1>
+                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">Stellar Tools</h1>
                 <div className="from-primary/50 h-px w-16 bg-linear-to-r to-transparent" />
               </div>
             </div>
 
             <div className="max-w-lg space-y-6">
               <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs. Centralized control with
-                enterprise reliability.
+                The cloud platform for managing Stellar payment SDKs. Centralized control with enterprise reliability.
               </p>
 
               <div className="flex flex-col gap-4 pt-2">
@@ -193,9 +178,7 @@ export default function SignIn() {
 
             <div className="space-y-4 pt-8">
               <div className="flex items-center gap-3">
-                <h3 className="text-base font-semibold tracking-wide text-white">
-                  Trusted Cloud Platform
-                </h3>
+                <h3 className="text-base font-semibold tracking-wide text-white">Trusted Cloud Platform</h3>
               </div>
               <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
                 Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
@@ -229,9 +212,7 @@ export default function SignIn() {
 
           <div className="my-6 flex w-full items-center">
             <Separator className="flex-1" />
-            <span className="text-muted-foreground px-4 text-sm whitespace-nowrap">
-              or continue with email
-            </span>
+            <span className="text-muted-foreground px-4 text-sm whitespace-nowrap">or continue with email</span>
             <Separator className="flex-1" />
           </div>
 
@@ -269,10 +250,7 @@ export default function SignIn() {
               name="password"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup
-                    className="w-full shadow-none"
-                    aria-invalid={error ? "true" : "false"}
-                  >
+                  <InputGroup className="w-full shadow-none" aria-invalid={error ? "true" : "false"}>
                     <InputGroupInput
                       {...field}
                       id="password"
@@ -309,11 +287,7 @@ export default function SignIn() {
               name="rememberMe"
               render={({ field }) => (
                 <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="remember-me"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
+                  <Checkbox id="remember-me" checked={field.value} onCheckedChange={field.onChange} />
                   <Label htmlFor="remember-me" className="cursor-pointer text-sm font-semibold">
                     Remember me
                   </Label>
@@ -346,10 +320,7 @@ export default function SignIn() {
           <div className="w-full text-center">
             <p className="text-muted-foreground text-sm">
               Don’t have an account?{" "}
-              <Link
-                href="/signup"
-                className="hover:text-foreground font-semibold underline transition-colors"
-              >
+              <Link href="/signup" className="hover:text-foreground font-semibold underline transition-colors">
                 Sign up
               </Link>
             </p>

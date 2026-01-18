@@ -37,13 +37,7 @@ export const retrieveApiKey = async (id: string, orgId?: string, env?: Network) 
   const [apiKey] = await db
     .select()
     .from(apiKeys)
-    .where(
-      and(
-        eq(apiKeys.id, id),
-        eq(apiKeys.organizationId, organizationId),
-        eq(apiKeys.environment, environment)
-      )
-    )
+    .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)))
     .limit(1);
 
   if (!apiKey) throw new Error("Api key not found");
@@ -51,24 +45,13 @@ export const retrieveApiKey = async (id: string, orgId?: string, env?: Network) 
   return apiKey;
 };
 
-export const putApiKey = async (
-  id: string,
-  retUpdate: Partial<ApiKey>,
-  orgId?: string,
-  env?: Network
-) => {
+export const putApiKey = async (id: string, retUpdate: Partial<ApiKey>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [apiKey] = await db
     .update(apiKeys)
     .set({ ...retUpdate, updatedAt: new Date() })
-    .where(
-      and(
-        eq(apiKeys.id, id),
-        eq(apiKeys.organizationId, organizationId),
-        eq(apiKeys.environment, environment)
-      )
-    )
+    .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)))
     .returning();
 
   if (!apiKey) throw new Error("Api key not found");
@@ -81,13 +64,7 @@ export const deleteApiKey = async (id: string, orgId?: string, env?: Network) =>
 
   await db
     .delete(apiKeys)
-    .where(
-      and(
-        eq(apiKeys.id, id),
-        eq(apiKeys.organizationId, organizationId),
-        eq(apiKeys.environment, environment)
-      )
-    )
+    .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)))
     .returning();
 
   return null;

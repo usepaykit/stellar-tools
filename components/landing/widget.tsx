@@ -46,8 +46,8 @@ export default function WidgetSection() {
         </h4>
 
         <p className="text-muted-foreground mx-auto my-4 max-w-2xl text-center text-sm font-normal lg:text-base">
-          Metered billing, subscriptions, one-time payments, and credit systems. All the APIs you
-          need for crypto payments.
+          Metered billing, subscriptions, one-time payments, and credit systems. All the APIs you need for crypto
+          payments.
         </p>
       </div>
 
@@ -66,13 +66,7 @@ export default function WidgetSection() {
   );
 }
 
-const FeatureCard = ({
-  children,
-  className,
-}: {
-  children?: React.ReactNode;
-  className?: string;
-}) => {
+const FeatureCard = ({ children, className }: { children?: React.ReactNode; className?: string }) => {
   return <div className={cn(`relative overflow-hidden p-4 sm:p-8`, className)}>{children}</div>;
 };
 
@@ -157,8 +151,7 @@ export const SkeletonThree = () => {
 };
 
 // Helper function to generate random rotations (called outside render)
-const generateRotations = (count: number): number[] =>
-  Array.from({ length: count }, () => Math.random() * 20 - 10);
+const generateRotations = (count: number): number[] => Array.from({ length: count }, () => Math.random() * 20 - 10);
 
 export const SkeletonTwo = () => {
   // Platform integration logos with actual images - separate arrays for each row
@@ -235,9 +228,7 @@ export const SkeletonTwo = () => {
                 className="h-full w-full rounded object-contain"
               />
             </div>
-            <p className="text-foreground mt-2 text-center text-xs font-medium md:text-sm">
-              {platform.name}
-            </p>
+            <p className="text-foreground mt-2 text-center text-xs font-medium md:text-sm">{platform.name}</p>
           </motion.div>
         ))}
       </div>
@@ -262,9 +253,7 @@ export const SkeletonTwo = () => {
                 className="h-full w-full rounded object-contain"
               />
             </div>
-            <p className="text-foreground mt-2 text-center text-xs font-medium md:text-sm">
-              {platform.name}
-            </p>
+            <p className="text-foreground mt-2 text-center text-xs font-medium md:text-sm">{platform.name}</p>
           </motion.div>
         ))}
       </div>

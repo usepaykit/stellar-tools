@@ -33,8 +33,7 @@ interface TimelineProps<T> {
 
 // --- Internal Helpers ---
 
-const formatLabel = (key: string) =>
-  key.replace(/([A-Z])/g, " $1").replace(/^[a-z]/, (m) => m.toUpperCase());
+const formatLabel = (key: string) => key.replace(/([A-Z])/g, " $1").replace(/^[a-z]/, (m) => m.toUpperCase());
 
 function TimelineSummary({ data, manualContent }: { data?: any; manualContent?: React.ReactNode }) {
   const summaryItems = React.useMemo(
@@ -97,9 +96,7 @@ function TimelineDiff({ changes }: { changes: any }) {
             {val.from === null || val.from === "" ? "none" : String(val.from)}
           </span>
           <span className="text-muted-foreground/40 mx-1.5">→</span>
-          <span className="text-primary font-medium">
-            {val.to === null || val.to === "" ? "none" : String(val.to)}
-          </span>
+          <span className="text-primary font-medium">{val.to === null || val.to === "" ? "none" : String(val.to)}</span>
         </div>
       ))}
     </div>
@@ -150,14 +147,11 @@ export function Timeline<T>({
 
   if (!items?.length) {
     return (
-      <div className={cn("text-muted-foreground py-10 text-center text-sm italic", className)}>
-        {emptyMessage}
-      </div>
+      <div className={cn("text-muted-foreground py-10 text-center text-sm italic", className)}>{emptyMessage}</div>
     );
   }
 
-  const displayItems =
-    limit > 0 && items.length > limit && !isExpanded ? items.slice(0, limit) : items;
+  const displayItems = limit > 0 && items.length > limit && !isExpanded ? items.slice(0, limit) : items;
 
   return (
     <div className={cn("relative flex flex-col", className)}>
@@ -179,9 +173,7 @@ export function Timeline<T>({
                   <h4 className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
                     {entry.title}
                   </h4>
-                  <time className="text-muted-foreground/60 text-[10px] font-medium sm:mt-0">
-                    {entry.date}
-                  </time>
+                  <time className="text-muted-foreground/60 text-[10px] font-medium sm:mt-0">{entry.date}</time>
                 </div>
 
                 <TimelineSummary data={entry.data} manualContent={entry.contentOverride} />

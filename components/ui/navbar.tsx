@@ -158,10 +158,7 @@ export function Header() {
             <NavigationMenuList>
               <NavigationMenuItem>
                 <NavigationMenuTrigger
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "text-muted-foreground h-7.5 rounded-full font-normal"
-                  )}
+                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
                 >
                   Products
                 </NavigationMenuTrigger>
@@ -186,10 +183,7 @@ export function Header() {
 
               <NavigationMenuItem>
                 <NavigationMenuTrigger
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "text-muted-foreground h-7.5 rounded-full font-normal"
-                  )}
+                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
                 >
                   Solutions
                 </NavigationMenuTrigger>
@@ -214,10 +208,7 @@ export function Header() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   asChild
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "text-muted-foreground h-7.5 rounded-full font-normal"
-                  )}
+                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
                 >
                   <Link href="#">Docs</Link>
                 </NavigationMenuLink>
@@ -225,10 +216,7 @@ export function Header() {
               <NavigationMenuItem>
                 <NavigationMenuLink
                   asChild
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "text-muted-foreground h-7.5 rounded-full font-normal"
-                  )}
+                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
                 >
                   <Link href="#">Pricing</Link>
                 </NavigationMenuLink>
@@ -261,11 +249,7 @@ export function Header() {
                   </span> */}
                 </a>
               </Button>
-              <Button
-                variant={"secondary"}
-                size={"sm"}
-                className="shadow-buttons-inverted shadow-md"
-              >
+              <Button variant={"secondary"} size={"sm"} className="shadow-buttons-inverted shadow-md">
                 Docs
               </Button>
               <Button variant={"default"} size={"sm"}>
@@ -335,10 +319,9 @@ function ListItem({
     if (React.isValidElement(icon)) {
       IconElement = icon;
     } else if (typeof icon === "function") {
-      IconElement = React.createElement(
-        icon as React.ComponentType<React.SVGProps<SVGSVGElement>>,
-        { className: "size-6" }
-      );
+      IconElement = React.createElement(icon as React.ComponentType<React.SVGProps<SVGSVGElement>>, {
+        className: "size-6",
+      });
     }
   }
 
@@ -360,9 +343,7 @@ function ListItem({
             ) : null}
             <div className="text-container">
               <div className="text-sm leading-none font-medium">{title}</div>
-              <p className="text-muted-foreground line-clamp-2 pt-1 text-xs leading-snug">
-                {children}
-              </p>
+              <p className="text-muted-foreground line-clamp-2 pt-1 text-xs leading-snug">{children}</p>
             </div>
           </div>
         </Link>
@@ -433,12 +414,7 @@ const ThemeSwitcher = ({ className }: ThemeSwitcherProps) => {
   }
 
   return (
-    <div
-      className={cn(
-        "bg-background ring-border relative isolate flex h-7 rounded-full p-1 ring-1",
-        className
-      )}
-    >
+    <div className={cn("bg-background ring-border relative isolate flex h-7 rounded-full p-1 ring-1", className)}>
       {themes.map(({ key, icon: Icon, label }) => {
         const isActive = theme === key;
 
@@ -452,10 +428,7 @@ const ThemeSwitcher = ({ className }: ThemeSwitcherProps) => {
           >
             {isActive && <div className="bg-secondary absolute inset-0 rounded-full" />}
             <Icon
-              className={cn(
-                "relative z-10 m-auto h-3.5 w-3.5",
-                isActive ? "text-foreground" : "text-muted-foreground"
-              )}
+              className={cn("relative z-10 m-auto h-3.5 w-3.5", isActive ? "text-foreground" : "text-muted-foreground")}
             />
           </button>
         );

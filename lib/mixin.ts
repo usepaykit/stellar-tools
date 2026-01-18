@@ -4,9 +4,7 @@ export type MixinProps<Mixin extends string, Props> = {
 
 type SplitProps<Props, Mixins extends string[]> = {
   [Mixin in Mixins[number]]: {
-    [MixinKey in keyof Props as MixinKey extends `${Mixin}${infer Key}`
-      ? Uncapitalize<Key>
-      : never]: Props[MixinKey];
+    [MixinKey in keyof Props as MixinKey extends `${Mixin}${infer Key}` ? Uncapitalize<Key> : never]: Props[MixinKey];
   };
 } & {
   rest: Omit<

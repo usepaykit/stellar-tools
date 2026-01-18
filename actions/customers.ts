@@ -27,11 +27,7 @@ export const postCustomers = async (
       type: "customer::created",
       map: (customer) => ({
         customerId: customer.id,
-        data: {
-          name: customer.name,
-          email: customer.email,
-          metadata: JSON.stringify(customer.metadata),
-        },
+        data: { name: customer.name, email: customer.email, metadata: JSON.stringify(customer.metadata) },
       }),
     },
     {
@@ -49,9 +45,7 @@ export const retrieveCustomers = async (orgId?: string, env?: Network) => {
   return await db
     .select()
     .from(customers)
-    .where(
-      and(eq(customers.organizationId, organizationId), eq(customers.environment, environment))
-    );
+    .where(and(eq(customers.organizationId, organizationId), eq(customers.environment, environment)));
 };
 
 export const retrieveCustomer = async (
@@ -80,26 +74,15 @@ export const retrieveCustomer = async (
   const [customer] = await db
     .select()
     .from(customers)
-    .where(
-      and(
-        whereClause,
-        eq(customers.organizationId, organizationId),
-        eq(customers.environment, environment)
-      )
-    )
+    .where(and(whereClause, eq(customers.organizationId, organizationId), eq(customers.environment, environment)))
     .limit(1);
 
-  if (!customer) throw new Error("Customer not found");
+  if (!customer) return null;
 
   return customer;
 };
 
-export const putCustomer = async (
-  id: string,
-  retUpdate: Partial<Customer>,
-  orgId?: string,
-  env?: Network
-) => {
+export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgId?: string, env?: Network) => {
   const [{ organizationId, environment }, oldCustomer] = await Promise.all([
     resolveOrgContext(orgId, env),
     retrieveCustomer({ id }, orgId, env),
@@ -127,17 +110,14 @@ export const putCustomer = async (
       type: "customer::updated",
       map: (newCustomer) => ({
         customerId: newCustomer.id,
-        data: { $changes: computeDiff(oldCustomer, newCustomer) },
+        data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer) },
       }),
     },
     {
       events: ["customer.updated"],
       organizationId,
       environment,
-      payload: (newCustomer) => ({
-        id: newCustomer.id,
-        changes: computeDiff(oldCustomer, newCustomer) ?? {},
-      }),
+      payload: (newCustomer) => ({ id: newCustomer.id, changes: computeDiff(oldCustomer ?? {}, newCustomer) ?? {} }),
     }
   );
 };

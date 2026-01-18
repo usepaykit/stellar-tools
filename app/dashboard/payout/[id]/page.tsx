@@ -114,9 +114,8 @@ export default function PayoutDetailPage() {
 
   const payout = mockPayouts.find((p) => p.id === id);
 
-  const { data: payoutEvents, isLoading: isLoadingPayoutEvents } = useOrgQuery(
-    ["payout-events", id],
-    () => retrieveEvents({ merchantId: "current" }, ["payout::requested", "payout::processed"])
+  const { data: payoutEvents, isLoading: isLoadingPayoutEvents } = useOrgQuery(["payout-events", id], () =>
+    retrieveEvents({ merchantId: "current" }, ["payout::requested", "payout::processed"])
   );
 
   const handleDownloadReceipt = React.useCallback(async () => {
@@ -186,19 +185,10 @@ export default function PayoutDetailPage() {
               <p className="text-muted-foreground text-sm">Payout #{payout.id}</p>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={onRefresh}
-                disabled={isRefreshing}
-                className="gap-2 shadow-none"
-              >
+              <Button variant="outline" onClick={onRefresh} disabled={isRefreshing} className="gap-2 shadow-none">
                 <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} /> Refresh
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleDownloadReceipt}
-                className="gap-2 shadow-none"
-              >
+              <Button variant="outline" onClick={handleDownloadReceipt} className="gap-2 shadow-none">
                 <Download className="h-4 w-4" /> Receipt
               </Button>
               <DropdownMenu>
@@ -208,17 +198,10 @@ export default function PayoutDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => copyToClipboard(payout.id, "ID Copied")}>
-                    Copy ID
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => copyToClipboard(payout.id, "ID Copied")}>Copy ID</DropdownMenuItem>
                   {payout.transactionHash && (
                     <DropdownMenuItem
-                      onClick={() =>
-                        window.open(
-                          getExplorerUrl(payout.transactionHash!, payout.environment),
-                          "_blank"
-                        )
-                      }
+                      onClick={() => window.open(getExplorerUrl(payout.transactionHash!, payout.environment), "_blank")}
                     >
                       View on Explorer
                     </DropdownMenuItem>
@@ -271,10 +254,7 @@ export default function PayoutDetailPage() {
                             <ExternalLink
                               className="h-4 w-4 cursor-pointer"
                               onClick={() =>
-                                window.open(
-                                  getExplorerUrl(payout.transactionHash!, payout.environment),
-                                  "_blank"
-                                )
+                                window.open(getExplorerUrl(payout.transactionHash!, payout.environment), "_blank")
                               }
                             />
                           </div>
@@ -302,12 +282,7 @@ export default function PayoutDetailPage() {
             <div className="space-y-3">
               <h3 className="text-lg font-semibold">Details</h3>
               <div className="space-y-3">
-                <DetailRow
-                  label="Payout ID"
-                  value={payout.id}
-                  mono
-                  action={<CopyBtn text={payout.id} />}
-                />
+                <DetailRow label="Payout ID" value={payout.id} mono action={<CopyBtn text={payout.id} />} />
                 <Separator />
                 <DetailRow label="Asset" value="XLM" />
               </div>

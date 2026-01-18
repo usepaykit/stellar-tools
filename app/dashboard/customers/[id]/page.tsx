@@ -66,10 +66,8 @@ import { z } from "zod";
 
 // --- Helpers ---
 
-const formatXLM = (amt: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "XLM" }).format(amt);
-const formatUSD = (amt: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amt);
+const formatXLM = (amt: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "XLM" }).format(amt);
+const formatUSD = (amt: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amt);
 
 // --- Reusable Internal Components ---
 
@@ -132,9 +130,7 @@ const paymentColumns: ColumnDef<Payment>[] = [
   {
     accessorKey: "checkoutId",
     header: "Description",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground font-mono text-sm">{row.original.checkoutId}</span>
-    ),
+    cell: ({ row }) => <span className="text-muted-foreground font-mono text-sm">{row.original.checkoutId}</span>,
   },
   {
     accessorKey: "status",
@@ -145,9 +141,7 @@ const paymentColumns: ColumnDef<Payment>[] = [
     accessorKey: "createdAt",
     header: "Date",
     cell: ({ row }) => (
-      <div className="text-muted-foreground text-xs">
-        {moment(row.original.createdAt).format("MMM DD, YYYY")}
-      </div>
+      <div className="text-muted-foreground text-xs">{moment(row.original.createdAt).format("MMM DD, YYYY")}</div>
     ),
   },
 ];
@@ -164,9 +158,8 @@ export default function CustomerDetailPage() {
     id?: string | null;
   }>({ type: null });
 
-  const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(
-    ["payments", customerId],
-    () => retrievePayments(undefined, { customerId: customerId }, undefined)
+  const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
+    retrievePayments(undefined, { customerId: customerId }, undefined)
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
     retrieveCustomer({ id: customerId })
@@ -177,15 +170,11 @@ export default function CustomerDetailPage() {
   );
 
   const totalSpent = React.useMemo(
-    () =>
-      payments
-        ?.filter((p) => p.status === "confirmed")
-        .reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0,
+    () => payments?.filter((p) => p.status === "confirmed").reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0,
     [payments]
   );
 
-  const isNew =
-    customer && new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
+  const isNew = customer && new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
 
   if (customerLoading) return <CustomerDetailSkeleton />;
 
@@ -218,11 +207,7 @@ export default function CustomerDetailPage() {
               <p className="text-muted-foreground text-sm">{customer.email}</p>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 shadow-none"
-                onClick={() => setModal({ type: "checkout" })}
-              >
+              <Button variant="outline" className="gap-2 shadow-none" onClick={() => setModal({ type: "checkout" })}>
                 <CreditCard className="h-4 w-4" /> <span>Checkout</span>
               </Button>
               <DropdownMenu>
@@ -232,13 +217,8 @@ export default function CustomerDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setModal({ type: "edit" })}>
-                    Edit customer
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => setModal({ type: "delete" })}
-                  >
+                  <DropdownMenuItem onClick={() => setModal({ type: "edit" })}>Edit customer</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive" onClick={() => setModal({ type: "delete" })}>
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -294,10 +274,7 @@ export default function CustomerDetailPage() {
                 </div>
                 <div className="space-y-3">
                   {customer.walletAddresses?.map(({ address, memo }) => (
-                    <div
-                      key={address}
-                      className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4"
-                    >
+                    <div key={address} className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4">
                       <Image
                         src="/images/integrations/stellar-official.png"
                         alt=""
@@ -321,11 +298,7 @@ export default function CustomerDetailPage() {
                             setHiddenWallets(next);
                           }}
                         >
-                          {hiddenWallets.has(address) ? (
-                            <Eye className="h-4 w-4" />
-                          ) : (
-                            <EyeOff className="h-4 w-4" />
-                          )}
+                          {hiddenWallets.has(address) ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                         </Button>
                         <CopyBtn text={address} />
                       </div>
@@ -349,31 +322,17 @@ export default function CustomerDetailPage() {
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
-                <DetailRow
-                  label="Customer ID"
-                  value={customer.id}
-                  mono
-                  action={<CopyBtn text={customer.id} />}
-                />
+                <DetailRow label="Customer ID" value={customer.id} mono action={<CopyBtn text={customer.id} />} />
                 <Separator />
-                <DetailRow
-                  label="Customer since"
-                  value={moment(customer.createdAt).format("MMM DD, YYYY")}
-                />
+                <DetailRow label="Customer since" value={moment(customer.createdAt).format("MMM DD, YYYY")} />
                 <Separator />
-                <DetailRow
-                  label="Billing email"
-                  value={customer.email}
-                  action={<CopyBtn text={customer.email!} />}
-                />
+                <DetailRow label="Billing email" value={customer.email} action={<CopyBtn text={customer.email!} />} />
               </div>
 
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold">Metadata</h3>
                 {customer.metadata ? (
-                  <CodeBlock language="json">
-                    {JSON.stringify(customer.metadata, null, 2)}
-                  </CodeBlock>
+                  <CodeBlock language="json">{JSON.stringify(customer.metadata, null, 2)}</CodeBlock>
                 ) : (
                   <div className="text-muted-foreground rounded-lg border-2 border-dashed p-6 text-center text-xs">
                     No metadata
@@ -390,11 +349,7 @@ export default function CustomerDetailPage() {
         onOpenChange={() => setModal({ type: null })}
         initialPaymentId={modal.id!}
       />
-      <CustomerModal
-        open={modal.type === "edit"}
-        onOpenChange={() => setModal({ type: null })}
-        customer={customer}
-      />
+      <CustomerModal open={modal.type === "edit"} onOpenChange={() => setModal({ type: null })} customer={customer} />
       <CheckoutModal
         open={modal.type === "checkout"}
         onOpenChange={() => setModal({ type: null })}
@@ -419,16 +374,12 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
     defaultValues: { productId: "", description: "" },
   });
 
-  const { data: products, isLoading: isLoadingProducts } = useOrgQuery(
-    ["products"],
-    () => retrieveProducts(),
-    {
-      select: (data) =>
-        data
-          .filter((p) => p.status === "active")
-          .map((p) => ({ value: p.id, label: `${p.name} - ${p.priceAmount} ${p.assetId}` })),
-    }
-  );
+  const { data: products, isLoading: isLoadingProducts } = useOrgQuery(["products"], () => retrieveProducts(), {
+    select: (data) =>
+      data
+        .filter((p) => p.status === "active")
+        .map((p) => ({ value: p.id, label: `${p.name} - ${p.priceAmount} ${p.assetId}` })),
+  });
 
   const mutation = useMutation({
     mutationFn: (data: any) => {
@@ -459,10 +410,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            onClick={form.handleSubmit((d) => mutation.mutate(d))}
-            isLoading={mutation.isPending}
-          >
+          <Button onClick={form.handleSubmit((d) => mutation.mutate(d))} isLoading={mutation.isPending}>
             Create
           </Button>
         </div>
@@ -503,12 +451,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
             control={form.control}
             name="expiresAt"
             render={({ field }) => (
-              <DateTimePicker
-                id="expiresAt"
-                label="Expiration"
-                value={field.value}
-                onChange={field.onChange}
-              />
+              <DateTimePicker id="expiresAt" label="Expiration" value={field.value} onChange={field.onChange} />
             )}
           />
         </div>
@@ -575,10 +518,7 @@ function CustomerDetailSkeleton() {
                 </div>
                 <div className="space-y-3">
                   {[1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4"
-                    >
+                    <div key={i} className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4">
                       <Skeleton className="h-5 w-5 rounded-full" />
                       <Skeleton className="h-4 flex-1" />
                       <Skeleton className="h-8 w-16" />

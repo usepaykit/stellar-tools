@@ -45,11 +45,7 @@ export const retrieveProducts = async (orgId?: string, env?: Network) => {
   return productsList;
 };
 
-export const retrieveProductsWithAsset = async (
-  orgId?: string,
-  env?: Network,
-  productId?: string
-) => {
+export const retrieveProductsWithAsset = async (orgId?: string, env?: Network, productId?: string) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const result = await db
@@ -103,11 +99,7 @@ export const retrieveProduct = async (id: string, organizationId: string) => {
   return product;
 };
 
-export const putProduct = async (
-  id: string,
-  organizationId: string,
-  retUpdate: Partial<Product>
-) => {
+export const putProduct = async (id: string, organizationId: string, retUpdate: Partial<Product>) => {
   const [product] = await db
     .update(products)
     .set({ ...retUpdate, updatedAt: new Date() })

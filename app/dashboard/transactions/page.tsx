@@ -145,9 +145,7 @@ const columns: ColumnDef<Transaction>[] = [
     accessorKey: "description",
     header: "Description",
     cell: ({ row }) => {
-      return (
-        <div className="text-muted-foreground font-mono text-sm">{row.original.description}</div>
-      );
+      return <div className="text-muted-foreground font-mono text-sm">{row.original.description}</div>;
     },
   },
   {
@@ -162,9 +160,7 @@ const columns: ColumnDef<Transaction>[] = [
     header: "Date",
     cell: ({ row }) => {
       const date = row.original.date;
-      return (
-        <div className="text-muted-foreground text-sm">{moment(date).format("MMM D, h:mm A")}</div>
-      );
+      return <div className="text-muted-foreground text-sm">{moment(date).format("MMM D, h:mm A")}</div>;
     },
   },
   {
@@ -271,11 +267,7 @@ export function RefundModal({
       description="Process a refund for a transaction by providing the payment details."
       footer={
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={createRefundMutation.isPending}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createRefundMutation.isPending}>
             Cancel
           </Button>
           <Button
@@ -355,9 +347,7 @@ function TransactionsPageContent() {
 
   const [selectedPaymentId, setSelectedPaymentId] = React.useState<string | null>(null);
 
-  const { data: payments, isLoading } = useOrgQuery(["payments"], () =>
-    retrievePaymentsWithDetails()
-  );
+  const { data: payments, isLoading } = useOrgQuery(["payments"], () => retrievePaymentsWithDetails());
 
   const stats = React.useMemo(() => {
     if (!payments?.length) {
@@ -453,9 +443,7 @@ function TransactionsPageContent() {
                   )}
                 >
                   {tab.label}
-                  {activeTab === tab.id && (
-                    <div className="bg-primary absolute right-0 bottom-0 left-0 h-0.5" />
-                  )}
+                  {activeTab === tab.id && <div className="bg-primary absolute right-0 bottom-0 left-0 h-0.5" />}
                 </button>
               ))}
             </div>

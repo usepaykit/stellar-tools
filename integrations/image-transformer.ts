@@ -22,12 +22,7 @@ export class ImageTransformer {
     const type = file.type.toLowerCase();
     const name = file.name.toLowerCase();
 
-    if (
-      type === "image/heic" ||
-      type === "image/heif" ||
-      name.endsWith(".heic") ||
-      name.endsWith(".heif")
-    ) {
+    if (type === "image/heic" || type === "image/heif" || name.endsWith(".heic") || name.endsWith(".heif")) {
       return "heic";
     }
     if (type === "image/svg+xml" || name.endsWith(".svg")) {
@@ -77,9 +72,7 @@ export class ImageTransformer {
       const fileName = file.name.replace(/\.(heic|heif)$/i, `.${extension}`);
       return new File([blob], fileName, { type: to });
     } catch (error) {
-      throw new Error(
-        `HEIC conversion failed: ${error instanceof Error ? error.message : String(error)}`
-      );
+      throw new Error(`HEIC conversion failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -156,9 +149,7 @@ export class ImageTransformer {
       const fileName = file.name.replace(new RegExp(`\\.${currentExt}$`, "i"), `.${extension}`);
       return new File([blob], fileName, { type: to });
     } catch (error) {
-      throw new Error(
-        `Image conversion failed: ${error instanceof Error ? error.message : String(error)}`
-      );
+      throw new Error(`Image conversion failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

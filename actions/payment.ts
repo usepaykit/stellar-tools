@@ -1,16 +1,6 @@
 "use server";
 
-import {
-  Network,
-  Payment,
-  assets,
-  checkouts,
-  customers,
-  db,
-  payments,
-  products,
-  refunds,
-} from "@/db";
+import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { and, desc, eq } from "drizzle-orm";
 
@@ -31,17 +21,10 @@ export const postPayment = async (
   return payment;
 };
 
-export const retrievePayments = async (
-  orgId?: string,
-  params?: { customerId?: string },
-  env?: Network
-) => {
+export const retrievePayments = async (orgId?: string, params?: { customerId?: string }, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const conditions = [
-    eq(payments.organizationId, organizationId),
-    eq(payments.environment, environment),
-  ];
+  const conditions = [eq(payments.organizationId, organizationId), eq(payments.environment, environment)];
 
   if (params?.customerId) {
     conditions.push(eq(payments.customerId, params.customerId));
@@ -60,11 +43,7 @@ export const retrievePayment = async (id: string, orgId?: string, env?: Network)
     .select()
     .from(payments)
     .where(
-      and(
-        eq(payments.id, id),
-        eq(payments.organizationId, organizationId),
-        eq(payments.environment, environment)
-      )
+      and(eq(payments.id, id), eq(payments.organizationId, organizationId), eq(payments.environment, environment))
     );
 
   if (!payment) throw new Error("Payment not found");

@@ -44,10 +44,7 @@ import * as RHF from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
-interface Product extends Pick<
-  ProductSchema,
-  "id" | "name" | "status" | "createdAt" | "updatedAt"
-> {
+interface Product extends Pick<ProductSchema, "id" | "name" | "status" | "createdAt" | "updatedAt"> {
   pricing: {
     amount: number;
     asset: string;
@@ -67,10 +64,7 @@ const productSchema = z.object({
     amount: z
       .string()
       .min(1, "Amount is required")
-      .refine(
-        (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
-        "Price must be greater than 0"
-      ),
+      .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Price must be greater than 0"),
     asset: z.string().min(1, "Asset is required"),
   }),
   unit: z.string().optional(),
@@ -182,29 +176,25 @@ function ProductsPageContent() {
 
   const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
 
-  const { data: products, isLoading } = useOrgQuery(
-    ["products"],
-    () => retrieveProductsWithAsset(),
-    {
-      select: (productsData) => {
-        return productsData.map(({ product, asset }) => {
-          return {
-            id: product.id,
-            name: product.name,
-            pricing: {
-              amount: product.priceAmount,
-              asset: asset.code,
-              isRecurring: product.type === "subscription",
-              period: product.recurringPeriod!,
-            },
-            status: product.status,
-            createdAt: product.createdAt,
-            updatedAt: product.updatedAt,
-          };
-        });
-      },
-    }
-  );
+  const { data: products, isLoading } = useOrgQuery(["products"], () => retrieveProductsWithAsset(), {
+    select: (productsData) => {
+      return productsData.map(({ product, asset }) => {
+        return {
+          id: product.id,
+          name: product.name,
+          pricing: {
+            amount: product.priceAmount,
+            asset: asset.code,
+            isRecurring: product.type === "subscription",
+            period: product.recurringPeriod!,
+          },
+          status: product.status,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+        };
+      });
+    },
+  });
 
   const stats = React.useMemo(
     () => ({
@@ -221,14 +211,10 @@ function ProductsPageContent() {
 
       if (value) {
         params.set("mode", "create");
-        router.replace(
-          `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
-        );
+        router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
       } else {
         params.delete("mode");
-        router.replace(
-          `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`
-        );
+        router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
         setEditingProduct(null);
       }
       setIsModalOpen(value);
@@ -259,9 +245,7 @@ function ProductsPageContent() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Product catalog</h1>
-                <p className="text-muted-foreground mt-1.5 text-sm">
-                  Manage and organize your product offerings
-                </p>
+                <p className="text-muted-foreground mt-1.5 text-sm">Manage and organize your product offerings</p>
               </div>
               <Button
                 onClick={() => {
@@ -309,11 +293,7 @@ function ProductsPageContent() {
               />
             </div>
 
-            <ProductsModal
-              open={isModalOpen}
-              onOpenChange={handleModalChange}
-              editingProduct={editingProduct}
-            />
+            <ProductsModal open={isModalOpen} onOpenChange={handleModalChange} editingProduct={editingProduct} />
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
@@ -448,11 +428,7 @@ function ProductsModal({
         title={isEditMode ? "Edit product" : "Add a product"}
         footer={
           <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={createProductMutation.isPending}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createProductMutation.isPending}>
               Cancel
             </Button>
             <Button

@@ -10,20 +10,13 @@ import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
+type EventDataDiff = { $changes?: Record<string, ReturnType<typeof computeDiff>> };
+
 interface EmitParams {
   type: EventType;
   customerId?: string; // for customer operations
   merchantId?: string; // for merchant operations
-  data?: Record<
-    string,
-    | string
-    | number
-    | boolean
-    | null
-    | undefined
-    | Date
-    | { $changes?: Record<string, ReturnType<typeof computeDiff>> }
-  >;
+  data?: Record<string, string | number | boolean | null | undefined | Date | EventDataDiff>;
 }
 
 export async function withEvent<T>(

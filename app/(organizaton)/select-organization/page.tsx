@@ -2,18 +2,10 @@
 
 import * as React from "react";
 
-import {
-  postOrganization,
-  retrieveOrganizations,
-  setCurrentOrganization,
-} from "@/actions/organization";
+import { postOrganization, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import {
-  PhoneNumber,
-  PhoneNumberPicker,
-  phoneNumberToString,
-} from "@/components/phone-number-picker";
+import { PhoneNumber, PhoneNumberPicker, phoneNumberToString } from "@/components/phone-number-picker";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -169,10 +161,7 @@ const createOrganizationSchema = z.object({
   twitterHandle: z.string().regex(/^@?[a-zA-Z0-9_]{1,15}$/, "Please enter a valid Twitter handle"),
   githubHandle: z
     .string()
-    .regex(
-      /^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/,
-      "Please enter a valid GitHub username"
-    ),
+    .regex(/^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/, "Please enter a valid GitHub username"),
   logo: z
     .custom<FileWithPreview[]>((val) => {
       if (!Array.isArray(val)) return false;
@@ -454,10 +443,7 @@ const CreateOrganizationModal = ({
                         Twitter Handle
                       </Label>
                       <InputGroup
-                        className={cn(
-                          error && "border-destructive ring-destructive/20",
-                          "w-full shadow-none"
-                        )}
+                        className={cn(error && "border-destructive ring-destructive/20", "w-full shadow-none")}
                       >
                         <InputGroupAddon align="inline-start">{twitterPrefix}</InputGroupAddon>
                         <InputGroupInput
@@ -496,10 +482,7 @@ const CreateOrganizationModal = ({
                         GitHub Handle
                       </Label>
                       <InputGroup
-                        className={cn(
-                          error && "border-destructive ring-destructive/20",
-                          "w-full shadow-none"
-                        )}
+                        className={cn(error && "border-destructive ring-destructive/20", "w-full shadow-none")}
                       >
                         <InputGroupAddon align="inline-start">{githubPrefix}</InputGroupAddon>
                         <InputGroupInput

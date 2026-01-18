@@ -2,24 +2,14 @@
 
 import React from "react";
 
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import { CartesianGrid, Line, LineChart as RechartsLineChart, XAxis } from "recharts";
 
 export type BaseChartData = Record<string, string | number>;
 
-export type ChartColor =
-  | "var(--chart-1)"
-  | "var(--chart-2)"
-  | "var(--chart-3)"
-  | "var(--chart-4)"
-  | "var(--chart-5)";
+export type ChartColor = "var(--chart-1)" | "var(--chart-2)" | "var(--chart-3)" | "var(--chart-4)" | "var(--chart-5)";
 
 interface LineChartProps<T extends BaseChartData>
   extends
@@ -27,10 +17,7 @@ interface LineChartProps<T extends BaseChartData>
     MixinProps<"xAxis", Omit<React.ComponentProps<typeof XAxis>, "dataKey" | "key" | "ref">>,
     MixinProps<
       "tooltip",
-      Omit<
-        React.ComponentProps<typeof ChartTooltipContent>,
-        "nameKey" | "labelFormatter" | "key" | "ref"
-      >
+      Omit<React.ComponentProps<typeof ChartTooltipContent>, "nameKey" | "labelFormatter" | "key" | "ref">
     >,
     MixinProps<"line", Omit<React.ComponentProps<typeof Line>, "dataKey" | "key" | "ref">>,
     MixinProps<"grid", React.ComponentProps<typeof CartesianGrid>> {
@@ -70,20 +57,10 @@ export function LineChart<T extends BaseChartData>({
   const formatX = xAxisFormatter || defaultFormatter;
   const formatTooltip = tooltipLabelFormatter || defaultFormatter;
 
-  const { xAxis, tooltip, line, rest, grid } = splitProps(
-    mixinProps,
-    "xAxis",
-    "tooltip",
-    "line",
-    "grid"
-  );
+  const { xAxis, tooltip, line, rest, grid } = splitProps(mixinProps, "xAxis", "tooltip", "line", "grid");
 
   return (
-    <ChartContainer
-      {...rest}
-      config={config}
-      className={cn("aspect-auto h-[250px] w-full", className)}
-    >
+    <ChartContainer {...rest} config={config} className={cn("aspect-auto h-[250px] w-full", className)}>
       <RechartsLineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} {...grid} />
 
@@ -116,14 +93,7 @@ export function LineChart<T extends BaseChartData>({
           />
         )}
 
-        <Line
-          type="monotone"
-          stroke={color}
-          strokeWidth={2}
-          dot={false}
-          {...line}
-          dataKey={activeKey}
-        />
+        <Line type="monotone" stroke={color} strokeWidth={2} dot={false} {...line} dataKey={activeKey} />
       </RechartsLineChart>
     </ChartContainer>
   );

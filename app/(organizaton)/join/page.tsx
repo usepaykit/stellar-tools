@@ -111,9 +111,7 @@ function JoinTeamContent() {
       <StatusLayout icon={Check} iconClass="bg-primary/10 text-primary">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold">You’re all set!</h1>
-          <p className="text-muted-foreground text-sm">
-            Joined {invite?.organizationName}. Redirecting...
-          </p>
+          <p className="text-muted-foreground text-sm">Joined {invite?.organizationName}. Redirecting...</p>
         </div>
       </StatusLayout>
     );
@@ -157,12 +155,7 @@ function JoinTeamContent() {
           <p className="text-muted-foreground text-center text-xs">
             By joining, you agree to become a member with {invite?.role} access.
           </p>
-          <Button
-            onClick={() => joinTeam()}
-            className="w-full"
-            isLoading={isPending}
-            disabled={isPending}
-          >
+          <Button onClick={() => joinTeam()} className="w-full" isLoading={isPending} disabled={isPending}>
             Accept Invitation
           </Button>
         </CardContent>

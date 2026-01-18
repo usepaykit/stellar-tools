@@ -3,14 +3,7 @@
 import * as React from "react";
 
 import { CodeBlock } from "@/components/code-block";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -21,10 +14,7 @@ import remarkMath from "remark-math";
 
 export interface MarkdownPickerProps
   extends
-    Omit<
-      React.ComponentProps<typeof ReactMarkdown>,
-      "components" | "remarkPlugins" | "rehypePlugins"
-    >,
+    Omit<React.ComponentProps<typeof ReactMarkdown>, "components" | "remarkPlugins" | "rehypePlugins">,
     MixinProps<"container", Omit<React.ComponentProps<"div">, "children">>,
     MixinProps<"codeBlock", Omit<React.ComponentProps<typeof CodeBlock>, "children">> {
   content: string;
@@ -63,48 +53,25 @@ export const MarkdownPicker = ({ content, ...mixProps }: MarkdownPickerProps) =>
             }
 
             return (
-              <CodeBlock
-                {...codeBlock}
-                language={language}
-                showCopyButton={true}
-                maxHeight="none"
-                className="my-4"
-              >
+              <CodeBlock {...codeBlock} language={language} showCopyButton={true} maxHeight="none" className="my-4">
                 {String(children).replace(/\n$/, "")}
               </CodeBlock>
             );
           },
 
           table: ({ children }: { children?: React.ReactNode }) => <Table>{children}</Table>,
-          thead: ({ children }: { children?: React.ReactNode }) => (
-            <TableHeader>{children}</TableHeader>
-          ),
-          tbody: ({ children }: { children?: React.ReactNode }) => (
-            <TableBody>{children}</TableBody>
-          ),
+          thead: ({ children }: { children?: React.ReactNode }) => <TableHeader>{children}</TableHeader>,
+          tbody: ({ children }: { children?: React.ReactNode }) => <TableBody>{children}</TableBody>,
           tr: ({ children }: { children?: React.ReactNode }) => <TableRow>{children}</TableRow>,
           th: ({ children }: { children?: React.ReactNode }) => <TableHead>{children}</TableHead>,
           td: ({ children }: { children?: React.ReactNode }) => <TableCell>{children}</TableCell>,
           // Responsive Images (using img for markdown compatibility)
           img: ({ alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              {...props}
-              className="mx-auto rounded-xl border shadow-sm"
-              loading="lazy"
-              alt={alt || ""}
-            />
+            <img {...props} className="mx-auto rounded-xl border shadow-sm" loading="lazy" alt={alt || ""} />
           ),
           // Custom Link handling (external links open in new tab)
-          a: ({
-            children,
-            href,
-            ...props
-          }: {
-            children?: React.ReactNode;
-            href?: string;
-            [key: string]: any;
-          }) => {
+          a: ({ children, href, ...props }: { children?: React.ReactNode; href?: string; [key: string]: any }) => {
             const isExternal = href?.startsWith("http");
             return (
               <a
@@ -120,9 +87,7 @@ export const MarkdownPicker = ({ content, ...mixProps }: MarkdownPickerProps) =>
           },
           // Blockquotes
           blockquote: ({ children }: { children?: React.ReactNode }) => (
-            <blockquote className="border-primary text-muted-foreground border-l-2 pl-4 italic">
-              {children}
-            </blockquote>
+            <blockquote className="border-primary text-muted-foreground border-l-2 pl-4 italic">{children}</blockquote>
           ),
           hr: () => <hr className="border-border my-6" />,
           ul: ({ children }: { children?: React.ReactNode }) => (
@@ -131,9 +96,7 @@ export const MarkdownPicker = ({ content, ...mixProps }: MarkdownPickerProps) =>
           ol: ({ children }: { children?: React.ReactNode }) => (
             <ol className="my-4 ml-6 list-decimal space-y-2">{children}</ol>
           ),
-          li: ({ children }: { children?: React.ReactNode }) => (
-            <li className="leading-relaxed">{children}</li>
-          ),
+          li: ({ children }: { children?: React.ReactNode }) => <li className="leading-relaxed">{children}</li>,
           h1: ({ children }: { children?: React.ReactNode }) => (
             <h1 className="mt-6 mb-4 text-4xl font-bold">{children}</h1>
           ),
@@ -152,9 +115,7 @@ export const MarkdownPicker = ({ content, ...mixProps }: MarkdownPickerProps) =>
           h6: ({ children }: { children?: React.ReactNode }) => (
             <h6 className="mt-3 mb-2 text-base font-semibold">{children}</h6>
           ),
-          p: ({ children }: { children?: React.ReactNode }) => (
-            <p className="mb-4 leading-relaxed">{children}</p>
-          ),
+          p: ({ children }: { children?: React.ReactNode }) => <p className="mb-4 leading-relaxed">{children}</p>,
         }}
       >
         {content}

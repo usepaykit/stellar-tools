@@ -210,12 +210,8 @@ export default function TransactionDetailPage() {
           <div className="flex flex-col gap-6 p-6">
             <div className="py-12 text-center">
               <h1 className="mb-2 text-2xl font-bold">Transaction not found</h1>
-              <p className="text-muted-foreground mb-4">
-                The transaction you&apos;re looking for doesn&apos;t exist.
-              </p>
-              <Button onClick={() => router.push("/dashboard/transactions")}>
-                Back to Transactions
-              </Button>
+              <p className="text-muted-foreground mb-4">The transaction you&apos;re looking for doesn&apos;t exist.</p>
+              <Button onClick={() => router.push("/dashboard/transactions")}>Back to Transactions</Button>
             </div>
           </div>
         </DashboardSidebarInset>
@@ -268,11 +264,7 @@ export default function TransactionDetailPage() {
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="size-8 cursor-pointer shadow-none"
-                      >
+                      <Button variant="outline" size="icon" className="size-8 cursor-pointer shadow-none">
                         <MoreHorizontal className="h-4 w-4" />
                         <span className="sr-only">More options</span>
                       </Button>
@@ -280,19 +272,14 @@ export default function TransactionDetailPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         onClick={() => {
-                          window.open(
-                            getStellarExplorerUrl(payment.transactionHash, payment.environment),
-                            "_blank"
-                          );
+                          window.open(getStellarExplorerUrl(payment.transactionHash, payment.environment), "_blank");
                         }}
                       >
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View on Stellar Explorer
                       </DropdownMenuItem>
                       {payment.status === "confirmed" && (
-                        <DropdownMenuItem onClick={() => setIsRefundModalOpen(true)}>
-                          Process Refund
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setIsRefundModalOpen(true)}>Process Refund</DropdownMenuItem>
                       )}
                       <DropdownMenuItem
                         onClick={() => {
@@ -342,10 +329,7 @@ export default function TransactionDetailPage() {
                           size="icon-sm"
                           className="h-8 w-8"
                           onClick={() => {
-                            window.open(
-                              getStellarExplorerUrl(payment.transactionHash, payment.environment),
-                              "_blank"
-                            );
+                            window.open(getStellarExplorerUrl(payment.transactionHash, payment.environment), "_blank");
                           }}
                         >
                           <ExternalLink className="h-4 w-4" />
@@ -367,28 +351,25 @@ export default function TransactionDetailPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="text-muted-foreground mb-1 text-xs">Created At</div>
-                        <div className="text-sm">
-                          {moment(payment.createdAt).format("MMMM DD, YYYY [at] h:mm A")}
-                        </div>
+                        <div className="text-sm">{moment(payment.createdAt).format("MMMM DD, YYYY [at] h:mm A")}</div>
                       </div>
                       <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                     </div>
 
-                    {payment.updatedAt &&
-                      payment.updatedAt.getTime() !== payment.createdAt.getTime() && (
-                        <>
-                          <Separator />
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
-                              <div className="text-sm">
-                                {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
-                              </div>
+                    {payment.updatedAt && payment.updatedAt.getTime() !== payment.createdAt.getTime() && (
+                      <>
+                        <Separator />
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
+                            <div className="text-sm">
+                              {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
                             </div>
-                            <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                           </div>
-                        </>
-                      )}
+                          <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -455,9 +436,7 @@ export default function TransactionDetailPage() {
                           <Separator />
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <div className="text-muted-foreground mb-1 text-xs">
-                                Receiver Wallet
-                              </div>
+                              <div className="text-muted-foreground mb-1 text-xs">Receiver Wallet</div>
                               <div className="flex items-center gap-2">
                                 <Wallet className="text-muted-foreground h-4 w-4" />
                                 <span className="font-mono text-sm break-all">
@@ -466,10 +445,7 @@ export default function TransactionDetailPage() {
                                 </span>
                               </div>
                             </div>
-                            <CopyButton
-                              text={latestRefund.receiverPublicKey}
-                              label="Copy wallet address"
-                            />
+                            <CopyButton text={latestRefund.receiverPublicKey} label="Copy wallet address" />
                           </div>
                         </>
                       )}
@@ -525,9 +501,7 @@ export default function TransactionDetailPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="text-muted-foreground mb-1 text-xs">Customer</div>
-                            <div className="text-sm font-medium">
-                              {customer.name || customer.email}
-                            </div>
+                            <div className="text-sm font-medium">{customer.name || customer.email}</div>
                             <div className="text-muted-foreground text-xs">{customer.email}</div>
                           </div>
                           <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
@@ -558,10 +532,7 @@ export default function TransactionDetailPage() {
                       variant="outline"
                       className="hover:bg-muted/50 h-auto w-full justify-start gap-2.5 px-3 py-2.5 shadow-none transition-colors"
                       onClick={() => {
-                        window.open(
-                          getStellarExplorerUrl(payment.transactionHash, payment.environment),
-                          "_blank"
-                        );
+                        window.open(getStellarExplorerUrl(payment.transactionHash, payment.environment), "_blank");
                       }}
                     >
                       <ExternalLink className="h-4 w-4 shrink-0" />

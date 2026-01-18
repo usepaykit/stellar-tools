@@ -56,11 +56,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
         />
 
         {error && (
-          <p
-            {...errorProps}
-            className={cn("text-destructive text-sm", errorProps.className)}
-            role="alert"
-          >
+          <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)} role="alert">
             {error}
           </p>
         )}
@@ -117,11 +113,7 @@ export const TextAreaField = React.forwardRef<HTMLTextAreaElement, TextAreaField
         />
 
         {error && (
-          <p
-            {...errorProps}
-            className={cn("text-destructive text-sm", errorProps.className)}
-            role="alert"
-          >
+          <p {...errorProps} className={cn("text-destructive text-sm", errorProps.className)} role="alert">
             {error}
           </p>
         )}

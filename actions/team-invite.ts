@@ -77,12 +77,7 @@ export const retrieveTeamInviteByOrg = async (orgId: string, inviteId: string) =
   return result;
 };
 
-export const putTeamInvite = async (
-  id: string,
-  params: Partial<TeamInvite>,
-  orgId?: string,
-  env?: Network
-) => {
+export const putTeamInvite = async (id: string, params: Partial<TeamInvite>, orgId?: string, env?: Network) => {
   const { organizationId } = await resolveOrgContext(orgId, env);
 
   const [teamInvite] = await db

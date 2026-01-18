@@ -210,10 +210,7 @@ export default function ApiKeysPage() {
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">API keys</h1>
               </div>
-              <Link
-                href="#"
-                className="text-primary flex items-center gap-1 text-sm hover:underline"
-              >
+              <Link href="#" className="text-primary flex items-center gap-1 text-sm hover:underline">
                 Learn more about API authentication
                 <ExternalLink className="h-4 w-4" />
               </Link>
@@ -370,8 +367,8 @@ function ApiKeyModal({
         <div className="space-y-4">
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
-              <strong className="text-foreground">Important:</strong> Make sure to copy your API key
-              now. You won’t be able to see it again!
+              <strong className="text-foreground">Important:</strong> Make sure to copy your API key now. You won’t be
+              able to see it again!
             </p>
           </div>
           <div className="space-y-2">
@@ -380,13 +377,7 @@ function ApiKeyModal({
               <div className="bg-muted border-border flex-1 rounded-md border p-3">
                 <code className="font-mono text-sm break-all">{createdApiKey}</code>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCopyKey}
-                className="shrink-0"
-              >
+              <Button type="button" variant="outline" size="icon" onClick={handleCopyKey} className="shrink-0">
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -421,8 +412,8 @@ function ApiKeyModal({
 
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
-              <strong className="text-foreground">Note:</strong> API keys have full API access. Make
-              sure to keep your secret keys secure and never expose them in client-side code.
+              <strong className="text-foreground">Note:</strong> API keys have full API access. Make sure to keep your
+              secret keys secure and never expose them in client-side code.
             </p>
           </div>
         </form>

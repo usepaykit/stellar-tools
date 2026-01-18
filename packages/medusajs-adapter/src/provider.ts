@@ -24,12 +24,7 @@ import {
   UpdatePaymentOutput,
   WebhookActionResult,
 } from "@medusajs/framework/types";
-import {
-  AbstractPaymentProvider,
-  MedusaError,
-  PaymentActions,
-  PaymentSessionStatus,
-} from "@medusajs/framework/utils";
+import { AbstractPaymentProvider, MedusaError, PaymentActions, PaymentSessionStatus } from "@medusajs/framework/utils";
 import { StellarTools, validateRequiredKeys } from "@stellartools/core";
 
 import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
@@ -85,10 +80,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     }
 
     if (currency_code !== "XLM") {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        `Only XLM is supported for now. Got ${currency_code}`
-      );
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, `Only XLM is supported for now. Got ${currency_code}`);
     }
 
     const checkout = await this.stellar.checkouts.create({
@@ -100,10 +92,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     });
 
     if (!checkout.ok) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        checkout.error?.message ?? "Failed to create checkout"
-      );
+      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, checkout.error?.message ?? "Failed to create checkout");
     }
 
     return {
@@ -134,10 +123,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       console.info("[StellarTools] Canceling payment", input);
     }
 
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      "Cannot cancel payment as the blockchain is immutable"
-    );
+    throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Cannot cancel payment as the blockchain is immutable");
   };
 
   deletePayment = async (input: DeletePaymentInput): Promise<DeletePaymentOutput> => {
@@ -157,10 +143,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     });
 
     if (!payment.ok) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        payment.error?.message ?? "Failed to retrieve payment"
-      );
+      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, payment.error?.message ?? "Failed to retrieve payment");
     }
 
     const statusMap: Record<string, PaymentSessionStatus> = {
@@ -196,10 +179,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     });
 
     if (!refund.ok) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        refund.error?.message ?? "Failed to create refund"
-      );
+      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, refund.error?.message ?? "Failed to create refund");
     }
 
     return { data: refund as Record<string, unknown> };
@@ -222,10 +202,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     });
 
     if (!payment.ok) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        payment.error?.message ?? "Failed to retrieve payment"
-      );
+      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, payment.error?.message ?? "Failed to retrieve payment");
     }
 
     return { data: payment.value as unknown as Record<string, unknown> };
@@ -236,15 +213,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       console.info("[Stellar] Update payment requested");
     }
 
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      "Cannot update payment as the blockchain is immutable"
-    );
+    throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Cannot update payment as the blockchain is immutable");
   };
 
-  getWebhookActionAndData = async (
-    payload: ProviderWebhookPayload["payload"]
-  ): Promise<WebhookActionResult> => {
+  getWebhookActionAndData = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
     if (this.options.debug) {
       console.info("[StellarTools] Getting webhook action and data", payload);
     }
@@ -267,10 +239,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     };
   };
 
-  createAccountHolder = async ({
-    context,
-    data,
-  }: CreateAccountHolderInput): Promise<CreateAccountHolderOutput> => {
+  createAccountHolder = async ({ context, data }: CreateAccountHolderInput): Promise<CreateAccountHolderOutput> => {
     if (this.options.debug) {
       console.info("[StellarTools] Creating account holder", context, data);
     }
@@ -278,9 +247,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     const { customer } = context;
 
     const metadata =
-      typeof data?.metadata === "object" && data?.metadata !== null
-        ? (data.metadata as Record<string, unknown>)
-        : {};
+      typeof data?.metadata === "object" && data?.metadata !== null ? (data.metadata as Record<string, unknown>) : {};
 
     const stellarCustomer = await this.stellar.customers.create({
       email: customer?.email,
@@ -302,10 +269,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     };
   };
 
-  updateAccountHolder = async ({
-    context,
-    data,
-  }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
+  updateAccountHolder = async ({ context, data }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
     if (this.options.debug) {
       console.info("[StellarTools] Updating account holder", context, data);
     }
@@ -337,10 +301,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     };
   };
 
-  deleteAccountHolder = async ({
-    context,
-    data,
-  }: DeleteAccountHolderInput): Promise<DeleteAccountHolderOutput> => {
+  deleteAccountHolder = async ({ context, data }: DeleteAccountHolderInput): Promise<DeleteAccountHolderOutput> => {
     if (this.options.debug) {
       console.info("[StellarTools] Deleting account holder", context, data);
     }
@@ -350,10 +311,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     const result = await this.stellar.customers.delete(accountHolderId);
 
     if (!result.ok) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        result.error?.message ?? "Failed to delete customer"
-      );
+      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, result.error?.message ?? "Failed to delete customer");
     }
 
     return { data: result.value as unknown as Record<string, unknown> };

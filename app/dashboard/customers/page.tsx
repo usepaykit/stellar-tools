@@ -194,9 +194,7 @@ export default function CustomersPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams.get("mode") === "create");
   const router = useRouter();
 
-  const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () =>
-    retrieveCustomers()
-  );
+  const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
 
   const handleRowClick = (customer: Customer) => {
     router.push(`/dashboard/customers/${customer.id}`);
@@ -387,9 +385,7 @@ export function CustomerModal({
       open={open}
       onOpenChange={handleOpenChange}
       title={isEditMode ? "Edit customer" : "Create customer"}
-      description={
-        isEditMode ? "Update customer information" : "Add a new customer to your organization"
-      }
+      description={isEditMode ? "Update customer information" : "Add a new customer to your organization"}
       size="full"
       showCloseButton={true}
       footer={
@@ -420,9 +416,7 @@ export function CustomerModal({
           <div className="flex-1 space-y-6 overflow-y-auto">
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
-              <p className="text-muted-foreground text-sm">
-                Enter the customer’s basic contact information.
-              </p>
+              <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

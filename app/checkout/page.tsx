@@ -128,12 +128,9 @@ export default function CheckoutPage() {
         retryOptions: { max: 3, baseDelay: 1000, debug: false },
       });
 
-      const response = await apiClient.post<{ message: string; success: boolean }>(
-        "/api/verify-wallet-payment",
-        {
-          body: JSON.stringify({ txHash: result.data?.hash, checkoutId, orgId, env }),
-        }
-      );
+      const response = await apiClient.post<{ message: string; success: boolean }>("/api/verify-wallet-payment", {
+        body: JSON.stringify({ txHash: result.data?.hash, checkoutId, orgId, env }),
+      });
 
       if (!response.ok) {
         console.log(response.error);
@@ -201,13 +198,10 @@ export default function CheckoutPage() {
             <div className="space-y-6">
               <div className="border-border space-y-4 rounded-lg border p-6">
                 <div className="space-y-3">
-                  <h1 className="text-foreground text-2xl font-semibold">
-                    Unlimited Monthly Subscription
-                  </h1>
+                  <h1 className="text-foreground text-2xl font-semibold">Unlimited Monthly Subscription</h1>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Unlimited Monthly offers a flexible subscription that unlocks premium features
-                    like unlimited transactions, priority support, and advanced analytics. Billed
-                    monthly and can be canceled anytime.
+                    Unlimited Monthly offers a flexible subscription that unlocks premium features like unlimited
+                    transactions, priority support, and advanced analytics. Billed monthly and can be canceled anytime.
                   </p>
                 </div>
 
@@ -338,28 +332,16 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs">
-                  <Link
-                    href="/terms"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <Link href="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
                     Terms of Service
                   </Link>
-                  <Link
-                    href="/privacy"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <Link href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
                     Privacy Policy
                   </Link>
-                  <Link
-                    href="/refund"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <Link href="/refund" className="text-muted-foreground hover:text-foreground transition-colors">
                     Refund Policy
                   </Link>
-                  <Link
-                    href="/support"
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <Link href="/support" className="text-muted-foreground hover:text-foreground transition-colors">
                     Support
                   </Link>
                 </div>

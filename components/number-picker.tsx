@@ -35,9 +35,7 @@ export const NumberPicker = React.forwardRef<HTMLInputElement, NumberPickerProps
     rest,
   } = splitProps(mixProps, "label", "error", "helpText");
 
-  const [displayValue, setDisplayValue] = React.useState<string>(() =>
-    value !== undefined ? String(value) : ""
-  );
+  const [displayValue, setDisplayValue] = React.useState<string>(() => (value !== undefined ? String(value) : ""));
 
   React.useEffect(() => {
     if (value !== undefined) {
@@ -75,11 +73,7 @@ export const NumberPicker = React.forwardRef<HTMLInputElement, NumberPickerProps
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <Label
-          {...labelProps}
-          htmlFor={id}
-          className={cn("text-sm leading-none font-medium", labelProps.className)}
-        >
+        <Label {...labelProps} htmlFor={id} className={cn("text-sm leading-none font-medium", labelProps.className)}>
           {label}
         </Label>
       )}
@@ -105,11 +99,7 @@ export const NumberPicker = React.forwardRef<HTMLInputElement, NumberPickerProps
       />
 
       {error && (
-        <p
-          {...errorProps}
-          role="alert"
-          className={cn("text-destructive text-sm font-medium", errorProps.className)}
-        >
+        <p {...errorProps} role="alert" className={cn("text-destructive text-sm font-medium", errorProps.className)}>
           {error}
         </p>
       )}

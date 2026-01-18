@@ -108,9 +108,7 @@ export class ApiClient {
     const shouldRetry = retryablePatterns.some((pattern) => pattern.test(errorString));
 
     if (this.config.retryOptions.debug) {
-      console.info(
-        `[ApiClient] Attempt ${attempt} failed: "${String(error)}" - Retry: ${shouldRetry}`
-      );
+      console.info(`[ApiClient] Attempt ${attempt} failed: "${String(error)}" - Retry: ${shouldRetry}`);
     }
 
     return { retry: shouldRetry, data: null };
