@@ -1,9 +1,8 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { postCustomers, retrieveCustomer } from "@/actions/customers";
-import { triggerWebhooks } from "@/actions/webhook";
 import { Customer } from "@/db";
-import { createCheckoutSchema, tryCatchAsync } from "@stellartools/core";
+import { createCheckoutSchema } from "@stellartools/core";
 import moment from "moment";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -40,10 +39,6 @@ export const POST = async (req: NextRequest) => {
       organizationId,
       environment
     );
-
-    await tryCatchAsync(
-      triggerWebhooks("customer.created", { customer }, organizationId, environment)
-    );
   } else {
     throw new Error("Customer ID or email is required");
   }
@@ -64,10 +59,6 @@ export const POST = async (req: NextRequest) => {
     },
     organizationId,
     environment
-  );
-
-  await tryCatchAsync(
-    triggerWebhooks("checkout.created", { checkout }, organizationId, environment)
   );
 
   return NextResponse.json({ data: checkout });

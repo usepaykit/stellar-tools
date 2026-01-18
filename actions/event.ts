@@ -1,14 +1,14 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
+import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
 import { computeDiff } from "@/lib/utils";
 import { LooseAutoComplete, WebhookEvent } from "@stellartools/core";
+import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
-
-import { triggerWebhooks } from "./webhook";
 
 interface EmitParams {
   type: EventType;
@@ -28,7 +28,7 @@ interface EmitParams {
 
 export async function withEvent<T>(
   action: () => Promise<T>,
-  eventConfig: {
+  eventConfig?: {
     type: EventType;
     map: (result: T) => Omit<EmitParams, "type">;
   },
@@ -41,26 +41,31 @@ export async function withEvent<T>(
 ): Promise<T> {
   const result = await action();
 
-  const eventParams = {
-    type: eventConfig.type,
-    ...eventConfig.map(result),
+  const runSideEffects = async () => {
+    try {
+      if (eventConfig) {
+        await emitEvent({ type: eventConfig.type, ...eventConfig.map(result) });
+      }
+
+      if (webhookConfig) {
+        const data = webhookConfig.payload(result);
+        await Promise.all(
+          webhookConfig.events.map((event) =>
+            triggerWebhooks(event, data, webhookConfig.organizationId, webhookConfig.environment)
+          )
+        );
+      }
+    } catch (err) {
+      console.error(`[Side-Effect Event Error] ${eventConfig?.type}:`, err);
+      console.error(
+        `[Side-Effect Webhook Error] ${webhookConfig?.events.map((event) => event.toString()).join(", ")}:`,
+        err
+      );
+    }
   };
 
-  emitEvent(eventParams).catch((err) => {
-    console.error(`[Event Error] Failed to emit ${eventConfig.type}:`, err);
-  });
-
-  if (webhookConfig) {
-    const promises = webhookConfig.events.map((event) =>
-      triggerWebhooks(
-        event,
-        webhookConfig.payload(result),
-        webhookConfig.organizationId,
-        webhookConfig.environment
-      )
-    );
-    await Promise.all(promises);
-  }
+  // Fire and forget
+  waitUntil(runSideEffects());
 
   return result;
 }

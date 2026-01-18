@@ -1,7 +1,6 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { postCustomers, retrieveCustomers } from "@/actions/customers";
-import { triggerWebhooks } from "@/actions/webhook";
-import { createCustomerSchema, tryCatchAsync } from "@stellartools/core";
+import { createCustomerSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
@@ -27,10 +26,6 @@ export const POST = async (req: NextRequest) => {
     ],
     organizationId,
     environment
-  );
-
-  await tryCatchAsync(
-    triggerWebhooks("customer.created", { customer }, organizationId, environment)
   );
 
   return NextResponse.json({ data: customer });

@@ -1,17 +1,11 @@
 "use server";
 
+import { resolveOrgContext } from "@/actions/organization";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
-import { StellarCoreApi } from "@/integrations/stellar-core";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
-import { parseJSON } from "@/lib/utils";
 import { WebhookEvent } from "@stellartools/core";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { z } from "zod";
-
-import { putCheckout, retrieveCheckout } from "./checkout";
-import { resolveOrgContext } from "./organization";
-import { postPayment } from "./payment";
 
 export const postWebhook = async (
   orgId?: string,
@@ -289,69 +283,4 @@ export const triggerWebhooks = async (
   console.log(`Webhooks triggered for ${eventType}: ${delivered} delivered, ${failed} failed`);
 
   return { success: true, delivered, failed };
-};
-
-// STELLAR
-
-export const processStellarWebhook = async (
-  environment: Network,
-  accountPublicKey: string,
-  organizationId: string,
-  checkoutId: string
-) => {
-  const stellar = new StellarCoreApi(environment);
-
-  stellar.streamTx(accountPublicKey, {
-    onError: (error) => {
-      console.error("Stream error:", error);
-    },
-    onMessage: async (tx) => {
-      const { amount } = parseJSON(
-        tx.memo!,
-        z.object({ amount: z.number(), checkoutId: z.string() })
-      );
-
-      const checkout = await retrieveCheckout(checkoutId, organizationId, environment);
-
-      if (!checkout) {
-        console.error(`Checkout ${checkoutId} not found`);
-        return { error: "Checkout not found" };
-      }
-
-      await Promise.all([
-        putCheckout(
-          checkout.id,
-          { status: "completed", updatedAt: new Date() },
-          organizationId,
-          environment
-        ),
-        postPayment(
-          {
-            id: `pay_${nanoid(25)}`,
-            checkoutId: checkout.id,
-            customerId: checkout.customerId,
-            amount: amount * 10_000_000, // XLM to stroops
-            transactionHash: tx.hash,
-            status: "confirmed",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          organizationId,
-          environment
-        ),
-      ]);
-
-      await triggerWebhooks(
-        "payment.confirmed",
-        {
-          payment_id: tx.hash,
-          checkout_id: checkout.id,
-        },
-        organizationId,
-        environment
-      );
-
-      return { success: true };
-    },
-  });
 };

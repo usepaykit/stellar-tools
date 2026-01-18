@@ -60,7 +60,7 @@ export const POST = async (req: NextRequest) => {
     await withEvent(
       async () => {
         const paymentId = `pay_${nanoid(25)}`;
-        await Promise.all([
+        const resolvedPromises = await Promise.allSettled([
           putCheckout(
             checkoutId,
             { status: "completed", updatedAt: new Date() },
@@ -81,8 +81,13 @@ export const POST = async (req: NextRequest) => {
             organizationId,
             environment
           ),
-          triggerWebhooks("payment.confirmed", { checkoutId }, organizationId, environment),
         ]);
+
+        const errors = resolvedPromises.map((result) =>
+          result.status === "rejected" ? result.reason : null
+        );
+
+        if (errors.length > 0) return { error: errors.join(", ") };
 
         return {
           paymentId,
@@ -98,6 +103,28 @@ export const POST = async (req: NextRequest) => {
           customerId: customerId ?? undefined,
           data: { amount, txHash, checkoutId, paymentId },
         }),
+      },
+      {
+        events: ["payment.confirmed", "payment.failed"],
+        organizationId,
+        environment,
+        payload: (result) => {
+          if (result?.error) {
+            return {
+              error: result?.error,
+              success: false,
+              timestamp: new Date(),
+            };
+          }
+
+          return {
+            paymentId: result?.paymentId,
+            amount: result?.amount,
+            txHash: result?.txHash,
+            checkoutId: result?.checkoutId,
+            customerId: result?.customerId,
+          };
+        },
       }
     );
 

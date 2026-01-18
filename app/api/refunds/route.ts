@@ -1,12 +1,12 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
+import { withEvent } from "@/actions/event";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
-import { triggerWebhooks } from "@/actions/webhook";
 import { Encryption } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
-import { createRefundSchema, tryCatchAsync } from "@stellartools/core";
+import { createRefundSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
@@ -57,49 +57,65 @@ export const POST = async (req: NextRequest) => {
 
   const secretKey = new Encryption().decrypt(secret.encrypted, secret.version);
 
-  const refundResult = await stellar.sendAssetPayment(
-    secretKey,
-    data.receiverPublicKey,
-    asset.code,
-    asset.issuer || "",
-    (data.amount / 10_000_000).toString(), // Convert stroops to XLM,
-    txMemo
-  );
+  const refund = await withEvent(
+    async () => {
+      const refundResult = await stellar.sendAssetPayment(
+        secretKey,
+        data.receiverPublicKey,
+        asset.code,
+        asset.issuer || "",
+        (data.amount / 10_000_000).toString(), // Convert stroops to XLM,
+        txMemo
+      );
 
-  if (refundResult.error) {
-    await tryCatchAsync(
-      triggerWebhooks(
-        "refund.failed",
+      if (refundResult.error) {
+        return { error: refundResult.error };
+      }
+
+      const refund = await postRefund(
         {
-          refund: data,
-          error: refundResult.error,
+          ...data,
+          status: "pending",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          receiverPublicKey: data.receiverPublicKey,
+          metadata: data.metadata ?? {},
+          customerId: data.customerId,
+          paymentId: data.paymentId,
+          amount: data.amount,
+          reason: data.reason ?? null,
         },
         organizationId,
         environment
-      )
-    );
+      );
 
-    return NextResponse.json({ error: refundResult.error }, { status: 500 });
-  }
-
-  const refund = await postRefund(
-    {
-      ...data,
-      status: "pending",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      receiverPublicKey: data.receiverPublicKey,
-      metadata: data.metadata ?? {},
-      customerId: data.customerId,
-      paymentId: data.paymentId,
-      amount: data.amount,
-      reason: data.reason ?? null,
+      return { data: refund };
     },
-    organizationId,
-    environment
+    undefined,
+    {
+      events: ["refund.failed", "refund.created", "refund.succeeded"],
+      organizationId,
+      environment,
+      payload: (refund) => {
+        if (refund?.error)
+          return {
+            error: refund.error,
+            success: false,
+            timestamp: new Date(),
+            paymentId: data.paymentId,
+            amount: data.amount,
+          };
+
+        return {
+          id: refund?.data?.id,
+          timestamp: new Date(),
+          paymentId: data.paymentId,
+          amount: data.amount,
+          success: true,
+        };
+      },
+    }
   );
 
-  await tryCatchAsync(triggerWebhooks("refund.succeeded", { refund }, organizationId, environment));
-
-  return NextResponse.json({ data: refund });
+  return NextResponse.json(refund);
 };

@@ -1,8 +1,7 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { deleteCustomer, putCustomer, retrieveCustomer } from "@/actions/customers";
-import { triggerWebhooks } from "@/actions/webhook";
 import { Customer } from "@/db";
-import { schemaFor, tryCatchAsync } from "@stellartools/core";
+import { schemaFor } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import z from "zod";
 
@@ -53,10 +52,6 @@ export const PUT = async (
 
   const customer = await putCustomer(customerId, data, organizationId, environment);
 
-  await tryCatchAsync(
-    triggerWebhooks("customer.updated", { customer }, organizationId, environment)
-  );
-
   return NextResponse.json({ data: customer });
 };
 
@@ -75,10 +70,6 @@ export const DELETE = async (
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
   await deleteCustomer(customerId, organizationId, environment);
-
-  await tryCatchAsync(
-    triggerWebhooks("customer.deleted", { customerId, deleted: true }, organizationId, environment)
-  );
 
   return NextResponse.json({ data: null });
 };

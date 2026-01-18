@@ -12,10 +12,10 @@ export const postCustomers = async (
   orgId?: string,
   env?: Network
 ) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
   return withEvent(
     async () => {
-      const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
       const [result] = await db
         .insert(customers)
         .values(params.map((p) => ({ ...p, id: `cus_${nanoid(25)}`, organizationId, environment })))
@@ -33,6 +33,12 @@ export const postCustomers = async (
           metadata: JSON.stringify(customer.metadata),
         },
       }),
+    },
+    {
+      events: ["customer.created"],
+      environment,
+      organizationId,
+      payload: ({ id, name, email, metadata, phone }) => ({ id, name, email, metadata, phone }),
     }
   );
 };
@@ -94,12 +100,13 @@ export const putCustomer = async (
   orgId?: string,
   env?: Network
 ) => {
-  const oldCustomer = await retrieveCustomer({ id }, orgId, env);
+  const [{ organizationId, environment }, oldCustomer] = await Promise.all([
+    resolveOrgContext(orgId, env),
+    retrieveCustomer({ id }, orgId, env),
+  ]);
 
   return withEvent(
     async () => {
-      const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
       const [customer] = await db
         .update(customers)
         .set({ ...retUpdate, updatedAt: new Date() })
@@ -122,6 +129,15 @@ export const putCustomer = async (
         customerId: newCustomer.id,
         data: { $changes: computeDiff(oldCustomer, newCustomer) },
       }),
+    },
+    {
+      events: ["customer.updated"],
+      organizationId,
+      environment,
+      payload: (newCustomer) => ({
+        id: newCustomer.id,
+        changes: computeDiff(oldCustomer, newCustomer) ?? {},
+      }),
     }
   );
 };
@@ -129,16 +145,32 @@ export const putCustomer = async (
 export const deleteCustomer = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  await db
-    .delete(customers)
-    .where(
-      and(
-        eq(customers.id, id),
-        eq(customers.organizationId, organizationId),
-        eq(customers.environment, environment)
-      )
-    )
-    .returning();
+  return withEvent(
+    async () => {
+      const [customer] = await db
+        .delete(customers)
+        .where(
+          and(
+            eq(customers.id, id),
+            eq(customers.organizationId, organizationId),
+            eq(customers.environment, environment)
+          )
+        )
+        .returning();
 
-  return null;
+      if (!customer) throw new Error("Customer not found");
+
+      return customer;
+    },
+    undefined,
+    {
+      events: ["customer.deleted"],
+      organizationId,
+      environment,
+      payload: (customer) => ({
+        id: customer.id,
+        deleted: true,
+      }),
+    }
+  );
 };

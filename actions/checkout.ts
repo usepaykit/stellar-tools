@@ -37,7 +37,9 @@ export const postCheckout = async (
       events: ["checkout.created"],
       organizationId,
       environment,
-      payload: ({ productId, expiresAt, amount }) => ({ productId, expiresAt, amount }),
+      payload: ({ updatedAt: _$, organizationId: _$1, ...checkoutWithoutOrg }) => ({
+        ...checkoutWithoutOrg,
+      }),
     }
   );
 };
