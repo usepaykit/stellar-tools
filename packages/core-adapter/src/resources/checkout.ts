@@ -1,6 +1,7 @@
 import { ApiClient } from "../api-client";
 import {
   Checkout,
+  CheckoutEmbedDetails,
   CreateCheckout,
   UpdateCheckout,
   createCheckoutSchema,
@@ -62,6 +63,18 @@ export class CheckoutApi {
 
     if (!response.ok) {
       return ERR(new Error(`Failed to delete checkout: ${response.error?.message}`));
+    }
+
+    return OK(response.value.data);
+  }
+
+  async retrieveEmbedDetails(id: string): Promise<Result<CheckoutEmbedDetails, Error>> {
+    const response = await this.apiClient.get<CheckoutEmbedDetails>(
+      `/checkouts/${id}/embed-details`
+    );
+
+    if (!response.ok) {
+      return ERR(new Error(`Failed to get checkout embed details: ${response.error?.message}`));
     }
 
     return OK(response.value.data);

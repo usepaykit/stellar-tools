@@ -4,9 +4,11 @@ import { resolveOrgContext } from "@/actions/organization";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
 import { computeDiff } from "@/lib/utils";
-import { LooseAutoComplete } from "@stellartools/core";
+import { LooseAutoComplete, WebhookEvent } from "@stellartools/core";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
+
+import { triggerWebhooks } from "./webhook";
 
 interface EmitParams {
   type: EventType;
@@ -29,6 +31,12 @@ export async function withEvent<T>(
   eventConfig: {
     type: EventType;
     map: (result: T) => Omit<EmitParams, "type">;
+  },
+  webhookConfig?: {
+    organizationId: string;
+    environment: Network;
+    payload: (result: T) => Record<string, unknown>;
+    events: Array<WebhookEvent>;
   }
 ): Promise<T> {
   const result = await action();
@@ -41,6 +49,18 @@ export async function withEvent<T>(
   emitEvent(eventParams).catch((err) => {
     console.error(`[Event Error] Failed to emit ${eventConfig.type}:`, err);
   });
+
+  if (webhookConfig) {
+    const promises = webhookConfig.events.map((event) =>
+      triggerWebhooks(
+        event,
+        webhookConfig.payload(result),
+        webhookConfig.organizationId,
+        webhookConfig.environment
+      )
+    );
+    await Promise.all(promises);
+  }
 
   return result;
 }

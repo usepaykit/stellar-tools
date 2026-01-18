@@ -1,8 +1,9 @@
 "use server";
 
 import { withEvent } from "@/actions/event";
-import { resolveOrgContext } from "@/actions/organization";
-import { Checkout, Network, checkouts, db } from "@/db";
+import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
+import { Checkout, Network, assets, checkouts, db, products } from "@/db";
+import { StellarCoreApi } from "@/integrations/stellar-core";
 import { computeDiff } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -31,6 +32,12 @@ export const postCheckout = async (
         checkoutId,
         data: { productId, expiresAt, amount },
       }),
+    },
+    {
+      events: ["checkout.created"],
+      organizationId,
+      environment,
+      payload: ({ productId, expiresAt, amount }) => ({ productId, expiresAt, amount }),
     }
   );
 };
@@ -119,3 +126,64 @@ export const deleteCheckout = async (id: string, orgId?: string, env?: Network) 
 
   return null;
 };
+
+// -- CHECKOUT INTERNALS --
+
+export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?: Network) {
+  const whereClause = and(
+    eq(checkouts.id, id),
+    ...(orgId ? [eq(checkouts.organizationId, orgId)] : []),
+    ...(env ? [eq(checkouts.environment, env)] : [])
+  );
+
+  const [result] = await db
+    .select({
+      checkout: checkouts,
+      product: products,
+      asset: assets,
+    })
+    .from(checkouts)
+    .leftJoin(products, eq(checkouts.productId, products.id))
+    .leftJoin(assets, eq(products.assetId, assets.id))
+    .where(whereClause)
+
+    .limit(1);
+
+  if (!result) throw new Error("Checkout not found");
+
+  const { secret } = await retrieveOrganizationIdAndSecret(
+    result.checkout.organizationId,
+    result.checkout.environment
+  );
+
+  if (!secret?.publicKey) throw new Error("Merchant wallet not configured");
+
+  const { checkout, product, asset } = result;
+
+  const rawAmount = product?.priceAmount ?? checkout.amount ?? 0;
+  const assetCode = asset?.code ?? "XLM";
+
+  // Normalize units (Stellar uses 7 decimal places)
+  const amountNormalized = (rawAmount / 10_000_000).toFixed(7);
+
+  const stellar = new StellarCoreApi(result.checkout.environment);
+
+  const paymentUri = stellar.makePaymentURI({
+    destination: secret.publicKey,
+    amount: amountNormalized,
+    assetCode: assetCode === "XLM" ? undefined : assetCode,
+    assetIssuer: asset?.issuer ?? undefined,
+    memo: checkout.id,
+    callback: checkout.successUrl ?? undefined,
+  });
+
+  return {
+    id: checkout.id,
+    merchantAddress: secret.publicKey,
+    amount: rawAmount, // Stroops
+    amountFormatted: amountNormalized, // Lumens
+    assetCode,
+    paymentUri,
+    expiresAt: checkout.expiresAt,
+  };
+}

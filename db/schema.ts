@@ -1,13 +1,12 @@
 import {
   AuthProvider,
   authProviderEnum as authProviderEnum$1,
-  checkoutStatus,
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
   roles,
 } from "@/constant/schema.client";
-import { WebhookEvent } from "@stellartools/core";
+import { WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
   boolean,
@@ -263,7 +262,7 @@ export const products = pgTable("product", {
   creditExpiryDays: integer("credit_expiry_days"),
 });
 
-export const checkoutStatusEnum = pgEnum("checkout_status", checkoutStatus);
+export const checkoutStatusEnum = pgEnum("checkout_status", checkoutStatusEnum$1.enum);
 
 export const checkouts = pgTable(
   "checkout",

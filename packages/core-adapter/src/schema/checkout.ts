@@ -160,3 +160,42 @@ export const updateCheckoutSchema = checkoutSchema.pick({
 });
 
 export type UpdateCheckout = Pick<Checkout, "status" | "metadata">;
+
+export interface CheckoutEmbedDetails {
+  /**
+   * The unique identifier for the checkout.
+   */
+  id: string;
+
+  /**
+   * The merchant address of the checkout.
+   */
+  merchantAddress: string;
+
+  /**
+   * The amount of the checkout.
+   */
+  amount: number;
+
+  /**
+   * The formatted amount of the checkout.
+   */
+  amountFormatted: string;
+
+  /**
+   * The asset code of the checkout.
+   */
+  assetCode: string;
+
+  /**
+   * The QR code URL of the checkout.
+   * Can be rendered as an image in the browser.
+   * @example <img src="https://st.stellartools.dev/qr_1234567890.png" alt="QR Code" />
+   */
+  qrCodeUrl: string | null;
+
+  /**
+   * The expiration date of the checkout.
+   */
+  expiresAt: Date;
+}
