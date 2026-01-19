@@ -3,16 +3,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/actions/auth";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { FullScreenModal } from "@/components/fullscreen-modal";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 
 interface LogoutModalProps {
@@ -40,25 +32,29 @@ export default function LogoutModal({ open, onOpenChange }: LogoutModalProps) {
   }, [router, onOpenChange]);
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Log out</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to log out? You&apos;ll need to sign in again to access your account.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoggingOut}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
+    <FullScreenModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Log out"
+      description="Are you sure you want to log out? You'll need to sign in again to access your account."
+      size="small"
+      showCloseButton={true}
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoggingOut}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut} isLoading={isLoggingOut}>
             {isLoggingOut ? "Logging out..." : "Log out"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </div>
+      }
+    >
+      <div className="py-4">
+        <p className="text-muted-foreground text-sm">
+          This will end your current session and you&apos;ll be redirected to the sign in page.
+        </p>
+      </div>
+    </FullScreenModal>
   );
 }
