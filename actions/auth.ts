@@ -264,6 +264,23 @@ export const getCurrentUser = async () => {
 };
 
 export const signOut = async () => {
+  const accessToken = await new CookieManager().get("accessToken");
+  if (accessToken) {
+    try {
+      const payload = (await new JWT().verify(accessToken)) as {
+        accountId: string;
+        email: string;
+        iat: number;
+        exp: number;
+      };
+
+      const authRecord = await retrieveAuth({ accountId: payload.accountId });
+      await putAuth(authRecord.id, { isRevoked: true });
+    } catch (error) {
+      console.error("Error revoking token:", error);
+    }
+  }
+
   await new CookieManager().delete([{ key: "accessToken" }, { key: "refreshToken" }]);
   return { success: true };
 };
