@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { getCurrentUser } from "@/actions/auth";
 import { retrieveOrganizations, setCurrentOrganization, switchEnvironment } from "@/actions/organization";
+import LogoutModal from "@/components/dashboard/logout-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -87,6 +88,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [isSwitching, setIsSwitching] = React.useState(false);
   const [isSwitchingEnv, setIsSwitchingEnv] = React.useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
 
   const { data: orgContext } = useOrgContext();
   const { data: user } = useQuery({ queryKey: ["current-user"], queryFn: getCurrentUser });
@@ -332,10 +334,11 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="text-destructive gap-2">
-                    <Link href="/auth/signout">
-                      <LogOut className="size-4" /> Log out
-                    </Link>
+                  <DropdownMenuItem
+                    className="text-destructive gap-2"
+                    onClick={() => setIsLogoutModalOpen(true)}
+                  >
+                    <LogOut className="size-4" /> Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -345,6 +348,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         <SidebarRail />
       </Sidebar>
       {children}
+      <LogoutModal open={isLogoutModalOpen} onOpenChange={setIsLogoutModalOpen} />
     </SidebarProvider>
   );
 }

@@ -262,3 +262,8 @@ export const getCurrentUser = async () => {
     createdAt: account.createdAt,
   };
 };
+
+export const signOut = async () => {
+  await new CookieManager().delete([{ key: "accessToken" }, { key: "refreshToken" }]);
+  return { success: true };
+};
