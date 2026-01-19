@@ -2,9 +2,11 @@
 
 import * as React from "react";
 
-import { getCurrentUser } from "@/actions/auth";
+import { getCurrentUser, signOut } from "@/actions/auth";
 import { retrieveOrganizations, setCurrentOrganization, switchEnvironment } from "@/actions/organization";
+import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -87,6 +89,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [isSwitching, setIsSwitching] = React.useState(false);
   const [isSwitchingEnv, setIsSwitchingEnv] = React.useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const { data: orgContext } = useOrgContext();
   const { data: user } = useQuery({ queryKey: ["current-user"], queryFn: getCurrentUser });
@@ -135,6 +139,21 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
       setIsSwitchingEnv(false);
     }
   };
+
+  const handleLogout = React.useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+      toast.success("Logged out successfully");
+      router.push("/signin");
+      setIsLogoutModalOpen(false);
+    } catch (error) {
+      toast.error("Failed to log out");
+      console.error("Logout error:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, [router]);
 
   return (
     <SidebarProvider>
@@ -332,10 +351,11 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="text-destructive gap-2">
-                    <Link href="/auth/signout">
-                      <LogOut className="size-4" /> Log out
-                    </Link>
+                  <DropdownMenuItem
+                    className="text-destructive gap-2"
+                    onClick={() => setIsLogoutModalOpen(true)}
+                  >
+                    <LogOut className="size-4" /> Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -345,6 +365,30 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         <SidebarRail />
       </Sidebar>
       {children}
+      <FullScreenModal
+        open={isLogoutModalOpen}
+        onOpenChange={setIsLogoutModalOpen}
+        title="Log out"
+        description="Are you sure you want to log out? You'll need to sign in again to access your account."
+        size="small"
+        showCloseButton={true}
+        footer={
+          <div className="flex items-center justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsLogoutModalOpen(false)} disabled={isLoggingOut}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut} isLoading={isLoggingOut}>
+              {isLoggingOut ? "Logging out..." : "Log out"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="py-4">
+          <p className="text-muted-foreground text-sm">
+            This will end your current session and you&apos;ll be redirected to the sign in page.
+          </p>
+        </div>
+      </FullScreenModal>
     </SidebarProvider>
   );
 }
