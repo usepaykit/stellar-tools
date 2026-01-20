@@ -5,7 +5,7 @@ import * as React from "react";
 import { ImageTransformer, type MimeType } from "@/integrations/image-transformer";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import { ImagePlus, Loader2, Pencil } from "lucide-react";
+import { CheckCircle, ImagePlus, Loader2, Pencil } from "lucide-react";
 import Image from "next/image";
 import { type DropzoneOptions, type FileRejection, useDropzone } from "react-dropzone";
 
@@ -127,6 +127,7 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
 
     const currentFile = value[0];
     const hasImage = currentFile && currentFile.type.startsWith("image/");
+    const hasFile = !!currentFile;
 
     return (
       <div className={cn("w-full", className)}>
@@ -142,7 +143,8 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
             "group border-input bg-muted/5 relative flex h-64 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all",
             isDragActive && "border-primary bg-primary/5 ring-primary/10 ring-4",
             (disabled || isTransforming) && "cursor-not-allowed opacity-50",
-            !hasImage && !isTransforming && "hover:bg-muted/50 hover:border-primary/50"
+            !hasFile && !isTransforming && "hover:bg-muted/50 hover:border-primary/50",
+            hasFile && !hasImage && "border-solid bg-background"
           )}
         >
           <input ref={ref} {...getInputProps({ id })} />
@@ -172,6 +174,16 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
                 </div>
               </div>
             </>
+          ) : hasFile ? (
+            <div className="flex flex-col items-center gap-3 px-6 text-center">
+              <div className="bg-emerald-500 rounded-full p-3">
+                <CheckCircle className="text-white h-8 w-8" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">File successfully uploaded!</p>
+                <p className="text-muted-foreground text-xs break-all">{currentFile.name}</p>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-2 px-6 text-center">
               <div className="bg-background rounded-full border p-4 shadow-sm">
