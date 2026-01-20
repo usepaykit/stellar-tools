@@ -144,7 +144,7 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
             isDragActive && "border-primary bg-primary/5 ring-primary/10 ring-4",
             (disabled || isTransforming) && "cursor-not-allowed opacity-50",
             !hasFile && !isTransforming && "hover:bg-muted/50 hover:border-primary/50",
-            hasFile && !hasImage && "border-solid bg-background"
+            hasFile && !hasImage && "bg-background border-solid"
           )}
         >
           <input ref={ref} {...getInputProps({ id })} />
@@ -176,8 +176,8 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
             </>
           ) : hasFile ? (
             <div className="flex flex-col items-center gap-3 px-6 text-center">
-              <div className="bg-emerald-500 rounded-full p-3">
-                <CheckCircle className="text-white h-8 w-8" />
+              <div className="rounded-full bg-emerald-500 p-3">
+                <CheckCircle className="h-8 w-8 text-white" />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium">File successfully uploaded!</p>

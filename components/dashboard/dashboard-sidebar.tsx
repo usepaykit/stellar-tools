@@ -351,10 +351,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive gap-2"
-                    onClick={() => setIsLogoutModalOpen(true)}
-                  >
+                  <DropdownMenuItem className="text-destructive gap-2" onClick={() => setIsLogoutModalOpen(true)}>
                     <LogOut className="size-4" /> Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -5,6 +5,7 @@ import * as React from "react";
 import { postOrganization, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
+import { GitHub } from "@/components/icon";
 import { PhoneNumber, PhoneNumberPicker, phoneNumberToString } from "@/components/phone-number-picker";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Building2, ChevronRight, Plus, Users } from "lucide-react";
-import { GitHub } from "@/components/icon";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FileRejection } from "react-dropzone";
@@ -444,10 +444,7 @@ const CreateOrganizationModal = ({
                       </Label>
                       <div className="flex items-center gap-2">
                         <InputGroup
-                          className={cn(
-                            error && "border-destructive ring-destructive/20",
-                            "flex-1 shadow-none"
-                          )}
+                          className={cn(error && "border-destructive ring-destructive/20", "flex-1 shadow-none")}
                         >
                           <InputGroupAddon align="inline-start">github.com/</InputGroupAddon>
                           <InputGroupInput
