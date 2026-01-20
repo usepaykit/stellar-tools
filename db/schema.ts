@@ -264,6 +264,9 @@ export const checkouts = pgTable(
     environment: networkEnum("network").notNull(),
     successUrl: text("success_url"),
     successMessage: text("success_message"),
+    // Store data captured during the checkout session
+    customerEmail: text("customer_email"),
+    customerPhone: text("customer_phone"),
   },
   (table) => ({
     amountOrProductCheck: check(

@@ -56,6 +56,8 @@ export const POST = async (req: NextRequest) => {
       productId: data.productId ?? null,
       successMessage: data.successMessage ?? null,
       successUrl: data.successUrl ?? null,
+      customerEmail: customer?.email ?? null,
+      customerPhone: customer?.phone ?? null,
     },
     organizationId,
     environment

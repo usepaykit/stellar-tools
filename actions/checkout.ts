@@ -2,10 +2,10 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
-import { Checkout, Network, assets, checkouts, db, products } from "@/db";
+import { Checkout, Network, assets, checkouts, customers, db, organizationSecrets, products } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { computeDiff } from "@/lib/utils";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCheckout = async (
@@ -64,6 +64,46 @@ export const retrieveCheckout = async (id: string, orgId?: string, env?: Network
   if (!checkout) throw new Error("Checkout not found");
 
   return checkout;
+};
+
+export const retrieveCheckoutAndCustomer = async (id: string) => {
+  const [result] = await db
+    .select({
+      checkout: checkouts,
+      customer: customers,
+      product: {
+        type: products.type,
+        priceAmount: products.priceAmount,
+        name: products.name,
+        recurringPeriod: products.recurringPeriod,
+      },
+      finalAmount: sql<number>`COALESCE(${checkouts.amount}, ${products.priceAmount})`.as("final_amount"),
+      merchantPublicKey: sql<string>`
+      CASE 
+        WHEN ${checkouts.environment} = 'testnet' THEN ${organizationSecrets.testnetPublicKey}
+        ELSE ${organizationSecrets.mainnetPublicKey}
+      END`.as("merchant_public_key"),
+    })
+    .from(checkouts)
+    .leftJoin(customers, eq(checkouts.customerId, customers.id))
+    .leftJoin(organizationSecrets, eq(checkouts.organizationId, organizationSecrets.organizationId))
+    .leftJoin(products, eq(checkouts.productId, products.id))
+    .where(eq(checkouts.id, id));
+
+  const { checkout, customer, finalAmount, merchantPublicKey, product } = result;
+
+  return {
+    ...checkout,
+    merchantPublicKey,
+    finalAmount,
+    productType: product?.type ?? "one_time",
+    productName: product?.name ?? "Payment",
+    recurringPeriod: product?.recurringPeriod ?? "month",
+    hasEmail: !!(customer?.email || checkout.customerEmail),
+    hasPhone: !!(customer?.phone || checkout.customerPhone),
+    customerEmail: customer?.email || checkout.customerEmail,
+    customerPhone: customer?.phone || checkout.customerPhone,
+  };
 };
 
 export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?: string, env?: Network) => {
