@@ -2,11 +2,14 @@
 
 import * as React from "react";
 
+import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { PhoneNumber, PhoneNumberPicker } from "@/components/phone-number-picker";
 import { TextField } from "@/components/text-field";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
 import { cn, truncate } from "@/lib/utils";
@@ -14,35 +17,47 @@ import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as StellarSDK from "@stellar/stellar-sdk";
 import { ApiClient } from "@stellartools/core";
+import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { notFound, useParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const PRICE = 200;
-
-const checkoutSchema = z.object({
-  email: z.email(),
-  phoneNumber: z.object({
-    number: z.string().min(10),
-    countryCode: z.string().min(1, "Country code is required"),
-  }),
-});
-
-const orgId = "org_1234567890";
-const env = "testnet";
-
-type CheckoutFormData = z.infer<typeof checkoutSchema>;
-
 export default function CheckoutPage() {
+  const { id: checkoutId } = useParams<{ id: string }>();
   const [showBanner, setShowBanner] = React.useState(true);
   const [connectedAddress, setConnectedAddress] = React.useState<string | null>(null);
   const [paymentURI, setPaymentURI] = React.useState<string | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
 
   const stellarWalletsKit = StellarWalletsKitApi.getInstance();
+
+  const { data: checkoutData, isLoading: isLoadingCheckout } = useQuery({
+    queryKey: ["checkout", checkoutId],
+    queryFn: () => retrieveCheckoutAndCustomer(checkoutId),
+  });
+
+  const checkoutSchema = z
+    .object({
+      email: z.email().optional().or(z.literal("")),
+      phoneNumber: z
+        .object({
+          number: z.string().optional(),
+          countryCode: z.string().default("US"),
+        })
+        .optional(),
+    })
+    .refine((data) => checkoutData?.hasEmail || !!data.email, {
+      message: "Email is required",
+      path: ["email"],
+    })
+    .refine((data) => checkoutData?.hasPhone || !!data.phoneNumber?.number, {
+      message: "Phone number is required",
+      path: ["phoneNumber"],
+    });
 
   React.useEffect(() => {
     const unsubscribe = stellarWalletsKit.onConnectionChange((address) => {
@@ -52,13 +67,48 @@ export default function CheckoutPage() {
     return unsubscribe;
   }, [stellarWalletsKit]);
 
-  const form = RHF.useForm<CheckoutFormData>({
+  const form = RHF.useForm({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       email: "",
       phoneNumber: { number: "", countryCode: "US" },
     },
   });
+
+  const isFormValid = form.formState.isValid;
+
+  React.useEffect(() => {
+    if (isFormValid) {
+      if (!checkoutData?.merchantPublicKey) return;
+
+      const stellar = new StellarCoreApi(checkoutData.environment);
+      const uri = stellar.makePaymentURI({
+        destination: checkoutData.merchantPublicKey,
+        amount: checkoutData.finalAmount.toString(),
+        memo: `ORD-${checkoutId}`, // MEMO_TEXT
+        message: checkoutData.productName,
+        callback: `${window.location.origin}/api/payment/callback`,
+      });
+      setPaymentURI(uri);
+    }
+  }, [
+    isFormValid,
+    form,
+    checkoutId,
+    checkoutData?.merchantPublicKey,
+    checkoutData?.environment,
+    checkoutData?.productName,
+    checkoutData?.finalAmount,
+    checkoutData?.productType,
+  ]);
+
+  if (isLoadingCheckout) {
+    return <Skeleton className="h-full w-full" />;
+  }
+
+  if (!checkoutData) return notFound();
+
+  type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
   const handleConnectWallet = async () => {
     try {
@@ -94,13 +144,13 @@ export default function CheckoutPage() {
         throw new Error("No wallet connected");
       }
 
-      const stellar = new StellarCoreApi(env);
+      const stellar = new StellarCoreApi(checkoutData?.environment);
 
       const result = await stellar.processWalletPayment(
         {
           sourcePublicKey: address,
-          destination: process.env.NEXT_PUBLIC_MERCHANT_STELLAR_ADDRESS!,
-          amount: PRICE.toString(),
+          destination: checkoutData.merchantPublicKey,
+          amount: checkoutData.finalAmount.toString(),
           memo: `ORD-${checkoutId}`,
           memoType: "text",
         },
@@ -129,7 +179,12 @@ export default function CheckoutPage() {
       });
 
       const response = await apiClient.post<{ message: string; success: boolean }>("/api/verify-wallet-payment", {
-        body: JSON.stringify({ txHash: result.data?.hash, checkoutId, orgId, env }),
+        body: JSON.stringify({
+          txHash: result.data?.hash,
+          checkoutId,
+          orgId: checkoutData.organizationId,
+          env: checkoutData.environment,
+        }),
       });
 
       if (!response.ok) {
@@ -150,24 +205,6 @@ export default function CheckoutPage() {
       setIsProcessing(false);
     }
   };
-
-  const isFormValid = form.formState.isValid;
-
-  const checkoutId = "cz_1234567890";
-
-  React.useEffect(() => {
-    if (isFormValid) {
-      const stellar = new StellarCoreApi("testnet");
-      const uri = stellar.makePaymentURI({
-        destination: process.env.NEXT_PUBLIC_MERCHANT_STELLAR_ADDRESS!,
-        amount: PRICE.toString(),
-        memo: `ORD-${checkoutId}`, // MEMO_TEXT
-        message: "Unlimited Monthly Subscription Payment",
-        callback: `${window.location.origin}/api/payment/callback`,
-      });
-      setPaymentURI(uri);
-    }
-  }, [isFormValid, form]);
 
   return (
     <div>
@@ -207,7 +244,10 @@ export default function CheckoutPage() {
 
                 <div className="border-border border-t pt-4">
                   <p className="text-foreground text-2xl font-semibold">
-                    {PRICE} XLM <span className="text-base font-normal">/ month</span>
+                    {checkoutData.finalAmount} XLM{" "}
+                    {checkoutData.productType === "subscription" && (
+                      <span className="text-base font-normal">/ {checkoutData.recurringPeriod}</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -227,44 +267,62 @@ export default function CheckoutPage() {
             <Card className="shadow-none">
               <CardContent className="space-y-6 pt-6 pb-6">
                 <form className="space-y-6" onSubmit={form.handleSubmit(handleSubmit)}>
-                  <RHF.Controller
-                    control={form.control}
-                    name="email"
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        id="email"
-                        type="email"
-                        value={field.value}
-                        onChange={field.onChange}
-                        label="Email"
-                        error={error?.message || null}
-                        className="w-full shadow-none"
-                        placeholder="you@example.com"
-                      />
-                    )}
-                  />
-
-                  <RHF.Controller
-                    control={form.control}
-                    name="phoneNumber"
-                    render={({ field, fieldState: { error } }) => {
-                      const phoneValue: PhoneNumber = {
-                        number: field.value?.number || "",
-                        countryCode: field.value?.countryCode || "US",
-                      };
-
-                      return (
-                        <PhoneNumberPicker
-                          id="phone"
-                          value={phoneValue}
+                  {!checkoutData.hasEmail ? (
+                    <RHF.Controller
+                      name="email"
+                      control={form.control}
+                      render={({ field, fieldState: { error } }) => (
+                        <TextField
+                          value={field.value as string}
                           onChange={field.onChange}
-                          label="Phone number"
-                          error={(error as any)?.number?.message}
-                          groupClassName="w-full shadow-none"
+                          id="email"
+                          label="Billing Email"
+                          error={error?.message}
+                          className="w-full shadow-none"
+                          placeholder="you@example.com"
                         />
-                      );
-                    }}
-                  />
+                      )}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 px-1 py-2">
+                      <Badge variant="secondary" className="font-mono text-[10px]">
+                        {checkoutData.customerEmail}
+                      </Badge>
+                      <span className="text-muted-foreground text-[10px] font-bold tracking-tighter uppercase">
+                        Verified Billing
+                      </span>
+                    </div>
+                  )}
+
+                  {!checkoutData.hasPhone ? (
+                    <RHF.Controller
+                      name="phoneNumber"
+                      control={form.control}
+                      render={({ field, fieldState: { error } }) => {
+                        const phoneValue: PhoneNumber = {
+                          number: field.value?.number || "",
+                          countryCode: field.value?.countryCode || "US",
+                        };
+
+                        return (
+                          <PhoneNumberPicker
+                            id="phone"
+                            value={phoneValue}
+                            onChange={field.onChange}
+                            label="Phone number"
+                            error={(error as any)?.number?.message}
+                            groupClassName="w-full shadow-none"
+                          />
+                        );
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 px-1 py-2">
+                      <Badge variant="secondary" className="font-mono text-[10px]">
+                        {checkoutData.customerPhone}
+                      </Badge>
+                    </div>
+                  )}
 
                   <div className="space-y-6">
                     <div className="relative">

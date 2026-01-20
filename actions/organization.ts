@@ -112,6 +112,7 @@ export const retrieveOrganizationIdAndSecret = async (id: string, environment: N
 
   return result;
 };
+
 export const putOrganization = async (id: string, params: Partial<Organization>) => {
   const [organization] = await db
     .update(organizations)
