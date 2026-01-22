@@ -1,17 +1,8 @@
 import { resolveApiKey } from "@/actions/apikey";
-import { listSubscriptions, postSubscription } from "@/actions/subscription";
+import { listSubscriptions, postSubscriptionsBulk } from "@/actions/subscription";
+import { createSubscriptionSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-
-const postSubscriptionSchema = z.object({
-  customerId: z.string(),
-  productId: z.string(),
-  currentPeriodStart: z.coerce.date(),
-  currentPeriodEnd: z.coerce.date(),
-  nextBillingDate: z.coerce.date().optional(),
-  status: z.enum(["active", "paused"]).default("active"),
-  metadata: z.record(z.string(), z.any()).optional(),
-});
 
 const getSubscriptionsSchema = z.object({
   customerId: z.string(),
@@ -25,7 +16,7 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ error: "API key is required" }, { status: 400 });
     }
 
-    const { error, data } = postSubscriptionSchema.safeParse(await req.json());
+    const { error, data } = createSubscriptionSchema.safeParse(await req.json());
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -33,22 +24,12 @@ export const POST = async (req: NextRequest) => {
 
     const { environment, organizationId } = await resolveApiKey(apiKey);
 
-    const subscription = await postSubscription(
+    const subscription = await postSubscriptionsBulk(
       {
-        customerId: data.customerId,
+        customerIds: data.customerIds,
         productId: data.productId,
-        currentPeriodStart: data.currentPeriodStart,
-        currentPeriodEnd: data.currentPeriodEnd,
-        status: data.status,
-        metadata: data.metadata ?? {},
-        cancelAtPeriodEnd: false,
-        failedPaymentCount: 0,
-        canceledAt: null,
-        pausedAt: null,
-        lastPaymentId: null,
-        nextBillingDate: data.nextBillingDate ?? null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        period: data.period,
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? false,
       },
       organizationId,
       environment

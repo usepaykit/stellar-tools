@@ -1,11 +1,35 @@
 "use server";
 
-import { Network, Subscription, db, subscriptions } from "@/db";
-import { and, eq, sql } from "drizzle-orm";
+import { Network, Subscription, customers, db, products, subscriptions } from "@/db";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
+export const postSubscriptionsBulk = async (
+  params: { customerIds: string[]; productId: string; period: { from: Date; to: Date }; cancelAtPeriodEnd: boolean },
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const values = params.customerIds.map((cid) => ({
+    id: `sub_${nanoid(20)}`,
+    customerId: cid,
+    productId: params.productId,
+    status: "active" as const,
+    organizationId,
+    environment,
+    currentPeriodStart: params.period.from,
+    currentPeriodEnd: params.period.to,
+    cancelAtPeriodEnd: params.cancelAtPeriodEnd,
+    nextBillingDate: params.period.to,
+  }));
+
+  return await db.insert(subscriptions).values(values).returning();
+};
+
+// todo: remove
 export const postSubscription = async (
   params: Omit<Subscription, "id" | "organizationId" | "environment">,
   orgId?: string,
@@ -70,6 +94,22 @@ export const retrieveSubscription = async (id: string, organizationId: string) =
   if (!subscription) throw new Error("Subscription not found");
 
   return subscription;
+};
+
+export const retrieveSubscriptions = async (orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  return await db
+    .select({
+      subscription: subscriptions,
+      customer: { name: customers.name, email: customers.email },
+      product: { name: products.name, priceAmount: products.priceAmount },
+    })
+    .from(subscriptions)
+    .innerJoin(customers, eq(subscriptions.customerId, customers.id))
+    .innerJoin(products, eq(subscriptions.productId, products.id))
+    .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptions.environment, environment)))
+    .orderBy(desc(subscriptions.createdAt));
 };
 
 export const listSubscriptions = async (customerId: string, orgId?: string, env?: Network) => {

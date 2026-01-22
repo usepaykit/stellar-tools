@@ -110,13 +110,19 @@ export const subscriptionSchema = schemaFor<Subscription>()(
   })
 );
 
-export const createSubscriptionSchema = subscriptionSchema.pick({
-  customerId: true,
-  productId: true,
-  metadata: true,
+export const createSubscriptionSchema = z.object({
+  customerIds: z.array(z.string()),
+  productId: z.string(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  nextBillingDate: z.string().optional(),
+  cancelAtPeriodEnd: z.boolean().optional().default(false),
+  period: z.object({
+    from: z.coerce.date(),
+    to: z.coerce.date(),
+  }),
 });
 
-export type CreateSubscription = Pick<Subscription, "customerId" | "productId" | "metadata">;
+export type CreateSubscription = z.infer<typeof createSubscriptionSchema>;
 
 export const pauseSubscriptionSchema = subscriptionSchema.pick({
   id: true,
