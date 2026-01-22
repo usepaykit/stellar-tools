@@ -322,6 +322,7 @@ const subscriptionSchema = z.object({
 type SubscriptionFormData = z.infer<typeof subscriptionSchema>;
 
 export default function SubscriptionsPage() {
+  const router = useRouter();
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
 
   const subscriptions = React.useMemo(() => mockSubscriptions, []);
@@ -330,8 +331,8 @@ export default function SubscriptionsPage() {
   const tableActions: TableAction<SubscriptionWithDetails>[] = [
     {
       label: "View Details",
-      onClick: () => {
-        toast.info("Subscription details page coming soon");
+      onClick: (row) => {
+        router.push(`/dashboard/subscriptions/${row.id}`);
       },
     },
     {
