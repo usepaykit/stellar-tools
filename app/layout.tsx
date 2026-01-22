@@ -26,6 +26,24 @@ const rosemary = localFont({
 export const metadata: Metadata = {
   title: "StellarTools | Stripe for Stellar",
   description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+  openGraph: {
+    title: "StellarTools | Stripe for Stellar",
+    description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+    images: [
+      {
+        url: "/images/og-image.jpeg",
+        width: 1200,
+        height: 630,
+        alt: "StellarTools - Stripe alternative for Stellar",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "StellarTools | Stripe for Stellar",
+    description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+    images: ["/images/og-image.jpeg"],
+  },
 };
 
 export default function RootLayout({
