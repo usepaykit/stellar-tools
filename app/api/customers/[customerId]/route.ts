@@ -1,9 +1,7 @@
 import { resolveApiKey } from "@/actions/apikey";
 import { deleteCustomer, putCustomer, retrieveCustomer } from "@/actions/customers";
-import { Customer } from "@/db";
-import { schemaFor } from "@stellartools/core";
+import { updateCustomerSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
-import z from "zod";
 
 export const GET = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
@@ -21,14 +19,6 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ custome
   return NextResponse.json({ data: customer });
 };
 
-const putCustomerSchema = schemaFor<Partial<Customer>>()(
-  z.object({
-    email: z.email().optional(),
-    phone: z.string().optional(),
-    name: z.string().optional(),
-  })
-);
-
 export const PUT = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
 
@@ -40,7 +30,7 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ custome
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const { error, data } = putCustomerSchema.safeParse(await req.json());
+  const { error, data } = updateCustomerSchema.safeParse(await req.json());
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 

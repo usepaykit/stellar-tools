@@ -1,7 +1,7 @@
 "use server";
 
 import { Network, Subscription, customers, db, products, subscriptions } from "@/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
@@ -27,61 +27,6 @@ export const postSubscriptionsBulk = async (
   }));
 
   return await db.insert(subscriptions).values(values).returning();
-};
-
-// todo: remove
-export const postSubscription = async (
-  params: Omit<Subscription, "id" | "organizationId" | "environment">,
-  orgId?: string,
-  env?: Network
-) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const subscriptionId = `sub_${nanoid(25)}`;
-
-  // Use raw SQL with a subquery to validate product type
-  const result = await db.execute<Subscription>(sql`
-    WITH validated_product AS (
-      SELECT id 
-      FROM product 
-      WHERE id = ${params.productId} 
-        AND type = 'subscription'::product_type
-        AND organization_id = ${organizationId}
-    )
-    INSERT INTO subscription (
-      id, customer_id, product_id, status, organization_id,
-      current_period_start, current_period_end, 
-      cancel_at_period_end, canceled_at, paused_at,
-      last_payment_id, next_billing_date, failed_payment_count,
-      created_at, updated_at, metadata, network
-    )
-    SELECT 
-      ${subscriptionId},
-      ${params.customerId},
-      validated_product.id,
-      ${params.status},
-      ${organizationId},
-      ${params.currentPeriodStart},
-      ${params.currentPeriodEnd},
-      COALESCE(${params.cancelAtPeriodEnd}, false),
-      ${params.canceledAt},
-      ${params.pausedAt},
-      ${params.lastPaymentId},
-      ${params.nextBillingDate},
-      COALESCE(${params.failedPaymentCount}, 0),
-      NOW(),
-      NOW(),
-      COALESCE(${params.metadata ? sql`${params.metadata}::jsonb` : sql`'{}'::jsonb`}),
-      ${environment}
-    FROM validated_product
-    RETURNING *
-  `);
-
-  if (result.length === 0) {
-    throw new Error(`Product ${params.productId} is not a subscription product or doesn't exist`);
-  }
-
-  return result[0];
 };
 
 export const retrieveSubscription = async (id: string, organizationId: string) => {
