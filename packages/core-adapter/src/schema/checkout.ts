@@ -161,6 +161,10 @@ export const updateCheckoutSchema = checkoutSchema.pick({
 
 export type UpdateCheckout = Pick<Checkout, "status" | "metadata">;
 
+export const retrieveCheckoutSchema = checkoutSchema.pick({
+  id: true,
+});
+
 export interface CheckoutEmbedDetails {
   /**
    * The unique identifier for the checkout.

@@ -1,15 +1,11 @@
 import {
   AuthorizePaymentInput,
   AuthorizePaymentOutput,
-  CancelPaymentInput,
-  CancelPaymentOutput,
   CapturePaymentOutput,
   CreateAccountHolderInput,
   CreateAccountHolderOutput,
   DeleteAccountHolderInput,
   DeleteAccountHolderOutput,
-  DeletePaymentInput,
-  DeletePaymentOutput,
   GetPaymentStatusInput,
   GetPaymentStatusOutput,
   InitiatePaymentInput,
@@ -18,133 +14,89 @@ import {
   RefundPaymentInput,
   RefundPaymentOutput,
   RetrievePaymentInput,
-  RetrievePaymentOutput,
   UpdateAccountHolderInput,
   UpdateAccountHolderOutput,
-  UpdatePaymentOutput,
   WebhookActionResult,
 } from "@medusajs/framework/types";
 import { AbstractPaymentProvider, MedusaError, PaymentActions, PaymentSessionStatus } from "@medusajs/framework/utils";
-import { StellarTools, validateRequiredKeys } from "@stellartools/core";
+import { Result, z as Schema, StellarTools, validateSchema } from "@stellartools/core";
 
 import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
 
 export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarToolsMedusaAdapterOptions> {
-  /**
-   * The unique identifier for this payment provider
-   */
   static identifier = "stellar";
-
-  protected readonly options: StellarToolsMedusaAdapterOptions;
-
   private stellar: StellarTools;
 
-  static validateOptions(options: Record<string, unknown>): void | never {
-    const { error } = stellarToolsMedusaAdapterOptionsSchema.safeParse(options);
-
-    if (error) {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message);
-    }
-
-    return;
+  constructor(cradle: any, options: StellarToolsMedusaAdapterOptions) {
+    super(cradle, options);
+    this.stellar = new StellarTools({ apiKey: options.apiKey });
   }
 
-  /**
-   * Constructor receives Medusa's container and provider options
-   *
-   * @param cradle - Medusa's dependency injection container
-   * @param options - Stellar provider configuration
-   */
-  constructor(cradle: Record<string, unknown>, options: StellarToolsMedusaAdapterOptions) {
-    super(cradle, options);
+  static validateOptions(options: Record<string, unknown>) {
+    const { error } = stellarToolsMedusaAdapterOptionsSchema.safeParse(options);
+    if (error) throw new MedusaError(MedusaError.Types.INVALID_DATA, error.message);
+  }
 
-    this.options = options;
+  private log(msg: string, data?: any) {
+    console.info(`[Stellar] ${msg}`, data ?? "");
+  }
 
-    const debug = this.options.debug ?? false;
-
-    if (debug) {
-      console.info(`[Stellar] Initialized with API key: ${this.options.apiKey}`);
+  private unwrap<T>(result: Result<T, Error>, errorCode = MedusaError.Types.UNEXPECTED_STATE): T {
+    if (!result.isOk()) {
+      throw new MedusaError(errorCode, result.error?.message ?? "Stellar operation failed");
     }
+    return result.value;
+  }
 
-    this.stellar = new StellarTools({ apiKey: this.options.apiKey });
+  private getCustomerId(input: any): string {
+    const id = input?.data?.id || input?.id;
+    if (!id) throw new MedusaError(MedusaError.Types.INVALID_DATA, "Stellar ID is missing from input data");
+    return id;
   }
 
   initiatePayment = async ({
     context,
     amount,
-    currency_code = "XLM",
+    currency_code,
     data,
   }: InitiatePaymentInput): Promise<InitiatePaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[Stellar] Initiating payment", { amount, currency_code });
-    }
+    this.log("Initiating payment", { amount, currency_code, data });
 
     if (currency_code !== "XLM") {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, `Only XLM is supported for now. Got ${currency_code}`);
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Only XLM is supported");
     }
 
-    const checkout = await this.stellar.checkouts.create({
-      amount: Number(amount),
-      assetCode: currency_code,
-      metadata: data?.metadata as Record<string, unknown>,
-      description: (data?.description as string) ?? "Payment for order",
-      customerId: context?.customer?.id as string,
-    });
+    return this.unwrap(
+      await Result.andThenAsync(
+        validateSchema(Schema.object({ amount: Schema.number(), currency_code: Schema.string() }), {
+          amount,
+          currency_code,
+        }),
+        async ({ amount, currency_code }) => {
+          const checkout = this.unwrap(
+            await this.stellar.checkouts.create({
+              amount: Number(amount),
+              assetCode: currency_code,
+              metadata: data?.metadata as any,
+              description: (data?.description as string) ?? "Order Payment",
+              customerId: context?.customer?.id as string,
+            })
+          );
 
-    if (!checkout.ok) {
-      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, checkout.error?.message ?? "Failed to create checkout");
-    }
-
-    return {
-      id: checkout.value.id,
-      status: PaymentSessionStatus.REQUIRES_MORE,
-      data: { payment_url: checkout.value.paymentUrl },
-    };
-  };
-
-  capturePayment = async (): Promise<CapturePaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[Stellar] Capture requested (no-op for Stellar)");
-    }
-
-    return { data: { captured: true } };
-  };
-
-  authorizePayment = async (input: AuthorizePaymentInput): Promise<AuthorizePaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[StellarTools] Authorizing payment", input);
-    }
-
-    return this.getPaymentStatus(input);
-  };
-
-  cancelPayment = async (input: CancelPaymentInput): Promise<CancelPaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[StellarTools] Canceling payment", input);
-    }
-
-    throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Cannot cancel payment as the blockchain is immutable");
-  };
-
-  deletePayment = async (input: DeletePaymentInput): Promise<DeletePaymentOutput> => {
-    return this.cancelPayment(input);
+          return Result.ok({
+            id: checkout.id,
+            status: PaymentSessionStatus.REQUIRES_MORE,
+            data: { payment_url: checkout.paymentUrl },
+          });
+        }
+      )
+    );
   };
 
   getPaymentStatus = async (input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> => {
-    const { id: paymentId } = validateRequiredKeys(
-      ["id"],
-      (input?.data ?? {}) as Record<string, string>,
-      "Missing required fields: {keys}",
-      (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
+    const payment = this.unwrap(
+      await this.stellar.payments.retrieve(this.getCustomerId(input), { verifyOnChain: true })
     );
-
-    const payment = await this.stellar.payments.retrieve(paymentId, {
-      verifyOnChain: true,
-    });
-
-    if (!payment.ok) {
-      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, payment.error?.message ?? "Failed to retrieve payment");
-    }
 
     const statusMap: Record<string, PaymentSessionStatus> = {
       pending: PaymentSessionStatus.REQUIRES_MORE,
@@ -153,77 +105,77 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     };
 
     return {
-      status: statusMap[payment.value.status] || PaymentSessionStatus.PENDING,
-      data: payment.value as unknown as Record<string, unknown>,
+      status: statusMap[payment.status] || PaymentSessionStatus.PENDING,
+      data: payment as any,
     };
   };
 
+  authorizePayment = async (input: AuthorizePaymentInput): Promise<AuthorizePaymentOutput> => {
+    return this.getPaymentStatus(input);
+  };
+
+  capturePayment = async (): Promise<CapturePaymentOutput> => ({ data: { captured: true } });
+
   refundPayment = async (input: RefundPaymentInput): Promise<RefundPaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[StellarTools] Refunding payment", input);
-    }
-
-    const { id: paymentId, receiverPublicKey } = validateRequiredKeys(
-      ["id", "receiverPublicKey"],
-      (input?.data ?? {}) as Record<string, string>,
-      "Missing required fields: {keys}",
-      (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
+    const result = validateSchema(
+      Schema.object({ receiverPublicKey: Schema.string(), reason: Schema.string().nullable() }),
+      input.data
     );
 
-    const refund = await this.stellar.refunds.create({
-      paymentId,
-      amount: Number(input.amount),
-      reason: (input.data?.reason as string) ?? "Refund for order",
-      metadata: (input.data?.metadata as Record<string, unknown>) ?? {},
-      receiverPublicKey,
-    });
-
-    if (!refund.ok) {
-      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, refund.error?.message ?? "Failed to create refund");
+    if (result.isErr()) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, result.error?.message ?? "Invalid refund data");
     }
 
-    return { data: refund as Record<string, unknown> };
-  };
-
-  retrievePayment = async (input: RetrievePaymentInput): Promise<RetrievePaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[Stellar] Retrieving payment", input);
-    }
-
-    const { id: paymentId } = validateRequiredKeys(
-      ["id"],
-      (input?.data ?? {}) as Record<string, string>,
-      "Missing required fields: {keys}",
-      (message) => new MedusaError(MedusaError.Types.INVALID_DATA, message)
+    const refund = this.unwrap(
+      await this.stellar.refunds.create({
+        paymentId: this.getCustomerId(input),
+        amount: Number(input.amount),
+        reason: result.value.reason ?? "Refund",
+        metadata: { source: "medusa-adapter" },
+        receiverPublicKey: result.value.receiverPublicKey,
+      })
     );
 
-    const payment = await this.stellar.payments.retrieve(paymentId, {
-      verifyOnChain: true,
-    });
-
-    if (!payment.ok) {
-      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, payment.error?.message ?? "Failed to retrieve payment");
-    }
-
-    return { data: payment.value as unknown as Record<string, unknown> };
+    return { data: refund as any };
   };
 
-  updatePayment = async (): Promise<UpdatePaymentOutput> => {
-    if (this.options.debug) {
-      console.info("[Stellar] Update payment requested");
-    }
+  createAccountHolder = async ({ context }: CreateAccountHolderInput): Promise<CreateAccountHolderOutput> => {
+    const { customer } = context;
 
-    throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, "Cannot update payment as the blockchain is immutable");
+    const res = this.unwrap(
+      await this.stellar.customers.create({
+        email: customer?.email,
+        name: `${customer?.first_name} ${customer?.last_name}`.trim(),
+        phone: customer?.phone ?? undefined,
+        metadata: { source: "medusa-adapter" },
+      })
+    );
+
+    return { id: res.id, data: res as any };
+  };
+
+  updateAccountHolder = async ({ context, data }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
+    const { customer } = context;
+    const res = this.unwrap(
+      await this.stellar.customers.update(this.getCustomerId(context.account_holder), {
+        email: customer?.email,
+        name: `${customer?.first_name} ${customer?.last_name}`.trim(),
+        phone: customer?.phone ?? undefined,
+        metadata: data?.metadata as any,
+      })
+    );
+
+    return { data: res as any };
+  };
+
+  deleteAccountHolder = async ({ context }: DeleteAccountHolderInput): Promise<DeleteAccountHolderOutput> => {
+    const res = this.unwrap(await this.stellar.customers.delete(this.getCustomerId(context.account_holder)));
+    return { data: res as any };
   };
 
   getWebhookActionAndData = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
-    if (this.options.debug) {
-      console.info("[StellarTools] Getting webhook action and data", payload);
-    }
-
     const body = JSON.parse(payload.rawData.toString());
-
-    const eventActionMap: Record<string, PaymentActions> = {
+    const actionMap: Record<string, PaymentActions> = {
       "payment.pending": PaymentActions.PENDING,
       "payment.confirmed": PaymentActions.SUCCESSFUL,
       "payment.failed": PaymentActions.FAILED,
@@ -231,89 +183,20 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     };
 
     return {
-      action: eventActionMap[body.event] || PaymentActions.NOT_SUPPORTED,
-      data: {
-        session_id: body.data?.metadata?.session_id,
-        amount: body.data?.amount,
-      },
+      action: actionMap[body.event] || PaymentActions.NOT_SUPPORTED,
+      data: { session_id: body.data?.metadata?.session_id, amount: body.data?.amount },
     };
   };
 
-  createAccountHolder = async ({ context, data }: CreateAccountHolderInput): Promise<CreateAccountHolderOutput> => {
-    if (this.options.debug) {
-      console.info("[StellarTools] Creating account holder", context, data);
-    }
-
-    const { customer } = context;
-
-    const metadata =
-      typeof data?.metadata === "object" && data?.metadata !== null ? (data.metadata as Record<string, unknown>) : {};
-
-    const stellarCustomer = await this.stellar.customers.create({
-      email: customer?.email,
-      name: `${customer?.first_name} ${customer?.last_name}`,
-      phone: customer?.phone ?? undefined,
-      metadata: { source: "medusa-adapter", ...(metadata ?? {}) },
-    });
-
-    if (!stellarCustomer.ok) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        stellarCustomer.error?.message ?? "Failed to create customer"
-      );
-    }
-
-    return {
-      id: stellarCustomer.value.id,
-      data: stellarCustomer.value as unknown as Record<string, unknown>,
-    };
+  cancelPayment = async () => {
+    throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Blockchain transactions are immutable");
+  };
+  deletePayment = async () => {
+    throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Blockchain transactions are immutable");
+  };
+  updatePayment = async () => {
+    throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Blockchain transactions are immutable");
   };
 
-  updateAccountHolder = async ({ context, data }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
-    if (this.options.debug) {
-      console.info("[StellarTools] Updating account holder", context, data);
-    }
-
-    const accountHolderId = context.account_holder?.data?.id as string;
-
-    const { customer } = context;
-
-    if (!customer) {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Customer not found in context");
-    }
-
-    const updatedCustomer = await this.stellar.customers.update(accountHolderId, {
-      email: customer.email,
-      name: `${customer.first_name} ${customer.last_name}`,
-      phone: customer.phone ?? undefined,
-      metadata: data?.metadata as Record<string, unknown>,
-    });
-
-    if (!updatedCustomer.ok) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        updatedCustomer.error?.message ?? "Failed to update customer"
-      );
-    }
-
-    return {
-      data: updatedCustomer.value as unknown as Record<string, unknown>,
-    };
-  };
-
-  deleteAccountHolder = async ({ context, data }: DeleteAccountHolderInput): Promise<DeleteAccountHolderOutput> => {
-    if (this.options.debug) {
-      console.info("[StellarTools] Deleting account holder", context, data);
-    }
-
-    const accountHolderId = context.account_holder?.data?.id as string;
-
-    const result = await this.stellar.customers.delete(accountHolderId);
-
-    if (!result.ok) {
-      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, result.error?.message ?? "Failed to delete customer");
-    }
-
-    return { data: result.value as unknown as Record<string, unknown> };
-  };
+  retrievePayment = async (input: RetrievePaymentInput) => this.getPaymentStatus(input);
 }

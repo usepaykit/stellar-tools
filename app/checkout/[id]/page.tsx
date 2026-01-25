@@ -175,7 +175,7 @@ export default function CheckoutPage() {
           "Content-Type": "application/json",
           "x-api-key": process.env.NEXT_PUBLIC_API_KEY!,
         },
-        retryOptions: { max: 3, baseDelay: 1000, debug: false },
+        maxRetries: 3,
       });
 
       const response = await apiClient.post<{ message: string; success: boolean }>("/api/verify-wallet-payment", {
@@ -187,7 +187,7 @@ export default function CheckoutPage() {
         }),
       });
 
-      if (!response.ok) {
+      if (!response.isOk()) {
         console.log(response.error);
         throw new Error("Failed to verify payment");
       }

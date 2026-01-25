@@ -1,5 +1,5 @@
 import { accountValidator } from "@/actions/auth";
-import { tryCatchSync } from "@stellartools/core";
+import { Result } from "@stellartools/core";
 import { OAuth2Client } from "google-auth-library";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -30,9 +30,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [stateData] = tryCatchSync<{ redirect: string; [x: string]: any }>(() =>
-      JSON.parse(Buffer.from(state ?? "", "base64").toString())
-    );
+    const stateDataResult = Result.try(() => JSON.parse(Buffer.from(state ?? "", "base64").toString()));
+
+    if (stateDataResult.isErr()) {
+      throw new Error("Invalid state data: " + stateDataResult.error.message);
+    }
+
+    const stateData = stateDataResult.value;
 
     const client = new OAuth2Client(
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,

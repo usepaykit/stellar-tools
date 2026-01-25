@@ -30,22 +30,26 @@ export class WebhookDelivery {
           "X-Stellar-Signature": signature,
           "X-Stellar-Event": eventType,
         },
-        retryOptions: { max: 3, baseDelay: 1000, debug: false },
+        maxRetries: 3,
         timeout: 15000,
       });
 
-      const result = await apiClient.post(webhook.url, {
+      const result = await apiClient.post<any>(webhook.url, {
         body: JSON.stringify(webhookPayload),
         requestId,
       });
 
+      if (!result.isOk()) {
+        throw new Error(`Webhook delivery failed: ${result.error}`);
+      }
+
       const duration = Date.now() - startTime;
 
-      const response = result?.value;
-      const statusCode = response?.status ?? null;
-      const responseText = response?.text ?? null;
-      const responseData = response?.data as Record<string, unknown> | null;
-      const isSuccess = response?.ok ?? false;
+      const response = result.value?.data;
+      const statusCode = response.status ?? null;
+      const responseText = response.text ?? null;
+      const responseData = response.data as Record<string, unknown> | null;
+      const isSuccess = response.ok ?? false;
 
       await postWebhookLog(
         webhook.id,

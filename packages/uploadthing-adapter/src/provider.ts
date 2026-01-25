@@ -1,158 +1,87 @@
-import { StellarTools } from "@stellartools/core";
+import { Result, StellarTools } from "@stellartools/core";
 import { UploadThingError, createUploadthing } from "uploadthing/server";
 import type { ExpandedRouteConfig } from "uploadthing/types";
 
-import { StellarToolsMetadata, StellarToolsUploadthingOptions, stellarToolsUploadthingOptionsSchema } from "./schema";
+import { StellarToolsUploadthingOptions, stellarToolsUploadthingOptionsSchema } from "./schema";
 
 export class StellarToolsUploadThingAdapter {
   private stellar: StellarTools;
-  private options: StellarToolsUploadthingOptions;
+  private f = createUploadthing();
 
-  private baseFactory = createUploadthing();
+  constructor(private opts: StellarToolsUploadthingOptions) {
+    const parsed = stellarToolsUploadthingOptionsSchema.parse(opts);
+    this.stellar = new StellarTools({ apiKey: parsed.apiKey });
+  }
 
-  constructor(opts: StellarToolsUploadthingOptions) {
-    const { error, data } = stellarToolsUploadthingOptionsSchema.safeParse(opts);
-    if (error) throw new Error(`Invalid options: ${error.message}`);
+  private unwrap<T>(result: Result<T, Error>, code: UploadThingError["code"] = "BAD_REQUEST"): T {
+    if (result.isErr()) throw new UploadThingError({ code, message: result.error.message });
 
-    this.options = data;
-    this.stellar = new StellarTools({ apiKey: data.apiKey });
+    return result.value;
   }
 
   public routerFactory<T extends ExpandedRouteConfig>(
-    routeConfig: T,
-    routeOptions?: Parameters<typeof this.baseFactory>[1]
-  ) {
-    const baseBuilder = this.baseFactory(routeConfig, routeOptions);
+    config: T,
+    options?: Parameters<typeof this.f>[1]
+  ): ReturnType<ReturnType<typeof createUploadthing>> {
+    const builder = this.f(config, options);
 
     return {
-      input: baseBuilder.input.bind(baseBuilder),
+      input: builder.input.bind(builder),
 
       middleware: <TOutput extends Record<string, unknown>>(
-        userMiddleware?: (opts: {
-          req: Request;
-          files: Array<{ name: string; size: number; type: string }>;
-          input: unknown;
-        }) => Promise<TOutput> | TOutput
+        userMiddleware?: (opts: any) => Promise<TOutput> | TOutput
       ) => {
-        const wrappedMiddleware = async (opts: {
-          req: Request;
-          files: Array<{ name: string; size: number; type: string }>;
-          input: unknown;
-        }) => {
-          const product = await this.stellar.products.retrieve(this.options.productId);
-          if (!product.ok)
-            throw new UploadThingError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "Stellar product not found",
-            });
+        return builder.middleware(async (opts) => {
+          const customerId = opts.req.headers.get("x-customer-id");
+          if (!customerId) throw new UploadThingError({ code: "FORBIDDEN", message: "Missing x-customer-id" });
 
-          const customerId =
-            opts.req?.headers?.get?.("x-customer-id") ??
-            (opts.req?.headers as unknown as Record<string, string>)?.["x-customer-id"];
+          const amount = opts.files.reduce((sum, f) => sum + f.size, 0);
 
-          if (!customerId) {
-            throw new UploadThingError({
-              code: "FORBIDDEN",
-              message: "Missing x-customer-id header",
-            });
-          }
+          this.unwrap(await this.stellar.products.retrieve(this.opts.productId), "INTERNAL_SERVER_ERROR");
 
-          const rawAmount = opts.files.reduce((sum: number, f: any) => sum + f.size, 0);
-
-          const check = await this.stellar.credits.check(customerId, {
-            productId: this.options.productId,
-            rawAmount,
-          });
-
-          if (!check.ok) {
-            throw new UploadThingError({
-              code: "FORBIDDEN",
-              message: check.error?.message ?? "Insufficient credits",
-            });
-          }
-
-          const result = await this.stellar.credits.consume(customerId, {
-            productId: this.options.productId,
-            rawAmount,
-            reason: "deduct",
-            metadata: {
-              files: opts.files.map((f) => f.name),
-              source: "uploadthing-adapter",
-              fileCount: opts.files.length,
-              totalSize: rawAmount,
-            },
-          });
-
-          if (!result.ok) {
-            throw new UploadThingError({
-              code: "FORBIDDEN",
-              message: result.error?.message ?? "Insufficient credits",
-            });
-          }
+          this.unwrap(
+            await this.stellar.credits.consume(customerId, {
+              productId: this.opts.productId,
+              rawAmount: amount,
+              reason: "deduct",
+              metadata: { files: opts.files.map((f) => f.name), source: "uploadthing-adapter" },
+            }),
+            "FORBIDDEN"
+          );
 
           try {
-            const userMetadata = userMiddleware ? await userMiddleware(opts) : ({} as TOutput);
-
-            return {
-              ...userMetadata,
-              __stellar: {
-                customerId,
-                requiredCredits: rawAmount,
-              } satisfies StellarToolsMetadata["__stellar"],
-            };
+            const metadata = userMiddleware ? await userMiddleware(opts) : ({} as TOutput);
+            return { ...metadata, __stellar: { customerId, requiredCredits: amount } };
           } catch (err) {
-            // Pass refund data through the Error object if user middleware crashes
+            // If user middleware fails, we throw with data so onUploadError can refund
             throw new UploadThingError({
               code: "INTERNAL_SERVER_ERROR",
               message: err instanceof Error ? err.message : "Middleware failed",
-              data: {
-                __stellar: {
-                  customerId,
-                  requiredCredits: rawAmount,
-                },
-              },
+              data: { __stellar: { customerId, requiredCredits: amount } },
             });
           }
-        };
-
-        return baseBuilder.middleware(wrappedMiddleware as any);
+        });
       },
 
-      onUploadError: (
-        fn?: (opts: { req: Request; error: UploadThingError; fileKey: string }) => Promise<void> | void
-      ) => {
-        const wrappedOnUploadError = async (opts: any) => {
-          // Only refund if the error contains the __stellar data we attached in middleware
-          const refundData = (opts.error.data as any)?.__stellar;
+      onUploadError: (fn?: (opts: any) => Promise<void> | void) => {
+        return builder.onUploadError(async (opts) => {
+          const stellar = (opts.error.data as any)?.__stellar;
 
-          if (refundData?.customerId && refundData?.requiredCredits) {
-            if (this.options.debug) {
-              console.log(`[Stellar] Refunding ${refundData.requiredCredits} to ${refundData.customerId}`);
-            }
+          if (stellar?.customerId && stellar?.requiredCredits) {
+            if (this.opts.debug) console.log(`[Stellar] Refunding ${stellar.requiredCredits} to ${stellar.customerId}`);
 
-            await this.stellar.credits.refund(refundData.customerId, {
-              productId: this.options.productId,
-              amount: refundData.requiredCredits,
-              reason: "Upload failed: automatic refund",
+            await this.stellar.credits.refund(stellar.customerId, {
+              productId: this.opts.productId,
+              amount: stellar.requiredCredits,
+              reason: "upload_failed_automatic_refund",
             });
           }
 
           if (fn) await fn(opts);
-        };
-
-        return baseBuilder.onUploadError(wrappedOnUploadError);
+        });
       },
 
-      onUploadComplete: <TReturn extends Record<string, unknown> | void>(
-        fn: (opts: any) => Promise<TReturn> | TReturn
-      ) => {
-        const wrappedOnUploadComplete = async (opts: any) => {
-          if (this.options.debug)
-            console.log(`[Stellar] Successfully used ${opts.metadata.__stellar?.requiredCredits} credits.`);
-          return await fn(opts);
-        };
-        return baseBuilder.onUploadComplete(wrappedOnUploadComplete as any);
-      },
-    } as unknown as ReturnType<typeof createUploadthing>;
+      onUploadComplete: (fn: (opts: any) => void) => builder.onUploadComplete(fn),
+    } as unknown as typeof builder;
   }
 }

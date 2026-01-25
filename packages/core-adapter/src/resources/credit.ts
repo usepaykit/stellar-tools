@@ -1,3 +1,6 @@
+import { Result } from "better-result";
+import { z } from "zod";
+
 import { ApiClient } from "../api-client";
 import {
   CheckCreditsParams,
@@ -11,108 +14,60 @@ import {
   creditTransactionHistorySchema,
   creditTransactionSchema,
 } from "../schema/credits";
-import { ERR, OK, Result } from "../utils";
+import { validateSchema } from "../utils";
 
 export class CreditApi {
   constructor(private apiClient: ApiClient) {}
 
-  async refund(customerId: string, params: CreditTransactionParams): Promise<Result<CreditBalance, Error>> {
-    const { error, data } = creditTransactionSchema.safeParse(params);
-
-    if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
-
-    const { productId, amount, reason, metadata } = data;
-
-    const response = await this.apiClient.post<CreditBalance>(
-      `/api/customers/${customerId}/credit/${productId}/transaction`,
-      { body: JSON.stringify({ amount, reason, metadata, type: "refund" }) }
-    );
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to refund credits: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
-  }
-
-  async getTransactions(
-    customerId: string,
-    options?: CreditTransactionHistoryParams
-  ): Promise<Result<Array<CreditTransaction>, Error>> {
-    const { error, data } = creditTransactionHistorySchema.safeParse(options);
-
-    if (error) {
-      return ERR(new Error(`Invalid parameters: ${error.message}`));
-    }
-
-    const { productId, limit, offset } = data;
-
-    const params = new URLSearchParams();
-    if (productId) params.set("productId", productId);
-    if (limit) params.set("limit", String(limit));
-    if (offset) params.set("offset", String(offset));
-
-    const response = await this.apiClient.get<{
-      data: Array<CreditTransaction>;
-    }>(`/api/customers/${customerId}/credit/transactions?${params}`);
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to get transaction history: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data.data);
-  }
-
-  async getTransaction(transactionId: string, customerId: string): Promise<Result<CreditTransaction, Error>> {
-    const response = await this.apiClient.get<CreditTransaction>(
-      `/api/customers/${customerId}/credit/transactions/${transactionId}`
-    );
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to get transaction: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
-  }
-
-  async check(customerId: string, params: CheckCreditsParams): Promise<Result<boolean, Error>> {
-    const { error, data } = checkCreditSchema.safeParse(params);
-
-    if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
-
-    const { productId, rawAmount } = data;
-
-    const response = await this.apiClient.get<{
-      isSufficient: boolean;
-    }>(`/api/customers/${customerId}/credit/${productId}/transaction`, {
-      body: JSON.stringify({ rawAmount, dryRun: true }),
+  async refund(customerId: string, params: CreditTransactionParams) {
+    return Result.andThenAsync(validateSchema(creditTransactionSchema, params), async (data) => {
+      const response = await this.apiClient.post<CreditBalance>(
+        `/api/customers/${customerId}/credit/${data.productId}/transaction`,
+        data
+      );
+      return response.map((r) => r.data);
     });
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to check credits: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data.isSufficient);
   }
 
-  async consume(customerId: string, params: ConsumeCreditParams): Promise<Result<CreditBalance, Error>> {
-    const { error, data } = consumeCreditSchema.safeParse(params);
+  async getTransactions(customerId: string, options?: CreditTransactionHistoryParams) {
+    return Result.andThenAsync(validateSchema(creditTransactionHistorySchema, options), async (data) => {
+      const response = await this.apiClient.get<Array<CreditTransaction>>(
+        `/api/customers/${customerId}/credit/transactions`,
+        data
+      );
+      return response.map((r) => r.data);
+    });
+  }
 
-    if (error) return ERR(new Error(`Invalid parameters: ${error.message}`));
-
-    const { productId, rawAmount, reason, metadata } = data;
-
-    const payload = { amount: rawAmount, reason, metadata, type: "deduct" };
-
-    const response = await this.apiClient.post<CreditBalance>(
-      `/api/customers/${customerId}/credit/${productId}/transaction`,
-      { body: JSON.stringify(payload) }
+  async getTransaction(transactionId: string, customerId: string) {
+    return Result.andThenAsync(
+      validateSchema(z.object({ transactionId: z.string(), customerId: z.string() }), { transactionId, customerId }),
+      async (data) => {
+        const response = await this.apiClient.get<CreditTransaction>(
+          `/api/customers/${data.customerId}/credit/transactions/${data.transactionId}`
+        );
+        return response.map((r) => r.data);
+      }
     );
+  }
 
-    if (!response.ok) {
-      return ERR(new Error(`Failed to deduct credits: ${response.error?.message}`));
-    }
+  async check(customerId: string, params: CheckCreditsParams) {
+    return Result.andThenAsync(validateSchema(checkCreditSchema, params), async (data) => {
+      const response = await this.apiClient.get<{ isSufficient: boolean }>(
+        `/api/customers/${customerId}/credit/${data.productId}/transaction`,
+        { body: JSON.stringify({ rawAmount: data.rawAmount, dryRun: true }) }
+      );
+      return response.map((r) => r.data.isSufficient);
+    });
+  }
 
-    return OK(response.value.data);
+  async consume(customerId: string, params: ConsumeCreditParams) {
+    return Result.andThenAsync(validateSchema(consumeCreditSchema, params), async (data) => {
+      const response = await this.apiClient.post<CreditBalance>(
+        `/api/customers/${customerId}/credit/${data.productId}/transaction`,
+        { ...data, type: "deduct", dryRun: false }
+      );
+      return response.map((r) => r.data);
+    });
   }
 }

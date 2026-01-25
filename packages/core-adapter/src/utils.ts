@@ -1,47 +1,15 @@
+import { Result } from "better-result";
 import { z } from "zod";
 
-type Success<T> = [T, undefined];
+export function validateSchema<T>(schema: z.ZodType<T>, data: unknown): Result<T, Error> {
+  const result = schema.safeParse(data);
 
-type Failure<E = Error> = [undefined, E];
-
-type TryCatchResult<T, E = Error> = Success<T> | Failure<E>;
-
-export async function tryCatchAsync<T, E = Error>(promise: Promise<T>): Promise<TryCatchResult<T, E>> {
-  try {
-    const data = await promise;
-    return [data as T, undefined];
-  } catch (error) {
-    return [undefined, error as E];
+  if (!result.success) {
+    return Result.err(new Error(`Validation failed: ${result.error.message}`));
   }
+
+  return Result.ok(result.data);
 }
-
-export function tryCatchSync<T, E = Error>(fn: () => T): TryCatchResult<T, E> {
-  try {
-    const data = fn();
-    return [data, undefined];
-  } catch (error) {
-    return [undefined, error as E];
-  }
-}
-
-export type Result<T, E = unknown> = { ok: true; value: T; error?: never } | { ok: false; value?: never; error: E };
-
-export const OK = <V>(value: V): Result<V, never> => ({ ok: true, value });
-
-export const ERR = <E>(error: E): Result<never, E> => ({
-  ok: false,
-  error,
-});
-
-export const buildError = (message: string, cause?: unknown): Error => {
-  const error = new Error(message);
-
-  if (cause) error.cause = cause;
-
-  return error;
-};
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const executeWithRetryWithHandler = async <T>(
   apiCall: () => Promise<T>,
@@ -60,7 +28,7 @@ export const executeWithRetryWithHandler = async <T>(
     if (handledError.retry && currentAttempt <= maxRetries) {
       const delay = baseDelay * Math.pow(2, currentAttempt - 1) * (0.5 + Math.random() * 0.5);
 
-      await sleep(delay);
+      await new Promise((resolve) => setTimeout(resolve, delay));
 
       return executeWithRetryWithHandler(apiCall, errorHandler, maxRetries, baseDelay, currentAttempt + 1);
     }

@@ -1,3 +1,6 @@
+import { Result } from "better-result";
+import z from "zod";
+
 import { ApiClient } from "./api-client";
 import { CheckoutApi } from "./resources/checkout";
 import { CreditApi } from "./resources/credit";
@@ -35,7 +38,7 @@ export class StellarTools {
         "Content-Type": "application/json",
         "x-api-key": this.config.apiKey,
       },
-      retryOptions: { max: 3, baseDelay: 1000, debug: false },
+      maxRetries: 3,
     });
 
     this.customers = new CustomerApi(apiClient);
@@ -52,9 +55,11 @@ export class StellarTools {
 export * from "./types";
 export { WebhookSigner } from "./resources/webhooks";
 export { ApiClient };
-export { schemaFor, tryCatchAsync, tryCatchSync, validateRequiredKeys } from "./utils";
+export { Result };
+export { schemaFor, validateRequiredKeys, validateSchema } from "./utils";
 export { raceAsyncIterator, batchProcess } from "./promisify";
 export type { LooseAutoComplete } from "./types";
+export { z };
 export * from "./schema/customer";
 export * from "./schema/checkout";
 export * from "./schema/payment";

@@ -1,3 +1,6 @@
+import { Result } from "better-result";
+import { z } from "zod";
+
 import { ApiClient } from "../api-client";
 import {
   CreateCustomer,
@@ -8,7 +11,7 @@ import {
   listCustomersSchema,
   updateCustomerSchema,
 } from "../schema/customer";
-import { ERR, OK, Result } from "../utils";
+import { validateSchema } from "../utils";
 
 export class CustomerApi {
   private apiClient: ApiClient;
@@ -17,77 +20,38 @@ export class CustomerApi {
     this.apiClient = apiClient;
   }
 
-  async create(params: CreateCustomer): Promise<Result<Customer, Error>> {
-    const { error, data } = createCustomerSchema.safeParse(params);
-
-    if (error) {
-      return ERR(new Error(`Invalid parameters: ${error.message}`));
-    }
-
-    const response = await this.apiClient.post<Customer>("/customers", {
-      body: JSON.stringify(data),
+  async create(params: CreateCustomer) {
+    return Result.andThenAsync(validateSchema(createCustomerSchema, params), async (data) => {
+      const response = await this.apiClient.post<Customer>("/customers", data);
+      return response.map((r) => r.data);
     });
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to create customer: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
   }
 
-  async list(params: ListCustomers): Promise<Result<Array<Customer>, Error>> {
-    const { error, data } = listCustomersSchema.safeParse(params);
-
-    if (error) {
-      return ERR(new Error(`Invalid parameters: ${error.message}`));
-    }
-
-    const response = await this.apiClient.get<Array<Customer>>(`/customers`, {
-      body: JSON.stringify({ ...data, organization: "xxx" }), // todo: resolve by organization from ApiKey
+  async list(params: ListCustomers) {
+    return Result.andThenAsync(validateSchema(listCustomersSchema, params), async (data) => {
+      const response = await this.apiClient.get<Array<Customer>>(`/customers`, data);
+      return response.map((r) => r.data);
     });
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to list customers: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
   }
 
-  async retrieve(id: string): Promise<Result<Customer, Error>> {
-    const response = await this.apiClient.get<Customer>(`/customers/${id}`);
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to retrieve customer: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
-  }
-
-  async update(id: string, params: UpdateCustomer): Promise<Result<Customer, Error>> {
-    const { error, data } = updateCustomerSchema.safeParse(params);
-
-    if (error) {
-      return ERR(new Error(`Invalid parameters: ${error.message}`));
-    }
-
-    const response = await this.apiClient.put<Customer>(`/customers/${id}`, {
-      body: JSON.stringify(data),
+  async retrieve(id: string) {
+    return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
+      const response = await this.apiClient.get<Customer>(`/customers/${id}`);
+      return response.map((r) => r.data);
     });
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to update customer: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
   }
 
-  async delete(id: string): Promise<Result<Customer, Error>> {
-    const response = await this.apiClient.delete<Customer>(`/customers/${id}`);
+  async update(id: string, params: UpdateCustomer) {
+    return Result.andThenAsync(validateSchema(updateCustomerSchema, params), async (data) => {
+      const response = await this.apiClient.put<Customer>(`/customers/${id}`, data);
+      return response.map((r) => r.data);
+    });
+  }
 
-    if (!response.ok) {
-      return ERR(new Error(`Failed to delete customer: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
+  async delete(id: string) {
+    return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
+      const response = await this.apiClient.delete<Customer>(`/customers/${id}`);
+      return response.map((r) => r.data);
+    });
   }
 }

@@ -1,17 +1,17 @@
+import { Result } from "better-result";
+import { z } from "zod";
+
 import { ApiClient } from "../api-client";
 import { Product } from "../schema/product";
-import { ERR, OK, Result } from "../utils";
+import { validateSchema } from "../utils";
 
 export class ProductApi {
   constructor(private readonly apiClient: ApiClient) {}
 
-  async retrieve(productId: string): Promise<Result<Product, Error>> {
-    const response = await this.apiClient.get<Product>(`/api/products/${productId}`);
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to retrieve product: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
+  async retrieve(productId: string) {
+    return Result.andThenAsync(validateSchema(z.string(), productId), async (productId) => {
+      const response = await this.apiClient.get<Product>(`/api/products/${productId}`);
+      return response.map((r) => r.data);
+    });
   }
 }

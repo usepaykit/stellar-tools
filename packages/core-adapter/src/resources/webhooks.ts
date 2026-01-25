@@ -1,8 +1,10 @@
+import { Result } from "better-result";
 import crypto from "crypto";
+import { z } from "zod";
 
 import { ApiClient } from "../api-client";
 import { CreateWebhook, UpdateWebhook, Webhook, createWebhookSchema, updateWebhookSchema } from "../schema/webhooks";
-import { ERR, OK, Result } from "../utils";
+import { validateSchema } from "../utils";
 
 export class WebhookSigner {
   constructor() {}
@@ -42,59 +44,31 @@ export class WebhookApi extends WebhookSigner {
     super();
   }
 
-  async create(params: CreateWebhook): Promise<Result<Webhook, Error>> {
-    const { error, data } = createWebhookSchema.safeParse(params);
-
-    if (error) {
-      return ERR(new Error(`Invalid parameters: ${error.message}`));
-    }
-
-    const response = await this.apiClient.post<Webhook>("/webhooks", {
-      body: JSON.stringify(data),
+  async create(params: CreateWebhook) {
+    return Result.andThenAsync(validateSchema(createWebhookSchema, params), async (data) => {
+      const response = await this.apiClient.post<Webhook>("/webhooks", data);
+      return response.map((r) => r.data);
     });
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to create webhook: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
   }
 
-  async retrieve(id: string): Promise<Result<Webhook, Error>> {
-    const response = await this.apiClient.get<Webhook>(`/webhooks/${id}`);
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to retrieve webhook: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
+  async retrieve(id: string) {
+    return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
+      const response = await this.apiClient.get<Webhook>(`/webhooks/${id}`);
+      return response.map((r) => r.data);
+    });
   }
 
-  async update(id: string, params: UpdateWebhook): Promise<Result<Webhook, Error>> {
-    const { error, data } = updateWebhookSchema.safeParse(params);
-
-    if (error) {
-      return ERR(new Error(`Invalid parameters: ${error.message}`));
-    }
-
-    const response = await this.apiClient.put<Webhook>(`/webhooks/${id}`, {
-      body: JSON.stringify(data),
+  async update(id: string, params: UpdateWebhook) {
+    return Result.andThenAsync(validateSchema(updateWebhookSchema, params), async (data) => {
+      const response = await this.apiClient.put<Webhook>(`/webhooks/${id}`, data);
+      return response.map((r) => r.data);
     });
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to update webhook: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
   }
 
   async delete(id: string): Promise<Result<Webhook, Error>> {
-    const response = await this.apiClient.delete<Webhook>(`/webhooks/${id}`);
-
-    if (!response.ok) {
-      return ERR(new Error(`Failed to delete webhook: ${response.error?.message}`));
-    }
-
-    return OK(response.value.data);
+    return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
+      const response = await this.apiClient.delete<Webhook>(`/webhooks/${id}`);
+      return response.map((r) => r.data);
+    });
   }
 }

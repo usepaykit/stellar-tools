@@ -1,44 +1,46 @@
 import { StellarTools } from "@stellartools/core";
-import type { BetterAuthPlugin } from "better-auth";
+import type { BetterAuthPlugin, Endpoint } from "better-auth";
 
-import {
-  cancelSubscription,
-  checkCredits,
-  consumeCredits,
-  createCustomer,
-  createRefund,
-  createSubscription,
-  getTransactions,
-  listSubscriptions,
-  pauseSubscription,
-  resumeSubscription,
-  retrieveCustomer,
-  retrieveSubscription,
-  updateCustomer,
-  updateSubscription,
-} from "./routes";
+import * as routes from "./routes";
 import { pluginSchema } from "./schema";
 import type { StellarToolsBetterAuthOptions } from "./types";
 
-const stellarTools = (options: StellarToolsBetterAuthOptions) => {
+async function syncUserWithStellar(user: any, ctx: any, options: StellarToolsBetterAuthOptions) {
+  const logger = ctx.context.logger;
+  const client = new StellarTools({ apiKey: options.apiKey });
+
+  const existing = await client.customers.list({ email: user.email });
+  let customerId = existing.isOk() && existing.value[0]?.id;
+  let customerData = existing.isOk() ? existing.value[0] : null;
+
+  if (!customerId) {
+    const created = await client.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { source: "betterauth-plugin" },
+    });
+
+    if (created.isErr()) {
+      return logger.error(`Stellar Sync Failed: ${created.error.message}`);
+    }
+
+    customerId = created.value.id;
+    customerData = created.value;
+  }
+
+  await ctx.context.internalAdapter.updateUser(user.id, { stellarCustomerId: customerId });
+  await options.onCustomerCreated?.(customerData!);
+
+  logger.info(`Stellar: Linked customer ${customerId} to user ${user.id}`);
+}
+
+export const stellarTools = (options: StellarToolsBetterAuthOptions) => {
   return {
     id: "stellar-tools",
-    endpoints: {
-      createCustomer: createCustomer(options),
-      retrieveCustomer: retrieveCustomer(options),
-      updateCustomer: updateCustomer(options),
-      createSubscription: createSubscription(options),
-      retrieveSubscription: retrieveSubscription(options),
-      listSubscriptions: listSubscriptions(options),
-      pauseSubscription: pauseSubscription(options),
-      resumeSubscription: resumeSubscription(options),
-      updateSubscription: updateSubscription(options),
-      cancelSubscription: cancelSubscription(options),
-      checkCredits: checkCredits(options),
-      consumeCredits: consumeCredits(options),
-      getTransactions: getTransactions(options),
-      createRefund: createRefund(options),
-    },
+    endpoints: Object.fromEntries(Object.entries(routes).map(([key, value]) => [key, value(options as any)])) as Record<
+      string,
+      Endpoint
+    >,
     schema: pluginSchema,
     init: async () => ({
       options: {
@@ -46,53 +48,8 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
           user: {
             create: {
               after: async (user, ctx) => {
-                if (!ctx || !options.createCustomerOnSignUp) return;
-
-                const userWithStellar = user as typeof user & {
-                  stellarCustomerId?: string;
-                };
-
-                // Skip if user already has a Stellar customer ID
-                if (userWithStellar.stellarCustomerId) return;
-
-                const client = new StellarTools({ apiKey: options.apiKey });
-
-                const existingCustomer = await client.customers.list({
-                  email: user.email,
-                });
-
-                if (existingCustomer.ok) {
-                  await ctx.context.internalAdapter.updateUser(user.id, {
-                    stellarCustomerId: existingCustomer.value[0].id,
-                  });
-
-                  await options.onCustomerCreated?.(existingCustomer.value[0]);
-
-                  ctx.context.logger.info(
-                    `Linked existing Stellar customer ${existingCustomer.value[0].id} to user ${user.id}`
-                  );
-
-                  return;
-                }
-
-                // Create a new customer
-                const newCustomer = await client.customers.create({
-                  email: user.email,
-                  name: user.name,
-                  metadata: { source: "betterauth-adapter" },
-                });
-
-                if (newCustomer.ok) {
-                  await ctx.context.internalAdapter.updateUser(user.id, {
-                    stellarCustomerId: newCustomer.value.id,
-                  });
-
-                  await options.onCustomerCreated?.(newCustomer.value);
-
-                  ctx.context.logger.info(`Created new Stellar customer ${newCustomer.value.id} for user ${user.id}`);
-                } else {
-                  ctx.context.logger.error(`Failed to create or link Stellar customer: ${newCustomer.error?.message}`);
-                }
+                const shouldSync = ctx && options.createCustomerOnSignUp && !user.stellarCustomerId;
+                if (shouldSync) await syncUserWithStellar(user, ctx, options);
               },
             },
           },
@@ -103,6 +60,4 @@ const stellarTools = (options: StellarToolsBetterAuthOptions) => {
   } satisfies BetterAuthPlugin;
 };
 
-type StellarToolsAdapter = ReturnType<typeof stellarTools>;
-
-export { type StellarToolsAdapter, stellarTools };
+export type StellarToolsAdapter = ReturnType<typeof stellarTools>;
