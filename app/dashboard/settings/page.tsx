@@ -327,7 +327,7 @@ export default function SettingsPage() {
   const onInviteMemberSubmit = async (data: InviteMemberFormData) => {
     setIsSubmitting(true);
     try {
-      const link = `${window.location.origin}/join/${nanoid(25)}`;
+      const link = `${window.location.origin}/dashboard/join/${nanoid(25)}`;
       setInviteLink(link);
 
       const emailCount = data.emails.length;

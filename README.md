@@ -1,5 +1,26 @@
 # Stellar Tools
 
+## Local subdomain routing (dashboard + checkout)
+
+This app supports subdomain-based routing in development via `middleware.ts`.
+
+- **Landing / marketing**: `http://localhost:3000/`
+- **Dashboard**: `http://dashboard.localhost:3000/`
+- **Checkout**: `http://checkout.localhost:3000/pay/:id`
+
+### Notes for local testing
+
+- Most macOS/Linux environments resolve `*.localhost` automatically.
+- If `dashboard.localhost` / `checkout.localhost` do not resolve on your machine, add these entries to your hosts file:
+  - `/etc/hosts` (macOS/Linux) or `C:\\Windows\\System32\\drivers\\etc\\hosts` (Windows)
+
+```
+127.0.0.1 dashboard.localhost
+127.0.0.1 checkout.localhost
+```
+
+- The checkout page will render for any `:id`, but you’ll only see a real checkout if the id exists in your database/API.
+
 ## Compound Components with MixinProps
 
 Use `MixinProps` and `splitProps` to create compound components that accept props for child elements.

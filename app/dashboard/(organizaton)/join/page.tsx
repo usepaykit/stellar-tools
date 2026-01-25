@@ -66,7 +66,7 @@ function JoinTeamContent() {
   } = useMutation({
     mutationFn: async () => {
       const user = await getCurrentUser();
-      if (!user) return router.push(`/signin?redirect=/join?org=${orgId}`);
+      if (!user) return router.push(`/signin?redirect=/dashboard/join?org=${orgId}`);
 
       const fullInvite = await retrieveTeamInvite(invite!.id, orgId!);
 
@@ -88,7 +88,7 @@ function JoinTeamContent() {
     },
     onSuccess: () => {
       toast.success(`Joined ${invite?.organizationName}`);
-      router.push("/select-organization");
+      router.push("/dashboard/select-organization");
     },
     onError: (err: any) => toast.error("Failed to join", { description: err.message }),
   });
@@ -165,7 +165,7 @@ function JoinTeamContent() {
         <p className="text-muted-foreground text-xs">
           Don’t have an account?{" "}
           <button
-            onClick={() => router.push(`/auth/signup?redirect=/join?org=${orgId}`)}
+            onClick={() => router.push(`/auth/signup?redirect=/dashboard/join?org=${orgId}`)}
             className="hover:text-foreground font-semibold underline"
           >
             Sign up
