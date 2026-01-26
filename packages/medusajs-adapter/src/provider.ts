@@ -67,29 +67,26 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     }
 
     return this.unwrap(
-      await Result.andThenAsync(
-        validateSchema(Schema.object({ amount: Schema.number(), currency_code: Schema.string() }), {
-          amount,
-          currency_code,
-        }),
-        async ({ amount, currency_code }) => {
-          const checkout = this.unwrap(
-            await this.stellar.checkouts.create({
-              amount: Number(amount),
-              assetCode: currency_code,
+      (
+        await Result.andThenAsync(
+          validateSchema(Schema.object({ amount: Schema.number(), currency_code: Schema.string() }), {
+            amount,
+            currency_code,
+          }),
+          (valid) =>
+            this.stellar.checkouts.create({
+              amount: Number(valid.amount),
+              assetCode: valid.currency_code,
               metadata: data?.metadata as any,
               description: (data?.description as string) ?? "Order Payment",
               customerId: context?.customer?.id as string,
             })
-          );
-
-          return Result.ok({
-            id: checkout.id,
-            status: PaymentSessionStatus.REQUIRES_MORE,
-            data: { payment_url: checkout.paymentUrl },
-          });
-        }
-      )
+        )
+      ).map((checkout) => ({
+        id: checkout.id,
+        status: PaymentSessionStatus.REQUIRES_MORE,
+        data: { payment_url: checkout.paymentUrl },
+      }))
     );
   };
 
