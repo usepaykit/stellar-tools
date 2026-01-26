@@ -1,18 +1,18 @@
 import { StellarTools } from "@stellartools/core";
 import { InvalidArgumentError, generateObject, generateText, streamObject, streamText } from "ai";
 
-import { StellarToolsAISDKOptions, stellarToolsAISDKOptionsSchema } from "./schema";
+import { MeterConfig, meterConfigSchema } from "./schema";
 
-export class StellarToolsAISDK {
+export class MeteredAISDK {
   private stellar: StellarTools;
 
-  constructor(private config: StellarToolsAISDKOptions) {
-    stellarToolsAISDKOptionsSchema.parse(config);
+  constructor(private config: MeterConfig) {
+    meterConfigSchema.parse(config);
     this.stellar = new StellarTools({ apiKey: config.apiKey });
   }
 
-  private async preflightCheck() {
-    const res = await this.stellar.credits.check(this.config.customerId, {
+  private async preflightCheck(customerId: string) {
+    const res = await this.stellar.credits.check(customerId, {
       productId: this.config.productId,
       rawAmount: 1,
     });
@@ -26,49 +26,49 @@ export class StellarToolsAISDK {
     }
   }
 
-  private async charge(tokens: number, operation: string) {
+  private async charge(customerId: string, tokens: number, operation: string) {
     if (tokens <= 0) return;
 
-    await this.stellar.credits.consume(this.config.customerId, {
+    await this.stellar.credits.consume(customerId, {
       productId: this.config.productId,
       rawAmount: tokens,
       reason: "deduct",
-      metadata: { operation, source: "aisdk-adapter" },
+      metadata: { adapter: "metered-aisdk", reason: `aisdk_${operation}` },
     });
   }
 
-  async generateText(args: Parameters<typeof generateText>[0]) {
-    await this.preflightCheck();
-    const result = await generateText(args);
-    await this.charge(result.usage.totalTokens ?? 0, "generateText");
+  async generateText(customerId: string, ...args: Parameters<typeof generateText>) {
+    await this.preflightCheck(customerId);
+    const result = await generateText(...args);
+    await this.charge(customerId, result.usage.totalTokens ?? 0, "generateText");
     return result;
   }
 
-  async generateObject(args: Parameters<typeof generateObject>[0]) {
-    await this.preflightCheck();
-    const result = await generateObject(args);
-    await this.charge(result.usage.totalTokens ?? 0, "generateObject");
+  async generateObject(customerId: string, ...args: Parameters<typeof generateObject>) {
+    await this.preflightCheck(customerId);
+    const result = await generateObject(...args);
+    await this.charge(customerId, result.usage.totalTokens ?? 0, "generateObject");
     return result;
   }
 
-  async streamText(args: Parameters<typeof streamText>[0]) {
-    await this.preflightCheck();
+  async streamText(customerId: string, ...args: Parameters<typeof streamText>) {
+    await this.preflightCheck(customerId);
     return streamText({
-      ...args,
+      ...args[0],
       onFinish: async (event) => {
-        await this.charge(event.usage.totalTokens ?? 0, "streamText");
-        if (args.onFinish) await args.onFinish(event);
+        await this.charge(customerId, event.usage.totalTokens ?? 0, "streamText");
+        if (args[0]?.onFinish) await args[0]?.onFinish(event);
       },
     });
   }
 
-  async streamObject(args: Parameters<typeof streamObject>[0]) {
-    await this.preflightCheck();
+  async streamObject(customerId: string, ...args: Parameters<typeof streamObject>) {
+    await this.preflightCheck(customerId);
     return streamObject({
-      ...args,
+      ...args[0],
       onFinish: async (event) => {
-        await this.charge(event.usage.totalTokens ?? 0, "streamObject");
-        if (args.onFinish) await args.onFinish(event);
+        await this.charge(customerId, event.usage.totalTokens ?? 0, "streamObject");
+        if (args[0]?.onFinish) await args[0]?.onFinish(event);
       },
     });
   }

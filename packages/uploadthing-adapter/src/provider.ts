@@ -2,15 +2,15 @@ import { Result, StellarTools } from "@stellartools/core";
 import { UploadThingError, createUploadthing } from "uploadthing/server";
 import type { ExpandedRouteConfig } from "uploadthing/types";
 
-import { StellarToolsUploadthingOptions, stellarToolsUploadthingOptionsSchema } from "./schema";
+import { MeterConfig, meterConfigSchema } from "./schema";
 
-export class StellarToolsUploadThingAdapter {
+export class MeteredUploadthing {
   private stellar: StellarTools;
   private f = createUploadthing();
 
-  constructor(private opts: StellarToolsUploadthingOptions) {
-    const parsed = stellarToolsUploadthingOptionsSchema.parse(opts);
-    this.stellar = new StellarTools({ apiKey: parsed.apiKey });
+  constructor(private opts: MeterConfig) {
+    meterConfigSchema.parse(opts);
+    this.stellar = new StellarTools({ apiKey: opts.apiKey });
   }
 
   private unwrap<T>(result: Result<T, Error>, code: UploadThingError["code"] = "BAD_REQUEST"): T {
@@ -68,12 +68,13 @@ export class StellarToolsUploadThingAdapter {
           const stellar = (opts.error.data as any)?.__stellar;
 
           if (stellar?.customerId && stellar?.requiredCredits) {
-            if (this.opts.debug) console.log(`[Stellar] Refunding ${stellar.requiredCredits} to ${stellar.customerId}`);
+            console.log(`[Metered Uploadthing] Refunding ${stellar.requiredCredits} to ${stellar.customerId}`);
 
             await this.stellar.credits.refund(stellar.customerId, {
               productId: this.opts.productId,
               amount: stellar.requiredCredits,
               reason: "upload_failed_automatic_refund",
+              metadata: { adapter: "metered-uploadthing", reason: "upload_failed_automatic_refund" },
             });
           }
 

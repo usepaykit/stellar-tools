@@ -1,11 +1,9 @@
-import { schemaFor } from "@stellartools/core";
-import { z } from "zod";
+import { z as Schema, schemaFor } from "@stellartools/core";
 
 export const meterConfigSchema = schemaFor<MeterConfig>()(
-  z.object({
-    apiKey: z.string(),
-    customerId: z.string(),
-    productId: z.string(),
+  Schema.object({
+    apiKey: Schema.string(),
+    productId: Schema.string(),
   })
 );
 

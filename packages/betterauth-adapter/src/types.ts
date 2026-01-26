@@ -1,6 +1,6 @@
 import { Checkout, CreditBalance, Customer, Subscription } from "@stellartools/core";
 
-export interface StellarToolsBetterAuthOptions {
+export interface BillingConfig {
   /**
    * The API key for the Stellar Tools API.
    */

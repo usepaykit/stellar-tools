@@ -3,9 +3,9 @@ import type { BetterAuthPlugin, Endpoint } from "better-auth";
 
 import * as routes from "./routes";
 import { pluginSchema } from "./schema";
-import type { StellarToolsBetterAuthOptions } from "./types";
+import type { BillingConfig } from "./types";
 
-async function syncUserWithStellar(user: any, ctx: any, options: StellarToolsBetterAuthOptions) {
+async function syncUserWithStellar(user: any, ctx: any, options: BillingConfig) {
   const logger = ctx.context.logger;
   const client = new StellarTools({ apiKey: options.apiKey });
 
@@ -34,7 +34,7 @@ async function syncUserWithStellar(user: any, ctx: any, options: StellarToolsBet
   logger.info(`Stellar: Linked customer ${customerId} to user ${user.id}`);
 }
 
-export const stellarTools = (options: StellarToolsBetterAuthOptions) => {
+export const createBilling = (options: BillingConfig) => {
   return {
     id: "stellar-tools",
     endpoints: Object.fromEntries(Object.entries(routes).map(([key, value]) => [key, value(options as any)])) as Record<
@@ -60,4 +60,4 @@ export const stellarTools = (options: StellarToolsBetterAuthOptions) => {
   } satisfies BetterAuthPlugin;
 };
 
-export type StellarToolsAdapter = ReturnType<typeof stellarTools>;
+export type BillingPlugin = ReturnType<typeof createBilling>;

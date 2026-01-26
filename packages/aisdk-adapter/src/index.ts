@@ -1,6 +1,6 @@
-import { StellarToolsAISDK } from "./provider";
-import { StellarToolsAISDKOptions } from "./schema";
+import { MeteredAISDK } from "./provider";
+import { MeterConfig } from "./schema";
 
-export const createStellarToolsAISDK = (config: StellarToolsAISDKOptions) => {
-  return new StellarToolsAISDK(config);
+export const createMeteredAISDK = (config: MeterConfig) => {
+  return new MeteredAISDK(config);
 };

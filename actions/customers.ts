@@ -27,7 +27,12 @@ export const postCustomers = async (
       type: "customer::created",
       map: (customer) => ({
         customerId: customer.id,
-        data: { name: customer.name, email: customer.email, metadata: JSON.stringify(customer.metadata) },
+        data: {
+          name: customer.name,
+          email: customer.email,
+          metadata: JSON.stringify(customer.metadata),
+          source: customer.metadata?.source,
+        },
       }),
     },
     {

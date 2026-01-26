@@ -1,10 +1,10 @@
 import { createUploadthing } from "uploadthing/server";
 
-import { StellarToolsUploadThingAdapter } from "./provider";
-import { StellarToolsUploadthingOptions } from "./schema";
+import { MeteredUploadthing } from "./provider";
+import { MeterConfig } from "./schema";
 
-export const createStellarUploadthing = (opts: StellarToolsUploadthingOptions) => {
-  const adapter = new StellarToolsUploadThingAdapter(opts);
+export const createMeteredUploadthing = (config: MeterConfig) => {
+  const adapter = new MeteredUploadthing(config);
 
   return adapter.routerFactory as unknown as ReturnType<typeof createUploadthing>;
 };

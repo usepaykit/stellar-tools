@@ -1,7 +1,7 @@
 import { GenericEndpointContext, z } from "better-auth";
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 
-import { StellarToolsBetterAuthOptions } from "./types";
+import { BillingConfig } from "./types";
 import { getContext, unwrap } from "./utils";
 
 export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<string> => {
@@ -33,7 +33,7 @@ export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Pro
 
 // -- CUSTOMERS --
 
-export const createCustomer = (options: StellarToolsBetterAuthOptions) =>
+export const createCustomer = (options: BillingConfig) =>
   createAuthEndpoint("/stellar/customer/create", { method: "POST", use: [sessionMiddleware] }, async (ctx) => {
     const customerId = await retrieveOrCreateCustomer(ctx);
     const { stellar } = getContext(ctx, options);
@@ -43,13 +43,13 @@ export const createCustomer = (options: StellarToolsBetterAuthOptions) =>
     return ctx.json(result);
   });
 
-export const retrieveCustomer = (options: StellarToolsBetterAuthOptions) =>
+export const retrieveCustomer = (options: BillingConfig) =>
   createAuthEndpoint("/stellar/customer/retrieve", { method: "GET", use: [sessionMiddleware] }, async (ctx) => {
     const { user, stellar } = getContext(ctx, options);
     return ctx.json(unwrap(await stellar.customers.retrieve(user.stellarCustomerId as string)));
   });
 
-export const updateCustomer = (options: StellarToolsBetterAuthOptions) =>
+export const updateCustomer = (options: BillingConfig) =>
   createAuthEndpoint(
     "/stellar/customer/update",
     {
@@ -70,7 +70,7 @@ export const updateCustomer = (options: StellarToolsBetterAuthOptions) =>
 
 // -- SUBSCRIPTIONS --
 
-export const createSubscription = (options: StellarToolsBetterAuthOptions) =>
+export const createSubscription = (options: BillingConfig) =>
   createAuthEndpoint(
     "/stellar/subscription/create",
     {
@@ -95,7 +95,7 @@ export const createSubscription = (options: StellarToolsBetterAuthOptions) =>
     }
   );
 
-export const listSubscriptions = (options: StellarToolsBetterAuthOptions) =>
+export const listSubscriptions = (options: BillingConfig) =>
   createAuthEndpoint("/stellar/subscription/list", { method: "GET", use: [sessionMiddleware] }, async (ctx) => {
     const { user, stellar } = getContext(ctx, options);
     return ctx.json(unwrap(await stellar.subscriptions.list(user.stellarCustomerId)));
@@ -105,7 +105,7 @@ export const listSubscriptions = (options: StellarToolsBetterAuthOptions) =>
 
 const DEFAULT_CREDITS_LOW_THRESHOLD = 10;
 
-export const consumeCredits = (options: StellarToolsBetterAuthOptions) =>
+export const consumeCredits = (options: BillingConfig) =>
   createAuthEndpoint(
     "/stellar/credits/consume",
     {
@@ -139,7 +139,7 @@ export const consumeCredits = (options: StellarToolsBetterAuthOptions) =>
     }
   );
 
-export const getTransactions = (options: StellarToolsBetterAuthOptions) =>
+export const getTransactions = (options: BillingConfig) =>
   createAuthEndpoint(
     "/stellar/credits/transactions",
     {
@@ -163,7 +163,7 @@ export const getTransactions = (options: StellarToolsBetterAuthOptions) =>
   );
 // -- REFUNDS --
 
-export const createRefund = (options: StellarToolsBetterAuthOptions) =>
+export const createRefund = (options: BillingConfig) =>
   createAuthEndpoint(
     "/stellar/refund/create",
     {
