@@ -3,7 +3,7 @@
 import React from "react";
 
 import { accountValidator } from "@/actions/auth";
-import { AuthErrorAlert } from "@/app/(auth)/signin/page";
+import { AuthErrorAlert } from "@/app/cloud/(auth)/signin/page";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";

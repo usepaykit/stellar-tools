@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { RefundModal } from "@/app/dashboard/transactions/page";
+import { RefundModal } from "@/app/dashboard/(dashboard)/transactions/page";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { Badge } from "@/components/ui/badge";
