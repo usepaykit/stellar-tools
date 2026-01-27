@@ -197,7 +197,7 @@ export default function CustomersPage() {
   const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
 
   const handleRowClick = (customer: Customer) => {
-    router.push(`/dashboard/customers/${customer.id}`);
+    router.push(`/customers/${customer.id}`);
   };
 
   const tableActions: TableAction<Customer>[] = [

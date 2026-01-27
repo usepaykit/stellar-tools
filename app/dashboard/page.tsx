@@ -273,7 +273,7 @@ export default function DashboardPage() {
     if (!activeIntegrations.includes(integrationId)) {
       setActiveIntegrations([...activeIntegrations, integrationId]);
       setIsMarketplaceOpen(false);
-      router.push("/dashboard");
+      router.push("/");
     }
   };
 

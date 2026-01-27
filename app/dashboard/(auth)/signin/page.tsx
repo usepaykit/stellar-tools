@@ -59,7 +59,7 @@ export default function SignIn() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const redirect = searchParams.get("redirect") ?? "/";
   const error = searchParams.get("error");
 
   React.useEffect(() => {

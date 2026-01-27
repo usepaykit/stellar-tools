@@ -187,7 +187,7 @@ export default function CustomerDetailPage() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <BreadcrumbLink href="/dashboard/customers">Customers</BreadcrumbLink>
+                <BreadcrumbLink href="/customers">Customers</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator>
                 <ChevronRight className="h-4 w-4" />
@@ -466,7 +466,7 @@ function NotFound({ router }: any) {
       <DashboardSidebarInset>
         <div className="py-24 text-center">
           <h1 className="text-xl font-bold">Customer not found</h1>
-          <Button onClick={() => router.push("/dashboard/customers")} className="mt-4">
+          <Button onClick={() => router.push("/customers")} className="mt-4">
             Back
           </Button>
         </div>

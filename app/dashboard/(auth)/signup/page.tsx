@@ -1,9 +1,8 @@
 "use client";
 
 import React from "react";
-
 import { accountValidator } from "@/actions/auth";
-import { AuthErrorAlert } from "@/app/cloud/(auth)/signin/page";
+import { AuthErrorAlert } from "../signin/page";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,7 @@ export default function SignUp() {
   const [dismissedError, setDismissedError] = React.useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const redirect = searchParams.get("redirect") ?? "/";
   const error = searchParams.get("error");
 
   React.useEffect(() => {

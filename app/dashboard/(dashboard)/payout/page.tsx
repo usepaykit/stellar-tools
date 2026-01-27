@@ -361,7 +361,7 @@ export default function PayoutPage() {
     {
       label: "View Details",
       onClick: (row) => {
-        router.push(`/dashboard/payout/${row.id}`);
+        router.push(`/payout/${row.id}`);
       },
     },
     {
@@ -398,7 +398,7 @@ export default function PayoutPage() {
             data={mockPayouts}
             actions={tableActions}
             onRowClick={(row) => {
-              router.push(`/dashboard/payout/${row.id}`);
+              router.push(`/payout/${row.id}`);
             }}
           />
 

@@ -46,7 +46,7 @@ export default function SelectOrganizationPage() {
   const handleSelectOrg = React.useCallback(
     async (orgId: string) => {
       await setCurrentOrganization(orgId);
-      router.push("/dashboard");
+      router.push("/");
     },
     [router]
   );
@@ -223,7 +223,7 @@ const CreateOrganizationModal = ({
       await setCurrentOrganization(org.id);
       form.reset();
       onOpenChange(false);
-      router.push("/dashboard");
+      router.push("/");
     },
     onError: (error) => {
       console.error(error);

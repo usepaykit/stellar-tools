@@ -520,7 +520,7 @@ export default function SettingsPage() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                    <Link href="/dashboard">Dashboard</Link>
+                    <Link href="/">Dashboard</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator>
@@ -856,7 +856,7 @@ export default function SettingsPage() {
                       <p className="text-muted-foreground text-sm">
                         Create and manage API keys to authenticate your requests to the Stellar Tools API.
                       </p>
-                      <Link href="/dashboard/api-keys">
+                      <Link href="/api-keys">
                         <Button variant="outline" className="gap-2 shadow-none">
                           Manage API Keys
                           <ExternalLink className="h-4 w-4" />
@@ -876,7 +876,7 @@ export default function SettingsPage() {
                       <p className="text-muted-foreground text-sm">
                         Set up webhooks to receive real-time notifications about events in your account.
                       </p>
-                      <Link href="/dashboard/webhooks">
+                        <Link href="/webhooks">
                         <Button variant="outline" className="gap-2 shadow-none">
                           Manage Webhooks
                           <ExternalLink className="h-4 w-4" />

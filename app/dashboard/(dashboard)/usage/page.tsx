@@ -234,19 +234,19 @@ export default function UsagePage() {
     {
       label: "View Product",
       onClick: (record) => {
-        router.push(`/dashboard/products/${record.productId}`);
+        router.push(`/products/${record.productId}`);
       },
     },
     {
       label: "View Customer",
       onClick: (record) => {
-        router.push(`/dashboard/customers/${record.customerId}`);
+        router.push(`/customers/${record.customerId}`);
       },
     },
     {
       label: "View Payment",
       onClick: (record) => {
-        router.push(`/dashboard/transactions?customer=${record.customerId}&paymentId=x`);
+        router.push(`/transactions?customer=${record.customerId}&paymentId=x`);
       },
     },
     {
@@ -269,7 +269,7 @@ export default function UsagePage() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                    <Link href="/dashboard">Dashboard</Link>
+                    <Link href="/">Dashboard</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator>
@@ -311,7 +311,7 @@ export default function UsagePage() {
               actions={tableActions}
               onRowClick={(row) => {
                 // Navigate to customer page
-                router.push(`/dashboard/usage/${row.id}`);
+                  router.push(`/usage/${row.id}`);
               }}
             />
           </div>

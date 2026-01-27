@@ -112,7 +112,7 @@ export default function SubscriptionDetailPage() {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link href="/dashboard/subscriptions">Subscriptions</Link>
+                  <Link href="/subscriptions">Subscriptions</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator>
@@ -163,11 +163,11 @@ export default function SubscriptionDetailPage() {
                 <DetailRow
                   label="Customer"
                   value={sub.customer.name}
-                  href={`/dashboard/customers/${sub.customer.id}`}
+                  href={`/customers/${sub.customer.id}`}
                   copy={sub.customer.id}
                 />
                 <Separator />
-                <DetailRow label="Product" value={sub.product.name} href={`/dashboard/products/${sub.product.id}`} />
+                  <DetailRow label="Product" value={sub.product.name} href={`/products/${sub.product.id}`} />
                 <Separator />
                 <DetailRow
                   label="Recurring Amount"

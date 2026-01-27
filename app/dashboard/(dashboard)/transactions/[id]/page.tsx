@@ -211,7 +211,7 @@ export default function TransactionDetailPage() {
             <div className="py-12 text-center">
               <h1 className="mb-2 text-2xl font-bold">Transaction not found</h1>
               <p className="text-muted-foreground mb-4">The transaction you&apos;re looking for doesn&apos;t exist.</p>
-              <Button onClick={() => router.push("/dashboard/transactions")}>Back to Transactions</Button>
+              <Button onClick={() => router.push("/transactions")}>Back to Transactions</Button>
             </div>
           </div>
         </DashboardSidebarInset>
@@ -231,7 +231,7 @@ export default function TransactionDetailPage() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                    <Link href="/dashboard/transactions">Transactions</Link>
+                    <Link href="/transactions">Transactions</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator>
@@ -505,7 +505,7 @@ export default function TransactionDetailPage() {
                             <div className="text-muted-foreground text-xs">{customer.email}</div>
                           </div>
                           <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
-                            <Link href={`/dashboard/customers/${customer.id}`}>
+                              <Link href={`/customers/${customer.id}`}>
                               <ExternalLink className="h-4 w-4" />
                             </Link>
                           </Button>

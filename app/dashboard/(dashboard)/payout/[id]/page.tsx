@@ -148,7 +148,7 @@ export default function PayoutDetailPage() {
         <DashboardSidebarInset>
           <div className="py-12 text-center">
             <h1 className="text-2xl font-bold">Payout not found</h1>
-            <Button onClick={() => router.push("/dashboard/payout")} className="mt-4">
+              <Button onClick={() => router.push("/payout")} className="mt-4">
               Back
             </Button>
           </div>
@@ -164,7 +164,7 @@ export default function PayoutDetailPage() {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link href="/dashboard/payout">Payout history</Link>
+                  <Link href="/payout">Payout history</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator>

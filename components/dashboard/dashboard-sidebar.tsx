@@ -63,22 +63,22 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const navMain = [
-  { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Products", url: "/dashboard/products", icon: Package },
-  { title: "Transactions", url: "/dashboard/transactions", icon: Receipt },
-  { title: "Customers", url: "/dashboard/customers", icon: Users },
-  { title: "Subscriptions", url: "/dashboard/subscriptions", icon: Repeat },
-  { title: "Payout", url: "/dashboard/payout", icon: Wallet },
-  { title: "Usage", url: "/dashboard/usage", icon: Activity },
-  { title: "Settings", url: "/dashboard/settings", icon: Settings2 },
+    { title: "Overview", url: "/", icon: LayoutDashboard },
+  { title: "Products", url: "/products", icon: Package },
+  { title: "Transactions", url: "/transactions", icon: Receipt },
+  { title: "Customers", url: "/customers", icon: Users },
+  { title: "Subscriptions", url: "/subscriptions", icon: Repeat },
+  { title: "Payout", url: "/payout", icon: Wallet },
+  { title: "Usage", url: "/usage", icon: Activity },
+  { title: "Settings", url: "/settings", icon: Settings2 },
   {
     title: "Developers",
-    url: "/dashboard/developers",
+    url: "/developers",
     icon: Code,
     items: [
-      { title: "API Keys", url: "/dashboard/api-keys" },
-      { title: "Webhooks", url: "/dashboard/webhooks" },
-      { title: "Documentation", url: "/dashboard/documentation" },
+      { title: "API Keys", url: "/api-keys" },
+      { title: "Webhooks", url: "/webhooks" },
+      { title: "Documentation", url: "/documentation" },
     ],
   },
 ];
@@ -107,7 +107,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
   const userInitials = (user?.profile.firstName?.[0] || user?.email?.[0] || "?").toUpperCase();
 
-  const isActive = (url: string) => (url === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(url));
+  const isActive = (url: string) => (url === "/" ? pathname === "/" : pathname.startsWith(url));
 
   const handleSwitchOrganization = async (orgId: string) => {
     if (!currentOrg || orgId === currentOrg.id) return;
@@ -342,7 +342,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
                     <DropdownMenuItem asChild className="gap-2">
-                      <Link href="/dashboard/settings">
+                        <Link href="/settings">
                         <BadgeCheck className="size-4" /> Account
                       </Link>
                     </DropdownMenuItem>
