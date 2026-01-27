@@ -1,47 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const REQUIRED_ENV_KEYS = ["NEXT_PUBLIC_DASHBOARD_HOST", "NEXT_PUBLIC_CHECKOUT_HOST"] as const;
-
-type EnvKey = (typeof REQUIRED_ENV_KEYS)[number];
-
-function getRequiredEnv(key: EnvKey): string {
-  const value = process.env[key];
-  if (value === undefined || value === "") {
-    throw new Error(
-      `[middleware] Missing required env: ${key}. Add it to .env (e.g. ${key}=app.example.com or localhost:3000).`
-    );
-  }
-  return value;
-}
-
-function loadMiddlewareEnv(): Record<EnvKey, string> {
-  const entries = REQUIRED_ENV_KEYS.map((key) => [key, getRequiredEnv(key)] as const);
-  return Object.fromEntries(entries) as Record<EnvKey, string>;
-}
-
-const MIDDLEWARE_ENV = loadMiddlewareEnv();
-
 export default async function middleware(req: NextRequest): Promise<NextResponse> {
   const host = req.headers.get("host");
-  if (host === null || host === "") {
-    return new NextResponse("Missing Host header", { status: 400 });
+  if (!host) return new NextResponse("Missing Host header", { status: 400 });
+
+  const url = req.nextUrl.clone();
+
+  let prefix = "/landing";
+
+  if (host === process.env.NEXT_PUBLIC_DASHBOARD_HOST) {
+    prefix = "/dashboard";
+  } else if (host === process.env.NEXT_PUBLIC_CHECKOUT_HOST) {
+    prefix = "/checkout";
   }
 
-  const { NEXT_PUBLIC_DASHBOARD_HOST: dashboardHost, NEXT_PUBLIC_CHECKOUT_HOST: checkoutHost } = MIDDLEWARE_ENV;
-  const url = req.nextUrl;
-  const searchParams = String(url.searchParams);
-  const path = `${url.pathname}${searchParams ? `?${searchParams}` : ""}`;
-  const pathSuffix = path === "/" ? "" : path;
+  url.pathname = `${prefix}${url.pathname}`;
 
-  if (host === dashboardHost) {
-    console.log("reaching dashboard host", dashboardHost);
-    return NextResponse.rewrite(new URL(`/dashboard${pathSuffix}`, req.url));
-  }
-  if (host === checkoutHost) {
-    return NextResponse.rewrite(new URL(`/checkout${pathSuffix}`, req.url));
-  }
-
-  return NextResponse.rewrite(new URL(`/landing${pathSuffix}`, req.url));
+  return NextResponse.rewrite(url);
 }
 
 export const config = {

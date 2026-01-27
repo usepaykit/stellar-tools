@@ -81,8 +81,8 @@ export default function SignIn() {
       toast.success("Logged in successfully");
       router.push("/select-organization");
     },
-    onError: () => {
-      toast.error("Sign-in failed");
+    onError: (error: unknown) => {
+      toast.error(error instanceof Error ? error.message : "Sign-in failed");
     },
   });
   const form = useForm<SignInFormData>({
