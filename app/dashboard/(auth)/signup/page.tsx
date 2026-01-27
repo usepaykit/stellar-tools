@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
+
 import { accountValidator } from "@/actions/auth";
-import { AuthErrorAlert } from "../signin/page";
 import { Google } from "@/components/icon";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+
+import { AuthErrorAlert } from "../signin/page";
 
 const signUpSchema = z.object({
   name: z.string().min(1, "Name is required").min(3, "Name must be at least 3 characters"),

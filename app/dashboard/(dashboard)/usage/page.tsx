@@ -311,7 +311,7 @@ export default function UsagePage() {
               actions={tableActions}
               onRowClick={(row) => {
                 // Navigate to customer page
-                  router.push(`/usage/${row.id}`);
+                router.push(`/usage/${row.id}`);
               }}
             />
           </div>

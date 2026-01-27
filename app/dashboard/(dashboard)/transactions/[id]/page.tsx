@@ -505,7 +505,7 @@ export default function TransactionDetailPage() {
                             <div className="text-muted-foreground text-xs">{customer.email}</div>
                           </div>
                           <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
-                              <Link href={`/customers/${customer.id}`}>
+                            <Link href={`/customers/${customer.id}`}>
                               <ExternalLink className="h-4 w-4" />
                             </Link>
                           </Button>

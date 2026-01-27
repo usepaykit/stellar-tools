@@ -63,7 +63,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 const navMain = [
-    { title: "Overview", url: "/", icon: LayoutDashboard },
+  { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Products", url: "/products", icon: Package },
   { title: "Transactions", url: "/transactions", icon: Receipt },
   { title: "Customers", url: "/customers", icon: Users },
@@ -342,7 +342,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
                     <DropdownMenuItem asChild className="gap-2">
-                        <Link href="/settings">
+                      <Link href="/settings">
                         <BadgeCheck className="size-4" /> Account
                       </Link>
                     </DropdownMenuItem>

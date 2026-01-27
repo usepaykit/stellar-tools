@@ -167,7 +167,7 @@ export default function SubscriptionDetailPage() {
                   copy={sub.customer.id}
                 />
                 <Separator />
-                  <DetailRow label="Product" value={sub.product.name} href={`/products/${sub.product.id}`} />
+                <DetailRow label="Product" value={sub.product.name} href={`/products/${sub.product.id}`} />
                 <Separator />
                 <DetailRow
                   label="Recurring Amount"

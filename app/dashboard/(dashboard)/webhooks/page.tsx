@@ -404,9 +404,9 @@ function WebhooksPageContent() {
                     isLoading={isLoading}
                     skeletonRowCount={5}
                     onRowClick={(row) => {
-                        router.push(`/webhooks/${row.id}`);
+                      router.push(`/webhooks/${row.id}`);
                     }}
-                  />  
+                  />
                 </TabsContent>
               </Tabs>
             </div>

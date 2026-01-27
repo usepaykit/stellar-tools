@@ -460,10 +460,7 @@ export default function UsageDetailPage() {
                     <LogDetailItem
                       label="Customer"
                       value={
-                        <Link
-                          href={`/customers/${record.customerId}`}
-                          className="text-primary hover:underline"
-                        >
+                        <Link href={`/customers/${record.customerId}`} className="text-primary hover:underline">
                           {record.customer.name}
                         </Link>
                       }
@@ -486,7 +483,7 @@ export default function UsageDetailPage() {
                   <LogDetailItem
                     label="Product"
                     value={
-                        <Link href={`/products/${record.productId}`} className="text-primary hover:underline">
+                      <Link href={`/products/${record.productId}`} className="text-primary hover:underline">
                         {record.product.name}
                       </Link>
                     }
@@ -544,7 +541,7 @@ export default function UsageDetailPage() {
               <BreadcrumbList>
                 <BreadcrumbItem>
                   <BreadcrumbLink asChild>
-                      <Link href="/usage">Usage</Link>
+                    <Link href="/usage">Usage</Link>
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator>

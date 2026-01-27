@@ -876,7 +876,7 @@ export default function SettingsPage() {
                       <p className="text-muted-foreground text-sm">
                         Set up webhooks to receive real-time notifications about events in your account.
                       </p>
-                        <Link href="/webhooks">
+                      <Link href="/webhooks">
                         <Button variant="outline" className="gap-2 shadow-none">
                           Manage Webhooks
                           <ExternalLink className="h-4 w-4" />
