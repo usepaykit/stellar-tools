@@ -1,0 +1,568 @@
+"use client";
+
+import * as React from "react";
+
+import { RefundModal } from "@/app/dashboard/(dashboard)/transactions/page";
+import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/toast";
+import { Payment } from "@/db";
+import { useCopy } from "@/hooks/use-copy";
+import { cn } from "@/lib/utils";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Copy,
+  ExternalLink,
+  MoreHorizontal,
+  RefreshCw,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+import moment from "moment";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+
+const StatusBadge = ({ status }: { status: Payment["status"] }) => {
+  const variants = {
+    confirmed: {
+      className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+      icon: CheckCircle2,
+      label: "Confirmed",
+    },
+    pending: {
+      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+      icon: Clock,
+      label: "Pending",
+    },
+    failed: {
+      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      icon: XCircle,
+      label: "Failed",
+    },
+  };
+
+  const variant = variants[status];
+  const Icon = variant.icon;
+
+  return (
+    <Badge variant="outline" className={cn("gap-1.5 border", variant.className)}>
+      <Icon className="h-3 w-3" />
+      {variant.label}
+    </Badge>
+  );
+};
+
+const CopyButton = ({ text, label }: { text: string; label?: string }) => {
+  const { copied, handleCopy } = useCopy();
+
+  return (
+    <button
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
+      className="hover:bg-muted inline-flex items-center justify-center rounded-md p-1 transition-colors"
+      aria-label={label || "Copy to clipboard"}
+    >
+      {copied ? (
+        <CheckCircle2 className="h-4 w-4 text-green-600" />
+      ) : (
+        <Copy className="text-muted-foreground h-4 w-4" />
+      )}
+    </button>
+  );
+};
+
+const mockPayment: Payment = {
+  id: "pay_abc123def456ghi789jkl012mno345",
+  organizationId: "org_mock123",
+  checkoutId: "chk_xyz789abc123def456",
+  customerId: "cust_mock456",
+  amount: 50000000,
+  transactionHash: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2",
+  status: "confirmed",
+  createdAt: new Date("2025-01-15T10:30:00Z"),
+  updatedAt: new Date("2025-01-15T10:30:15Z"),
+  environment: "testnet",
+};
+
+const mockCustomer = {
+  id: "cust_mock456",
+  name: "John Doe",
+  email: "john.doe@example.com",
+  phone: null,
+  createdAt: new Date("2024-12-01T08:00:00Z"),
+  updatedAt: new Date("2025-01-15T10:30:00Z"),
+  organizationId: "org_mock123",
+  appMetadata: {
+    company: "Acme Corp",
+    plan: "premium",
+  },
+  walletAddresses: [
+    {
+      address: "GABCDEF1234567890ABCDEF1234567890ABCDEF12",
+      memo: "Payment for subscription",
+    },
+  ],
+};
+
+const mockRefunds = [
+  {
+    id: "rf_refund123456789",
+    organizationId: "org_mock123",
+    paymentId: "pay_abc123def456ghi789jkl012mno345",
+    customerId: "cust_mock456",
+    amount: 25000000, // 25.00 XLM in stroops (partial refund)
+    reason: "Customer requested partial refund due to service issue",
+    status: "succeeded",
+    receiverPublicKey: "GXYZ9876543210ABCDEF9876543210ABCDEF9876",
+    createdAt: new Date("2025-01-16T14:20:00Z"),
+    updatedAt: new Date("2025-01-16T14:20:00Z"),
+    environment: "testnet",
+    metadata: {},
+  },
+];
+
+export default function TransactionDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  const paymentId = params?.id as string;
+
+  const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  // Mock data - replace with actual API calls later
+  const payment = React.useMemo(() => {
+    // Use mock data, but you can also check if paymentId matches
+    return mockPayment;
+  }, []);
+
+  const customer = React.useMemo(() => {
+    return mockCustomer;
+  }, []);
+
+  const refunds = React.useMemo(() => {
+    // Filter refunds for this payment
+    return mockRefunds.filter((refund) => refund.paymentId === paymentId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isLoadingPayment = false;
+
+  const handleRefreshStatus = React.useCallback(async () => {
+    if (!payment) return;
+
+    setIsRefreshing(true);
+    try {
+      // Simulate API call to refresh transaction status
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      toast.success("Transaction status refreshed");
+    } catch (error) {
+      console.error("Failed to refresh status:", error);
+      toast.error("Failed to refresh transaction status");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [payment]);
+
+  const getStellarExplorerUrl = (txHash: string, network: string) => {
+    const baseUrl =
+      network === "mainnet"
+        ? "https://stellar.expert/explorer/public/tx"
+        : "https://stellar.expert/explorer/testnet/tx";
+    return `${baseUrl}/${txHash}`;
+  };
+
+  if (isLoadingPayment) {
+    return (
+      <DashboardSidebar>
+        <DashboardSidebarInset>
+          <div className="flex flex-col gap-6 p-6">
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">Loading transaction...</p>
+            </div>
+          </div>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
+    );
+  }
+
+  if (!payment) {
+    return (
+      <DashboardSidebar>
+        <DashboardSidebarInset>
+          <div className="flex flex-col gap-6 p-6">
+            <div className="py-12 text-center">
+              <h1 className="mb-2 text-2xl font-bold">Transaction not found</h1>
+              <p className="text-muted-foreground mb-4">The transaction you&apos;re looking for doesn&apos;t exist.</p>
+              <Button onClick={() => router.push("/transactions")}>Back to Transactions</Button>
+            </div>
+          </div>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
+    );
+  }
+
+  const hasRefund = refunds && refunds.length > 0;
+  const latestRefund = hasRefund ? refunds[0] : null;
+
+  return (
+    <div className="w-full">
+      <DashboardSidebar>
+        <DashboardSidebarInset>
+          <div className="flex flex-col gap-6 p-4 sm:p-6">
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href="/transactions">Transactions</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator>
+                  <ChevronRight className="h-4 w-4" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{payment.id}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <h1 className="text-2xl font-bold sm:text-3xl">Transaction Details</h1>
+                    <StatusBadge status={payment.status} />
+                  </div>
+                  <p className="text-muted-foreground text-sm sm:text-base">{payment.id}</p>
+                </div>
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 shadow-none sm:w-auto"
+                    onClick={handleRefreshStatus}
+                    disabled={isRefreshing}
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                    <span>Refresh Status</span>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon" className="size-8 cursor-pointer shadow-none">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">More options</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          window.open(getStellarExplorerUrl(payment.transactionHash, payment.environment), "_blank");
+                        }}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View on Stellar Explorer
+                      </DropdownMenuItem>
+                      {payment.status === "confirmed" && (
+                        <DropdownMenuItem onClick={() => setIsRefundModalOpen(true)}>Process Refund</DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          navigator.clipboard.writeText(payment.id);
+                          toast.success("Transaction ID copied to clipboard");
+                        }}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy Transaction ID
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="space-y-6 lg:col-span-2">
+                {/* Transaction Information */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold sm:text-xl">Transaction Information</h3>
+                  <div className="bg-card space-y-4 rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-muted-foreground mb-1 text-xs">Amount</div>
+                        <div className="text-2xl font-bold">
+                          {((payment.amount ?? 0) / 1000000).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 7,
+                          })}{" "}
+                          XLM
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-muted-foreground mb-1 text-xs">Transaction Hash</div>
+                        <div className="font-mono text-sm break-all">{payment.transactionHash}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <CopyButton text={payment.transactionHash} label="Copy transaction hash" />
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            window.open(getStellarExplorerUrl(payment.transactionHash, payment.environment), "_blank");
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-muted-foreground mb-1 text-xs">Network</div>
+                        <div className="text-sm capitalize">{payment.environment}</div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-muted-foreground mb-1 text-xs">Created At</div>
+                        <div className="text-sm">{moment(payment.createdAt).format("MMMM DD, YYYY [at] h:mm A")}</div>
+                      </div>
+                      <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
+                    </div>
+
+                    {payment.updatedAt && payment.updatedAt.getTime() !== payment.createdAt.getTime() && (
+                      <>
+                        <Separator />
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
+                            <div className="text-sm">
+                              {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
+                            </div>
+                          </div>
+                          <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Refund Information */}
+                {hasRefund && latestRefund && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold sm:text-xl">Refund Information</h3>
+                    <div className="bg-card space-y-4 rounded-lg border p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-muted-foreground mb-1 text-xs">Refund Status</div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "gap-1.5 border",
+                              latestRefund.status === "succeeded"
+                                ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
+                                : latestRefund.status === "pending"
+                                  ? "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+                                  : "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                            )}
+                          >
+                            {latestRefund.status === "succeeded" ? (
+                              <CheckCircle2 className="h-3 w-3" />
+                            ) : latestRefund.status === "pending" ? (
+                              <Clock className="h-3 w-3" />
+                            ) : (
+                              <XCircle className="h-3 w-3" />
+                            )}
+                            <span className="capitalize">{latestRefund.status}</span>
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-muted-foreground mb-1 text-xs">Refund Amount</div>
+                          <div className="text-lg font-semibold">
+                            {((latestRefund.amount ?? 0) / 1000000).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 7,
+                            })}{" "}
+                            XLM
+                          </div>
+                        </div>
+                      </div>
+
+                      {latestRefund.reason && (
+                        <>
+                          <Separator />
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-muted-foreground mb-1 text-xs">Reason</div>
+                              <div className="text-sm">{latestRefund.reason}</div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {latestRefund.receiverPublicKey && (
+                        <>
+                          <Separator />
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-muted-foreground mb-1 text-xs">Receiver Wallet</div>
+                              <div className="flex items-center gap-2">
+                                <Wallet className="text-muted-foreground h-4 w-4" />
+                                <span className="font-mono text-sm break-all">
+                                  {latestRefund.receiverPublicKey.slice(0, 8)}...
+                                  {latestRefund.receiverPublicKey.slice(-4)}
+                                </span>
+                              </div>
+                            </div>
+                            <CopyButton text={latestRefund.receiverPublicKey} label="Copy wallet address" />
+                          </div>
+                        </>
+                      )}
+
+                      <Separator />
+
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="text-muted-foreground mb-1 text-xs">Refunded At</div>
+                          <div className="text-sm">
+                            {moment(latestRefund.createdAt).format("MMMM DD, YYYY [at] h:mm A")}
+                          </div>
+                        </div>
+                        <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column - Sidebar */}
+              <div className="space-y-6">
+                {/* Details Section */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold sm:text-xl">Details</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-muted-foreground mb-1 text-xs">Transaction ID</div>
+                        <div className="font-mono text-sm break-all">{payment.id}</div>
+                      </div>
+                      <CopyButton text={payment.id} label="Copy transaction ID" />
+                    </div>
+
+                    <Separator />
+
+                    {payment.checkoutId && (
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-muted-foreground mb-1 text-xs">Checkout ID</div>
+                            <div className="font-mono text-sm break-all">{payment.checkoutId}</div>
+                          </div>
+                          <CopyButton text={payment.checkoutId} label="Copy checkout ID" />
+                        </div>
+
+                        <Separator />
+                      </>
+                    )}
+
+                    {customer && (
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-muted-foreground mb-1 text-xs">Customer</div>
+                            <div className="text-sm font-medium">{customer.name || customer.email}</div>
+                            <div className="text-muted-foreground text-xs">{customer.email}</div>
+                          </div>
+                          <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
+                            <Link href={`/customers/${customer.id}`}>
+                              <ExternalLink className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </div>
+
+                        <Separator />
+                      </>
+                    )}
+
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-muted-foreground mb-1 text-xs">Status</div>
+                        <StatusBadge status={payment.status} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Section */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold sm:text-xl">Actions</h3>
+                  <div className="space-y-2">
+                    <Button
+                      variant="outline"
+                      className="hover:bg-muted/50 h-auto w-full justify-start gap-2.5 px-3 py-2.5 shadow-none transition-colors"
+                      onClick={() => {
+                        window.open(getStellarExplorerUrl(payment.transactionHash, payment.environment), "_blank");
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 shrink-0" />
+                      <span className="text-sm font-medium">View on Stellar Explorer</span>
+                    </Button>
+                    {payment.status === "confirmed" && (
+                      <Button
+                        variant="outline"
+                        className="hover:bg-muted/50 h-auto w-full justify-start gap-2.5 px-3 py-2.5 shadow-none transition-colors"
+                        onClick={() => setIsRefundModalOpen(true)}
+                      >
+                        <Wallet className="h-4 w-4 shrink-0" />
+                        <span className="text-sm font-medium">Process Refund</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
+
+      <RefundModal
+        open={isRefundModalOpen}
+        onOpenChange={(open) => {
+          setIsRefundModalOpen(open);
+        }}
+        initialPaymentId={paymentId}
+      />
+    </div>
+  );
+}

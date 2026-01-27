@@ -1,0 +1,563 @@
+"use client";
+
+import * as React from "react";
+import { useState } from "react";
+
+import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
+import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { DataTable, TableAction } from "@/components/data-table";
+import { FullScreenModal } from "@/components/fullscreen-modal";
+import {
+  PhoneNumber,
+  PhoneNumberPicker,
+  phoneNumberFromString,
+  phoneNumberToString,
+} from "@/components/phone-number-picker";
+import { TextField } from "@/components/text-field";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/toast";
+import { Customer } from "@/db";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { cn } from "@/lib/utils";
+import { truncate } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { ColumnDef } from "@tanstack/react-table";
+import { Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
+
+const columns: ColumnDef<Customer>[] = [
+  {
+    accessorKey: "name",
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return (
+        <Button
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          variant={"ghost"}
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          aria-label={`Sort by name ${isSorted === "asc" ? "descending" : "ascending"}`}
+        >
+          <span>Customer</span>
+          {isSorted === "asc" ? (
+            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : isSorted === "desc" ? (
+            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+          )}
+        </Button>
+      );
+    },
+    cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+    enableSorting: true,
+  },
+  {
+    accessorKey: "email",
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return (
+        <Button
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant={"ghost"}
+          aria-label={`Sort by email ${isSorted === "asc" ? "descending" : "ascending"}`}
+        >
+          <span>Email</span>
+          {isSorted === "asc" ? (
+            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : isSorted === "desc" ? (
+            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+          )}
+        </Button>
+      );
+    },
+    cell: ({ row }) => <div className="text-muted-foreground">{row.original.email}</div>,
+    enableSorting: true,
+  },
+  {
+    accessorKey: "phone",
+    header: "Phone",
+    cell: ({ row }) => <div className="text-muted-foreground">{row.original.phone}</div>,
+  },
+  {
+    accessorKey: "walletAddress",
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return (
+        <Button
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant={"ghost"}
+          aria-label={`Sort by wallet address ${isSorted === "asc" ? "descending" : "ascending"}`}
+        >
+          <span>Wallet Address</span>
+          {isSorted === "asc" ? (
+            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : isSorted === "desc" ? (
+            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+          )}
+        </Button>
+      );
+    },
+    cell: ({ row }) => (
+      <div className="text-muted-foreground font-mono text-sm">
+        {truncate(row.original.walletAddresses?.[0]?.address ?? "-")}
+      </div>
+    ),
+    enableSorting: true,
+  },
+  {
+    accessorKey: "createdAt",
+    header: ({ column }) => {
+      const isSorted = column.getIsSorted();
+      return (
+        <Button
+          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant="ghost"
+          aria-label={`Sort by created date ${isSorted === "asc" ? "descending" : "ascending"}`}
+        >
+          <span>Created</span>
+          {isSorted === "asc" ? (
+            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : isSorted === "desc" ? (
+            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
+          ) : (
+            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
+          )}
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const date = row.original.createdAt;
+      return (
+        <div className="text-muted-foreground">
+          {date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}{" "}
+          {date.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          })}
+        </div>
+      );
+    },
+    enableSorting: true,
+  },
+];
+
+const filterMap: Record<number, string> = {
+  0: "All",
+  1: "First-time customers",
+  2: "Recent customers",
+};
+
+const filterOptions = [0, 1, 2];
+
+const customerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.email(),
+  phoneNumber: z.object({
+    number: z.string(),
+    countryCode: z.string().min(1, "Country code is required"),
+  }),
+  metadata: z
+    .array(
+      z.object({
+        key: z.string().min(1, "Key is required"),
+        value: z.string(),
+      })
+    )
+    .default([])
+    .optional(),
+});
+
+type CustomerFormData = z.infer<typeof customerSchema>;
+
+export default function CustomersPage() {
+  const searchParams = useSearchParams();
+  const [selectedFilter, setSelectedFilter] = useState<number>(0);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams.get("mode") === "create");
+  const router = useRouter();
+
+  const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
+
+  const handleRowClick = (customer: Customer) => {
+    router.push(`/customers/${customer.id}`);
+  };
+
+  const tableActions: TableAction<Customer>[] = [
+    {
+      label: "Create invoice",
+      onClick: (customer) => {
+        console.log("Create invoice for:", customer);
+      },
+    },
+    {
+      label: "Create subscription",
+      onClick: (customer) => {
+        console.log("Create subscription for:", customer);
+      },
+    },
+  ];
+
+  return (
+    <div className="w-full">
+      <DashboardSidebar>
+        <DashboardSidebarInset>
+          <div className="flex flex-col gap-6 p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">Customers</h1>
+                <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add customer
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                {filterOptions.map((filterIndex) => (
+                  <Button
+                    key={filterIndex}
+                    onClick={() => setSelectedFilter(filterIndex)}
+                    className={cn(
+                      "rounded-full px-4 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
+                      selectedFilter === filterIndex
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {filterMap[filterIndex]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <DataTable
+              columns={columns}
+              data={customers ?? []}
+              enableBulkSelect={true}
+              actions={tableActions}
+              onRowClick={handleRowClick}
+              isLoading={isLoadingCustomers}
+            />
+          </div>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
+
+      <CustomerModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+    </div>
+  );
+}
+
+export function CustomerModal({
+  open,
+  onOpenChange,
+  customer,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  customer?: Partial<Customer> | null;
+}) {
+  const invalidate = useInvalidateOrgQuery();
+
+  const isEditMode = !!customer;
+  const form = RHF.useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      phoneNumber: { number: "", countryCode: "US" },
+      metadata: [],
+    },
+  });
+
+  const { fields, append, remove } = RHF.useFieldArray({
+    control: form.control,
+    name: "metadata",
+  });
+
+  React.useEffect(() => {
+    if (open && customer) {
+      const phoneNumber = customer.phone ? phoneNumberFromString(customer.phone) : undefined;
+
+      const metadataArray = customer.metadata
+        ? Object.entries(customer.metadata).map(([key, value]) => ({
+            key,
+            value: value || "",
+          }))
+        : [];
+
+      form.reset({
+        name: customer.name || "",
+        email: customer.email || "",
+        phoneNumber,
+        metadata: metadataArray,
+      });
+    } else if (open && !customer) {
+      form.reset({
+        name: "",
+        email: "",
+        phoneNumber: { number: "", countryCode: "US" },
+        metadata: [],
+      });
+    }
+  }, [open, customer, form]);
+
+  const putCustomerMutation = useMutation({
+    mutationFn: async (data: CustomerFormData) => {
+      const phoneString = data.phoneNumber.number ? phoneNumberToString(data.phoneNumber) : "";
+
+      const metadataRecord = (data.metadata || []).reduce(
+        (acc, item) => {
+          if (item.key) {
+            acc[item.key] = item.value || "";
+          }
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+
+      if (isEditMode) {
+        return await putCustomer(customer!.id!, {
+          name: data.name,
+          email: data.email,
+          phone: phoneString,
+          metadata: metadataRecord,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      return await postCustomers([
+        {
+          name: data.name,
+          email: data.email,
+          phone: phoneString,
+          walletAddresses: null,
+          metadata: metadataRecord,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+    },
+    onSuccess: (customer) => {
+      invalidate(isEditMode ? ["customers", customer?.id] : ["customers"]);
+      invalidate(["customer-events", customer?.id]);
+
+      toast.success(isEditMode ? "Customer updated successfully" : "Customer created successfully");
+      form.reset();
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      console.error(error);
+      toast.error(isEditMode ? "Failed to update customer" : "Failed to create customer");
+    },
+  });
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && !form.formState.isSubmitting) {
+      form.reset();
+    }
+    onOpenChange(newOpen);
+  };
+
+  const onSubmit = (data: CustomerFormData) => {
+    putCustomerMutation.mutate(data);
+  };
+
+  return (
+    <FullScreenModal
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={isEditMode ? "Edit customer" : "Create customer"}
+      description={isEditMode ? "Update customer information" : "Add a new customer to your organization"}
+      size="full"
+      showCloseButton={true}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            className="shadow-none"
+            disabled={form.formState.isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            isLoading={putCustomerMutation.isPending}
+            type="button"
+            onClick={form.handleSubmit(onSubmit)}
+            className="gap-2 shadow-none"
+            disabled={putCustomerMutation.isPending}
+          >
+            {isEditMode ? "Update customer" : "Create customer"}
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex h-full flex-col gap-8">
+        <div className="flex flex-1 gap-8 overflow-hidden">
+          <div className="flex-1 space-y-6 overflow-y-auto">
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
+              <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <RHF.Controller
+                control={form.control}
+                name="name"
+                render={({ field, fieldState: { error } }) => (
+                  <TextField
+                    id="name"
+                    value={field.value}
+                    onChange={field.onChange}
+                    label="Name"
+                    error={error?.message || null}
+                    placeholder="John Doe"
+                    className="w-full shadow-none"
+                    required
+                  />
+                )}
+              />
+
+              <RHF.Controller
+                control={form.control}
+                name="email"
+                render={({ field, fieldState: { error } }) => (
+                  <TextField
+                    id="email"
+                    type="email"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    label="Email"
+                    error={error?.message || null}
+                    placeholder="john@example.com"
+                    className="w-full shadow-none"
+                  />
+                )}
+              />
+            </div>
+
+            <RHF.Controller
+              control={form.control}
+              name="phoneNumber"
+              render={({ field, fieldState: { error } }) => {
+                const phoneValue: PhoneNumber = {
+                  number: field.value?.number || "",
+                  countryCode: field.value?.countryCode || "US",
+                };
+
+                return (
+                  <PhoneNumberPicker
+                    id="phone"
+                    value={phoneValue}
+                    onChange={field.onChange}
+                    label="Phone number"
+                    error={(error as any)?.number?.message}
+                    groupClassName="w-full shadow-none"
+                  />
+                );
+              }}
+            />
+          </div>
+
+          <Separator orientation="vertical" className="h-auto" />
+
+          <div className="flex-1 space-y-6 overflow-y-auto">
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
+              <p className="text-muted-foreground text-sm">
+                Add custom key-value pairs to store additional information about this customer.
+              </p>
+            </div>
+
+            <Card className="shadow-none">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {fields.length === 0 ? (
+                    <div className="text-muted-foreground py-8 text-center text-sm">
+                      No metadata entries. Click &quot;Add metadata&quot; to add one.
+                    </div>
+                  ) : (
+                    fields.map((field, index) => (
+                      <div key={field.id} className="flex items-start gap-3 rounded-lg border p-4">
+                        <div className="grid flex-1 grid-cols-2 gap-3">
+                          <RHF.Controller
+                            control={form.control}
+                            name={`metadata.${index}.key`}
+                            render={({ field: fieldProps, fieldState: { error } }) => (
+                              <TextField
+                                id={`metadata-key-${index}`}
+                                value={fieldProps.value || ""}
+                                onChange={fieldProps.onChange}
+                                label="Key"
+                                error={error?.message || null}
+                                placeholder="e.g., company"
+                                className="w-full shadow-none"
+                              />
+                            )}
+                          />
+                          <RHF.Controller
+                            control={form.control}
+                            name={`metadata.${index}.value`}
+                            render={({ field: fieldProps, fieldState: { error } }) => (
+                              <TextField
+                                id={`metadata-value-${index}`}
+                                value={fieldProps.value || ""}
+                                onChange={fieldProps.onChange}
+                                label="Value"
+                                error={error?.message || null}
+                                placeholder="e.g., Acme Inc"
+                                className="w-full shadow-none"
+                              />
+                            )}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => remove(index)}
+                          className="mt-5 shrink-0 shadow-none"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => append({ key: "", value: "" })}
+                    className="w-full shadow-none"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add metadata
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </form>
+    </FullScreenModal>
+  );
+}

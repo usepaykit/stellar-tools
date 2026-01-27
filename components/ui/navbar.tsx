@@ -104,7 +104,6 @@ const cases: {
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const [starsNumber, setStarsNumber] = useState<number>(0);
   const isAuthenticated = false;
   useEffect(() => {
     const handleScroll = () => {
@@ -122,7 +121,6 @@ export function Header() {
       try {
         const response = await axios.get("https://api.github.com/repos/usepaykit/stellar-tools");
         if (!mounted) return;
-        setStarsNumber(response.data.stargazers_count);
         console.log("Stars count:", response.data.stargazers_count);
       } catch (error) {
         console.error("Failed to fetch GitHub stars", error);
@@ -253,7 +251,7 @@ export function Header() {
                 Docs
               </Button>
               <Button variant={"default"} size={"sm"}>
-                <Link href="/dashboard/create">Get Started</Link>
+                <Link href="/create">Get Started</Link>
               </Button>
             </>
           )}

@@ -9,8 +9,8 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 
 const ROUTE_MAP = {
-  customerId: (id: string) => `/dashboard/customers/${id}`,
-  productId: (id: string) => `/dashboard/products/${id}`,
+  customerId: (id: string) => `/customers/${id}`,
+  productId: (id: string) => `/products/${id}`,
 } as Record<string, (id: string) => string>;
 
 export interface TimelineEntry {
