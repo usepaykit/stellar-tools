@@ -5,7 +5,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+
 import { CheckMark } from "../icon";
+
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />;
 }

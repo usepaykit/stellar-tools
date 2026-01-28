@@ -5,13 +5,7 @@ import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 import { Label } from "./ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
@@ -75,10 +69,7 @@ export const SelectPicker = ({
       )}
 
       <Select {...rest} value={value} onValueChange={(v) => onChange(v)}>
-        <SelectTrigger
-          {...triggerProps}
-          className={cn("w-full", triggerProps?.className)}
-        >
+        <SelectTrigger {...triggerProps} className={cn("w-full", triggerProps?.className)}>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

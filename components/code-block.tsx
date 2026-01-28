@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { useMounted } from "@/hooks/use-mounted";
@@ -40,7 +40,7 @@ export function CodeBlock({
   logo,
   showCopyButton = true,
   className,
-  maxHeight = "400px",
+  maxHeight,
 }: CodeBlockProps) {
   const mounted = useMounted();
   const { resolvedTheme } = useTheme();
@@ -73,14 +73,19 @@ export function CodeBlock({
         ...baseTheme['pre[class*="language-"]'],
         background: bg,
         margin: 0,
-        padding: "1rem",
+        padding: "0.5rem 1rem",
         borderRadius: "0 0 8px 8px", // Bottom corners only if header exists
+        whiteSpace: "pre",
+        overflow: "visible",
+        width: "fit-content",
+        minWidth: "100%",
       },
       'code[class*="language-"]': {
         ...baseTheme['code[class*="language-"]'],
         background: "transparent", // Let pre handle the bg
         fontSize: "0.875rem", // text-sm
         fontFamily: "var(--font-mono, monospace)", // Use your app's mono font
+        whiteSpace: "pre",
       },
     };
   }, [resolvedTheme, isShell]);
@@ -109,7 +114,8 @@ export function CodeBlock({
     <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "group bg-muted/50 relative flex w-full flex-col overflow-hidden rounded-xl border text-sm",
+          "group bg-muted/50 relative flex w-full flex-col rounded-xl border text-sm",
+          hasMaxHeight && "overflow-hidden",
           className
         )}
         style={hasMaxHeight ? { maxHeight } : undefined}
@@ -128,8 +134,8 @@ export function CodeBlock({
 
         {/* Code Content with ScrollArea */}
         {hasMaxHeight ? (
-          <div className="flex">
-            <ScrollArea style={{ height: scrollAreaHeight }} className="flex-1">
+          <ScrollArea style={{ height: scrollAreaHeight }} className="w-full">
+            <div style={{ width: "max-content", minWidth: "100%", display: "inline-block" }}>
               <SyntaxHighlighter
                 language={lang}
                 style={syntaxTheme}
@@ -138,34 +144,40 @@ export function CodeBlock({
                 customStyle={{
                   margin: 0,
                   borderRadius: showHeader ? "0 0 8px 8px" : "8px",
+                  display: "block",
                 }}
               >
                 {children.trim()}
               </SyntaxHighlighter>
-            </ScrollArea>
-          </div>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         ) : (
-          <div className="relative w-full overflow-x-auto">
-            <SyntaxHighlighter
-              language={lang}
-              style={syntaxTheme}
-              showLineNumbers={false}
-              wrapLines={false}
-              customStyle={{
-                margin: 0,
-                borderRadius: showHeader ? "0 0 8px 8px" : "8px",
-              }}
-            >
-              {children.trim()}
-            </SyntaxHighlighter>
+          <ScrollArea className="relative w-full">
+            <div style={{ width: "max-content", minWidth: "100%", display: "inline-block" }}>
+              <SyntaxHighlighter
+                language={lang}
+                style={syntaxTheme}
+                showLineNumbers={false}
+                wrapLines={false}
+                customStyle={{
+                  margin: 0,
+                  borderRadius: showHeader ? "0 0 8px 8px" : "8px",
+                  display: "block",
+                }}
+              >
+                {children.trim()}
+              </SyntaxHighlighter>
+            </div>
+            <ScrollBar orientation="horizontal" />
 
             {/* Floating Copy Button for Shell/No-Header view */}
             {!showHeader && showCopyButton && (
-              <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="absolute top-2 right-2 z-10 opacity-0 transition-opacity group-hover:opacity-100">
                 <CopyButton copied={copied} onCopy={copyToClipboard} variant="floating" />
               </div>
             )}
-          </div>
+          </ScrollArea>
         )}
       </div>
     </TooltipProvider>

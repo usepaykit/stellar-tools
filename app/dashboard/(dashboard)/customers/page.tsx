@@ -1,23 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useCallback, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import type { Column, ColumnDef } from "@tanstack/react-table";
-import * as RHF from "react-hook-form";
-import { z } from "zod";
-// @ts-expect-error - papaparse has no types in this workspace
-import Papa from "papaparse";
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, CloudUpload, Plus, Trash2, X } from "lucide-react";
+import { useState } from "react";
 
 import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
+import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
-import type { FileWithPreview } from "@/components/file-upload-picker";
-import { FileUploadPicker } from "@/components/file-upload-picker";
+import { FileUploadPicker, FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   PhoneNumber,
@@ -27,13 +18,26 @@ import {
 } from "@/components/phone-number-picker";
 import { SelectPicker } from "@/components/select-picker";
 import { TextField } from "@/components/text-field";
+import { Timeline } from "@/components/timeline";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer } from "@/db";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, truncate } from "@/lib/utils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import type { Column, ColumnDef } from "@tanstack/react-table";
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, CloudUpload, Plus, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Papa from "papaparse";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
 function SortableHeader({
   column,
@@ -47,7 +51,7 @@ function SortableHeader({
   const isSorted = column.getIsSorted();
   return (
     <Button
-      className="-mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       variant="ghost"
       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       aria-label={`${ariaLabelPrefix} ${isSorted === "asc" ? "descending" : "ascending"}`}
@@ -96,9 +100,7 @@ const columns: ColumnDef<Customer>[] = [
   },
   {
     accessorKey: "createdAt",
-    header: ({ column }) => (
-      <SortableHeader column={column} label="Created" ariaLabelPrefix="Sort by created date" />
-    ),
+    header: ({ column }) => <SortableHeader column={column} label="Created" ariaLabelPrefix="Sort by created date" />,
     cell: ({ row }) => {
       const date = row.original.createdAt;
       return (
@@ -185,17 +187,13 @@ export default function CustomersPage() {
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold">Customers</h1>
                 <div className="flex items-center gap-2">
-                  <Button
-                  className="gap-2 shadow-none"
-                  variant="outline"
-                  onClick={() => setIsImportCsvOpen(true)}
-                >
-                  <CloudUpload className="h-4 w-4" />
-                  Import CSV
-                </Button>
-                <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Add customer
+                  <Button className="gap-2 shadow-none" variant="outline" onClick={() => setIsImportCsvOpen(true)}>
+                    <CloudUpload className="h-4 w-4" />
+                    Import CSV
+                  </Button>
+                  <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    Add customer
                   </Button>
                 </div>
               </div>
@@ -534,565 +532,246 @@ export function CustomerModal({
   );
 }
 
-type CsvRow = Record<string, string>;
+type MappingTarget = "name" | "email" | "phone" | "metadata" | "none";
 
-const CSV_MAP_NONE = "__none__";
-
-const MAPS_TO_VALUES = ["name", "email", "phone", "metadata"] as const;
-const SINGLE_USE_MAPS_TO = ["name", "email", "phone"] as const;
-
-const mappingRowSchema = z.object({
-  csvKey: z.string().min(1, "CSV column is required"),
-  mapsTo: z.enum([CSV_MAP_NONE, ...MAPS_TO_VALUES]),
-  metadataKey: z.string().optional(),
-});
-
-const csvMappingSchema = z.object({
-  mappings: z.array(mappingRowSchema),
-});
-
-type CsvMappingFormData = z.infer<typeof csvMappingSchema>;
-type MapsToOption = CsvMappingFormData["mappings"][number]["mapsTo"];
-
-type MappingEntry = { csvKey: string; mapsTo: string; metadataKey?: string };
-
-const MAPS_TO_ITEMS: { value: string; label: string }[] = [
-  { value: CSV_MAP_NONE, label: "Don't map" },
-  { value: "name", label: "Name" },
-  { value: "email", label: "Email" },
-  { value: "phone", label: "Phone" },
-  { value: "metadata", label: "Metadata" },
-];
-
-function applyMappingsToRow(
-  row: CsvRow,
-  list: MappingEntry[]
-): { name: string; email: string; phoneRaw: string; metadataRecord: Record<string, string> } {
-  const mapVal = (r: CsvRow, key: string) => String(r[key] ?? "").trim();
-  let name = "";
-  let email = "";
-  let phoneRaw = "";
-  const metadataRecord: Record<string, string> = {};
-  for (const m of list) {
-    const v = mapVal(row, m.csvKey);
-    if (m.mapsTo === "name") name = v;
-    else if (m.mapsTo === "email") email = v;
-    else if (m.mapsTo === "phone") phoneRaw = v;
-    else if (m.mapsTo === "metadata" && v) {
-      const key = (m.metadataKey || m.csvKey).trim() || m.csvKey;
-      metadataRecord[key] = v;
-    }
-  }
-  return { name, email, phoneRaw, metadataRecord };
+interface ColumnMapping {
+  csvHeader: string;
+  target: MappingTarget;
+  metadataKey?: string;
 }
 
-function parseRowToCustomerPayload(
-  row: CsvRow,
-  list: MappingEntry[]
-): Omit<Customer, "id" | "organizationId" | "environment"> | null {
-  const { name, email, phoneRaw, metadataRecord } = applyMappingsToRow(row, list);
-  const parsed = customerSchema.safeParse({
-    name: name || undefined,
-    email: email || undefined,
-    phoneNumber: { number: phoneRaw || "", countryCode: "US" },
-    metadata: Object.entries(metadataRecord).map(([key, value]) => ({ key, value })),
-  });
-  if (!parsed.success) return null;
-  const phoneString = parsed.data.phoneNumber?.number
-    ? phoneNumberToString(parsed.data.phoneNumber as PhoneNumber)
-    : "";
-  return {
-    name: parsed.data.name ?? "",
-    email: parsed.data.email ?? "",
-    phone: phoneString,
-    walletAddresses: null,
-    metadata: metadataRecord,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-}
-
-function parseCsvFile(file: File): Promise<{ headers: string[]; rows: CsvRow[] }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = reader.result as string;
-      const result = Papa.parse<CsvRow>(text, { header: true, skipEmptyLines: true });
-      const headers = result.meta.fields ?? [];
-      const rows = (result.data ?? []).filter((row: CsvRow) =>
-        Object.keys(row).some((k) => String(row[k] ?? "").trim() !== "")
-      );
-      resolve({ headers, rows });
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsText(file, "UTF-8");
-  });
-}
-
-export function ImportCsvModal({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const invalidate = useInvalidateOrgQuery();
-  const [csvFile, setCsvFile] = useState<FileWithPreview | null>(null);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [parsedRows, setParsedRows] = useState<CsvRow[]>([]);
-
-  const mappingForm = RHF.useForm<CsvMappingFormData>({
-    resolver: zodResolver(csvMappingSchema),
-    defaultValues: { mappings: [] },
-  });
-
-  const { fields, append, remove } = RHF.useFieldArray({
-    control: mappingForm.control,
-    name: "mappings",
-  });
-
-  React.useEffect(() => {
-    if (headers.length > 0) {
-      mappingForm.reset({
-        mappings: headers.map((h) => ({ csvKey: h, mapsTo: CSV_MAP_NONE, metadataKey: h })),
-      });
-    } else {
-      mappingForm.reset({ mappings: [] });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when headers change
-  }, [headers]);
-
-  const handleFilesChange = useCallback(
-    async (files: FileWithPreview[]) => {
-      const file = files[0];
-      if (!file) {
-        setCsvFile(null);
-        setHeaders([]);
-        setParsedRows([]);
-        return;
+const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) => {
+  return mappings.reduce(
+    (acc, m) => {
+      const value = row[m.csvHeader]?.trim();
+      if (!value || m.target === "none") return acc;
+      if (m.target === "metadata") {
+        acc.metadata[m.metadataKey || m.csvHeader] = value;
+      } else {
+        acc[m.target] = value;
       }
-      setCsvFile(file);
-      try {
-        const { headers: h, rows } = await parseCsvFile(file);
-        setHeaders(h);
-        setParsedRows(rows);
-      } catch {
-        toast.error("Could not parse CSV. Ensure the file is valid UTF-8 CSV.");
-      }
+      return acc;
     },
+    { metadata: {} } as any
+  );
+};
+
+export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [csvFile, setCsvFile] = React.useState<FileWithPreview | null>(null);
+  const [rawRows, setRawRows] = React.useState<Record<string, string>[]>([]);
+  const [headers, setHeaders] = React.useState<string[]>([]);
+  const [mappings, setMappings] = React.useState<ColumnMapping[]>([]);
+  const [viewMetadata, setViewMetadata] = React.useState<null | Record<string, unknown>>(null);
+
+  const onUpload = React.useCallback((files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    setCsvFile(file as FileWithPreview);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (r) => {
+        const cols = r.meta.fields || [];
+        setHeaders(cols);
+        setRawRows(r.data as any[]);
+        setMappings(
+          cols.map((h) => ({
+            csvHeader: h,
+            target: h.toLowerCase().includes("email")
+              ? "email"
+              : h.toLowerCase().includes("name")
+                ? "name"
+                : "metadata",
+            metadataKey: h,
+          }))
+        );
+      },
+    });
+  }, []);
+
+  const schemaLogic = React.useMemo(() => {
+    return mappings.reduce((acc, m) => {
+      if (m.target !== "none" && (m.target === "metadata" || m.target !== m.csvHeader)) {
+        acc[m.csvHeader] = { from: "CSV", to: m.target === "metadata" ? `meta.${m.metadataKey}` : m.target };
+      }
+      return acc;
+    }, {} as any);
+  }, [mappings]);
+
+  const previewData = React.useMemo(() => rawRows.map((row) => transformRow(row, mappings)), [rawRows, mappings]);
+
+  const PREVIEW_COLS = React.useMemo(
+    () => [
+      { accessorKey: "name", header: "Name" },
+      { accessorKey: "email", header: "Email" },
+      { accessorKey: "phone", header: "Phone" },
+      {
+        accessorKey: "metadata",
+        header: "Metadata",
+        cell: ({ row }: any) => {
+          const meta = row.original.metadata;
+          if (!meta || !Object.keys(meta).length) return <span className="opacity-20">—</span>;
+          return (
+            <button
+              onClick={() => setViewMetadata(meta)}
+              className="bg-muted hover:bg-primary/5 hover:text-primary hover:border-primary/20 max-w-[150px] cursor-pointer truncate rounded border border-transparent px-2 py-1 font-mono text-[10px] transition-colors"
+            >
+              {JSON.stringify(meta)}
+            </button>
+          );
+        },
+      },
+    ],
     []
   );
 
-  const importMutation = useMutation({
-    mutationFn: async (data: CsvMappingFormData) => {
-      const list = data.mappings as MappingEntry[];
-      const payloads = parsedRows
-        .map((row) => parseRowToCustomerPayload(row, list))
-        .filter((p): p is NonNullable<typeof p> => p != null);
-      if (payloads.length === 0) {
-        throw new Error("No valid rows. Map Name and Email to CSV columns and ensure rows pass validation.");
-      }
-      await postCustomers(payloads);
-    },
-    onSuccess: () => {
-      invalidate(["customers"]);
-      toast.success(`Imported ${parsedRows.length} customer(s) from CSV.`);
-      onOpenChange(false);
-      resetState();
-    },
-    onError: (e: Error) => {
-      toast.error(e.message ?? "Import failed.");
-    },
-  });
-
-  const resetState = useCallback(() => {
-    setCsvFile(null);
-    setHeaders([]);
-    setParsedRows([]);
-    mappingForm.reset({ mappings: [] });
-  }, [mappingForm]);
-
-  const handleOpenChange = useCallback(
-    (next: boolean) => {
-      if (!next) resetState();
-      onOpenChange(next);
-    },
-    [onOpenChange, resetState]
-  );
-
-  const mappings = mappingForm.watch("mappings");
-  const mappingsKey = JSON.stringify(mappings ?? []);
-
-  type MappedPreviewRow = Record<string, string>;
-  const { mappedPreviewRows, mappedPreviewColumns } = React.useMemo(() => {
-    const list = JSON.parse(mappingsKey) as MappingEntry[];
-    const columns: ColumnDef<MappedPreviewRow>[] = [];
-    const seen = new Set<string>();
-    const addCol = (id: string, label: string) => {
-      if (seen.has(id)) return;
-      seen.add(id);
-      columns.push({
-        accessorKey: id,
-        header: label,
-        cell: ({ row }) => (
-          <div
-            className="text-muted-foreground max-w-[200px] truncate"
-            title={String(row.original[id] ?? "")}
-          >
-            {String(row.original[id] ?? "")}
-          </div>
-        ),
-      });
-    };
-    const hasMetadataMapping = list.some((m) => m.mapsTo === "metadata");
-    for (const m of list) {
-      if (m.mapsTo === "name") addCol("name", "Name");
-      else if (m.mapsTo === "email") addCol("email", "Email");
-      else if (m.mapsTo === "phone") addCol("phone", "Phone");
-    }
-    if (hasMetadataMapping) {
-      columns.push({
-        id: "metadata",
-        header: "Metadata",
-        cell: ({ row }) => {
-          const meta: Record<string, string> = {};
-          for (const [k, v] of Object.entries(row.original)) {
-            if (k.startsWith("meta:") && v) meta[k.slice(5)] = v;
-          }
-          if (Object.keys(meta).length === 0) {
-            return <span className="text-muted-foreground text-sm">—</span>;
-          }
-          const json = JSON.stringify(meta, null, 2);
-          return (
-            <div className="border-border bg-muted/30 max-h-[88px] min-w-[120px] max-w-[200px] overflow-auto rounded-md border px-2 py-1.5">
-              <pre className="text-muted-foreground font-mono text-xs leading-relaxed whitespace-pre" role="presentation">
-                {json}
-              </pre>
-            </div>
-          );
-        },
-      });
-    }
-    const rows: MappedPreviewRow[] = parsedRows.map((csvRow) => {
-      const { name, email, phoneRaw, metadataRecord } = applyMappingsToRow(csvRow, list);
-      const out: MappedPreviewRow = { name, email, phone: phoneRaw };
-      for (const [key, value] of Object.entries(metadataRecord)) {
-        if (value) out[`meta:${key}`] = value;
-      }
-      return out;
+  const updateMapping = (index: number, updates: Partial<ColumnMapping>) => {
+    setMappings((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
+      return next;
     });
-    return { mappedPreviewRows: rows, mappedPreviewColumns: columns };
-  }, [parsedRows, mappingsKey]);
-
-  const { validCount, invalidCount, hasName, hasEmail, metadataKeys } = React.useMemo(() => {
-    const list = JSON.parse(mappingsKey) as MappingEntry[];
-    let valid = 0;
-    const metaKeys = new Set<string>();
-    for (const m of list) {
-      if (m.mapsTo === "metadata") metaKeys.add(m.metadataKey || m.csvKey);
-    }
-    for (const row of parsedRows) {
-      if (parseRowToCustomerPayload(row, list) != null) valid += 1;
-    }
-    return {
-      validCount: valid,
-      invalidCount: parsedRows.length - valid,
-      hasName: list.some((m) => m.mapsTo === "name"),
-      hasEmail: list.some((m) => m.mapsTo === "email"),
-      metadataKeys: Array.from(metaKeys),
-    };
-  }, [parsedRows, mappingsKey]);
-
-  const csvColumns: ColumnDef<CsvRow>[] = React.useMemo(
-    () =>
-      headers.map((h) => ({
-        accessorKey: h,
-        header: h,
-        cell: ({ row }) => (
-          <div className="text-muted-foreground max-w-[200px] truncate" title={String(row.original[h] ?? "")}>
-            {String(row.original[h] ?? "")}
-          </div>
-        ),
-      })),
-    [headers]
-  );
-  const canImport =
-    !!csvFile && parsedRows.length > 0 && (hasName || hasEmail) && !importMutation.isPending;
-
-  const handleAddMapping = useCallback(() => {
-    append({ csvKey: headers[0] ?? "", mapsTo: CSV_MAP_NONE, metadataKey: "" });
-  }, [headers, append]);
+  };
 
   return (
     <FullScreenModal
       open={open}
-      onOpenChange={handleOpenChange}
-      title="Import customers from CSV"
-      description="Upload a CSV, map columns to customer fields and metadata, then import."
+      onOpenChange={onOpenChange}
+      title="Import Customers"
+      description="Map CSV columns to system fields or shrink them into metadata."
       size="full"
-      showCloseButton
       footer={
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="shadow-none">
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            className="shadow-none"
-            disabled={!canImport}
-            isLoading={importMutation.isPending}
-            onClick={() => mappingForm.handleSubmit((data) => importMutation.mutate(data))()}
-          >
-            Import {parsedRows.length > 0 ? `(${parsedRows.length} rows)` : ""}
-          </Button>
+        <div className="flex w-full items-center justify-between">
+          <p className="text-muted-foreground/60 text-[10px] font-black tracking-widest uppercase">
+            {rawRows.length} Rows Detected
+          </p>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" disabled={!rawRows.length}>
+              Import Data
+            </Button>
+          </div>
         </div>
       }
     >
-      <div className="flex h-full flex-col gap-8">
-        <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
-          <div className="min-w-0 space-y-4 lg:min-w-[280px]">
-            <h3 className="text-lg font-semibold">1. Upload CSV</h3>
+      <div className="grid h-full grid-cols-1 gap-10 pb-10 lg:grid-cols-2">
+        <div className="space-y-10">
+          <CsvImportSection label="1. Data Source">
             <FileUploadPicker
               value={csvFile ? [csvFile] : []}
-              onFilesChange={handleFilesChange}
-              placeholder="Drag & drop a CSV here or click to select"
-              description="Header row required. Supports name, email, phone and custom columns for metadata."
-              label="CSV file"
-              dropzoneAccept={{
-                "text/csv": [".csv"],
-                "application/vnd.ms-excel": [".csv"],
-                "text/plain": [".csv"],
-              }}
-              dropzoneMaxFiles={1}
+              onFilesChange={onUpload}
               dropzoneMultiple={false}
+              placeholder="Drag & drop a CSV here or click to select"
+              dropzoneAccept={{ "text/csv": [".csv"] }}
             />
-          </div>
-          <div className="min-w-0 space-y-4 overflow-hidden lg:min-w-[280px]">
-            <h3 className="text-lg font-semibold">3. Preview</h3>
-            {mappedPreviewColumns.length > 0 ? (
-              <>
-                <p className="text-muted-foreground text-sm">
-                  Mapped result — updates in real time as you change the mapping below.
-                </p>
-                <div className="min-w-0 max-h-[min(50vh,28rem)] overflow-auto rounded-lg border border-border">
+          </CsvImportSection>
+
+          {headers.length > 0 && (
+            <CsvImportSection label="2. Field Mapping">
+              <div className="bg-card divide-border/50 divide-y overflow-hidden rounded-xl border shadow-xs">
+                {mappings.map((m, i) => (
+                  <div
+                    key={m.csvHeader}
+                    className="hover:bg-muted/10 flex items-center gap-6 px-5 py-3 transition-colors"
+                  >
+                    <span className="text-foreground/80 flex-1 truncate text-sm font-medium">{m.csvHeader}</span>
+                    <ArrowRight className="text-muted-foreground/30 size-3" />
+                    <div className="flex flex-2 items-center gap-3">
+                      <SelectPicker
+                        id={`mapping-target-${i}`}
+                        value={m.target}
+                        triggerClassName="w-40 h-9 bg-background shadow-none"
+                        onChange={(val) => updateMapping(i, { target: val as any })}
+                        items={[
+                          { label: "Name", value: "name" },
+                          { label: "Email", value: "email" },
+                          { label: "Phone", value: "phone" },
+                          { label: "Metadata", value: "metadata" },
+                          { label: "Ignore", value: "none" },
+                        ]}
+                      />
+                      {m.target === "metadata" ? (
+                        <InputGroup className="bg-background h-9 w-44 shadow-none">
+                          <InputGroupInput
+                            value={m.metadataKey}
+                            placeholder="Key..."
+                            className="font-mono text-xs"
+                            onChange={(e) => updateMapping(i, { metadataKey: e.target.value })}
+                          />
+                        </InputGroup>
+                      ) : (
+                        m.target !== "none" && (
+                          <Badge
+                            variant="secondary"
+                            className="text-muted-foreground/60 h-9 border-none px-4 text-[10px] font-bold tracking-tight uppercase"
+                          >
+                            System Field
+                          </Badge>
+                        )
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CsvImportSection>
+          )}
+        </div>
+
+        <div className="space-y-10">
+          <CsvImportSection label="3. System Preview">
+            <div className="bg-background overflow-hidden rounded-xl border shadow-xs">
+              <ScrollArea className="h-[280px] w-full">
+                <div className="**:table:min-w-full!">
                   <DataTable
-                    columns={mappedPreviewColumns}
-                    data={mappedPreviewRows}
-                    emptyMessage="No rows parsed."
-                    enableBulkSelect={false}
+                    columns={PREVIEW_COLS}
+                    data={previewData}
+                    isLoading={false}
+                    className="border-0 shadow-none"
                   />
                 </div>
-              </>
-            ) : (
-              <div className="min-w-0 max-h-[min(50vh,28rem)] overflow-auto rounded-lg border border-border">
-                <DataTable
-                  columns={csvColumns}
-                  data={parsedRows}
-                  emptyMessage="No rows parsed. Upload a CSV and set mappings to see the mapped preview."
-                  enableBulkSelect={false}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-        {headers.length > 0 && (
-          <>
-            <Separator />
-            <div className="grid w-full min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
-              <div className="min-w-0 space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold">2. Map columns</h3>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    Map each CSV column to a customer field or to a metadata key. Use &quot;Metadata&quot; and set a
-                    key to store values in the customer metadata object.
-                  </p>
-                </div>
-                <div className="border-border min-w-0 max-h-[min(40vh,24rem)] overflow-auto rounded-lg border">
-                  <table className="w-full min-w-[420px] table-fixed border-collapse text-left">
-                    <thead>
-                      <tr className="border-border border-b bg-muted/50">
-                        <th className="text-muted-foreground w-[28%] px-4 py-3 text-xs font-medium uppercase tracking-wider">
-                          CSV column
-                        </th>
-                        <th className="text-muted-foreground w-[28%] px-4 py-3 text-xs font-medium uppercase tracking-wider">
-                          Maps to
-                        </th>
-                        <th className="text-muted-foreground w-[28%] px-4 py-3 text-xs font-medium uppercase tracking-wider">
-                          Metadata key
-                        </th>
-                        <th className="w-[16%] px-2 py-3" aria-label="Actions" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fields.map((field, index) => {
-                        const list = (mappings ?? []) as MappingEntry[];
-                        const singleUseUsedByOther = new Set(
-                          list
-                            .map((m, j) => (j !== index ? m.mapsTo : null))
-                            .filter((v): v is string => v != null && SINGLE_USE_MAPS_TO.includes(v as (typeof SINGLE_USE_MAPS_TO)[number]))
-                        );
-                        const mapsToItems = MAPS_TO_ITEMS.map((item) => ({
-                          ...item,
-                          disabled:
-                            item.value !== CSV_MAP_NONE &&
-                            item.value !== "metadata" &&
-                            singleUseUsedByOther.has(item.value),
-                        }));
-                        const csvKeyUsedByOther = new Set(
-                          list.filter((_, j) => j !== index).map((m) => m.csvKey)
-                        );
-                        const csvKeyItems = headers.map((h) => ({
-                          value: h,
-                          label: h,
-                          disabled: csvKeyUsedByOther.has(h),
-                        }));
-                        const showMetadataKey = mappingForm.watch(`mappings.${index}.mapsTo`) === "metadata";
-                        return (
-                          <tr key={field.id} className="border-border border-b last:border-b-0">
-                            <td className="px-4 py-2 align-middle">
-                              <SelectPicker
-                                id={`mapping-csvKey-${index}`}
-                                value={mappingForm.watch(`mappings.${index}.csvKey`)}
-                                onChange={(v) => mappingForm.setValue(`mappings.${index}.csvKey`, v)}
-                                items={csvKeyItems}
-                                placeholder="Column…"
-                              />
-                            </td>
-                            <td className="px-4 py-2 align-middle">
-                              <SelectPicker
-                                id={`mapping-mapsTo-${index}`}
-                                value={mappingForm.watch(`mappings.${index}.mapsTo`)}
-                                onChange={(v) => {
-                                  mappingForm.setValue(`mappings.${index}.mapsTo`, v as MapsToOption);
-                                  if (v === "metadata") {
-                                    const csvKey = mappingForm.getValues(`mappings.${index}.csvKey`);
-                                    const meta = mappingForm.getValues(`mappings.${index}.metadataKey`);
-                                    if (!meta?.trim()) mappingForm.setValue(`mappings.${index}.metadataKey`, csvKey);
-                                  }
-                                }}
-                                items={mapsToItems}
-                                placeholder="Field…"
-                              />
-                            </td>
-                            <td className="px-4 py-2 align-middle">
-                              {showMetadataKey ? (
-                                <SelectPicker
-                                  id={`mapping-metadataKey-${index}`}
-                                  value={
-                                    (mappingForm.watch(`mappings.${index}.metadataKey`) ||
-                                      mappingForm.watch(`mappings.${index}.csvKey`) ||
-                                      headers[0]) ??
-                                    ""
-                                  }
-                                  onChange={(v) => mappingForm.setValue(`mappings.${index}.metadataKey`, v)}
-                                  items={headers.map((h) => ({ value: h, label: h }))}
-                                  placeholder="Key…"
-                                />
-                              ) : (
-                                <span className="text-muted-foreground text-sm">—</span>
-                              )}
-                            </td>
-                            <td className="px-2 py-2 align-middle">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => remove(index)}
-                                className="shrink-0 shadow-none"
-                                aria-label="Remove mapping"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <div className="border-border border-t p-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddMapping}
-                      className="w-full shadow-none"
-                      disabled={headers.length === 0}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add mapping
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="min-w-0 space-y-4">
-                <h3 className="text-lg font-semibold">Import summary</h3>
-                <Card className="border-border overflow-hidden shadow-none">
-                  <CardContent className="p-4 space-y-4">
-                    <div className="space-y-2">
-                      <p className="text-muted-foreground text-sm font-medium">Rows</p>
-                      <p className="text-sm">
-                        <span className="font-medium">{parsedRows.length}</span> total
-                        {parsedRows.length > 0 && (
-                          <>
-                            {" · "}
-                            <span className={validCount > 0 ? "text-foreground font-medium" : "text-muted-foreground"}>
-                              {validCount} valid
-                            </span>
-                            {invalidCount > 0 && (
-                              <>
-                                {" · "}
-                                <span className="text-muted-foreground">{invalidCount} skipped</span>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-muted-foreground text-sm font-medium">Required fields</p>
-                      <ul className="text-sm space-y-1">
-                        <li className="flex items-center gap-2">
-                          {hasName ? (
-                            <Check className="text-emerald-600 h-4 w-4 shrink-0" aria-hidden />
-                          ) : (
-                            <X className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
-                          )}
-                          <span>Name mapped</span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          {hasEmail ? (
-                            <Check className="text-emerald-600 h-4 w-4 shrink-0" aria-hidden />
-                          ) : (
-                            <X className="text-muted-foreground h-4 w-4 shrink-0" aria-hidden />
-                          )}
-                          <span>Email mapped</span>
-                        </li>
-                      </ul>
-                    </div>
-                    {metadataKeys.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-muted-foreground text-sm font-medium">Metadata keys</p>
-                        <p className="text-sm">
-                          {metadataKeys.join(", ")}
-                        </p>
-                      </div>
-                    )}
-                    <Separator className="my-3" />
-                    <div className="space-y-1.5">
-                      <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">Tips</p>
-                      <ul className="text-muted-foreground text-sm space-y-1 list-disc list-inside">
-                        <li>Map <strong className="text-foreground">Name</strong> and <strong className="text-foreground">Email</strong> for rows to be imported.</li>
-                        <li>Use <strong className="text-foreground">Metadata</strong> for custom fields (e.g. company, plan).</li>
-                        <li>Skipped rows fail validation (e.g. invalid email or missing required fields).</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
             </div>
-          </>
-        )}
+          </CsvImportSection>
+
+          <CsvImportSection label="4. Logic Validation">
+            <div className="bg-muted/10 min-h-[160px] rounded-xl border p-6">
+              <Timeline
+                items={Object.keys(schemaLogic).length ? [1] : []}
+                renderItem={() => ({ title: "Schema Transformation", date: "Rules", data: { $changes: schemaLogic } })}
+                emptyMessage="Mappings are 1:1. No transformations needed."
+              />
+            </div>
+          </CsvImportSection>
+        </div>
       </div>
+
+      <Dialog open={!!viewMetadata} onOpenChange={() => setViewMetadata(null)} modal>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Metadata Preview</DialogTitle>
+            <DialogDescription>Raw object mapping for the selected row.</DialogDescription>
+          </DialogHeader>
+          <div className="bg-muted/30 mt-4 overflow-hidden rounded-lg border">
+            <CodeBlock language="json" showCopyButton>
+              {JSON.stringify(viewMetadata, null, 2)}
+            </CodeBlock>
+          </div>
+        </DialogContent>
+      </Dialog>
     </FullScreenModal>
+  );
+}
+
+function CsvImportSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h4 className="text-muted-foreground/60 text-[10px] font-black tracking-[0.2em] uppercase">{label}</h4>
+      {children}
+    </section>
   );
 }
