@@ -756,7 +756,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
             <DialogTitle>Metadata Preview</DialogTitle>
             <DialogDescription>Raw object mapping for the selected row.</DialogDescription>
           </DialogHeader>
-          <div className="bg-muted/30 mt-4 overflow-hidden rounded-lg border">
+          <div className="bg-muted/30 mt-4 overflow-hidden">
             <CodeBlock language="json" showCopyButton>
               {JSON.stringify(viewMetadata, null, 2)}
             </CodeBlock>
