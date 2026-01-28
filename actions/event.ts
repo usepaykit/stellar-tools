@@ -5,7 +5,7 @@ import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
 import { computeDiff } from "@/lib/utils";
-import { LooseAutoComplete, MaybeArray, WebhookEvent } from "@stellartools/core";
+import { LooseAutoComplete, MaybeArray, WebhookEvent, chunk } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -38,57 +38,63 @@ export async function withEvent<T>(
     try {
       if (eventConfig) {
         const mapped = eventConfig.map(result);
+        const eventArray = Array.isArray(mapped) ? mapped : [mapped];
 
-        if (Array.isArray(mapped)) {
-          await Promise.all(mapped.map((eventData) => emitEvent({ type: eventConfig.type, ...eventData })));
-        } else if (mapped) {
-          await emitEvent({ type: eventConfig.type, ...mapped });
-        }
+        await emitEvents(eventArray.map((e) => ({ ...e, type: eventConfig.type })));
       }
 
       if (webhookConfig) {
         const data = webhookConfig.payload(result);
+        const dataArray = Array.isArray(data) ? data : [data];
 
-        if (Array.isArray(data)) {
-          await Promise.all(
-            data.flatMap((eventData) =>
-              webhookConfig.events.map((event) =>
-                triggerWebhooks(event, eventData, webhookConfig.organizationId, webhookConfig.environment)
-              )
+        const calls = dataArray.flatMap((item) =>
+          webhookConfig.events.map((event) => ({
+            event,
+            payload: item,
+            orgId: webhookConfig.organizationId,
+            env: webhookConfig.environment,
+          }))
+        );
+
+        // Configuration for the background throttler
+        const BATCH_SIZE = 5;
+        const BATCH_DELAY = 150; // ms between batches
+        const batches = chunk(calls, BATCH_SIZE);
+
+        for (const batch of batches) {
+          await Promise.allSettled(
+            batch.map(({ event, payload, orgId, env }) =>
+              triggerWebhooks(event, payload, orgId, env).catch((err) => {
+                console.error(`[Webhook Error] ${event} for ${orgId}:`, err);
+              })
             )
           );
-        } else {
-          await Promise.all(
-            webhookConfig.events.map((event) =>
-              triggerWebhooks(event, data, webhookConfig.organizationId, webhookConfig.environment)
-            )
-          );
+
+          if (batches.length > 1) {
+            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
+          }
         }
       }
     } catch (err) {
-      console.error(`[Side-Effect Event Error] ${eventConfig?.type}:`, err);
-      console.error(
-        `[Side-Effect Webhook Error] ${webhookConfig?.events.map((event) => event.toString()).join(", ")}:`,
-        err
-      );
+      console.error(`[Side-Effect Critical Failure]:`, err);
     }
   };
 
-  // Fire and forget
-  waitUntil(runSideEffects());
+  if (typeof waitUntil === "function") {
+    waitUntil(runSideEffects());
+  } else {
+    runSideEffects();
+  }
 
   return result;
 }
 
-export const emitEvent = async (params: EmitParams, orgId?: string, env?: Network) => {
+export const emitEvents = async (params: Array<EmitParams>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  return await db.insert(events).values({
-    id: `evt_${nanoid(25)}`,
-    organizationId,
-    environment,
-    ...params,
-  });
+  return await db
+    .insert(events)
+    .values(params.map((p) => ({ id: `evt_${nanoid(25)}`, organizationId, environment, ...p })));
 };
 
 type NarrowedEvent<T extends EventType> = Event & { type: T };

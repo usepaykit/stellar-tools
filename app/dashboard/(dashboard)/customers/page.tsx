@@ -648,7 +648,10 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
           createdAt: new Date(),
           updatedAt: new Date(),
           walletAddresses: null,
-        }))
+        })),
+        undefined,
+        undefined,
+        { source: "CSV Import" }
       ),
     onSuccess: () => {
       toast.success(`${previewData.length} customers imported successfully`);

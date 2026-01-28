@@ -35,7 +35,7 @@ export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
 export const phoneNumberFromString = (phoneNumber: string): PhoneNumber => {
   const countryCodeMatch = phoneNumber.match(/^(\+\d{1,4})/);
 
-  if (!countryCodeMatch) throw new Error("Invalid country code");
+  if (!countryCodeMatch) return { number: phoneNumber, countryCode: "US" };
 
   const prefix = countryCodeMatch[1];
   const number = phoneNumber.slice(prefix.length).replace(/[^\d]/g, "");
