@@ -10,7 +10,8 @@ import { nanoid } from "nanoid";
 export const postCustomers = async (
   params: Omit<Customer, "id" | "organizationId" | "environment">[],
   orgId?: string,
-  env?: Network
+  env?: Network,
+  options?: { source?: string }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
@@ -28,7 +29,13 @@ export const postCustomers = async (
       map: (customers) =>
         customers.map((c) => ({
           customerId: c.id,
-          data: { name: c.name, email: c.email, phone: c.phone, metadata: c.metadata },
+          data: {
+            name: c.name,
+            email: c.email,
+            phone: c.phone,
+            metadata: c.metadata,
+            ...(options?.source ? { source: options.source } : {}),
+          },
         })),
     },
     {

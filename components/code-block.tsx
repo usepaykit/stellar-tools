@@ -3,11 +3,12 @@
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCopy } from "@/hooks/use-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
+import { LooseAutoComplete } from "@stellartools/core";
 import { Check, Copy } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
@@ -23,14 +24,15 @@ SyntaxHighlighter.registerLanguage("typescript", typescript);
 SyntaxHighlighter.registerLanguage("bash", bash);
 SyntaxHighlighter.registerLanguage("json", json);
 
-interface CodeBlockProps {
-  language?: string;
+type Language = LooseAutoComplete<"tsx" | "typescript" | "bash" | "json" | "shell" | "sh" | "zsh">;
+
+interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
+  language?: Language;
   children: string;
   filename?: string;
   logo?: string;
   showCopyButton?: boolean;
-  className?: string;
-  maxHeight?: string;
+  maxHeight?: string | "none";
 }
 
 export function CodeBlock({
@@ -40,147 +42,91 @@ export function CodeBlock({
   logo,
   showCopyButton = true,
   className,
-  maxHeight = "400px",
+  maxHeight = "none",
+  ...props
 }: CodeBlockProps) {
   const mounted = useMounted();
   const { resolvedTheme } = useTheme();
   const { copied, handleCopy } = useCopy();
 
-  const lang = language.toLowerCase();
-  const isShell = ["bash", "sh", "shell", "zsh"].includes(lang);
-
-  const copyToClipboard = React.useCallback(async () => {
-    if (!children) return;
-    await handleCopy({ text: children, message: "Copied to clipboard" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children]);
+  const isShell = ["bash", "sh", "shell", "zsh"].includes(language.toLowerCase());
+  const showHeader = !isShell || !!filename;
 
   const syntaxTheme = React.useMemo(() => {
     const isDark = resolvedTheme === "dark";
-    const baseTheme = isDark ? oneDark : oneLight;
-
-    const bg = isShell
-      ? isDark
-        ? "#1f1f1f"
-        : "#f5f5f5" // Muted for shell
-      : isDark
-        ? "#0f0f0f"
-        : "#fafafa"; // Standard for code
+    const bg = isShell ? (isDark ? "#1f1f1f" : "#f5f5f5") : isDark ? "#0f0f0f" : "#fafafa";
+    const base = isDark ? oneDark : oneLight;
 
     return {
-      ...baseTheme,
+      ...base,
       'pre[class*="language-"]': {
-        ...baseTheme['pre[class*="language-"]'],
+        ...base['pre[class*="language-"]'],
         background: bg,
         margin: 0,
-        padding: "1rem",
-        borderRadius: "0 0 8px 8px", // Bottom corners only if header exists
+        padding: "1.25rem",
+        minWidth: "100%",
+        width: "max-content",
+        // CRITICAL FIX: Ensure the pre tag doesn't scroll itself
+        overflow: "visible",
       },
       'code[class*="language-"]': {
-        ...baseTheme['code[class*="language-"]'],
-        background: "transparent", // Let pre handle the bg
-        fontSize: "0.875rem", // text-sm
-        fontFamily: "var(--font-mono, monospace)", // Use your app's mono font
+        ...base['code[class*="language-"]'],
+        background: "transparent",
+        fontSize: "0.875rem",
+        fontFamily: "var(--font-mono, monospace)",
       },
     };
   }, [resolvedTheme, isShell]);
 
-  // Shell blocks usually don't need a filename header unless explicitly provided
-  const showHeader = !isShell || filename;
+  if (!mounted) return <div className={cn("bg-muted h-24 w-full animate-pulse rounded-xl", className)} />;
 
-  const hasMaxHeight = maxHeight && maxHeight !== "none";
-
-  const scrollAreaHeight = React.useMemo(() => {
-    if (!hasMaxHeight) return undefined;
-    try {
-      const maxHeightValue = parseInt(maxHeight.replace("px", ""));
-      const headerHeight = showHeader ? 40 : 0; // Approximate header height
-      return `${maxHeightValue - headerHeight}px`;
-    } catch {
-      return maxHeight;
-    }
-  }, [hasMaxHeight, maxHeight, showHeader]);
-
-  if (!mounted) {
-    return <div className={cn("bg-muted h-[100px] w-full animate-pulse rounded-lg", className)} />;
-  }
+  const onCopy = () => handleCopy({ text: children, message: "Copied to clipboard" });
 
   return (
     <TooltipProvider delayDuration={200}>
       <div
-        className={cn(
-          "group bg-muted/50 relative flex w-full flex-col overflow-hidden rounded-xl border text-sm",
-          className
-        )}
-        style={hasMaxHeight ? { maxHeight } : undefined}
+        className={cn("group bg-muted/50 relative flex w-full flex-col overflow-hidden rounded-xl border", className)}
+        // Ensure the container actually has a height limit
+        style={{ height: maxHeight === "none" ? "auto" : maxHeight }}
+        {...props}
       >
-        {/* Header Section - Sticky */}
         {showHeader && (
-          <div className="bg-muted/50 sticky top-0 z-10 flex shrink-0 items-center justify-between border-b px-3 py-2 backdrop-blur-sm">
+          <div className="bg-muted/50 sticky top-0 z-20 flex shrink-0 items-center justify-between border-b px-4 py-2 backdrop-blur-sm">
             <div className="flex items-center gap-2">
-              {logo && <Image src={logo} alt="Tech logo" width={14} height={14} className="object-contain" />}
+              {logo && <Image src={logo} alt="" width={14} height={14} className="object-contain" />}
               {filename && <span className="text-muted-foreground text-xs font-medium">{filename}</span>}
             </div>
-
-            {showCopyButton && !isShell && <CopyButton copied={copied} onCopy={copyToClipboard} />}
+            {showCopyButton && !isShell && <CopyAction copied={copied} onClick={onCopy} />}
           </div>
         )}
 
-        {/* Code Content with ScrollArea */}
-        {hasMaxHeight ? (
-          <div className="flex">
-            <ScrollArea style={{ height: scrollAreaHeight }} className="flex-1">
-              <SyntaxHighlighter
-                language={lang}
-                style={syntaxTheme}
-                showLineNumbers={false}
-                wrapLines={false}
-                customStyle={{
-                  margin: 0,
-                  borderRadius: showHeader ? "0 0 8px 8px" : "8px",
-                }}
-              >
-                {children.trim()}
-              </SyntaxHighlighter>
-            </ScrollArea>
-          </div>
-        ) : (
-          <div className="relative w-full overflow-x-auto">
-            <SyntaxHighlighter
-              language={lang}
-              style={syntaxTheme}
-              showLineNumbers={false}
-              wrapLines={false}
-              customStyle={{
-                margin: 0,
-                borderRadius: showHeader ? "0 0 8px 8px" : "8px",
-              }}
-            >
-              {children.trim()}
-            </SyntaxHighlighter>
+        {/* 
+           FIX: Added 'min-h-0' and 'flex-1'. 
+           In flexbox, 'min-h-0' is required for a child to shrink/scroll 
+           correctly if its content is larger than its flex basis.
+        */}
+        <ScrollArea className="relative min-h-0 w-full flex-1 bg-transparent">
+          <SyntaxHighlighter
+            language={language as string}
+            style={syntaxTheme}
+            customStyle={{ display: "block", margin: 0 }}
+          >
+            {children.trim()}
+          </SyntaxHighlighter>
+          <ScrollBar orientation="horizontal" />
 
-            {/* Floating Copy Button for Shell/No-Header view */}
-            {!showHeader && showCopyButton && (
-              <div className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
-                <CopyButton copied={copied} onCopy={copyToClipboard} variant="floating" />
-              </div>
-            )}
-          </div>
-        )}
+          {!showHeader && showCopyButton && (
+            <div className="absolute top-2 right-2 z-20 opacity-0 transition-opacity group-hover:opacity-100">
+              <CopyAction copied={copied} onClick={onCopy} isFloating />
+            </div>
+          )}
+        </ScrollArea>
       </div>
     </TooltipProvider>
   );
 }
 
-function CopyButton({
-  copied,
-  onCopy,
-  variant = "standard",
-}: {
-  copied: boolean;
-  onCopy: () => void;
-  variant?: "standard" | "floating";
-}) {
+function CopyAction({ copied, onClick, isFloating }: { copied: boolean; onClick: () => void; isFloating?: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -188,16 +134,15 @@ function CopyButton({
           variant="ghost"
           size="icon"
           className={cn(
-            "text-muted-foreground hover:bg-muted-foreground/10 hover:text-foreground h-6 w-6",
-            variant === "floating" && "bg-muted/80 h-8 w-8 backdrop-blur-sm"
+            "text-muted-foreground hover:text-foreground h-7 w-7",
+            isFloating && "bg-muted/80 border backdrop-blur-sm"
           )}
-          onClick={onCopy}
+          onClick={onClick}
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-          <span className="sr-only">Copy code</span>
+          {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{copied ? "Copied!" : "Copy to clipboard"}</TooltipContent>
+      <TooltipContent>{copied ? "Copied!" : "Copy code"}</TooltipContent>
     </Tooltip>
   );
 }

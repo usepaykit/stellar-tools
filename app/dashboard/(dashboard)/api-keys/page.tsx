@@ -63,7 +63,7 @@ export default function ApiKeysPage() {
       cell: () => {
         return (
           <div className="flex items-center gap-2">
-            <span className="font-mono text-sm">••••••••••••••••</span>
+            <span className="font-mono text-sm">{"•".repeat(16)}</span>
           </div>
         );
       },

@@ -2,23 +2,23 @@ import * as React from "react";
 
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import * as SelectPrimitive from "@radix-ui/react-select";
 import { Loader2 } from "lucide-react";
 
 import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
 
-type SelectTriggerProps = React.ComponentProps<typeof SelectPrimitive.SelectTrigger>;
+type SelectTriggerProps = React.ComponentProps<typeof SelectTrigger>;
 
 interface SelectPickerProps
   extends
-    Omit<React.ComponentProps<typeof SelectPrimitive.Select>, "value" | "onChange">,
+    Omit<React.ComponentProps<typeof Select>, "value" | "onValueChange">,
     MixinProps<"trigger", Omit<SelectTriggerProps, "children">>,
-    MixinProps<"triggerValue", Omit<React.ComponentProps<typeof SelectPrimitive.SelectValue>, "children">>,
-    MixinProps<"item", Omit<React.ComponentProps<typeof SelectPrimitive.SelectItem>, "children" | "value">>,
+    MixinProps<"triggerValue", Omit<React.ComponentProps<typeof SelectValue>, "children">>,
+    MixinProps<"item", Omit<React.ComponentProps<typeof SelectItem>, "children" | "value">>,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
     MixinProps<"helpText", Omit<HelpTextProps, "children">> {
@@ -28,8 +28,9 @@ interface SelectPickerProps
   label?: LabelProps["children"];
   error?: ErrorProps["children"];
   helpText?: HelpTextProps["children"];
-  items: Array<{ value: string; label: string }>;
+  items: Array<{ value: string; label: string; disabled?: boolean }>;
   isLoading?: boolean;
+  placeholder?: string;
 }
 
 export const SelectPicker = ({
@@ -41,6 +42,7 @@ export const SelectPicker = ({
   error,
   helpText,
   isLoading = false,
+  placeholder = "Select…",
   ...mixProps
 }: SelectPickerProps) => {
   const {
@@ -66,23 +68,23 @@ export const SelectPicker = ({
         </p>
       )}
 
-      <SelectPrimitive.Select {...rest} value={value} onValueChange={onChange}>
-        <SelectPrimitive.SelectTrigger {...triggerProps}>
+      <Select {...rest} value={value} onValueChange={(v) => onChange(v)}>
+        <SelectTrigger {...triggerProps} className={cn("w-full", triggerProps?.className)}>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <SelectPrimitive.SelectValue {...triggerValueProps} />
+            <SelectValue {...triggerValueProps} placeholder={placeholder} />
           )}
-        </SelectPrimitive.SelectTrigger>
+        </SelectTrigger>
 
-        <SelectPrimitive.SelectContent>
+        <SelectContent>
           {items.map((item) => (
-            <SelectPrimitive.SelectItem key={item.value} value={item.value}>
+            <SelectItem key={item.value} value={item.value} disabled={item.disabled}>
               {item.label}
-            </SelectPrimitive.SelectItem>
+            </SelectItem>
           ))}
-        </SelectPrimitive.SelectContent>
-      </SelectPrimitive.Select>
+        </SelectContent>
+      </Select>
 
       {error && (
         <p {...errorProps} role="alert" className={cn("text-destructive text-sm font-medium", errorProps.className)}>

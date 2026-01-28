@@ -4,9 +4,11 @@ import * as React from "react";
 import { useState } from "react";
 
 import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
+import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
+import { FileUploadPicker, FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   PhoneNumber,
@@ -14,72 +16,68 @@ import {
   phoneNumberFromString,
   phoneNumberToString,
 } from "@/components/phone-number-picker";
+import { SelectPicker } from "@/components/select-picker";
 import { TextField } from "@/components/text-field";
+import { Timeline } from "@/components/timeline";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer } from "@/db";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn } from "@/lib/utils";
-import { truncate } from "@/lib/utils";
+import { cn, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { ColumnDef } from "@tanstack/react-table";
-import { Trash2 } from "lucide-react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
+import type { Column, ColumnDef } from "@tanstack/react-table";
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, CloudUpload, Plus, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Papa from "papaparse";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
+
+function SortableHeader({
+  column,
+  label,
+  ariaLabelPrefix,
+}: {
+  column: Column<Customer, unknown>;
+  label: string;
+  ariaLabelPrefix: string;
+}) {
+  const isSorted = column.getIsSorted();
+  return (
+    <Button
+      className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      variant="ghost"
+      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      aria-label={`${ariaLabelPrefix} ${isSorted === "asc" ? "descending" : "ascending"}`}
+    >
+      <span>{label}</span>
+      {isSorted === "asc" ? (
+        <ArrowUp className="ml-1 h-4 w-4" aria-hidden />
+      ) : isSorted === "desc" ? (
+        <ArrowDown className="ml-1 h-4 w-4" aria-hidden />
+      ) : (
+        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden />
+      )}
+    </Button>
+  );
+}
 
 const columns: ColumnDef<Customer>[] = [
   {
     accessorKey: "name",
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted();
-      return (
-        <Button
-          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          variant={"ghost"}
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          aria-label={`Sort by name ${isSorted === "asc" ? "descending" : "ascending"}`}
-        >
-          <span>Customer</span>
-          {isSorted === "asc" ? (
-            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : isSorted === "desc" ? (
-            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
-          )}
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} label="Customer" ariaLabelPrefix="Sort by name" />,
     cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
     enableSorting: true,
   },
   {
     accessorKey: "email",
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted();
-      return (
-        <Button
-          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          variant={"ghost"}
-          aria-label={`Sort by email ${isSorted === "asc" ? "descending" : "ascending"}`}
-        >
-          <span>Email</span>
-          {isSorted === "asc" ? (
-            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : isSorted === "desc" ? (
-            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
-          )}
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} label="Email" ariaLabelPrefix="Sort by email" />,
     cell: ({ row }) => <div className="text-muted-foreground">{row.original.email}</div>,
     enableSorting: true,
   },
@@ -90,26 +88,9 @@ const columns: ColumnDef<Customer>[] = [
   },
   {
     accessorKey: "walletAddress",
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted();
-      return (
-        <Button
-          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          variant={"ghost"}
-          aria-label={`Sort by wallet address ${isSorted === "asc" ? "descending" : "ascending"}`}
-        >
-          <span>Wallet Address</span>
-          {isSorted === "asc" ? (
-            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : isSorted === "desc" ? (
-            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
-          )}
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <SortableHeader column={column} label="Wallet Address" ariaLabelPrefix="Sort by wallet address" />
+    ),
     cell: ({ row }) => (
       <div className="text-muted-foreground font-mono text-sm">
         {truncate(row.original.walletAddresses?.[0]?.address ?? "-")}
@@ -119,26 +100,7 @@ const columns: ColumnDef<Customer>[] = [
   },
   {
     accessorKey: "createdAt",
-    header: ({ column }) => {
-      const isSorted = column.getIsSorted();
-      return (
-        <Button
-          className="hover:text-foreground focus-visible:ring-ring -mx-1 flex items-center gap-2 rounded-sm px-1 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          variant="ghost"
-          aria-label={`Sort by created date ${isSorted === "asc" ? "descending" : "ascending"}`}
-        >
-          <span>Created</span>
-          {isSorted === "asc" ? (
-            <ArrowUp className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : isSorted === "desc" ? (
-            <ArrowDown className="ml-1 h-4 w-4" aria-hidden="true" />
-          ) : (
-            <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" aria-hidden="true" />
-          )}
-        </Button>
-      );
-    },
+    header: ({ column }) => <SortableHeader column={column} label="Created" ariaLabelPrefix="Sort by created date" />,
     cell: ({ row }) => {
       const date = row.original.createdAt;
       return (
@@ -192,6 +154,7 @@ export default function CustomersPage() {
   const searchParams = useSearchParams();
   const [selectedFilter, setSelectedFilter] = useState<number>(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams.get("mode") === "create");
+  const [isImportCsvOpen, setIsImportCsvOpen] = useState(false);
   const router = useRouter();
 
   const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
@@ -223,10 +186,16 @@ export default function CustomersPage() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold">Customers</h1>
-                <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Add customer
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button className="gap-2 shadow-none" variant="outline" onClick={() => setIsImportCsvOpen(true)}>
+                    <CloudUpload className="h-4 w-4" />
+                    Import CSV
+                  </Button>
+                  <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    Add customer
+                  </Button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
@@ -260,6 +229,7 @@ export default function CustomersPage() {
       </DashboardSidebar>
 
       <CustomerModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <ImportCsvModal open={isImportCsvOpen} onOpenChange={setIsImportCsvOpen} />
     </div>
   );
 }
@@ -389,7 +359,7 @@ export function CustomerModal({
       title={isEditMode ? "Edit customer" : "Create customer"}
       description={isEditMode ? "Update customer information" : "Add a new customer to your organization"}
       size="full"
-      showCloseButton={true}
+      showCloseButton
       footer={
         <div className="flex justify-end gap-3">
           <Button
@@ -561,5 +531,276 @@ export function CustomerModal({
         </div>
       </form>
     </FullScreenModal>
+  );
+}
+
+type MappingTarget = "name" | "email" | "phone" | "metadata" | "none";
+
+interface ColumnMapping {
+  csvHeader: string;
+  target: MappingTarget;
+  metadataKey?: string;
+}
+
+const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) => {
+  return mappings.reduce(
+    (acc, m) => {
+      const value = row[m.csvHeader]?.trim();
+      if (!value || m.target === "none") return acc;
+      if (m.target === "metadata") {
+        acc.metadata[m.metadataKey || m.csvHeader] = value;
+      } else {
+        acc[m.target] = value;
+      }
+      return acc;
+    },
+    { metadata: {} } as Record<MappingTarget, any>
+  );
+};
+
+export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [csvFile, setCsvFile] = React.useState<FileWithPreview | null>(null);
+  const [rawRows, setRawRows] = React.useState<Record<string, string>[]>([]);
+  const [headers, setHeaders] = React.useState<string[]>([]);
+  const [mappings, setMappings] = React.useState<ColumnMapping[]>([]);
+  const [viewMetadata, setViewMetadata] = React.useState<null | Record<string, unknown>>(null);
+
+  const onUpload = React.useCallback((files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    setCsvFile(file as FileWithPreview);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (r) => {
+        const cols = r.meta.fields || [];
+        setHeaders(cols);
+        setRawRows(r.data as any[]);
+        setMappings(
+          cols.map((h) => ({
+            csvHeader: h,
+            target: h.toLowerCase().includes("email")
+              ? "email"
+              : h.toLowerCase().includes("name")
+                ? "name"
+                : "metadata",
+            metadataKey: h,
+          }))
+        );
+      },
+    });
+  }, []);
+
+  const schemaLogic = React.useMemo(() => {
+    return mappings.reduce((acc, m) => {
+      if (m.target !== "none" && (m.target === "metadata" || m.target !== m.csvHeader)) {
+        acc[m.csvHeader] = { from: "CSV", to: m.target === "metadata" ? `meta.${m.metadataKey}` : m.target };
+      }
+      return acc;
+    }, {} as any);
+  }, [mappings]);
+
+  const previewData = React.useMemo(() => rawRows.map((row) => transformRow(row, mappings)), [rawRows, mappings]);
+
+  const PREVIEW_COLS = React.useMemo(
+    () => [
+      { accessorKey: "name", header: "Name" },
+      { accessorKey: "email", header: "Email" },
+      { accessorKey: "phone", header: "Phone" },
+      {
+        accessorKey: "metadata",
+        header: "Metadata",
+        cell: ({ row }: any) => {
+          const meta = row.original.metadata;
+          if (!meta || !Object.keys(meta).length) return <span className="opacity-20">—</span>;
+          return (
+            <button
+              onClick={() => setViewMetadata(meta)}
+              className="bg-muted hover:bg-primary/5 hover:text-primary hover:border-primary/20 max-w-[150px] cursor-pointer truncate rounded border border-transparent px-2 py-1 font-mono text-[10px] transition-colors"
+            >
+              {JSON.stringify(meta)}
+            </button>
+          );
+        },
+      },
+    ],
+    []
+  );
+
+  const updateMapping = (index: number, updates: Partial<ColumnMapping>) => {
+    setMappings((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
+      return next;
+    });
+  };
+
+  const importCustomersMutation = useMutation({
+    mutationFn: async () =>
+      postCustomers(
+        previewData.map((row) => ({
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          metadata: row.metadata,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          walletAddresses: null,
+        })),
+        undefined,
+        undefined,
+        { source: "CSV Import" }
+      ),
+    onSuccess: () => {
+      toast.success(`${previewData.length} customers imported successfully`);
+      onOpenChange(false);
+    },
+  });
+
+  return (
+    <FullScreenModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Import Customers"
+      description="Map CSV columns to system fields or shrink them into metadata."
+      size="full"
+      footer={
+        <div className="flex w-full items-center justify-between">
+          <p className="text-muted-foreground/60 text-[10px] font-black tracking-widest uppercase">
+            {rawRows.length} Rows Detected
+          </p>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!rawRows.length}
+              isLoading={importCustomersMutation.isPending}
+              onClick={() => importCustomersMutation.mutate()}
+            >
+              {importCustomersMutation.isPending ? "Importing..." : "Import Data"}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="grid h-full grid-cols-1 gap-10 pb-10 lg:grid-cols-2">
+        <div className="space-y-10">
+          <CsvImportSection label="1. Data Source">
+            <FileUploadPicker
+              value={csvFile ? [csvFile] : []}
+              onFilesChange={onUpload}
+              dropzoneMultiple={false}
+              placeholder="Drag & drop a CSV here or click to select"
+              dropzoneAccept={{ "text/csv": [".csv"] }}
+            />
+          </CsvImportSection>
+
+          {headers.length > 0 && (
+            <CsvImportSection label="2. Field Mapping">
+              <div className="bg-card divide-border/50 divide-y overflow-hidden rounded-xl border shadow-xs">
+                {mappings.map((m, i) => (
+                  <div
+                    key={m.csvHeader}
+                    className="hover:bg-muted/10 flex items-center gap-6 px-5 py-3 transition-colors"
+                  >
+                    <span className="text-foreground/80 flex-1 truncate text-sm font-medium">{m.csvHeader}</span>
+                    <ArrowRight className="text-muted-foreground/30 size-3" />
+                    <div className="flex flex-2 items-center gap-3">
+                      <SelectPicker
+                        id={`mapping-target-${i}`}
+                        value={m.target}
+                        triggerClassName="w-40 h-9 bg-background shadow-none"
+                        onChange={(val) => updateMapping(i, { target: val as any })}
+                        items={[
+                          { label: "Name", value: "name" },
+                          { label: "Email", value: "email" },
+                          { label: "Phone", value: "phone" },
+                          { label: "Metadata", value: "metadata" },
+                          { label: "Ignore", value: "none" },
+                        ]}
+                      />
+                      {m.target === "metadata" ? (
+                        <InputGroup className="bg-background h-9 w-44 shadow-none">
+                          <InputGroupInput
+                            value={m.metadataKey}
+                            placeholder="Key..."
+                            className="font-mono text-xs"
+                            onChange={(e) => updateMapping(i, { metadataKey: e.target.value })}
+                          />
+                        </InputGroup>
+                      ) : (
+                        m.target !== "none" && (
+                          <Badge
+                            variant="secondary"
+                            className="text-muted-foreground/60 h-9 border-none px-4 text-[10px] font-bold tracking-tight uppercase"
+                          >
+                            System Field
+                          </Badge>
+                        )
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CsvImportSection>
+          )}
+        </div>
+
+        <div className="space-y-10">
+          <CsvImportSection label="3. System Preview">
+            <div className="bg-background overflow-hidden rounded-xl border shadow-xs">
+              <ScrollArea className="h-[280px] w-full">
+                <div className="**:table:min-w-full!">
+                  <DataTable
+                    columns={PREVIEW_COLS}
+                    data={previewData}
+                    isLoading={false}
+                    className="border-0 shadow-none"
+                  />
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </div>
+          </CsvImportSection>
+
+          <CsvImportSection label="4. Logic Validation">
+            <div className="bg-muted/10 min-h-[160px] rounded-xl border p-6">
+              <Timeline
+                items={Object.keys(schemaLogic).length ? [1] : []}
+                renderItem={() => ({ title: "Schema Transformation", date: "Rules", data: { $changes: schemaLogic } })}
+                emptyMessage="Mappings are 1:1. No transformations needed."
+              />
+            </div>
+          </CsvImportSection>
+        </div>
+      </div>
+
+      <Dialog open={!!viewMetadata} onOpenChange={() => setViewMetadata(null)} modal>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Metadata Preview</DialogTitle>
+            <DialogDescription>Raw object mapping for the selected row.</DialogDescription>
+          </DialogHeader>
+          <div className="bg-muted/30 mt-4 overflow-hidden">
+            <CodeBlock language="json" showCopyButton>
+              {JSON.stringify(viewMetadata, null, 2)}
+            </CodeBlock>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </FullScreenModal>
+  );
+}
+
+function CsvImportSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h4 className="text-muted-foreground/60 text-[10px] font-black tracking-[0.2em] uppercase">{label}</h4>
+      {children}
+    </section>
   );
 }

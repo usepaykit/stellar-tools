@@ -1,6 +1,9 @@
 import { Result } from "better-result";
 import { z } from "zod";
 
+export const chunk = <T>(arr: T[], size: number): T[][] =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
+
 export function validateSchema<T>(schema: z.ZodType<T>, data: unknown): Result<T, Error> {
   const result = schema.safeParse(data);
 
