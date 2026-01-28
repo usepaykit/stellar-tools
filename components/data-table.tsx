@@ -206,9 +206,9 @@ export const DataTable = <TData, TValue>({
                   className={cn(onRowClick && "cursor-pointer")}
                   onClick={() => onRowClick?.(row.original)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell {...cell} key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  {row.getVisibleCells().map((tanstackCell) => (
+                    <TableCell {...cell} key={tanstackCell.id}>
+                      {flexRender(tanstackCell.column.columnDef.cell, tanstackCell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -304,7 +304,7 @@ const DataTableSkeleton = <TData, TValue>({
                     <Skeleton
                       className="h-4"
                       style={{
-                        width: `${Math.floor(Math.random() * 40) + 60}%`,
+                        width: `${60 + ((rowIndex * 7 + colIndex * 11) % 40)}%`,
                       }}
                     />
                   </TableCell>

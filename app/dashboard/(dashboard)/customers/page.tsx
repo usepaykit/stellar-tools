@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
+import type { FileWithPreview } from "@/components/file-upload-picker";
+import { FileUploadPicker } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   PhoneNumber,
@@ -17,6 +19,7 @@ import {
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SelectPicker } from "@/components/select-picker";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer } from "@/db";
@@ -26,8 +29,10 @@ import { truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
+// @ts-expect-error - papaparse has no types in this workspace
+import Papa from "papaparse";
 import { Trash2 } from "lucide-react";
-import { ArrowDown, ArrowUp, ArrowUpDown, Plus } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Plus, CloudUpload } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -192,6 +197,7 @@ export default function CustomersPage() {
   const searchParams = useSearchParams();
   const [selectedFilter, setSelectedFilter] = useState<number>(0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams.get("mode") === "create");
+  const [isImportCsvOpen, setIsImportCsvOpen] = useState(false);
   const router = useRouter();
 
   const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
@@ -223,10 +229,21 @@ export default function CustomersPage() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold">Customers</h1>
+                <div className="flex items-center gap-2">
+
+                <Button
+                  className="gap-2 shadow-none"
+                  variant="outline"
+                  onClick={() => setIsImportCsvOpen(true)}
+                >
+                  <CloudUpload className="h-4 w-4" />
+                  Import CSV
+                </Button>
                 <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Add customer
                 </Button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 overflow-x-auto pb-2">
@@ -260,6 +277,7 @@ export default function CustomersPage() {
       </DashboardSidebar>
 
       <CustomerModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
+      <ImportCsvModal open={isImportCsvOpen} onOpenChange={setIsImportCsvOpen} />
     </div>
   );
 }
@@ -558,6 +576,344 @@ export function CustomerModal({
           </div>
         </div>
       </form>
+    </FullScreenModal>
+  );
+}
+
+type CsvRow = Record<string, string>;
+
+/** Sentinel for "Don't map" – Radix Select disallows empty string as item value */
+const CSV_MAP_NONE = "__none__";
+
+const MAPS_TO_VALUES = ["name", "email", "phone", "metadata"] as const;
+
+const mappingRowSchema = z.object({
+  csvKey: z.string().min(1, "CSV column is required"),
+  mapsTo: z.enum([CSV_MAP_NONE, ...MAPS_TO_VALUES]),
+  metadataKey: z.string().optional(),
+});
+
+const csvMappingSchema = z.object({
+  mappings: z.array(mappingRowSchema),
+});
+
+type CsvMappingFormData = z.infer<typeof csvMappingSchema>;
+type MapsToOption = CsvMappingFormData["mappings"][number]["mapsTo"];
+
+const MAPS_TO_ITEMS: { value: string; label: string }[] = [
+  { value: CSV_MAP_NONE, label: "Don't map" },
+  { value: "name", label: "Name" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
+  { value: "metadata", label: "Metadata" },
+];
+
+function parseCsvFile(file: File): Promise<{ headers: string[]; rows: CsvRow[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result as string;
+      const result = Papa.parse<CsvRow>(text, { header: true, skipEmptyLines: true });
+      const headers = result.meta.fields ?? [];
+      const rows = (result.data ?? []).filter((row: CsvRow) =>
+        Object.keys(row).some((k) => String(row[k] ?? "").trim() !== "")
+      );
+      resolve({ headers, rows });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file, "UTF-8");
+  });
+}
+
+export function ImportCsvModal({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const invalidate = useInvalidateOrgQuery();
+  const [csvFile, setCsvFile] = useState<FileWithPreview | null>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [parsedRows, setParsedRows] = useState<CsvRow[]>([]);
+
+  const mappingForm = RHF.useForm<CsvMappingFormData>({
+    resolver: zodResolver(csvMappingSchema),
+    defaultValues: { mappings: [] },
+  });
+
+  const { fields, append, remove } = RHF.useFieldArray({
+    control: mappingForm.control,
+    name: "mappings",
+  });
+
+  React.useEffect(() => {
+    if (headers.length > 0) {
+      mappingForm.reset({
+        mappings: headers.map((h) => ({ csvKey: h, mapsTo: CSV_MAP_NONE, metadataKey: h })),
+      });
+    } else {
+      mappingForm.reset({ mappings: [] });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when headers change
+  }, [headers]);
+
+  const handleFilesChange = useCallback(
+    async (files: FileWithPreview[]) => {
+      const file = files[0];
+      if (!file) {
+        setCsvFile(null);
+        setHeaders([]);
+        setParsedRows([]);
+        return;
+      }
+      setCsvFile(file);
+      try {
+        const { headers: h, rows } = await parseCsvFile(file);
+        setHeaders(h);
+        setParsedRows(rows);
+      } catch {
+        toast.error("Could not parse CSV. Ensure the file is valid UTF-8 CSV.");
+      }
+    },
+    []
+  );
+
+  const importMutation = useMutation({
+    mutationFn: async (data: CsvMappingFormData) => {
+      const mappings = data.mappings;
+      const mapVal = (row: CsvRow, key: string) => String(row[key] ?? "").trim();
+      const payloads: Omit<Customer, "id" | "organizationId" | "environment">[] = [];
+      for (const row of parsedRows) {
+        let name = "";
+        let email = "";
+        let phoneRaw = "";
+        const metadataRecord: Record<string, string> = {};
+        for (const m of mappings) {
+          const v = mapVal(row, m.csvKey);
+          if (m.mapsTo === "name") name = v;
+          else if (m.mapsTo === "email") email = v;
+          else if (m.mapsTo === "phone") phoneRaw = v;
+          else if (m.mapsTo === "metadata" && v) {
+            const key = (m.metadataKey || m.csvKey).trim() || m.csvKey;
+            metadataRecord[key] = v;
+          }
+        }
+        const parsed = customerSchema.safeParse({
+          name: name || undefined,
+          email: email || undefined,
+          phoneNumber: { number: phoneRaw || "", countryCode: "US" },
+          metadata: Object.entries(metadataRecord).map(([key, value]) => ({ key, value })),
+        });
+        if (!parsed.success) continue;
+        const phoneString = parsed.data.phoneNumber?.number
+          ? phoneNumberToString(parsed.data.phoneNumber as PhoneNumber)
+          : "";
+        payloads.push({
+          name: parsed.data.name ?? "",
+          email: parsed.data.email ?? "",
+          phone: phoneString,
+          walletAddresses: null,
+          metadata: metadataRecord,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+      if (payloads.length === 0) {
+        throw new Error("No valid rows. Map Name and Email to CSV columns and ensure rows pass validation.");
+      }
+      await postCustomers(payloads);
+    },
+    onSuccess: () => {
+      invalidate(["customers"]);
+      toast.success(`Imported ${parsedRows.length} customer(s) from CSV.`);
+      onOpenChange(false);
+      resetState();
+    },
+    onError: (e: Error) => {
+      toast.error(e.message ?? "Import failed.");
+    },
+  });
+
+  const resetState = useCallback(() => {
+    setCsvFile(null);
+    setHeaders([]);
+    setParsedRows([]);
+    mappingForm.reset({ mappings: [] });
+  }, [mappingForm]);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) resetState();
+      onOpenChange(next);
+    },
+    [onOpenChange, resetState]
+  );
+
+  const csvColumns: ColumnDef<CsvRow>[] = React.useMemo(
+    () =>
+      headers.map((h) => ({
+        accessorKey: h,
+        header: h,
+        cell: ({ row }) => (
+          <div className="text-muted-foreground max-w-[200px] truncate" title={String(row.original[h] ?? "")}>
+            {String(row.original[h] ?? "")}
+          </div>
+        ),
+      })),
+    [headers]
+  );
+
+  const mappings = mappingForm.watch("mappings");
+  const hasRequiredMapping =
+    mappings.some((m) => m.mapsTo === "name") || mappings.some((m) => m.mapsTo === "email");
+  const canImport =
+    csvFile && parsedRows.length > 0 && hasRequiredMapping && !importMutation.isPending;
+
+  const handleAddMapping = useCallback(() => {
+    append({ csvKey: headers[0] ?? "", mapsTo: CSV_MAP_NONE, metadataKey: "" });
+  }, [headers, append]);
+
+  return (
+    <FullScreenModal
+      open={open}
+      onOpenChange={handleOpenChange}
+      title="Import customers from CSV"
+      description="Upload a CSV, map columns to customer fields and metadata, then import."
+      size="full"
+      showCloseButton
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} className="shadow-none">
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="shadow-none"
+            disabled={!canImport}
+            isLoading={importMutation.isPending}
+            onClick={() => mappingForm.handleSubmit((data) => importMutation.mutate(data))()}
+          >
+            Import {parsedRows.length > 0 ? `(${parsedRows.length} rows)` : ""}
+          </Button>
+        </div>
+      }
+    >
+      <div className="flex h-full flex-col gap-8">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">1. Upload CSV</h3>
+          <FileUploadPicker
+            value={csvFile ? [csvFile] : []}
+            onFilesChange={handleFilesChange}
+            placeholder="Drag & drop a CSV here or click to select"
+            description="Header row required. Supports name, email, phone and custom columns for metadata."
+            label="CSV file"
+            dropzoneAccept={{
+              "text/csv": [".csv"],
+              "application/vnd.ms-excel": [".csv"],
+              "text/plain": [".csv"],
+            }}
+            dropzoneMaxFiles={1}
+            dropzoneMultiple={false}
+          />
+        </div>
+
+        {headers.length > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">
+                2. Dynamically create a picker group for each of the CSV keys
+              </h3>
+              <p className="text-muted-foreground text-sm">
+                Map each CSV column to a customer field or to a metadata key. Use &quot;Metadata&quot; and set a key to
+                store values in the customer metadata object.
+              </p>
+              <div className="space-y-3">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="border-border flex flex-wrap items-end gap-3 rounded-lg border p-4 sm:flex-nowrap"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <SelectPicker
+                        id={`mapping-csvKey-${index}`}
+                        label="CSV column (key)"
+                        value={mappingForm.watch(`mappings.${index}.csvKey`)}
+                        onChange={(v) => mappingForm.setValue(`mappings.${index}.csvKey`, v)}
+                        items={headers.map((h) => ({ value: h, label: h }))}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <SelectPicker
+                        id={`mapping-mapsTo-${index}`}
+                        label="Maps to"
+                        value={mappingForm.watch(`mappings.${index}.mapsTo`)}
+                        onChange={(v) => {
+                          mappingForm.setValue(`mappings.${index}.mapsTo`, v as MapsToOption);
+                          if (v === "metadata") {
+                            const csvKey = mappingForm.getValues(`mappings.${index}.csvKey`);
+                            const meta = mappingForm.getValues(`mappings.${index}.metadataKey`);
+                            if (!meta?.trim()) mappingForm.setValue(`mappings.${index}.metadataKey`, csvKey);
+                          }
+                        }}
+                        items={MAPS_TO_ITEMS}
+                      />
+                    </div>
+                    {mappingForm.watch(`mappings.${index}.mapsTo`) === "metadata" && (
+                      <div className="min-w-0 flex-1">
+                        <SelectPicker
+                          id={`mapping-metadataKey-${index}`}
+                          label="Metadata key"
+                          value={
+                            (mappingForm.watch(`mappings.${index}.metadataKey`) ||
+                              mappingForm.watch(`mappings.${index}.csvKey`) ||
+                              headers[0]) ??
+                            ""
+                          }
+                          onChange={(v) => mappingForm.setValue(`mappings.${index}.metadataKey`, v)}
+                          items={headers.map((h) => ({ value: h, label: h }))}
+                        />
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => remove(index)}
+                      className="shrink-0 shadow-none"
+                      aria-label="Remove mapping"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddMapping}
+                  className="w-full shadow-none"
+                  disabled={headers.length === 0}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+            </div>
+
+            <Separator />
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">3. Preview</h3>
+              <DataTable
+                columns={csvColumns}
+                data={parsedRows}
+                emptyMessage="No rows parsed."
+                enableBulkSelect={false}
+              />
+            </div>
+          </>
+        )}
+      </div>
     </FullScreenModal>
   );
 }

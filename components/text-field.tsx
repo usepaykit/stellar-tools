@@ -25,7 +25,7 @@ interface TextFieldProps
 }
 
 export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
-  ({ id, value, onChange, label, error, helpText, ...mixProps }) => {
+  ({ id, value, onChange, label, error, helpText, ...mixProps }, ref) => {
     const {
       label: labelProps,
       error: errorProps,
@@ -48,6 +48,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
         )}
 
         <Input
+          ref={ref}
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
