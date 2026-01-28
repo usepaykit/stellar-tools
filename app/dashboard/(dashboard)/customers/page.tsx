@@ -343,7 +343,7 @@ export function CustomerModal({
         });
       }
 
-      return await postCustomers([
+      const [result] = await postCustomers([
         {
           name: data.name,
           email: data.email,
@@ -354,6 +354,8 @@ export function CustomerModal({
           updatedAt: new Date(),
         },
       ]);
+
+      return result;
     },
     onSuccess: (customer) => {
       invalidate(isEditMode ? ["customers", customer?.id] : ["customers"]);

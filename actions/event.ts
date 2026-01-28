@@ -5,7 +5,7 @@ import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
 import { computeDiff } from "@/lib/utils";
-import { LooseAutoComplete, WebhookEvent } from "@stellartools/core";
+import { LooseAutoComplete, MaybeArray, WebhookEvent } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -23,12 +23,12 @@ export async function withEvent<T>(
   action: () => Promise<T>,
   eventConfig?: {
     type: EventType;
-    map: (result: T) => Omit<EmitParams, "type">;
+    map: (result: T) => MaybeArray<Omit<EmitParams, "type">>;
   },
   webhookConfig?: {
     organizationId: string;
     environment: Network;
-    payload: (result: T) => Record<string, unknown>;
+    payload: (result: T) => MaybeArray<Record<string, unknown>>;
     events: Array<WebhookEvent>;
   }
 ): Promise<T> {
@@ -37,16 +37,33 @@ export async function withEvent<T>(
   const runSideEffects = async () => {
     try {
       if (eventConfig) {
-        await emitEvent({ type: eventConfig.type, ...eventConfig.map(result) });
+        const mapped = eventConfig.map(result);
+
+        if (Array.isArray(mapped)) {
+          await Promise.all(mapped.map((eventData) => emitEvent({ type: eventConfig.type, ...eventData })));
+        } else if (mapped) {
+          await emitEvent({ type: eventConfig.type, ...mapped });
+        }
       }
 
       if (webhookConfig) {
         const data = webhookConfig.payload(result);
-        await Promise.all(
-          webhookConfig.events.map((event) =>
-            triggerWebhooks(event, data, webhookConfig.organizationId, webhookConfig.environment)
-          )
-        );
+
+        if (Array.isArray(data)) {
+          await Promise.all(
+            data.flatMap((eventData) =>
+              webhookConfig.events.map((event) =>
+                triggerWebhooks(event, eventData, webhookConfig.organizationId, webhookConfig.environment)
+              )
+            )
+          );
+        } else {
+          await Promise.all(
+            webhookConfig.events.map((event) =>
+              triggerWebhooks(event, data, webhookConfig.organizationId, webhookConfig.environment)
+            )
+          );
+        }
       }
     } catch (err) {
       console.error(`[Side-Effect Event Error] ${eventConfig?.type}:`, err);

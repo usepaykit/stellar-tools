@@ -16,30 +16,27 @@ export const postCustomers = async (
 
   return withEvent(
     async () => {
-      const [result] = await db
+      const results = await db
         .insert(customers)
         .values(params.map((p) => ({ ...p, id: `cus_${nanoid(25)}`, organizationId, environment })))
         .returning();
 
-      return result;
+      return results;
     },
     {
       type: "customer::created",
-      map: (customer) => ({
-        customerId: customer.id,
-        data: {
-          name: customer.name,
-          email: customer.email,
-          metadata: JSON.stringify(customer.metadata),
-          source: customer.metadata?.source,
-        },
-      }),
+      map: (customers) =>
+        customers.map((c) => ({
+          customerId: c.id,
+          data: { name: c.name, email: c.email, phone: c.phone, metadata: c.metadata },
+        })),
     },
     {
       events: ["customer.created"],
       environment,
       organizationId,
-      payload: ({ id, name, email, metadata, phone }) => ({ id, name, email, metadata, phone }),
+      payload: (customers) =>
+        customers.map((c) => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, metadata: c.metadata })),
     }
   );
 };
