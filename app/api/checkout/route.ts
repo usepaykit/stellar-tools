@@ -24,7 +24,7 @@ export const POST = async (req: NextRequest) => {
   if (data?.customerId) {
     customer = await retrieveCustomer({ id: data.customerId }, organizationId, environment);
   } else if (data?.customerEmail) {
-    customer = await postCustomers(
+    [customer] = await postCustomers(
       [
         {
           email: data.customerEmail as string,

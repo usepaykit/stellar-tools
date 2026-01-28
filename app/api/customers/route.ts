@@ -14,7 +14,7 @@ export const POST = async (req: NextRequest) => {
 
   const { organizationId, environment } = await resolveApiKey(apiKey);
 
-  const customer = await postCustomers(
+  const [customer] = await postCustomers(
     [
       {
         ...data,

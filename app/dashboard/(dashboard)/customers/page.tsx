@@ -313,7 +313,7 @@ export function CustomerModal({
         });
       }
 
-      return await postCustomers([
+      const [result] = await postCustomers([
         {
           name: data.name,
           email: data.email,
@@ -324,6 +324,8 @@ export function CustomerModal({
           updatedAt: new Date(),
         },
       ]);
+
+      return result;
     },
     onSuccess: (customer) => {
       invalidate(isEditMode ? ["customers", customer?.id] : ["customers"]);
@@ -552,7 +554,7 @@ const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) =>
       }
       return acc;
     },
-    { metadata: {} } as any
+    { metadata: {} } as Record<MappingTarget, any>
   );
 };
 
@@ -635,6 +637,25 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
     });
   };
 
+  const importCustomersMutation = useMutation({
+    mutationFn: async () =>
+      postCustomers(
+        previewData.map((row) => ({
+          name: row.name,
+          email: row.email,
+          phone: row.phone,
+          metadata: row.metadata,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          walletAddresses: null,
+        }))
+      ),
+    onSuccess: () => {
+      toast.success(`${previewData.length} customers imported successfully`);
+      onOpenChange(false);
+    },
+  });
+
   return (
     <FullScreenModal
       open={open}
@@ -651,8 +672,13 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
             <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button size="sm" disabled={!rawRows.length}>
-              Import Data
+            <Button
+              size="sm"
+              disabled={!rawRows.length}
+              isLoading={importCustomersMutation.isPending}
+              onClick={() => importCustomersMutation.mutate()}
+            >
+              {importCustomersMutation.isPending ? "Importing..." : "Import Data"}
             </Button>
           </div>
         </div>
