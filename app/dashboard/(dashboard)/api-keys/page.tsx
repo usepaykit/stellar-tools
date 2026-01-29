@@ -26,7 +26,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
@@ -183,10 +182,6 @@ export default function ApiKeysPage() {
       onClick: (key) => setKeyToEdit(key),
     },
     {
-      label: "Manage scope",
-      onClick: () => {},
-    },
-    {
       label: "View request logs",
       onClick: () => {},
     },
@@ -263,10 +258,20 @@ export default function ApiKeysPage() {
       </DashboardSidebar>
 
       <ApiKeyModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        open={isModalOpen || !!keyToEdit}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsModalOpen(false);
+            setKeyToEdit(null);
+            setCreatedApiKey(null);
+          } else {
+            setIsModalOpen(true);
+          }
+        }}
         createdApiKey={createdApiKey}
         onApiKeyCreated={setCreatedApiKey}
+        keyToEdit={keyToEdit}
+        onEditSuccess={() => invalidate(["apiKeys"])}
       />
 
       <FullScreenModal
@@ -373,28 +378,34 @@ export default function ApiKeysPage() {
           </div>
         </div>
       </FullScreenModal>
-
-      <EditApiKeyDialog
-        keyToEdit={keyToEdit}
-        onClose={() => setKeyToEdit(null)}
-        onSuccess={() => invalidate(["apiKeys"])}
-      />
     </div>
   );
 }
 
-function EditApiKeyDialog({
+function ApiKeyModal({
+  open,
+  onOpenChange,
+  createdApiKey,
+  onApiKeyCreated,
   keyToEdit,
-  onClose,
-  onSuccess,
+  onEditSuccess,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  createdApiKey: string | null;
+  onApiKeyCreated: (key: string | null) => void;
   keyToEdit: ApiKey | null;
-  onClose: () => void;
-  onSuccess: () => void;
+  onEditSuccess: () => void;
 }) {
+  const { handleCopy } = useCopy();
+
+  const invalidateOrgQuery = useInvalidateOrgQuery();
+
   const form = RHF.useForm<ApiKeyFormData>({
     resolver: zodResolver(apiKeySchema),
-    defaultValues: { name: "" },
+    defaultValues: {
+      name: "",
+    },
   });
 
   React.useEffect(() => {
@@ -405,73 +416,11 @@ function EditApiKeyDialog({
     mutationFn: ({ id, name }: { id: string; name: string }) => putApiKey(id, { name }),
     onSuccess: () => {
       toast.success("API key updated");
-      onSuccess();
-      onClose();
+      onEditSuccess();
+      onOpenChange(false);
     },
     onError: (e: Error) => {
       toast.error(e.message ?? "Failed to update API key");
-    },
-  });
-
-  const onSubmit = (data: ApiKeyFormData) => {
-    if (!keyToEdit) return;
-    updateMutation.mutate({ id: keyToEdit.id, name: data.name });
-  };
-
-  return (
-    <Dialog open={!!keyToEdit} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit API key</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <RHF.Controller
-            control={form.control}
-            name="name"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                id="edit-key-name"
-                label="Name"
-                error={error?.message}
-                placeholder="e.g., Production API Key"
-                className="shadow-none"
-              />
-            )}
-          />
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={updateMutation.isPending}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={updateMutation.isPending} isLoading={updateMutation.isPending}>
-              Save
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ApiKeyModal({
-  open,
-  onOpenChange,
-  createdApiKey,
-  onApiKeyCreated,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  createdApiKey: string | null;
-  onApiKeyCreated: (key: string | null) => void;
-}) {
-  const { handleCopy } = useCopy();
-
-  const invalidateOrgQuery = useInvalidateOrgQuery();
-
-  const form = RHF.useForm<ApiKeyFormData>({
-    resolver: zodResolver(apiKeySchema),
-    defaultValues: {
-      name: "",
     },
   });
 
@@ -511,7 +460,7 @@ function ApiKeyModal({
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      if (!createApiKeyMutation.isPending) {
+      if (!createApiKeyMutation.isPending && !updateMutation.isPending) {
         form.reset();
         onApiKeyCreated(null);
       }
@@ -525,21 +474,46 @@ function ApiKeyModal({
     onOpenChange(false);
   };
 
+  const isEditMode = !!keyToEdit;
+
   return (
     <FullScreenModal
       open={open}
       onOpenChange={handleOpenChange}
-      title={createdApiKey ? "API key created" : "Create secret key"}
+      title={
+        isEditMode ? "Edit API key" : createdApiKey ? "API key created" : "Create secret key"
+      }
       description={
-        createdApiKey
-          ? "Make sure to copy your API key now. You won't be able to see it again!"
-          : "Create a key that unlocks full API access, enabling extensive interaction with your account."
+        isEditMode
+          ? "Update the name of your API key."
+          : createdApiKey
+            ? "Make sure to copy your API key now. You won't be able to see it again!"
+            : "Create a key that unlocks full API access, enabling extensive interaction with your account."
       }
       size="small"
       showCloseButton={true}
       footer={
         <div className="flex w-full items-center justify-end gap-3">
-          {createdApiKey ? (
+          {isEditMode ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={updateMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={form.handleSubmit((data) => {
+                  if (keyToEdit) updateMutation.mutate({ id: keyToEdit.id, name: data.name });
+                })}
+                disabled={updateMutation.isPending}
+                isLoading={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? "Saving..." : "Save"}
+              </Button>
+            </>
+          ) : createdApiKey ? (
             <Button onClick={handleContinue}>Continue</Button>
           ) : (
             <>
@@ -564,7 +538,30 @@ function ApiKeyModal({
         </div>
       }
     >
-      {createdApiKey ? (
+      {isEditMode ? (
+        <form
+          onSubmit={form.handleSubmit((data) => {
+            if (keyToEdit) updateMutation.mutate({ id: keyToEdit.id, name: data.name });
+          })}
+          className="space-y-6"
+          id="edit-api-key-form"
+        >
+          <RHF.Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                id="edit-key-name"
+                label="Name"
+                error={error?.message}
+                placeholder="e.g., Production API Key"
+                className="shadow-none"
+              />
+            )}
+          />
+        </form>
+      ) : createdApiKey ? (
         <div className="space-y-4">
           <div className="bg-muted/50 border-border rounded-lg border p-4">
             <p className="text-muted-foreground text-sm">
@@ -589,9 +586,7 @@ function ApiKeyModal({
         </div>
       ) : (
         <form
-          onSubmit={form.handleSubmit((data) => {
-            createApiKeyMutation.mutate(data);
-          })}
+          onSubmit={form.handleSubmit((data) => createApiKeyMutation.mutate(data))}
           className="space-y-6"
           id="api-key-form"
         >
