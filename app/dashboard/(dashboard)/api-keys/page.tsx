@@ -1,8 +1,16 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { ColumnDef } from "@tanstack/react-table";
+import { ChevronRight, Copy, ExternalLink, Info, Plus } from "lucide-react";
+import { nanoid } from "nanoid";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
-import { postApiKey, retrieveApiKeys } from "@/actions/apikey";
+import { deleteApiKey, postApiKey, putApiKey, retrieveApiKeys } from "@/actions/apikey";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
@@ -18,18 +26,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toast";
 import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { ColumnDef } from "@tanstack/react-table";
-import { ChevronRight, Copy, ExternalLink, Info, Plus } from "lucide-react";
-import { nanoid } from "nanoid";
-import Link from "next/link";
-import * as RHF from "react-hook-form";
-import { z } from "zod";
 
 const apiKeySchema = z.object({
   name: z
@@ -45,10 +46,37 @@ type ApiKeyFormData = z.infer<typeof apiKeySchema>;
 export default function ApiKeysPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
+  const [keyToDelete, setKeyToDelete] = React.useState<ApiKey | null>(null);
+  const [keyToRevoke, setKeyToRevoke] = React.useState<ApiKey | null>(null);
+  const [keyToEdit, setKeyToEdit] = React.useState<ApiKey | null>(null);
 
+  const invalidate = useInvalidateOrgQuery();
   const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () => retrieveApiKeys());
-
   const { handleCopy } = useCopy();
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteApiKey(id),
+    onSuccess: () => {
+      invalidate(["apiKeys"]);
+      setKeyToDelete(null);
+      toast.success("API key deleted");
+    },
+    onError: (e: Error) => {
+      toast.error(e.message ?? "Failed to delete API key");
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) => putApiKey(id, { isRevoked: true }),
+    onSuccess: () => {
+      invalidate(["apiKeys"]);
+      setKeyToRevoke(null);
+      toast.success("API key revoked");
+    },
+    onError: (e: Error) => {
+      toast.error(e.message ?? "Failed to revoke API key");
+    },
+  });
 
   const columns: ColumnDef<ApiKey>[] = [
     {
@@ -148,39 +176,33 @@ export default function ApiKeysPage() {
   const actions: TableAction<ApiKey>[] = [
     {
       label: "Copy API key ID",
-      onClick: (key) => {
-        handleCopy({ text: key.id, message: "API key ID copied to clipboard" });
-      },
-    },
-    {
-      label: "Rotate key",
-      onClick: (key) => {
-        console.log("Rotate key:", key.id);
-      },
+      onClick: (key) => handleCopy({ text: key.id, message: "API key ID copied to clipboard" }),
     },
     {
       label: "Edit key",
-      onClick: (key) => {
-        console.log("Edit key:", key.id);
-      },
+      onClick: (key) => setKeyToEdit(key),
     },
     {
       label: "Manage scope",
-      onClick: (key) => {
-        console.log("Manage scope:", key.id);
-      },
+      onClick: () => {},
     },
     {
       label: "View request logs",
+      onClick: () => {},
+    },
+    {
+      label: "Revoke key",
       onClick: (key) => {
-        console.log("View request logs:", key.id);
+        if (key.isRevoked) {
+          toast.error("This key is already revoked");
+          return;
+        }
+        setKeyToRevoke(key);
       },
     },
     {
       label: "Delete key",
-      onClick: (key) => {
-        console.log("Delete key:", key.id);
-      },
+      onClick: (key) => setKeyToDelete(key),
       variant: "destructive",
     },
   ];
@@ -246,11 +268,190 @@ export default function ApiKeysPage() {
         createdApiKey={createdApiKey}
         onApiKeyCreated={setCreatedApiKey}
       />
+
+      <FullScreenModal
+        open={!!keyToDelete}
+        onOpenChange={(open) => !open && setKeyToDelete(null)}
+        title="Delete API key"
+        description="This key will be permanently removed. This action cannot be undone."
+        size="small"
+        showCloseButton
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setKeyToDelete(null)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              isLoading={deleteMutation.isPending}
+              onClick={() => keyToDelete && deleteMutation.mutate(keyToDelete.id)}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <div className="border-border bg-muted/30 rounded-lg border p-4">
+            <p className="text-muted-foreground mb-2 text-sm font-medium">Key to delete</p>
+            <p className="font-medium">{keyToDelete?.name}</p>
+            <p className="text-muted-foreground mt-1 font-mono text-xs">{keyToDelete?.id}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground mb-2 text-sm font-medium">What happens when you delete</p>
+            <ul className="text-muted-foreground list-inside list-disc space-y-1.5 text-sm">
+              <li>This key will be permanently removed from your account</li>
+              <li>Any requests using this key will be rejected</li>
+              <li>You can create a new key anytime if you need API access again</li>
+              <li>Deletion cannot be undone</li>
+            </ul>
+          </div>
+          <div className="border-red-500/30 bg-red-500/5 rounded-lg border p-4">
+            <p className="text-red-800 dark:text-red-200 text-sm">
+              <strong>Warning:</strong> Deleting this key is permanent. If anything is still using it, those
+              integrations will stop working immediately.
+            </p>
+          </div>
+        </div>
+      </FullScreenModal>
+
+      <FullScreenModal
+        open={!!keyToRevoke}
+        onOpenChange={(open) => !open && setKeyToRevoke(null)}
+        title="Revoke API key"
+        description="This key will immediately stop working. You can create a new key anytime."
+        size="small"
+        showCloseButton
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setKeyToRevoke(null)}
+              disabled={revokeMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={revokeMutation.isPending}
+              isLoading={revokeMutation.isPending}
+              onClick={() => keyToRevoke && revokeMutation.mutate(keyToRevoke.id)}
+            >
+              {revokeMutation.isPending ? "Revoking..." : "Revoke"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <div className="border-border bg-muted/30 rounded-lg border p-4">
+            <p className="text-muted-foreground mb-2 text-sm font-medium">Key to revoke</p>
+            <p className="font-medium">{keyToRevoke?.name}</p>
+            <p className="text-muted-foreground mt-1 font-mono text-xs">{keyToRevoke?.id}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground mb-2 text-sm font-medium">What happens when you revoke</p>
+            <ul className="text-muted-foreground list-inside list-disc space-y-1.5 text-sm">
+              <li>All requests using this key will be rejected</li>
+              <li>Integrations or scripts using this key will stop working</li>
+              <li>You can create a new key later if you need API access again</li>
+              <li>Revocation cannot be undone</li>
+            </ul>
+          </div>
+          <div className="border-amber-500/30 bg-amber-500/5 rounded-lg border p-4">
+            <p className="text-amber-800 dark:text-amber-200 text-sm">
+              <strong>Before you continue:</strong> Make sure no critical services are depending on this key. Update
+              your environment variables or configs to use a different key if needed.
+            </p>
+          </div>
+        </div>
+      </FullScreenModal>
+
+      <EditApiKeyDialog
+        keyToEdit={keyToEdit}
+        onClose={() => setKeyToEdit(null)}
+        onSuccess={() => invalidate(["apiKeys"])}
+      />
     </div>
   );
 }
 
-// --- Modal Component ---
+function EditApiKeyDialog({
+  keyToEdit,
+  onClose,
+  onSuccess,
+}: {
+  keyToEdit: ApiKey | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const form = RHF.useForm<ApiKeyFormData>({
+    resolver: zodResolver(apiKeySchema),
+    defaultValues: { name: "" },
+  });
+
+  React.useEffect(() => {
+    if (keyToEdit) form.reset({ name: keyToEdit.name });
+  }, [keyToEdit, form]);
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => putApiKey(id, { name }),
+    onSuccess: () => {
+      toast.success("API key updated");
+      onSuccess();
+      onClose();
+    },
+    onError: (e: Error) => {
+      toast.error(e.message ?? "Failed to update API key");
+    },
+  });
+
+  const onSubmit = (data: ApiKeyFormData) => {
+    if (!keyToEdit) return;
+    updateMutation.mutate({ id: keyToEdit.id, name: data.name });
+  };
+
+  return (
+    <Dialog open={!!keyToEdit} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit API key</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <RHF.Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                id="edit-key-name"
+                label="Name"
+                error={error?.message}
+                placeholder="e.g., Production API Key"
+                className="shadow-none"
+              />
+            )}
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} disabled={updateMutation.isPending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateMutation.isPending} isLoading={updateMutation.isPending}>
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ApiKeyModal({
   open,
