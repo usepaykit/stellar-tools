@@ -25,7 +25,8 @@ export const POST = async (req: NextRequest) => {
       },
     ],
     organizationId,
-    environment
+    environment,
+    { source: "API" }
   );
 
   return NextResponse.json({ data: customer });
