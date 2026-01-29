@@ -12,6 +12,7 @@ interface LogPickerProps<TData, TValue> extends React.ComponentProps<typeof Data
   renderDetail?: (row: TData) => React.ReactNode;
   emptyMessage?: string;
   detailPanelWidth?: number;
+  isLoading?: boolean;
 }
 
 export function LogPicker<TData, TValue>({
@@ -22,6 +23,7 @@ export function LogPicker<TData, TValue>({
   emptyMessage = "No logs found",
   className,
   detailPanelWidth = 350,
+  isLoading,
   ...props
 }: LogPickerProps<TData, TValue>) {
   const [selectedRow, setSelectedRow] = React.useState<TData | null>(null);
@@ -47,6 +49,16 @@ export function LogPicker<TData, TValue>({
 
   useHotkeys("esc", () => handleClose(), [handleClose]);
 
+  if (isLoading) {
+    return (
+      <div className={cn("flex gap-4", className)}>
+        <div className="min-w-0 flex-1">
+          <DataTable {...props} isLoading={true} data={[]} columns={columns} />
+        </div>
+      </div>
+    );
+  }
+
   if (data.length === 0) {
     return (
       <div
@@ -66,7 +78,7 @@ export function LogPicker<TData, TValue>({
   return (
     <div className={cn("flex gap-4", className)}>
       <div className="min-w-0 flex-1">
-        <DataTable {...props} data={data} columns={columns} onRowClick={handleRowClick} />
+        <DataTable {...props} isLoading={false} data={data} columns={columns} onRowClick={handleRowClick} />
       </div>
 
       {renderDetail && selectedRow && (

@@ -95,12 +95,7 @@ const columns: ColumnDef<WebhookLog>[] = [
       return (
         <div className="text-right whitespace-nowrap">
           <span className="text-muted-foreground text-sm">
-            {log.createdAt.toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: true,
-            })}
+            {moment(log.createdAt).utc().format("MMM D, YYYY, h:mm A [GMT]")}
           </span>
         </div>
       );
@@ -157,7 +152,7 @@ export default function WebhookLogPage() {
       logs = logs?.filter((log) => log.status === statusFilter);
     }
 
-    return logs;
+    return logs ?? [];
   }, [webhookLogs, searchQuery, statusFilter]);
 
   const renderDetail = (log: WebhookLog) => {
@@ -204,14 +199,7 @@ export default function WebhookLogPage() {
 
               <LogDetailItem
                 label="Attempt date"
-                value={log.createdAt.toLocaleString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
+                value={moment(log.createdAt).utc().format("MMM D, YYYY, h:mm A [GMT]")}
               />
 
               <div className="flex items-start justify-between gap-2">

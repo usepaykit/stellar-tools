@@ -226,7 +226,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     <Switch
                       checked={LiveMode}
                       onCheckedChange={handleSwitchEnvironment}
-                      disabled={isSwitchingEnv}
+                      disabled={isSwitchingEnv || isLoadingOrgs}
                       className="h-4 w-7 [&>span]:size-3 [&>span]:data-[state=checked]:translate-x-[calc(100%-0.125rem)]"
                     />
                   </div>

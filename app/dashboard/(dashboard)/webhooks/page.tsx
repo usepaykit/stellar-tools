@@ -434,19 +434,18 @@ import { StellarTools } from '@stellartools/core';
 
 const stellar = new StellarTools({
   apiKey: process.env.STELLAR_API_KEY!,
-  debug: false,
 });
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
-  const signature = request.headers.get('stellar-signature');
+  const signature = request.headers.get('X-StellarTools-Signature');
 
   if (!signature) {
     return NextResponse.json( { error: 'Missing signature' }, { status: 401 });
   }
 
   // Verify webhook signature
-  const isValid = stellar.webhook.verifySignature(
+  const isValid = stellar.webhooks.verifySignature(
     body,
     signature,
     '${WEBHOOK_SECRET}'
@@ -501,7 +500,7 @@ export async function POST(request: NextRequest) {
 const WEBHOOK_CURL_EXAMPLE = /* sh */ `
 curl -X POST https://your-domain.com/api/webhooks \\
   -H "Content-Type: application/json" \\
-  -H "stellar-signature: t=1735000000,v1=abc123..." \\
+  -H "X-StellarTools-Signature: t=1735000000,v1=abc123..." \\
   -d '{
     "id": "evt_123",
     "type": "payment.confirmed",
@@ -520,7 +519,7 @@ curl -X POST https://your-domain.com/api/webhooks \\
 `;
 
 const schema = z.object({
-  destinationName: z.string().regex(/^[a-z0-9-]+$/),
+  destinationName: z.string().min(1, "Destination name is required"),
   endpointUrl: z.url().refine(
     (url) => {
       try {

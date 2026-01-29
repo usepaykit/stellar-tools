@@ -8,10 +8,16 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
 
   let prefix = "/landing";
 
+  if (host == process.env.NGROK_HOST) {
+    prefix = "/api";
+  }
+
   if (host === process.env.NEXT_PUBLIC_DASHBOARD_HOST) {
     prefix = "/dashboard";
   } else if (host === process.env.NEXT_PUBLIC_CHECKOUT_HOST) {
     prefix = "/checkout";
+  } else if (host == process.env.NEXT_PUBLIC_API_HOST) {
+    prefix = "/api";
   }
 
   url.pathname = `${prefix}${url.pathname}`;

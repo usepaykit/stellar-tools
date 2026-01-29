@@ -76,11 +76,17 @@ export const getWebhooksWithAnalytics = async (orgId?: string, env?: Network) =>
 
   if (!result.length) throw new Error("Failed to retrieve webhooks");
 
-  return result.map((webhook) => ({
-    ...webhook,
-    errorRate: webhook.logsCount > 0 ? Math.round((webhook.errorCount / webhook.logsCount) * 100) : 0,
-    responseTime: webhook.responseTime ?? [],
-  }));
+  return result.map((webhook) => {
+    const rawLogs = webhook.responseTime ?? [];
+
+    const sparklineData = rawLogs.slice(0, 50).reverse();
+
+    return {
+      ...webhook,
+      errorRate: webhook.logsCount > 0 ? Math.round((webhook.errorCount / webhook.logsCount) * 100) : 0,
+      responseTime: sparklineData,
+    };
+  });
 };
 
 export const retrieveWebhook = async (id: string, orgId?: string, env?: Network) => {

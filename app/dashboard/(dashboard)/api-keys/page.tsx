@@ -285,7 +285,7 @@ function ApiKeyModal({
 
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: ApiKeyFormData) => {
-      const token = `stKey_${nanoid(32)}`;
+      const token = `st_key_${nanoid(52)}`;
 
       return await postApiKey({
         name: data.name,

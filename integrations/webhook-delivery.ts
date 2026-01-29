@@ -4,12 +4,9 @@ import { ApiClient, WebhookEvent, WebhookSigner } from "@stellartools/core";
 import { nanoid } from "nanoid";
 
 export class WebhookDelivery {
-  constructor() {}
-
   deliver = async (webhook: WebhookSchema, eventType: WebhookEvent, payload: Record<string, unknown>) => {
     const startTime = Date.now();
     const webhookEventId = `wh+evt_${nanoid(52)}`;
-    const requestId = `wh+req_${nanoid(52)}`;
 
     const webhookPayload = {
       id: webhookEventId,
@@ -21,90 +18,67 @@ export class WebhookDelivery {
 
     const signature = new WebhookSigner().generateSignature(JSON.stringify(webhookPayload), webhook.secret);
 
-    try {
-      const apiClient = new ApiClient({
-        baseUrl: webhook.url,
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "StellarTools-Webhooks/1.0",
-          "X-Stellar-Signature": signature,
-          "X-Stellar-Event": eventType,
-        },
-        maxRetries: 3,
-        timeout: 15000,
-      });
+    const url = new URL(webhook.url);
 
-      const result = await apiClient.post<any>(webhook.url, {
-        body: JSON.stringify(webhookPayload),
-        requestId,
-      });
+    const client = new ApiClient({
+      baseUrl: url.origin.replace(/\/$/, ""),
+      headers: {
+        "X-StellarTools-Signature": signature,
+        "X-StellarTools-Event": eventType,
+        "User-Agent": "StellarTools-Webhooks/1.0",
+      },
+      maxRetries: 0,
+    });
 
-      if (!result.isOk()) {
-        throw new Error(`Webhook delivery failed: ${result.error}`);
-      }
+    const result = await client.postDetailed<Record<string, unknown>>(
+      url.pathname.slice(1) || "",
+      JSON.stringify(webhookPayload)
+    );
 
-      const duration = Date.now() - startTime;
+    const duration = Date.now() - startTime;
 
-      const response = result.value?.data;
-      const statusCode = response.status ?? null;
-      const responseText = response.text ?? null;
-      const responseData = response.data as Record<string, unknown> | null;
-      const isSuccess = response.ok ?? false;
+    let statusCode: number | null = null;
+    let responseData: any = null;
+    let isSuccess = false;
+    let errorMessage: string | null = null;
 
-      await postWebhookLog(
-        webhook.id,
-        {
-          id: webhookEventId,
-          eventType,
-          request: webhookPayload,
-          statusCode,
-          errorMessage: isSuccess ? null : responseText,
-          responseTime: duration,
-          response: responseData ?? null,
-          description: `Webhook delivery to ${webhook.url}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          nextRetry: null,
-          apiVersion: "2025-12-27.stellartools",
-        },
-        webhook.organizationId,
-        webhook.environment
-      );
-
-      if (!isSuccess) {
-        throw new Error(`Webhook delivery failed: ${statusCode} - ${responseText}`);
-      }
-
-      console.log(`✅ Webhook delivered to ${webhook.url} in ${duration}ms (${statusCode})`);
-
-      return { success: true, webhookId: webhook.id };
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-      await postWebhookLog(
-        webhook.id,
-        {
-          id: webhookEventId,
-          eventType,
-          request: webhookPayload,
-          statusCode: null,
-          errorMessage,
-          responseTime: duration,
-          response: null,
-          description: `Webhook delivery to ${webhook.url}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          nextRetry: null,
-          apiVersion: "2025-12-27.stellartools",
-        },
-        webhook.organizationId,
-        webhook.environment
-      );
-
-      console.error(`❌ Webhook delivery failed to ${webhook.url} after ${duration}ms:`, errorMessage);
-
-      throw error;
+    if (result.isOk()) {
+      statusCode = result.value.status;
+      responseData = result.value.data;
+      isSuccess = result.value.ok;
+      if (!isSuccess) errorMessage = `Server returned ${statusCode}`;
+    } else {
+      console.log({ result });
+      errorMessage = result.error.message;
     }
+
+    await postWebhookLog(
+      webhook.id,
+      {
+        id: webhookEventId,
+        eventType,
+        request: webhookPayload,
+        statusCode,
+        errorMessage,
+        responseTime: duration,
+        response: responseData,
+        description: `Delivery to ${webhook.url}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        nextRetry: null,
+        apiVersion: "2025-12-27.stellartools",
+      },
+      webhook.organizationId,
+      webhook.environment
+    );
+
+    if (!isSuccess) {
+      console.error(`❌ Webhook failed: ${webhook.url} (${statusCode})`);
+      if (result.isErr()) console.log(result.error.message);
+      throw new Error(errorMessage ?? "Delivery failed");
+    }
+
+    console.log(`✅ Webhook delivered: ${webhook.url} in ${duration}ms`);
+    return { success: true };
   };
 }
