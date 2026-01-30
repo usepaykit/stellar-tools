@@ -1,0 +1,42 @@
+{
+  "name": "@stellartools/aisdk-adapter",
+  "version": "0.0.1",
+  "description": "Stellar Tools AI SDK Adapter",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [
+    "stellar",
+    "tools",
+    "ai",
+    "sdk",
+    "adapter"
+  ],
+  "author": "Emmanuel Odii",
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usepaykit/stellar-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/usepaykit/stellar-tools/issues"
+  },
+  "dependencies": {
+    "ai": "^5.0.116",
+    "@stellartools/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@ai-sdk/openai": "^2.0.88"
+  }
+}

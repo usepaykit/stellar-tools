@@ -4,6 +4,45 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --animate-aurora: aurora 60s linear infinite;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  @keyframes aurora {
+    from {
+      background-position:
+        50% 50%,
+        50% 50%;
+    }
+    to {
+      background-position:
+        350% 50%,
+        350% 50%;
+    }
+  }
+}
+
+@theme inline {
+  --animate-orbit: orbit calc(var(--duration) * 1s) linear infinite;
+
+  @keyframes orbit {
+    0% {
+      transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * 1px))
+        rotate(calc(var(--angle) * -1deg));
+    }
+    100% {
+      transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * 1px))
+        rotate(calc((var(--angle) * -1deg) - 360deg));
+    }
+  }
+}
+
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -67,6 +106,24 @@
   --shadow-opacity: var(--shadow-opacity);
   --color-shadow-color: var(--shadow-color);
   --color-destructive-foreground: var(--destructive-foreground);
+
+  --stellar-wallet-background: var(--background);
+  --stellar-wallet-background-secondary: var(--secondary);
+  --stellar-wallet-foreground-strong: var(--foreground);
+  --stellar-wallet-foreground: var(--foreground);
+  --stellar-wallet-foreground-secondary: var(--muted-foreground);
+  --stellar-wallet-primary: var(--primary);
+  --stellar-wallet-primary-foreground: var(--primary-foreground);
+  --stellar-wallet-transparent: transparent;
+  --stellar-wallet-lighter: var(--background);
+  --stellar-wallet-light: var(--secondary);
+  --stellar-wallet-light-gray: var(--muted-foreground);
+  --stellar-wallet-gray: var(--muted-foreground);
+  --stellar-wallet-danger: var(--destructive);
+  --stellar-wallet-border: var(--border);
+  --stellar-wallet-shadow: var(--shadow-lg);
+  --stellar-wallet-border-radius: var(--radius);
+  --stellar-wallet-font-family: var(--font-sans);
 }
 
 h1,
@@ -123,27 +180,25 @@ h6 {
   --shadow-color: hsl(222.2 47.4% 11.2%);
   --shadow-2xs: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.05);
   --shadow-xs: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.05);
-  --shadow-sm: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow-md: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 2px 4px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow-lg: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 4px 6px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow-xl: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 8px 10px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-sm: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-md: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 2px 4px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-lg: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 4px 6px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-xl: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 8px 10px -1px hsl(222.2 47.4% 11.2% / 0.1);
   --shadow-2xl: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.25);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 }
 
 .shadow-buttons-inverted {
-  box-shadow: 0 0 #0000, 0 0 #0000, 0 0 #0000, 0 0 #0000,
-
-      0px 0.75px 0px 0px rgba(255, 255, 255, 0.2) inset,
-      0px 1px 2px 0px rgba(0, 0, 0, 0.4),
-      0px 0px 0px 1px rgba(24, 24, 27, 1);
+  box-shadow:
+    0 0 #0000,
+    0 0 #0000,
+    0 0 #0000,
+    0 0 #0000,
+    0px 0.75px 0px 0px rgba(255, 255, 255, 0.2) inset,
+    0px 1px 2px 0px rgba(0, 0, 0, 0.4),
+    0px 0px 0px 1px rgba(24, 24, 27, 1);
 }
 
 .dark {
@@ -191,17 +246,30 @@ h6 {
   --shadow-color: hsl(222.2 47.4% 11.2%);
   --shadow-2xs: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.05);
   --shadow-xs: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.05);
-  --shadow-sm: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow-md: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 2px 4px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow-lg: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 4px 6px -1px hsl(222.2 47.4% 11.2% / 0.1);
-  --shadow-xl: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1),
-    0 8px 10px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-sm: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 1px 2px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-md: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 2px 4px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-lg: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 4px 6px -1px hsl(222.2 47.4% 11.2% / 0.1);
+  --shadow-xl: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.1), 0 8px 10px -1px hsl(222.2 47.4% 11.2% / 0.1);
   --shadow-2xl: 0 0.25rem 0.5rem 0 hsl(222.2 47.4% 11.2% / 0.25);
+
+  --stellar-wallet-background: var(--background);
+  --stellar-wallet-background-secondary: var(--secondary);
+  --stellar-wallet-foreground-strong: var(--foreground);
+  --stellar-wallet-foreground: var(--foreground);
+  --stellar-wallet-foreground-secondary: var(--muted-foreground);
+  --stellar-wallet-primary: var(--primary);
+  --stellar-wallet-primary-foreground: var(--primary-foreground);
+  --stellar-wallet-transparent: transparent;
+  --stellar-wallet-lighter: var(--background);
+  --stellar-wallet-light: var(--secondary);
+  --stellar-wallet-light-gray: var(--muted-foreground);
+  --stellar-wallet-gray: var(--muted-foreground);
+  --stellar-wallet-danger: var(--destructive);
+  --stellar-wallet-border: var(--border);
+  --stellar-wallet-shadow: var(--shadow-lg);
+  --stellar-wallet-border-radius: var(--radius);
+  --stellar-wallet-font-family: var(--font-sans);
 }
 
 @theme inline {
@@ -289,6 +357,10 @@ h6 {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   width: 100%;
+}
+
+[data-sonner-toast][data-styled="true"] [data-cancel] {
+  background: transparent !important;
 }
 
 .code-block-wrapper pre,

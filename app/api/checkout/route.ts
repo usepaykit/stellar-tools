@@ -1,0 +1,67 @@
+import { resolveApiKey } from "@/actions/apikey";
+import { postCheckout } from "@/actions/checkout";
+import { postCustomers, retrieveCustomer } from "@/actions/customers";
+import { Customer } from "@/db";
+import { createCheckoutSchema } from "@stellartools/core";
+import moment from "moment";
+import { NextRequest, NextResponse } from "next/server";
+
+export const POST = async (req: NextRequest) => {
+  const apiKey = req.headers.get("x-api-key");
+
+  if (!apiKey) {
+    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  }
+
+  const { error, data } = createCheckoutSchema.safeParse(await req.json());
+
+  if (error) return NextResponse.json({ error }, { status: 400 });
+
+  const { organizationId, environment } = await resolveApiKey(apiKey);
+
+  let customer: Customer | null = null;
+
+  if (data?.customerId) {
+    customer = await retrieveCustomer({ id: data.customerId }, organizationId, environment);
+  } else if (data?.customerEmail) {
+    [customer] = await postCustomers(
+      [
+        {
+          email: data.customerEmail as string,
+          name: data.customerEmail?.split("@")[0],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          phone: null,
+          walletAddresses: null,
+          metadata: data?.metadata ?? null,
+        },
+      ],
+      organizationId,
+      environment
+    );
+  } else {
+    throw new Error("Customer ID or email is required");
+  }
+
+  const checkout = await postCheckout(
+    {
+      customerId: customer?.id ?? null,
+      status: "open",
+      expiresAt: moment().add(1, "day").toDate(),
+      metadata: data?.metadata ?? {},
+      amount: data.amount ?? null,
+      description: data.description ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      productId: data.productId ?? null,
+      successMessage: data.successMessage ?? null,
+      successUrl: data.successUrl ?? null,
+      customerEmail: customer?.email ?? null,
+      customerPhone: customer?.phone ?? null,
+    },
+    organizationId,
+    environment
+  );
+
+  return NextResponse.json({ data: checkout });
+};

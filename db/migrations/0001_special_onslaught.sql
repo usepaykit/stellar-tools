@@ -1,0 +1,1 @@
+ALTER TABLE "team_invite" RENAME COLUMN "network" TO "role";

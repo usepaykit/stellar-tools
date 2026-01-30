@@ -2,29 +2,17 @@
 
 import * as React from "react";
 
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { type MixinProps, splitProps } from "@/lib/mixin";
+import { cn } from "@/lib/utils";
 import { TCountryCode, getCountryData } from "countries-list";
 import { countries } from "country-flag-icons";
 import * as CountryFlags from "country-flag-icons/react/3x2";
 import { Check } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { splitProps, type MixinProps } from "@/lib/mixin";
-import { cn } from "@/lib/utils";
 
 export interface PhoneNumber {
   number: string;
@@ -38,10 +26,7 @@ export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
 
   // Format as (XXX) XXX-XXXX for 10-digit numbers
   if (digits.length === 10) {
-    return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(
-      3,
-      6
-    )}-${digits.slice(6)}`;
+    return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
 
   return `${prefix} ${digits}`;
@@ -50,7 +35,7 @@ export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
 export const phoneNumberFromString = (phoneNumber: string): PhoneNumber => {
   const countryCodeMatch = phoneNumber.match(/^(\+\d{1,4})/);
 
-  if (!countryCodeMatch) throw new Error("Invalid country code");
+  if (!countryCodeMatch) return { number: phoneNumber, countryCode: "US" };
 
   const prefix = countryCodeMatch[1];
   const number = phoneNumber.slice(prefix.length).replace(/[^\d]/g, "");
@@ -72,20 +57,12 @@ type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 
 export interface PhoneNumberPickerProps
-  extends MixinProps<
-      "flag",
-      React.ComponentProps<(typeof CountryFlags)[TCountryCode]>
-    >,
+  extends
+    MixinProps<"flag", React.ComponentProps<(typeof CountryFlags)[TCountryCode]>>,
     MixinProps<"label", Omit<LabelProps, "children">>,
-    MixinProps<
-      "input",
-      Omit<React.ComponentProps<typeof InputGroupInput>, "onChange" | "value">
-    >,
+    MixinProps<"input", Omit<React.ComponentProps<typeof InputGroupInput>, "onChange" | "value">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
-    MixinProps<
-      "group",
-      Omit<React.ComponentProps<typeof InputGroup>, "children">
-    > {
+    MixinProps<"group", Omit<React.ComponentProps<typeof InputGroup>, "children">> {
   id: string;
   value: PhoneNumber;
   onChange: (v: PhoneNumber) => void;
@@ -107,39 +84,20 @@ const COUNTRIES_DATA = countries.flatMap((countryCode) => {
   }));
 });
 
-const CountryFlag = React.memo(
-  ({ countryCode, className }: { countryCode: string; className?: string }) => {
-    const FlagComponent = CountryFlags[countryCode as TCountryCode];
+const CountryFlag = React.memo(({ countryCode, className }: { countryCode: string; className?: string }) => {
+  const FlagComponent = CountryFlags[countryCode as TCountryCode];
 
-    return FlagComponent ? (
-      <FlagComponent
-        className={cn(
-          "w-6 h-4 shrink-0 rounded object-cover border border-border/40",
-          className
-        )}
-      />
-    ) : (
-      <CountryFlags.US className={className} />
-    );
-  }
-);
+  return FlagComponent ? (
+    <FlagComponent className={cn("border-border/40 h-4 w-6 shrink-0 rounded border object-cover", className)} />
+  ) : (
+    <CountryFlags.US className={className} />
+  );
+});
 
-export const PhoneNumberPicker = React.forwardRef<
-  HTMLInputElement,
-  PhoneNumberPickerProps
->(
-  (
-    {
-      id,
-      value,
-      onChange,
-      disabled,
-      label,
-      error,
-      ...mixProps
-    }: PhoneNumberPickerProps,
-    ref
-  ) => {
+CountryFlag.displayName = "CountryFlag";
+
+export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberPickerProps>(
+  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberPickerProps, ref) => {
     const {
       group,
       label: labelProps,
@@ -181,10 +139,7 @@ export const PhoneNumberPicker = React.forwardRef<
       } else if (digits.length <= 6) {
         return `${digits.slice(0, 3)} ${digits.slice(3)}`;
       } else {
-        return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(
-          6,
-          10
-        )}`;
+        return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;
       }
     };
 
@@ -203,18 +158,14 @@ export const PhoneNumberPicker = React.forwardRef<
     return (
       <div className="space-y-2">
         {label && (
-          <Label
-            className={cn("text-sm font-medium", labelProps.className)}
-            htmlFor={id}
-            {...labelProps}
-          >
+          <Label className={cn("text-sm font-medium", labelProps.className)} htmlFor={id} {...labelProps}>
             {label}
           </Label>
         )}
 
         <InputGroup
           className={cn(
-            "relative flex h-10 mt-2 w-full rounded-md border border-input bg-transparent text-sm has-[[data-slot=input-group-control]:focus-visible]:ring-ring has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-offset-2",
+            "border-input has-[[data-slot=input-group-control]:focus-visible]:ring-ring relative mt-2 flex h-10 w-full rounded-md border bg-transparent text-sm has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-offset-2",
             group.className
           )}
           {...group}
@@ -226,20 +177,15 @@ export const PhoneNumberPicker = React.forwardRef<
                 role="combobox"
                 aria-expanded={open}
                 disabled={disabled}
-                className="flex h-full gap-2 rounded-r-none border-r border-input bg-transparent px-3 hover:bg-accent hover:text-accent-foreground"
+                className="border-input hover:bg-accent hover:text-accent-foreground flex h-full gap-2 rounded-r-none border-r bg-transparent px-3"
               >
-                <CountryFlag
-                  countryCode={value.countryCode || "US"}
-                  className={flag.className}
-                />
-                <span className="text-sm font-mono text-foreground">
-                  {selectedCountry?.prefix || "+1"}
-                </span>
+                <CountryFlag countryCode={value.countryCode || "US"} className={flag.className} />
+                <span className="text-foreground font-mono text-sm">{selectedCountry?.prefix || "+1"}</span>
               </Button>
             </PopoverTrigger>
 
             <PopoverContent
-              className="w-[300px] p-0 bg-background border shadow-lg"
+              className="bg-background w-[300px] border p-0 shadow-lg"
               align="start"
               onWheel={(e) => e.stopPropagation()}
             >
@@ -252,26 +198,16 @@ export const PhoneNumberPicker = React.forwardRef<
                       <CommandItem
                         key={`${country.countryCode}-${country.prefix}`}
                         value={country.searchKey}
-                        onSelect={() =>
-                          handleCountrySelect(country.countryCode)
-                        }
+                        onSelect={() => handleCountrySelect(country.countryCode)}
                         className={cn(
                           "gap-3",
-                          value.countryCode === country.countryCode &&
-                            "bg-primary/10 hover:bg-primary/20"
+                          value.countryCode === country.countryCode && "bg-primary/10 hover:bg-primary/20"
                         )}
                       >
-                        <CountryFlag
-                          countryCode={country.countryCode}
-                          className={flag.className}
-                        />
+                        <CountryFlag countryCode={country.countryCode} className={flag.className} />
                         <span className="flex-1 truncate">{country.name}</span>
-                        <span className="text-sm font-mono text-muted-foreground">
-                          {country.prefix}
-                        </span>
-                        {value.countryCode === country.countryCode && (
-                          <Check className="ml-auto h-4 w-4 opacity-100" />
-                        )}
+                        <span className="text-muted-foreground font-mono text-sm">{country.prefix}</span>
+                        {value.countryCode === country.countryCode && <Check className="ml-auto h-4 w-4 opacity-100" />}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -290,7 +226,7 @@ export const PhoneNumberPicker = React.forwardRef<
             onChange={handleNumberChange}
             disabled={disabled}
             className={cn(
-              "no-autofill-bg flex-1 border-0 bg-transparent px-3 mr-3 py-1 ml-1 text-sm shadow-none focus-visible:ring-0",
+              "no-autofill-bg mr-3 ml-1 flex-1 border-0 bg-transparent px-3 py-1 text-sm shadow-none focus-visible:ring-0",
               input.className
             )}
           />
@@ -299,10 +235,7 @@ export const PhoneNumberPicker = React.forwardRef<
         {error && (
           <p
             {...errorProps}
-            className={cn(
-              "text-sm text-destructive flex items-start gap-1.5",
-              errorProps.className
-            )}
+            className={cn("text-destructive flex items-start gap-1.5 text-sm", errorProps.className)}
             role="alert"
           >
             {error}

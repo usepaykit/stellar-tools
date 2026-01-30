@@ -4,18 +4,14 @@ export type MixinProps<Mixin extends string, Props> = {
 
 type SplitProps<Props, Mixins extends string[]> = {
   [Mixin in Mixins[number]]: {
-    [MixinKey in keyof Props as MixinKey extends `${Mixin}${infer Key}`
-      ? Uncapitalize<Key>
-      : never]: Props[MixinKey];
+    [MixinKey in keyof Props as MixinKey extends `${Mixin}${infer Key}` ? Uncapitalize<Key> : never]: Props[MixinKey];
   };
 } & {
   rest: Omit<
     Props,
     {
       [Mixin in Mixins[number]]: keyof {
-        [MixinKey in keyof Props as MixinKey extends `${Mixin}${string}`
-          ? MixinKey
-          : never]: never;
+        [MixinKey in keyof Props as MixinKey extends `${Mixin}${string}` ? MixinKey : never]: never;
       };
     }[Mixins[number]]
   >;
@@ -43,8 +39,7 @@ export const splitProps = <Props, Mixins extends string[]>(
 
       split = true;
       const remainingKey = key.substring(mixinKey.length);
-      const splitKey =
-        remainingKey.charAt(0).toLowerCase() + remainingKey.slice(1);
+      const splitKey = remainingKey.charAt(0).toLowerCase() + remainingKey.slice(1);
 
       const splitProps = result[mixinKey] as Record<string, unknown>;
       splitProps[splitKey] = props[key as keyof typeof props];

@@ -1,7 +1,12 @@
+import { Toaster } from "@/components/ui/toast";
+import { Providers } from "@/providers";
+import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
+
 import "./globals.css";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -19,9 +24,26 @@ const rosemary = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Stellar Tools - Bring Stellar Payments to Every Platform",
-  description:
-    "Unified adapters for BetterAuth, Medusa, Shopify, Clerk, Convex, Trigger.dev, WordPress, AI SDKs, and more—make crypto-native payments seamless for your users.",
+  title: "StellarTools | Stripe for Stellar",
+  description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+  openGraph: {
+    title: "StellarTools | Stripe for Stellar",
+    description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+    images: [
+      {
+        url: "/images/og-image.jpeg",
+        width: 1200,
+        height: 630,
+        alt: "StellarTools - Stripe alternative for Stellar",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "StellarTools | Stripe for Stellar",
+    description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+    images: ["/images/og-image.jpeg"],
+  },
 };
 
 export default function RootLayout({
@@ -31,11 +53,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${rosemary.variable} antialiased`}
-      >
-
+      <body className={`${geistSans.variable} ${geistMono.variable} ${rosemary.variable} antialiased`}>
+        <Providers>
           {children}
+          <Toaster position="bottom-right" />
+        </Providers>
       </body>
     </html>
   );

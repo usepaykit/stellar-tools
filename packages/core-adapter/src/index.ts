@@ -1,0 +1,70 @@
+import { Result } from "better-result";
+import z from "zod";
+
+import { ApiClient } from "./api-client";
+import { CheckoutApi } from "./resources/checkout";
+import { CreditApi } from "./resources/credit";
+import { CustomerApi } from "./resources/customers";
+import { PaymentApi } from "./resources/payment";
+import { ProductApi } from "./resources/product";
+import { RefundApi } from "./resources/refund";
+import { SubscriptionApi } from "./resources/subscription";
+import { WebhookApi } from "./resources/webhooks";
+import { StellarToolsConfig, stellarToolsConfigSchema } from "./schema/shared";
+
+export class StellarTools {
+  private config: StellarToolsConfig;
+  public webhooks: WebhookApi;
+  public customers: CustomerApi;
+  public refunds: RefundApi;
+  public checkouts: CheckoutApi;
+  public payments: PaymentApi;
+  public credits: CreditApi;
+  public products: ProductApi;
+  public subscriptions: SubscriptionApi;
+
+  constructor(config: StellarToolsConfig) {
+    const { error, data } = stellarToolsConfigSchema.safeParse(config);
+
+    if (error) {
+      throw new Error(`Invalid config: ${error.message}`);
+    }
+
+    this.config = data;
+
+    const apiClient = new ApiClient({
+      baseUrl: "https://localhost:3000",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.config.apiKey,
+      },
+      maxRetries: 3,
+    });
+
+    this.customers = new CustomerApi(apiClient);
+    this.refunds = new RefundApi(apiClient);
+    this.checkouts = new CheckoutApi(apiClient);
+    this.payments = new PaymentApi(apiClient);
+    this.credits = new CreditApi(apiClient);
+    this.products = new ProductApi(apiClient);
+    this.subscriptions = new SubscriptionApi(apiClient);
+    this.webhooks = new WebhookApi(apiClient);
+  }
+}
+
+export * from "./types";
+export { WebhookSigner } from "./resources/webhooks";
+export { ApiClient };
+export { Result };
+export { schemaFor, validateRequiredKeys, validateSchema, chunk } from "./utils";
+export { raceAsyncIterator, batchProcess } from "./promisify";
+export type { LooseAutoComplete } from "./types";
+export { z };
+export * from "./schema/customer";
+export * from "./schema/checkout";
+export * from "./schema/payment";
+export * from "./schema/refund";
+export * from "./schema/shared";
+export * from "./schema/credits";
+export * from "./schema/subscription";
+export * from "./schema/webhooks";
