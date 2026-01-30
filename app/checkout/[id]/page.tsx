@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
-import { PhoneNumber, PhoneNumberPicker } from "@/components/phone-number-picker";
+import { type PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,14 +114,16 @@ export default function CheckoutPage() {
         }
       );
 
-      if (result.error) throw new Error(result.error);
+      if (result.isErr()) throw new Error(result.error.message);
 
       // Verify server-side
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
         headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY! },
       });
-      await api.post("/api/verify-wallet-payment", { body: JSON.stringify({ txHash: result.data?.hash, checkoutId }) });
+      await api.post("/api/verify-wallet-payment", {
+        body: JSON.stringify({ txHash: result.value?.hash, checkoutId }),
+      });
 
       toast.success("Payment successful!");
     } catch (e: any) {
@@ -202,7 +204,7 @@ export default function CheckoutPage() {
                     name="phoneNumber"
                     control={form.control}
                     render={({ field, fieldState: { error } }) => (
-                      <PhoneNumberPicker
+                      <PhoneNumberField
                         id={field.name}
                         value={field.value as PhoneNumber}
                         onChange={field.onChange}

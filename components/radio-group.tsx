@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup as RadioGroupRoot, RadioGroupItem } from "@/components/ui/radio-group";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 
@@ -10,9 +10,9 @@ type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
 
-interface RadioGroupPickerProps
+export interface RadioGroupProps
   extends
-    Omit<React.ComponentProps<typeof RadioGroup>, "value" | "onChange">,
+    Omit<React.ComponentProps<typeof RadioGroupRoot>, "value" | "onChange">,
     MixinProps<
       "item",
       Omit<React.ComponentProps<typeof RadioGroupItem>, "children" | "value" | "itemRef" | "ref" | "type">
@@ -29,7 +29,8 @@ interface RadioGroupPickerProps
   helpText?: HelpTextProps["children"];
   itemLayout?: "horizontal" | "vertical";
 }
-export const RadioGroupPicker = ({
+
+export const RadioGroup = ({
   id,
   value,
   onChange,
@@ -39,7 +40,7 @@ export const RadioGroupPicker = ({
   helpText,
   itemLayout = "horizontal",
   ...mixProps
-}: RadioGroupPickerProps) => {
+}: RadioGroupProps) => {
   const {
     label: labelProps,
     error: errorProps,
@@ -62,7 +63,7 @@ export const RadioGroupPicker = ({
         </p>
       )}
 
-      <RadioGroup {...rest} value={value} onValueChange={onChange}>
+      <RadioGroupRoot {...rest} value={value} onValueChange={onChange}>
         <div className={cn("flex flex-col gap-2", itemLayout === "horizontal" ? "flex-row" : "flex-col")}>
           {items.map((item) => (
             <div key={item.value} className="flex items-center space-x-2">
@@ -73,7 +74,7 @@ export const RadioGroupPicker = ({
             </div>
           ))}
         </div>
-      </RadioGroup>
+      </RadioGroupRoot>
 
       {error && (
         <p {...errorProps} role="alert" className={cn("text-destructive text-sm font-medium", errorProps.className)}>

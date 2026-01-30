@@ -10,7 +10,7 @@ type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
 
-interface NumberPickerProps
+export interface NumberFieldProps
   extends
     Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type">,
     MixinProps<"label", Omit<LabelProps, "children">>,
@@ -25,7 +25,7 @@ interface NumberPickerProps
   allowDecimal?: boolean;
 }
 
-export const NumberPicker = React.forwardRef<HTMLInputElement, NumberPickerProps>((props, ref) => {
+export const NumberField = React.forwardRef<HTMLInputElement, NumberFieldProps>((props, ref) => {
   const { id, value, onChange, label, error, helpText, allowDecimal = false, ...mixProps } = props;
 
   const {
@@ -91,9 +91,11 @@ export const NumberPicker = React.forwardRef<HTMLInputElement, NumberPickerProps
         type="text"
         inputMode={allowDecimal ? "decimal" : "numeric"}
         value={displayValue}
+        aria-invalid={!!error}
         onChange={handleAmountChange}
         className={cn(
           "w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+
           rest.className
         )}
       />
@@ -107,4 +109,4 @@ export const NumberPicker = React.forwardRef<HTMLInputElement, NumberPickerProps
   );
 });
 
-NumberPicker.displayName = "NumberPicker";
+NumberField.displayName = "NumberField";

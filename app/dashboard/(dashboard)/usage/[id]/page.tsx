@@ -5,7 +5,7 @@ import * as React from "react";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { LogDetailItem, LogDetailSection, LogPicker } from "@/components/log-picker";
+import { Log, LogDetailItem, LogDetailSection } from "@/components/log";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -664,7 +664,7 @@ export default function UsageDetailPage() {
 
             {/* Log Picker */}
             <div className="h-[calc(100vh-400px)] min-h-[600px]">
-              <LogPicker
+              <Log
                 data={filteredRecords}
                 columns={columns}
                 renderDetail={renderDetail}

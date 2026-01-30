@@ -6,8 +6,8 @@ import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset"
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { type PhoneNumber, PhoneNumberPicker } from "@/components/phone-number-picker";
-import { TagInputPicker } from "@/components/tag-input-picker";
+import { type PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
+import { TagInput } from "@/components/tag+input";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -603,7 +603,7 @@ export default function SettingsPage() {
                         control={profileForm.control}
                         name="phoneNumber"
                         render={({ field, fieldState: { error } }) => (
-                          <PhoneNumberPicker
+                          <PhoneNumberField
                             id="phone-number"
                             label="Phone Number"
                             value={field.value || { number: "", countryCode: "US" }}
@@ -935,7 +935,7 @@ export default function SettingsPage() {
               control={inviteMemberForm.control}
               name="emails"
               render={({ field, fieldState: { error } }) => (
-                <TagInputPicker
+                <TagInput
                   {...field}
                   id="invite-emails"
                   label="Email Addresses"

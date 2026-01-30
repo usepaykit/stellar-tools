@@ -13,7 +13,7 @@ type HelpTextProps = React.ComponentProps<"p">;
 
 type SelectTriggerProps = React.ComponentProps<typeof SelectTrigger>;
 
-interface SelectPickerProps
+export interface SelectFieldProps
   extends
     Omit<React.ComponentProps<typeof Select>, "value" | "onValueChange">,
     MixinProps<"trigger", Omit<SelectTriggerProps, "children">>,
@@ -33,7 +33,7 @@ interface SelectPickerProps
   placeholder?: string;
 }
 
-export const SelectPicker = ({
+export const SelectField = ({
   id,
   value,
   onChange,
@@ -44,7 +44,7 @@ export const SelectPicker = ({
   isLoading = false,
   placeholder = "Select…",
   ...mixProps
-}: SelectPickerProps) => {
+}: SelectFieldProps) => {
   const {
     label: labelProps,
     error: errorProps,
@@ -68,8 +68,12 @@ export const SelectPicker = ({
         </p>
       )}
 
-      <Select {...rest} value={value} onValueChange={(v) => onChange(v)}>
-        <SelectTrigger {...triggerProps} className={cn("w-full", triggerProps?.className)}>
+      <Select {...rest} value={value} onValueChange={(v) => onChange(v)} >
+        <SelectTrigger
+          {...triggerProps}
+          aria-invalid={!!error}
+          className={cn("w-full", triggerProps?.className)}
+        >
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

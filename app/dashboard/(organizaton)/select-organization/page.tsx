@@ -2,16 +2,16 @@
 
 import * as React from "react";
 
+import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import {
   postOrganization,
   postOrganizationSecret,
   retrieveOrganizations,
   setCurrentOrganization,
 } from "@/actions/organization";
-import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
-import { PhoneNumber, PhoneNumberPicker, phoneNumberToString } from "@/components/phone-number-picker";
+import { type PhoneNumber, PhoneNumberField, phoneNumberToString } from "@/components/phone-number-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -329,7 +329,7 @@ const CreateOrganizationModal = ({
                 control={form.control}
                 name="logo"
                 render={({ field, fieldState: { error } }) => (
-                  <FileUploadPicker
+                  <FileUpload
                     label="Organization Logo"
                     id="organization-logo"
                     value={field.value ?? []}
@@ -405,7 +405,7 @@ const CreateOrganizationModal = ({
                   };
 
                   return (
-                    <PhoneNumberPicker
+                    <PhoneNumberField
                       id={field.name}
                       label="Phone Number"
                       value={phoneValue}

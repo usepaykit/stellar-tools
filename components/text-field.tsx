@@ -53,6 +53,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
           value={value}
           onChange={(e) => onChange(e.target.value)}
           {...rest}
+          aria-invalid={!!error}
           className={cn("w-full", rest.className)}
         />
 
@@ -111,6 +112,7 @@ export const TextAreaField = React.forwardRef<HTMLTextAreaElement, TextAreaField
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={cn("w-full", rest.className)}
+          aria-invalid={!!error}
         />
 
         {error && (

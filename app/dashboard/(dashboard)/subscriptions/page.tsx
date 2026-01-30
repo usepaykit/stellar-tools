@@ -8,9 +8,9 @@ import { postSubscriptionsBulk, retrieveSubscriptions } from "@/actions/subscrip
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable } from "@/components/data-table";
-import { DatePicker } from "@/components/date-picker";
+import { DateField } from "@/components/date-field";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { ResourcePicker } from "@/components/resource-picker";
+import { ResourceField } from "@/components/resource-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -148,7 +148,7 @@ export function CreateSubscriptionModal({
     >
       <div className="mx-auto max-w-5xl space-y-10 py-4">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-          <ResourcePicker
+          <ResourceField
             isLoading={isLoadingCustomers}
             label="Target Customers"
             items={allCustomers ?? []}
@@ -157,7 +157,7 @@ export function CreateSubscriptionModal({
             onChange={(ids) => setForm({ ...form, customerIds: ids })}
             renderItem={(c) => ({ id: c.id, title: c.name!, subtitle: c.email!, searchValue: `${c.name} ${c.email}` })}
           />
-          <ResourcePicker
+          <ResourceField
             isLoading={isLoadingProducts}
             label="Subscription Plan"
             items={allProducts?.filter((p) => p.type === "subscription") ?? []}
@@ -178,7 +178,7 @@ export function CreateSubscriptionModal({
               <Calendar className="text-muted-foreground size-4" />
               <h3 className="text-foreground/70 text-sm font-black tracking-widest uppercase">Billing Logic</h3>
             </div>
-            <DatePicker
+            <DateField
               id="billingPeriod"
               mode="range"
               label="Active Period"

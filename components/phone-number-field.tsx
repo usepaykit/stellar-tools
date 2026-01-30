@@ -24,7 +24,6 @@ export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
   const prefix = phone?.[0] ? `+${phone[0]}` : "+1";
   const digits = phoneNumber.number.replace(/[^\d]/g, "");
 
-  // Format as (XXX) XXX-XXXX for 10-digit numbers
   if (digits.length === 10) {
     return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
@@ -56,7 +55,7 @@ export const phoneNumberFromString = (phoneNumber: string): PhoneNumber => {
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 
-export interface PhoneNumberPickerProps
+export interface PhoneNumberFieldProps
   extends
     MixinProps<"flag", React.ComponentProps<(typeof CountryFlags)[TCountryCode]>>,
     MixinProps<"label", Omit<LabelProps, "children">>,
@@ -96,8 +95,8 @@ const CountryFlag = React.memo(({ countryCode, className }: { countryCode: strin
 
 CountryFlag.displayName = "CountryFlag";
 
-export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberPickerProps>(
-  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberPickerProps, ref) => {
+export const PhoneNumberField = React.forwardRef<HTMLInputElement, PhoneNumberFieldProps>(
+  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberFieldProps, ref) => {
     const {
       group,
       label: labelProps,
@@ -246,4 +245,4 @@ export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberP
   }
 );
 
-PhoneNumberPicker.displayName = "PhoneNumberPicker";
+PhoneNumberField.displayName = "PhoneNumberField";

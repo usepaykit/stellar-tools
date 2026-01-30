@@ -12,7 +12,7 @@ import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 
-export interface MarkdownPickerProps
+export interface MarkdownProps
   extends
     Omit<React.ComponentProps<typeof ReactMarkdown>, "components" | "remarkPlugins" | "rehypePlugins">,
     MixinProps<"container", Omit<React.ComponentProps<"div">, "children">>,
@@ -20,7 +20,7 @@ export interface MarkdownPickerProps
   content: string;
 }
 
-export const MarkdownPicker = ({ content, ...mixProps }: MarkdownPickerProps) => {
+export const Markdown = ({ content, ...mixProps }: MarkdownProps) => {
   const { container, codeBlock, rest } = splitProps(mixProps, "container", "codeBlock");
 
   return (

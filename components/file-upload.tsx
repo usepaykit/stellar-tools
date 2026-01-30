@@ -16,7 +16,7 @@ export interface FileWithPreview extends File {
   preview: string;
 }
 
-interface FileUploadPickerProps
+interface FileUploadProps
   extends
     MixinProps<"dropzone", Omit<DropzoneOptions, "onDrop">>,
     MixinProps<"label", Omit<LabelProps, "children">>,
@@ -43,7 +43,7 @@ interface FileUploadPickerProps
   error?: ErrorProps["children"];
 }
 
-export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPickerProps>(
+export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
   (
     {
       value = [],
@@ -139,6 +139,8 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
 
         <div
           {...getRootProps()}
+          aria-disabled={disabled || isTransforming}
+          aria-invalid={!!error}
           className={cn(
             "group border-input bg-muted/5 relative flex h-64 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all",
             isDragActive && "border-primary bg-primary/5 ring-primary/10 ring-4",
@@ -147,7 +149,18 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
             hasFile && !hasImage && "bg-background border-solid"
           )}
         >
-          <input ref={ref} {...getInputProps({ id })} />
+          <input
+            ref={ref}
+            {...getInputProps({
+              id,
+        
+             
+          
+            })}
+            aria-label={typeof label === "string" ? label : "Upload file"}
+            disabled={disabled || isTransforming}
+            aria-invalid={!!error}
+          />
 
           {isTransforming && (
             <div className="bg-background/80 absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
@@ -207,4 +220,4 @@ export const FileUploadPicker = React.forwardRef<HTMLInputElement, FileUploadPic
   }
 );
 
-FileUploadPicker.displayName = "FileUploadPicker";
+FileUpload.displayName = "FileUpload";

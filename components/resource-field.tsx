@@ -16,18 +16,18 @@ import { Label } from "./ui/label";
 type ErrorProps = React.ComponentProps<"p">;
 type LabelProps = React.ComponentProps<"label">;
 
-interface PickerItem {
+export interface ResourceFieldItem {
   id: string;
   title: string;
   subtitle?: string;
   searchValue: string;
 }
 
-interface ResourcePickerProps<T> extends MixinProps<"error", Omit<ErrorProps, "children">> {
+export interface ResourceFieldProps<T> extends MixinProps<"error", Omit<ErrorProps, "children">> {
   items: T[];
   value: string[];
   onChange: (value: string[]) => void;
-  renderItem: (item: T) => PickerItem;
+  renderItem: (item: T) => ResourceFieldItem;
   placeholder?: string;
   multiple?: boolean;
   isLoading?: boolean;
@@ -43,7 +43,7 @@ interface ResourcePickerProps<T> extends MixinProps<"error", Omit<ErrorProps, "c
 
 const SelectionRibbon = ({ items, onRemove, onClear }: any) => (
   <div className="animate-in fade-in slide-in-from-top-1 flex flex-wrap items-center gap-1.5 duration-200">
-    {items.map((item: PickerItem) => (
+    {items.map((item: ResourceFieldItem) => (
       <Badge
         key={item.id}
         variant="secondary"
@@ -65,7 +65,7 @@ const SelectionRibbon = ({ items, onRemove, onClear }: any) => (
   </div>
 );
 
-const PickerRow = React.memo(({ item, isSelected, onClick }: any) => (
+const ResourceFieldRow = React.memo(({ item, isSelected, onClick }: any) => (
   <div
     onClick={() => onClick(item.id)}
     className={cn(
@@ -100,11 +100,11 @@ const PickerRow = React.memo(({ item, isSelected, onClick }: any) => (
     </div>
   </div>
 ));
-PickerRow.displayName = "PickerRow";
+ResourceFieldRow.displayName = "ResourceFieldRow";
 
 // --- Main Component ---
 
-export function ResourcePicker<T>({
+export function ResourceField<T>({
   items,
   value,
   onChange,
@@ -119,7 +119,7 @@ export function ResourcePicker<T>({
   error,
   label,
   ...mixProps
-}: ResourcePickerProps<T>) {
+}: ResourceFieldProps<T>) {
   const [query, setQuery] = React.useState("");
   const [isFocused, setIsFocused] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -216,7 +216,7 @@ export function ResourcePicker<T>({
               ) : (
                 <div className="divide-border/40 divide-y">
                   {filteredItems.map((item) => (
-                    <PickerRow
+                    <ResourceFieldRow
                       key={item.id}
                       item={item}
                       multiple={multiple}

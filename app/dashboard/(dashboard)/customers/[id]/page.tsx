@@ -13,9 +13,9 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable } from "@/components/data-table";
-import { DateTimePicker } from "@/components/date-picker";
+import { DateTimeField } from "@/components/date-field";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { SelectPicker } from "@/components/select-picker";
+import { SelectField } from "@/components/select-field";
 import { TextAreaField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
@@ -422,7 +422,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
             control={form.control}
             name="productId"
             render={({ field }) => (
-              <SelectPicker
+              <SelectField
                 id="productId"
                 label="Product"
                 items={products ?? []}
@@ -451,7 +451,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
             control={form.control}
             name="expiresAt"
             render={({ field }) => (
-              <DateTimePicker id="expiresAt" label="Expiration" value={field.value} onChange={field.onChange} />
+              <DateTimeField id="expiresAt" label="Expiration" value={field.value} onChange={field.onChange} />
             )}
           />
         </div>

@@ -16,7 +16,7 @@ type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
 
-export interface DateTimePickerProps
+export interface DateTimeFieldProps
   extends
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
@@ -36,7 +36,7 @@ export interface DateTimePickerProps
   layout?: "horizontal" | "vertical";
 }
 
-export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerProps>(
+export const DateTimeField = React.forwardRef<HTMLDivElement, DateTimeFieldProps>(
   (
     {
       id,
@@ -86,6 +86,7 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
                   id={`${id}-date`}
                   variant="outline"
                   disabled={disabled}
+                  aria-invalid={!!error}
                   data-empty={!value.date}
                   className={cn("data-[empty=true]:text-muted-foreground w-full justify-start text-left font-normal")}
                 >
@@ -118,6 +119,7 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
               onChange={(e) => onChange({ ...value, time: e.target.value || undefined })}
               placeholder={timePlaceholder}
               disabled={disabled}
+              aria-invalid={!!error}
               className={cn(
                 "bg-background w-full appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
               )}
@@ -135,9 +137,9 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
   }
 );
 
-DateTimePicker.displayName = "DateTimePicker";
+DateTimeField.displayName = "DateTimeField";
 
-export interface DatePickerProps
+export interface DateFieldProps
   extends
     MixinProps<"label", React.ComponentPropsWithoutRef<typeof Label>>,
     MixinProps<"error", React.ComponentPropsWithoutRef<"p">>,
@@ -156,7 +158,7 @@ export interface DatePickerProps
   dateFormat?: string; // Moment format, e.g., "MMMM DD, YYYY"
 }
 
-export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
+export const DateField = React.forwardRef<HTMLInputElement, DateFieldProps>(
   (
     {
       id,
@@ -234,6 +236,8 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
             value={inputValue}
             placeholder={placeholder}
             disabled={disabled}
+            aria-disabled={disabled}
+            aria-invalid={!!error}
             onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === "ArrowDown") {
@@ -252,6 +256,8 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
                 type="button"
                 variant="ghost"
                 disabled={disabled}
+                aria-disabled={disabled}
+                aria-invalid={!!error}
                 className="absolute right-2 size-7 p-0 hover:bg-transparent"
               >
                 <CalendarIcon className="text-muted-foreground size-4" />
@@ -302,4 +308,4 @@ export const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
   }
 );
 
-DatePicker.displayName = "DatePicker";
+DateField.displayName = "DateField";

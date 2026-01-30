@@ -1,14 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { ColumnDef } from "@tanstack/react-table";
-import { ChevronRight, Copy, ExternalLink, Info, Plus } from "lucide-react";
-import { nanoid } from "nanoid";
-import * as RHF from "react-hook-form";
-import { z } from "zod";
 
 import { deleteApiKey, postApiKey, putApiKey, retrieveApiKeys } from "@/actions/apikey";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -30,6 +22,14 @@ import { toast } from "@/components/ui/toast";
 import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { ColumnDef } from "@tanstack/react-table";
+import { ChevronRight, Copy, ExternalLink, Info, Plus } from "lucide-react";
+import { nanoid } from "nanoid";
+import Link from "next/link";
+import * as RHF from "react-hook-form";
+import { z } from "zod";
 
 const apiKeySchema = z.object({
   name: z
@@ -318,8 +318,8 @@ export default function ApiKeysPage() {
               <li>Deletion cannot be undone</li>
             </ul>
           </div>
-          <div className="border-red-500/30 bg-red-500/5 rounded-lg border p-4">
-            <p className="text-red-800 dark:text-red-200 text-sm">
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4">
+            <p className="text-sm text-red-800 dark:text-red-200">
               <strong>Warning:</strong> Deleting this key is permanent. If anything is still using it, those
               integrations will stop working immediately.
             </p>
@@ -370,8 +370,8 @@ export default function ApiKeysPage() {
               <li>Revocation cannot be undone</li>
             </ul>
           </div>
-          <div className="border-amber-500/30 bg-amber-500/5 rounded-lg border p-4">
-            <p className="text-amber-800 dark:text-amber-200 text-sm">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
               <strong>Before you continue:</strong> Make sure no critical services are depending on this key. Update
               your environment variables or configs to use a different key if needed.
             </p>
@@ -480,9 +480,7 @@ function ApiKeyModal({
     <FullScreenModal
       open={open}
       onOpenChange={handleOpenChange}
-      title={
-        isEditMode ? "Edit API key" : createdApiKey ? "API key created" : "Create secret key"
-      }
+      title={isEditMode ? "Edit API key" : createdApiKey ? "API key created" : "Create secret key"}
       description={
         isEditMode
           ? "Update the name of your API key."
@@ -496,11 +494,7 @@ function ApiKeyModal({
         <div className="flex w-full items-center justify-end gap-3">
           {isEditMode ? (
             <>
-              <Button
-                variant="outline"
-                onClick={() => handleOpenChange(false)}
-                disabled={updateMutation.isPending}
-              >
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={updateMutation.isPending}>
                 Cancel
               </Button>
               <Button
