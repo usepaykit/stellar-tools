@@ -1,24 +1,22 @@
 import crypto from "crypto";
 
-export class Encryption {
+export class EncryptionApi {
   private readonly algorithm = "aes-256-gcm";
   private readonly keyLength = 32;
   private readonly ivLength = 16;
   private readonly tagLength = 16;
 
-  private getEncryptionKey(version: number): Buffer {
-    const key = process.env[`MASTER_ENCRYPTION_KEY_V${version}`];
+  private getEncryptionKey(): Buffer {
+    const key = process.env.MASTER_ENCRYPTION_KEY;
 
-    if (!key) {
-      throw new Error(`Encryption key version ${version} not found`);
-    }
+    if (!key) throw new Error("Encryption key not found");
 
     const salt = Buffer.from(process.env.ENCRYPTION_SALT!, "hex");
     return crypto.pbkdf2Sync(key, salt, 100000, this.keyLength, "sha512");
   }
 
-  encrypt(plaintext: string, version: number) {
-    const key = this.getEncryptionKey(version);
+  encrypt(plaintext: string) {
+    const key = this.getEncryptionKey();
 
     const iv = crypto.randomBytes(this.ivLength);
     const cipher = crypto.createCipheriv(this.algorithm, key, iv);
@@ -31,8 +29,8 @@ export class Encryption {
     return iv.toString("hex") + authTag.toString("hex") + encrypted;
   }
 
-  decrypt(encrypted: string, version: number): string {
-    const key = this.getEncryptionKey(version);
+  decrypt(encrypted: string): string {
+    const key = this.getEncryptionKey();
 
     const ivHex = encrypted.slice(0, this.ivLength * 2);
     const authTagHex = encrypted.slice(this.ivLength * 2, (this.ivLength + this.tagLength) * 2);
@@ -50,10 +48,8 @@ export class Encryption {
     return decrypted;
   }
 
-  reencrypt(encrypted: string, oldVersion: number, newVersion: number): string {
-    const decrypted = this.decrypt(encrypted, oldVersion);
-    return this.encrypt(decrypted, newVersion);
+  reencrypt(encrypted: string): string {
+    const decrypted = this.decrypt(encrypted);
+    return this.encrypt(decrypted);
   }
 }
-
-export const encryption = new Encryption();

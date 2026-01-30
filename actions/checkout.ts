@@ -77,6 +77,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
         name: products.name,
         recurringPeriod: products.recurringPeriod,
       },
+      assets: { code: assets.code, issuer: assets.issuer },
       finalAmount: sql<number>`COALESCE(${checkouts.amount}, ${products.priceAmount})`.as("final_amount"),
       merchantPublicKey: sql<string>`
       CASE 
@@ -88,9 +89,10 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     .leftJoin(customers, eq(checkouts.customerId, customers.id))
     .leftJoin(organizationSecrets, eq(checkouts.organizationId, organizationSecrets.organizationId))
     .leftJoin(products, eq(checkouts.productId, products.id))
+    .leftJoin(assets, eq(products.assetId, assets.id))
     .where(eq(checkouts.id, id));
 
-  const { checkout, customer, finalAmount, merchantPublicKey, product } = result;
+  const { checkout, customer, finalAmount, merchantPublicKey, product, assets: assets$1 } = result;
 
   return {
     ...checkout,
@@ -103,6 +105,8 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     hasPhone: !!(customer?.phone || checkout.customerPhone),
     customerEmail: customer?.email || checkout.customerEmail,
     customerPhone: customer?.phone || checkout.customerPhone,
+    assetCode: assets$1?.code ?? null,
+    assetIssuer: assets$1?.issuer ?? null,
   };
 };
 
@@ -183,20 +187,26 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
   const { checkout, product, asset } = result;
 
   const rawAmount = product?.priceAmount ?? checkout.amount ?? 0;
-  const assetCode = asset?.code ?? "XLM";
+  const assetCode = asset!.code!;
+  const assetIssuer = asset!.issuer!;
 
   // Normalize units (Stellar uses 7 decimal places)
   const amountNormalized = (rawAmount / 10_000_000).toFixed(7);
 
   const stellar = new StellarCoreApi(result.checkout.environment);
 
-  const paymentUri = stellar.makePaymentURI({
+  const paymentUri = stellar.makeCheckoutURI({
+    id: checkout.id,
+    network: result.checkout.environment,
+    productId: product!.id,
+    currentPeriodEnd: null,
     destination: secret.publicKey,
     amount: amountNormalized,
-    assetCode: assetCode === "XLM" ? undefined : assetCode,
-    assetIssuer: asset?.issuer ?? undefined,
+    assetCode,
+    assetIssuer,
     memo: checkout.id,
     callback: checkout.successUrl ?? undefined,
+    type: product!.type,
   });
 
   return {

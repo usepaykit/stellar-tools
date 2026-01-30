@@ -112,9 +112,9 @@ export const refreshTxStatus = async (
 
   const txResult = await stellar.retrieveTx(transactionHash);
 
-  if (txResult.error) throw new Error(txResult.error);
+  if (txResult.isErr()) throw new Error(txResult.error?.message);
 
-  if (txResult.data?.successful) {
+  if (txResult.value?.successful) {
     putPayment(paymentId, organizationId, { status: "confirmed" });
   } else {
     putPayment(paymentId, organizationId, { status: "failed" });

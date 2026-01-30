@@ -2,7 +2,12 @@
 
 import * as React from "react";
 
-import { postOrganization, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
+import {
+  postOrganization,
+  postOrganizationSecret,
+  retrieveOrganizations,
+  setCurrentOrganization,
+} from "@/actions/organization";
 import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
@@ -13,6 +18,8 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { EncryptionApi } from "@/integrations/encryption";
+import { StellarCoreApi } from "@/integrations/stellar-core";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -30,16 +37,10 @@ export default function SelectOrganizationPage() {
   const showCreate = searchParams.get("create") === "true";
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(showCreate ? true : false);
 
-  const {
-    data: organizations,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: organizations, isLoading } = useQuery({
     queryKey: ["organizations"],
     queryFn: () => retrieveOrganizations(),
   });
-
-  console.log({ organizations, isLoading, error });
 
   const hasOrganizations = !!(organizations && organizations.length > 0);
 
@@ -198,7 +199,17 @@ const CreateOrganizationModal = ({
     mutationFn: async (data: CreateOrganizationFormData) => {
       const formData = new FormData();
 
+      const defaultEnvironment = "testnet" as const;
+
       if (data.logo?.[0]) formData.append("logo", data.logo[0]);
+
+      /**
+       * Creates a testnet account for the organization
+       * Mainnet account is created later when the organization is activated
+       */
+      const account = await new StellarCoreApi(defaultEnvironment).createAccount();
+
+      if (account.isErr()) throw new Error(account.error?.message);
 
       const org = await postOrganization(
         {
@@ -214,6 +225,21 @@ const CreateOrganizationModal = ({
           socialLinks: null,
         },
         formData
+      );
+
+      const encryption = new EncryptionApi();
+
+      await postOrganizationSecret(
+        {
+          testnetSecretEncrypted: encryption.encrypt(account.value!.keypair.secret()),
+          testnetSecretVersion: parseInt(process.env.NEXT_PUBLIC_CURRENT_ENCRYPTION_KEY_VERSION!) || 1,
+          testnetPublicKey: account.value!.keypair.publicKey(),
+          mainnetSecretEncrypted: null,
+          mainnetSecretVersion: 0,
+          mainnetPublicKey: null,
+        },
+        org.id,
+        "testnet"
       );
 
       return org;
