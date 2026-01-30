@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const buildSubscriptionXDRSchema = Schema.object({
   merchantAddress: Schema.string(),
-  network: networkEnum,
+  network: Schema.enum(networkEnum),
   productId: Schema.string(),
   amount: Schema.string(),
   periodEnd: Schema.string(),
