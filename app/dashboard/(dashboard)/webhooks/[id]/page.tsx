@@ -3,10 +3,10 @@
 import * as React from "react";
 
 import { retrieveWebhookLogs } from "@/actions/webhook";
-import { CodeBlock } from "@/components/code+block";
+import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { LogDetailItem, LogDetailSection, Log } from "@/components/log";
+import { Log, LogDetailItem, LogDetailSection } from "@/components/log";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,

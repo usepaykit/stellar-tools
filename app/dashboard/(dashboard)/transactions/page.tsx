@@ -6,9 +6,9 @@ import { retrievePayment, retrievePaymentsWithDetails } from "@/actions/payment"
 import { postRefund } from "@/actions/refund";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data+table";
+import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextAreaField, TextField } from "@/components/text+field";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

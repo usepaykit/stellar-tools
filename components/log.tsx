@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { DataTable } from "@/components/data+table";
+import { DataTable } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FileSearch, X } from "lucide-react";

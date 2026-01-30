@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { DataTable, type TableAction } from "./data+table";
+
+import { DataTable, type TableAction } from "./data-table";
 import { Badge } from "./ui/badge";
 
 type Person = {

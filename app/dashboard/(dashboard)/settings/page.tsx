@@ -4,11 +4,11 @@ import * as React from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data+table";
+import { DataTable, TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { type PhoneNumberValue, PhoneNumber } from "@/components/phone+number";
+import { type PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
 import { TagInput } from "@/components/tag+input";
-import { TextAreaField, TextField } from "@/components/text+field";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,7 +47,7 @@ const mockUser = {
   id: "user_123",
   name: "Prince Ajuzie",
   email: "princeajuzie1@gmail.com",
-  phoneNumber: { number: "1234567890", countryCode: "US" } as PhoneNumberValue,
+  phoneNumber: { number: "1234567890", countryCode: "US" } as PhoneNumber,
   avatar: null,
   joinedAt: new Date("2024-12-01"),
 };
@@ -603,7 +603,7 @@ export default function SettingsPage() {
                         control={profileForm.control}
                         name="phoneNumber"
                         render={({ field, fieldState: { error } }) => (
-                          <PhoneNumber
+                          <PhoneNumberField
                             id="phone-number"
                             label="Phone Number"
                             value={field.value || { number: "", countryCode: "US" }}

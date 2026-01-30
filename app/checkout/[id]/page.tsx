@@ -3,8 +3,8 @@
 import * as React from "react";
 
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
-import { type PhoneNumberValue, PhoneNumber } from "@/components/phone+number";
-import { TextField } from "@/components/text+field";
+import { type PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
+import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -299,13 +299,13 @@ export default function CheckoutPage() {
                       name="phoneNumber"
                       control={form.control}
                       render={({ field, fieldState: { error } }) => {
-                        const phoneValue: PhoneNumberValue = {
+                        const phoneValue: PhoneNumber = {
                           number: field.value?.number || "",
                           countryCode: field.value?.countryCode || "US",
                         };
 
                         return (
-                          <PhoneNumber
+                          <PhoneNumberField
                             id="phone"
                             value={phoneValue}
                             onChange={field.onChange}

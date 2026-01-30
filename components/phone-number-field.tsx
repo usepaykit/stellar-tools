@@ -14,14 +14,12 @@ import { countries } from "country-flag-icons";
 import * as CountryFlags from "country-flag-icons/react/3x2";
 import { Check } from "lucide-react";
 
-export interface PhoneNumberValue {
+export interface PhoneNumber {
   number: string;
   countryCode: string;
 }
 
-
-
-export const phoneNumberToString = (phoneNumber: PhoneNumberValue) => {
+export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
   const { phone } = getCountryData(phoneNumber.countryCode as TCountryCode);
   const prefix = phone?.[0] ? `+${phone[0]}` : "+1";
   const digits = phoneNumber.number.replace(/[^\d]/g, "");
@@ -33,7 +31,7 @@ export const phoneNumberToString = (phoneNumber: PhoneNumberValue) => {
   return `${prefix} ${digits}`;
 };
 
-export const phoneNumberFromString = (phoneNumber: string): PhoneNumberValue => {
+export const phoneNumberFromString = (phoneNumber: string): PhoneNumber => {
   const countryCodeMatch = phoneNumber.match(/^(\+\d{1,4})/);
 
   if (!countryCodeMatch) return { number: phoneNumber, countryCode: "US" };
@@ -57,7 +55,7 @@ export const phoneNumberFromString = (phoneNumber: string): PhoneNumberValue => 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 
-export interface PhoneNumberProps
+export interface PhoneNumberFieldProps
   extends
     MixinProps<"flag", React.ComponentProps<(typeof CountryFlags)[TCountryCode]>>,
     MixinProps<"label", Omit<LabelProps, "children">>,
@@ -65,8 +63,8 @@ export interface PhoneNumberProps
     MixinProps<"error", Omit<ErrorProps, "children">>,
     MixinProps<"group", Omit<React.ComponentProps<typeof InputGroup>, "children">> {
   id: string;
-  value: PhoneNumberValue;
-  onChange: (v: PhoneNumberValue) => void;
+  value: PhoneNumber;
+  onChange: (v: PhoneNumber) => void;
   disabled?: boolean;
   label: LabelProps["children"] | null;
   error: ErrorProps["children"] | null;
@@ -97,8 +95,8 @@ const CountryFlag = React.memo(({ countryCode, className }: { countryCode: strin
 
 CountryFlag.displayName = "CountryFlag";
 
-export const PhoneNumber = React.forwardRef<HTMLInputElement, PhoneNumberProps>(
-  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberProps, ref) => {
+export const PhoneNumberField = React.forwardRef<HTMLInputElement, PhoneNumberFieldProps>(
+  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberFieldProps, ref) => {
     const {
       group,
       label: labelProps,
@@ -247,4 +245,4 @@ export const PhoneNumber = React.forwardRef<HTMLInputElement, PhoneNumberProps>(
   }
 );
 
-PhoneNumber.displayName = "PhoneNumber";
+PhoneNumberField.displayName = "PhoneNumberField";

@@ -4,20 +4,20 @@ import * as React from "react";
 import { useState } from "react";
 
 import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
-import { CodeBlock } from "@/components/code+block";
+import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data+table";
-import { FileUpload, FileWithPreview } from "@/components/file+upload";
+import { DataTable, TableAction } from "@/components/data-table";
+import { FileUpload, FileWithPreview } from "@/components/file-upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
-  type PhoneNumberValue,
-  PhoneNumber,
+  type PhoneNumber,
+  PhoneNumberField,
   phoneNumberFromString,
   phoneNumberToString,
-} from "@/components/phone+number";
-import { SelectField } from "@/components/select+field";
-import { TextField } from "@/components/text+field";
+} from "@/components/phone-number-field";
+import { SelectField } from "@/components/select-field";
+import { TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -431,13 +431,13 @@ export function CustomerModal({
               control={form.control}
               name="phoneNumber"
               render={({ field, fieldState: { error } }) => {
-                const phoneValue: PhoneNumberValue = {
+                const phoneValue: PhoneNumber = {
                   number: field.value?.number || "",
                   countryCode: field.value?.countryCode || "US",
                 };
 
                 return (
-                  <PhoneNumber
+                  <PhoneNumberField
                     id="phone"
                     value={phoneValue}
                     onChange={field.onChange}

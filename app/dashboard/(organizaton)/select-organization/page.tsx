@@ -3,11 +3,11 @@
 import * as React from "react";
 
 import { postOrganization, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
-import { FileUpload, type FileWithPreview } from "@/components/file+upload";
+import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
-import { type PhoneNumberValue, PhoneNumber, phoneNumberToString } from "@/components/phone+number";
-import { TextAreaField, TextField } from "@/components/text+field";
+import { type PhoneNumber, PhoneNumberField, phoneNumberToString } from "@/components/phone-number-field";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -373,13 +373,13 @@ const CreateOrganizationModal = ({
                 control={form.control}
                 name="phoneNumber"
                 render={({ field, fieldState: { error } }) => {
-                  const phoneValue: PhoneNumberValue = {
+                  const phoneValue: PhoneNumber = {
                     number: field.value?.number || "",
                     countryCode: field.value?.countryCode || "US",
                   };
 
                   return (
-                    <PhoneNumber
+                    <PhoneNumberField
                       id={field.name}
                       label="Phone Number"
                       value={phoneValue}

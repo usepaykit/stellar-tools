@@ -1,16 +1,9 @@
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import type { FileWithPreview } from "./file+upload";
-import { FileUpload } from "./file+upload";
 
-// 1x1 transparent PNG data URL for image preview in stories
-const TINY_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+import type { Meta, StoryObj } from "@storybook/react";
 
-function createImageFile(name: string): FileWithPreview {
-  const file = new File([], name, { type: "image/png" });
-  return Object.assign(file, { preview: TINY_PNG });
-}
+import type { FileWithPreview } from "./file-upload";
+import { FileUpload } from "./file-upload";
 
 function createNonImageFile(name: string, type: string): FileWithPreview {
   const file = new File([], name, { type });
@@ -20,7 +13,7 @@ function createNonImageFile(name: string, type: string): FileWithPreview {
 const FileUploadWithState = (args: any) => {
   const [value, setValue] = useState<FileWithPreview[]>(args.value ?? []);
   return (
-    <div className="min-w-[400px] w-full max-w-md">
+    <div className="w-full max-w-md min-w-[400px]">
       <FileUpload
         value={value}
         onFilesChange={setValue}
@@ -121,48 +114,11 @@ export const WithoutLabel: Story = {
   } as any,
 };
 
-export const CustomPlaceholder: Story = {
-  render: (args) => <FileUploadWithState {...args} />,
-  args: {
-    label: "Upload file",
-    placeholder: "Click or drop your file here",
-  } as any,
-};
-
-export const WithInitialImage: Story = {
-  render: (args) => <FileUploadWithState {...args} />,
-  args: {
-    label: "Upload file",
-    placeholder: "Drag & drop an image here, or click to select",
-    value: [createImageFile("example.png")],
-  } as any,
-};
-
-export const WithInitialFile: Story = {
+export const WithNonImageFile: Story = {
   render: (args) => <FileUploadWithState {...args} />,
   args: {
     label: "Upload file",
     placeholder: "Drag & drop an image here, or click to select",
     value: [createNonImageFile("document.pdf", "application/pdf")],
-  } as any,
-};
-
-export const Multiple: Story = {
-  render: (args) => <FileUploadWithState {...args} />,
-  args: {
-    label: "Upload files",
-    placeholder: "Drag & drop images here, or click to select",
-    description: "You can select multiple files",
-    dropzoneMultiple: true,
-  } as any,
-};
-
-export const AcceptImagesOnly: Story = {
-  render: (args) => <FileUploadWithState {...args} />,
-  args: {
-    label: "Upload image",
-    placeholder: "Drag & drop an image here, or click to select",
-    description: "Only PNG, JPG and GIF",
-    dropzoneAccept: { "image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"], "image/gif": [".gif"] },
   } as any,
 };

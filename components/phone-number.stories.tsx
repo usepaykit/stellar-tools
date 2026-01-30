@@ -2,11 +2,11 @@ import { useState } from "react";
 
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { type PhoneNumberValue, PhoneNumber } from "./phone+number";
+import { type PhoneNumber, PhoneNumberField } from "./phone-number-field";
 
 const meta = {
-  title: "Components/PhoneNumber",
-  component: PhoneNumber,
+  title: "Components/PhoneNumberField",
+  component: PhoneNumberField,
   parameters: {
     layout: "centered",
   },
@@ -25,16 +25,16 @@ const meta = {
       control: "object",
     },
   },
-} satisfies Meta<typeof PhoneNumber>;
+} satisfies Meta<typeof PhoneNumberField>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 const PhoneNumberWithState = (args: any) => {
-  const [value, setValue] = useState<PhoneNumberValue>({ countryCode: "US", number: "" });
+  const [value, setValue] = useState<PhoneNumber>({ countryCode: "US", number: "" });
 
   return (
-    <PhoneNumber
+    <PhoneNumberField
       id="phone-number"
       value={value}
       onChange={setValue}
@@ -58,11 +58,7 @@ export const WithInitialValue: Story = {
 
 export const Disabled: Story = {
   render: () => (
-    <PhoneNumberWithState
-      label="Phone Number"
-      disabled={true}
-      value={{ countryCode: "US", number: "5551234567" }}
-    />
+    <PhoneNumberWithState label="Phone Number" disabled={true} value={{ countryCode: "US", number: "5551234567" }} />
   ),
   args: {} as any,
 };

@@ -1,5 +1,22 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { AreaChart } from "./area+chart";
+
+import { LineChart } from "./line-chart";
+
+const desktopData = [
+  { month: "January", desktop: 186 },
+  { month: "February", desktop: 305 },
+  { month: "March", desktop: 237 },
+  { month: "April", desktop: 73 },
+  { month: "May", desktop: 209 },
+  { month: "June", desktop: 214 },
+];
+
+const desktopConfig = {
+  desktop: {
+    label: "Desktop Users",
+    color: "hsl(var(--chart-1))",
+  },
+};
 
 const revenueData = [
   { date: "2024-03-13", revenue: 1200 },
@@ -39,8 +56,8 @@ const viewsConfig = {
 };
 
 const meta = {
-  title: "Components/AreaChart",
-  component: AreaChart,
+  title: "Components/LineChart",
+  component: LineChart,
   parameters: {
     layout: "centered",
   },
@@ -64,12 +81,22 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof AreaChart>;
+} satisfies Meta<typeof LineChart>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  args: {
+    data: desktopData,
+    config: desktopConfig,
+    xAxisKey: "month",
+    activeKey: "desktop",
+    color: "var(--chart-1)",
+  },
+};
+
+export const WithDates: Story = {
   args: {
     data: revenueData,
     config: revenueConfig,
@@ -90,7 +117,6 @@ export const LongSeries: Story = {
   },
 };
 
-
 export const NonDateXAxis: Story = {
   args: {
     data: viewsData,
@@ -109,9 +135,20 @@ export const CustomXAxisFormatter: Story = {
     activeKey: "revenue",
     color: "var(--chart-1)",
     xAxisFormatter: (value) => {
-      const d = new Date(value);
+      const d = new Date(value as string);
       return `${d.getMonth() + 1}/${d.getDate()}`;
     },
+  },
+};
+
+export const CustomTooltipLabelFormatter: Story = {
+  args: {
+    data: revenueData,
+    config: revenueConfig,
+    xAxisKey: "date",
+    activeKey: "revenue",
+    color: "var(--chart-1)",
+    tooltipLabelFormatter: (value) => `$${Number(value).toLocaleString()}`,
   },
 };
 

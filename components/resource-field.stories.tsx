@@ -1,6 +1,8 @@
-import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { ResourceField } from "./resource+field";
+
+import type { Meta, StoryObj } from "@storybook/react";
+
+import { ResourceField } from "./resource-field";
 
 type SampleResource = {
   id: string;
@@ -58,7 +60,7 @@ type Story = StoryObj<typeof meta>;
 const ResourceFieldWithState = (args: any) => {
   const [value, setValue] = useState<string[]>(args.value ?? []);
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-md h-[500px]">
       <ResourceField<SampleResource>
         items={args.items ?? sampleItems}
         value={value}

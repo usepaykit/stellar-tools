@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { CodeBlock } from "@/components/code+block";
+import { CodeBlock } from "@/components/code-block";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";

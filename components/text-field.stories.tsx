@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { TextAreaField, TextField } from "./text+field";
+import { TextAreaField, TextField } from "./text-field";
 
 const meta = {
   title: "Components/TextField",

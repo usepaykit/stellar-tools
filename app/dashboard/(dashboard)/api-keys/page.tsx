@@ -5,9 +5,9 @@ import * as React from "react";
 import { deleteApiKey, postApiKey, putApiKey, retrieveApiKeys } from "@/actions/apikey";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, type TableAction } from "@/components/data+table";
+import { DataTable, type TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { TextField } from "@/components/text+field";
+import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,

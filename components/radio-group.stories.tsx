@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import type { Meta, StoryObj } from "@storybook/react";
 
-import { RadioGroup } from "./radio+group";
+import { RadioGroup } from "./radio-group";
 
 const defaultItems = [
   { value: "option-a", label: "Option A" },

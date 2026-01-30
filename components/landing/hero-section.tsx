@@ -1,6 +1,6 @@
 import React from "react";
 
-import { CodeBlock } from "@/components/code+block";
+import { CodeBlock } from "@/components/code-block";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heroproviders } from "@/constant/hero-constant";
 import Image from "next/image";
