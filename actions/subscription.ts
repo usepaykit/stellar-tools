@@ -1,7 +1,7 @@
 "use server";
 
 import { Network, Subscription, customers, db, products, subscriptions } from "@/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
@@ -29,12 +29,8 @@ export const postSubscriptionsBulk = async (
   return await db.insert(subscriptions).values(values).returning();
 };
 
-export const retrieveSubscription = async (id: string, organizationId: string) => {
-  const [subscription] = await db
-    .select()
-    .from(subscriptions)
-    .where(and(eq(subscriptions.id, id), eq(subscriptions.organizationId, organizationId)))
-    .limit(1);
+export const retrieveSubscription = async (id: string) => {
+  const [subscription] = await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1);
 
   if (!subscription) throw new Error("Subscription not found");
 
@@ -109,4 +105,18 @@ export const deleteSubscription = async (id: string, orgId?: string, env?: Netwo
     .returning();
 
   return null;
+};
+
+export const retrieveDueSubscriptions = async () => {
+  const results = await db
+    .select({
+      subscription: { id: subscriptions.id, productId: subscriptions.productId },
+      customer: { walletAddresses: customers.walletAddresses },
+    })
+    .from(subscriptions)
+    .where(and(lt(subscriptions.nextBillingDate, new Date()), eq(subscriptions.status, "active")))
+    .innerJoin(customers, eq(subscriptions.customerId, customers.id))
+    .orderBy(desc(subscriptions.nextBillingDate));
+
+  return results;
 };

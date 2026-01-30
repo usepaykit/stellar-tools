@@ -1,7 +1,7 @@
+import { ProductType } from "@/constant/schema.client";
 import { Network } from "@/db";
-import { ApiResponse } from "@/types";
 import * as StellarSDK from "@stellar/stellar-sdk";
-import { Sep7Pay, Sep7Tx } from "@stellar/typescript-wallet-sdk";
+import { Result } from "@stellartools/core";
 
 export class StellarCoreApi {
   constructor(private network: Network) {}
@@ -20,11 +20,12 @@ export class StellarCoreApi {
     }
   }
 
-  async createAccount(
-    sourceSecret: string,
-    destinationPublicKey: string,
-    startingBalance: string
-  ): Promise<ApiResponse<StellarSDK.Horizon.AccountResponse | null>> {
+  async createAccount(): Promise<
+    Result<(StellarSDK.Horizon.AccountResponse & { keypair: StellarSDK.Keypair }) | null, Error>
+  > {
+    const sourceSecret = process.env.KEEPER_SECRET!;
+    const startingBalance = 1 * 1e7;
+
     const { networkPassphrase, server } = this.getServerAndNetwork();
 
     if (networkPassphrase == StellarSDK.Networks.TESTNET) {
@@ -34,7 +35,11 @@ export class StellarCoreApi {
 
       const account = await server.loadAccount(keypair.publicKey());
 
-      return { data: account, error: undefined };
+      const result = { ...account, keypair } as unknown as StellarSDK.Horizon.AccountResponse & {
+        keypair: StellarSDK.Keypair;
+      };
+
+      return Result.ok(result);
     }
 
     const sourceKeypair = StellarSDK.Keypair.fromSecret(sourceSecret);
@@ -46,8 +51,8 @@ export class StellarCoreApi {
     })
       .addOperation(
         StellarSDK.Operation.createAccount({
-          destination: destinationPublicKey,
-          startingBalance,
+          destination: sourceKeypair.publicKey(),
+          startingBalance: startingBalance.toString(),
         })
       )
       .setTimeout(30)
@@ -57,50 +62,11 @@ export class StellarCoreApi {
 
     await server.submitTransaction(transaction);
 
-    return { data: account };
-  }
+    const result = { ...account, keypair: sourceKeypair } as unknown as StellarSDK.Horizon.AccountResponse & {
+      keypair: StellarSDK.Keypair;
+    };
 
-  async fundAccount(
-    sourceSecret: string,
-    destinationPublicKey: string,
-    startingBalance: string
-  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> {
-    if (!StellarSDK.StrKey.isValidEd25519PublicKey(destinationPublicKey)) {
-      return {
-        data: null,
-        error: "Invalid destination public key",
-      };
-    }
-
-    try {
-      const { networkPassphrase, server } = this.getServerAndNetwork();
-      const sourceKeypair = StellarSDK.Keypair.fromSecret(sourceSecret);
-
-      const account = await server.loadAccount(sourceKeypair.publicKey());
-
-      const transaction = new StellarSDK.TransactionBuilder(account, {
-        fee: StellarSDK.BASE_FEE,
-        networkPassphrase,
-      })
-        .addOperation(
-          StellarSDK.Operation.createAccount({
-            destination: destinationPublicKey,
-            startingBalance,
-          })
-        )
-        .setTimeout(30)
-        .build();
-
-      transaction.sign(sourceKeypair);
-      const result = await server.submitTransaction(transaction);
-
-      return { data: result };
-    } catch (error) {
-      return {
-        data: null,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
+    return Result.ok(result);
   }
 
   /**
@@ -111,7 +77,7 @@ export class StellarCoreApi {
    */
   async submitSignedTransaction(
     signedTxXdr: string
-  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> {
+  ): Promise<Result<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, Error>> {
     try {
       const { server, networkPassphrase } = this.getServerAndNetwork();
 
@@ -121,12 +87,11 @@ export class StellarCoreApi {
       // Submit to network
       const result = await server.submitTransaction(signedTx);
 
-      return { data: result };
+      return Result.ok(result);
     } catch (error) {
-      return {
-        data: null,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      if (error instanceof Error) {
+        return Result.err(error);
+      } else return Result.err(new Error("Unknown error"));
     }
   }
 
@@ -145,22 +110,16 @@ export class StellarCoreApi {
     memo?: string | number;
     memoType?: "text" | "id" | "hash" | "return";
     timeout?: number;
-  }): Promise<ApiResponse<string | null, string>> {
+  }): Promise<Result<string | null, Error>> {
     try {
       const { server, networkPassphrase } = this.getServerAndNetwork();
 
       if (!StellarSDK.StrKey.isValidEd25519PublicKey(params.sourcePublicKey)) {
-        return {
-          data: null,
-          error: "Invalid source public key",
-        };
+        return Result.err(new Error("Invalid source public key"));
       }
 
       if (!StellarSDK.StrKey.isValidEd25519PublicKey(params.destination)) {
-        return {
-          data: null,
-          error: "Invalid destination public key",
-        };
+        return Result.err(new Error("Invalid destination public key"));
       }
 
       const account = await server.loadAccount(params.sourcePublicKey);
@@ -202,12 +161,11 @@ export class StellarCoreApi {
       const transaction = txBuilder.setTimeout(params.timeout || 30).build();
       const xdr = transaction.toXDR();
 
-      return { data: xdr };
+      return Result.ok(xdr);
     } catch (error) {
-      return {
-        data: null,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      if (error instanceof Error) {
+        return Result.err(error);
+      } else return Result.err(new Error("Unknown error"));
     }
   }
 
@@ -230,32 +188,28 @@ export class StellarCoreApi {
       timeout?: number;
     },
     signTransaction: (xdr: string) => Promise<string>
-  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> {
+  ): Promise<Result<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, Error>> {
     try {
       const buildResult = await this.buildPaymentTransaction(params);
 
-      if (buildResult.error || !buildResult.data) {
-        return {
-          data: null,
-          error: buildResult.error || "Failed to build transaction",
-        };
+      if (buildResult.isErr()) {
+        return Result.err(new Error("Failed to build transaction"));
       }
 
-      const signedTxXdr = await signTransaction(buildResult.data);
+      const signedTxXdr = await signTransaction(buildResult.value!);
 
       return await this.submitSignedTransaction(signedTxXdr);
     } catch (error) {
-      return {
-        data: null,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      if (error instanceof Error) {
+        return Result.err(error);
+      } else return Result.err(new Error("Unknown error"));
     }
   }
 
-  retrieveAccount = async (publicKey: string): Promise<ApiResponse<StellarSDK.Horizon.AccountResponse | null>> => {
+  retrieveAccount = async (publicKey: string): Promise<Result<StellarSDK.Horizon.AccountResponse | null, Error>> => {
     const { server } = this.getServerAndNetwork();
     const account = await server.loadAccount(publicKey);
-    return { data: account, error: undefined };
+    return Result.ok(account);
   };
 
   retrieveTxHistory = async (
@@ -263,7 +217,7 @@ export class StellarCoreApi {
     limit: number = 20,
     cursor?: string
   ): Promise<
-    ApiResponse<StellarSDK.Horizon.ServerApi.CollectionPage<StellarSDK.Horizon.ServerApi.TransactionRecord> | null>
+    Result<StellarSDK.Horizon.ServerApi.CollectionPage<StellarSDK.Horizon.ServerApi.TransactionRecord> | null, Error>
   > => {
     const { server } = this.getServerAndNetwork();
     const query = server.transactions().forAccount(accountId);
@@ -280,7 +234,7 @@ export class StellarCoreApi {
 
     const transactions = await query.call();
 
-    return { data: transactions };
+    return Result.ok(transactions);
   };
 
   retrievePaymentHistory = async (accountId: string, limit: number = 20, cursor?: string) => {
@@ -299,17 +253,17 @@ export class StellarCoreApi {
 
     const payments = await query.call();
 
-    return { data: payments };
+    return Result.ok(payments);
   };
 
   retrieveTx = async (
     transactionHash: string
-  ): Promise<ApiResponse<StellarSDK.Horizon.ServerApi.TransactionRecord | null>> => {
+  ): Promise<Result<StellarSDK.Horizon.ServerApi.TransactionRecord | null, Error>> => {
     const { server } = this.getServerAndNetwork();
 
     const transaction = await server.transactions().transaction(transactionHash).call();
 
-    return { data: transaction };
+    return Result.ok(transaction);
   };
 
   retrievePayment = async (transactionHash: string) => {
@@ -317,7 +271,7 @@ export class StellarCoreApi {
 
     const payment = await server.payments().forTransaction(transactionHash).call();
 
-    return { data: payment };
+    return Result.ok(payment);
   };
 
   sendAssetPayment = async (
@@ -327,7 +281,7 @@ export class StellarCoreApi {
     assetIssuer: string,
     amount: string,
     memo?: string
-  ): Promise<ApiResponse<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, string>> => {
+  ): Promise<Result<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, Error>> => {
     try {
       const keypair = StellarSDK.Keypair.fromSecret(sourceSecret);
 
@@ -356,87 +310,117 @@ export class StellarCoreApi {
       transaction.sign(keypair);
       const result = await server.submitTransaction(transaction);
 
-      return { data: result };
+      return Result.ok(result);
     } catch (error) {
-      return {
-        data: null,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+      if (error instanceof Error) {
+        return Result.err(error);
+      } else return Result.err(new Error("Unknown error"));
     }
   };
 
-  streamTx = (
-    publicKey: string,
-    evts: {
-      onError: (event: MessageEvent) => void;
-      onMessage: (event: StellarSDK.Horizon.ServerApi.TransactionRecord) => void;
-    }
-  ): (() => void) => {
-    const { server } = this.getServerAndNetwork();
-
-    return server
-      .transactions()
-      .forAccount(publicKey)
-      .cursor("now")
-      .stream({ onerror: evts.onError, onmessage: evts.onMessage });
-  };
-
-  /**
-   * Creates a SEP-7 payment URI for wallet-based payments using the native Sep7Pay class
-   * @param params Payment URI parameters
-   * @returns A web+stellar:pay URI that can be scanned or clicked
-   * @see https://developers.stellar.org/docs/build/apps/wallet/sep7
-   */
-  makePaymentURI = (params: {
+  makeCheckoutURI = (params: {
+    id: string;
+    memo: string;
+    type: ProductType;
     destination: string;
-    amount?: string;
-    assetCode?: string;
-    assetIssuer?: string;
-    memo?: string;
-    message?: string;
+    amount: string;
     callback?: string;
-    originDomain?: string;
+    network: Network;
+    productId: string;
+    currentPeriodEnd: Date | null;
+    assetCode: string | null;
+    assetIssuer: string | null;
   }): string => {
-    const { destination, amount, assetCode, assetIssuer, memo, message, callback, originDomain } = params;
+    let urlParams: URLSearchParams;
 
-    const paymentRequest = Sep7Pay.forDestination(destination);
-
-    if (amount) paymentRequest.amount = amount;
-
-    if (assetCode && assetCode !== "XLM") {
-      paymentRequest.assetCode = assetCode;
-      if (assetIssuer) paymentRequest.assetIssuer = assetIssuer;
+    if (params.type === "subscription") {
+      urlParams = new URLSearchParams({
+        merchantAddress: params.destination,
+        network: params.network,
+        productId: params.productId,
+        amount: params.amount.toString(),
+        periodEnd: params.currentPeriodEnd!.toISOString(),
+        assetCode: params.assetCode!,
+        assetIssuer: params.assetIssuer!,
+      });
+      // Allows wallet to request the transaction details from the server once the user is authenticated
+      const requestUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/checkouts/${params.id}/initiate-subscription?merchantAddress=${params.destination}`;
+      return `web+stellar:tx?url=${encodeURIComponent(requestUrl)}`;
     }
-    if (memo) paymentRequest.memo = memo;
 
-    if (message) paymentRequest.msg = message;
-    if (callback) paymentRequest.callback = callback;
+    urlParams = new URLSearchParams({
+      destination: params.destination,
+      amount: params.amount,
+      memo: params.memo,
+      ...(params.callback ? { callback: params.callback } : {}),
+    });
 
-    if (originDomain) paymentRequest.originDomain = originDomain;
-
-    return paymentRequest.toString();
+    return `web+stellar:pay?${urlParams.toString()}`;
   };
 
-  /**
-   * Creates a SEP-7 transaction URI for signing pre-built transactions using the native Sep7Tx class
-   * @param params Transaction URI parameters
-   * @returns A web+stellar:tx URI that can be scanned or clicked
-   * @see https://developers.stellar.org/docs/build/apps/wallet/sep7
-   */
-  makeTransactionURI = (params: {
-    transaction: StellarSDK.Transaction;
-    callback?: string;
-    message?: string;
-    originDomain?: string;
-  }): string => {
-    const { transaction, callback, message, originDomain } = params;
+  buildSubscriptionXDR = async (params: {
+    customerAddress: string;
+    merchantAddress: string;
+    amount: number;
+    tokenContractId: string;
+    engineContractId: string;
+    productId: string;
+    network: Network;
+    currentPeriodEnd: Date;
+  }) => {
+    const { network, customerAddress, engineContractId, tokenContractId } = params;
 
-    const txRequest = Sep7Tx.forTransaction(transaction as any);
-    if (callback) txRequest.callback = callback;
+    const server = new StellarSDK.rpc.Server(process.env.RPC_URL!);
 
-    if (message) txRequest.msg = message;
-    if (originDomain) txRequest.originDomain = originDomain;
+    const source = await server.getAccount(customerAddress);
 
-    return txRequest.toString();
+    const tokenContract = new StellarSDK.Contract(tokenContractId);
+    const engineContract = new StellarSDK.Contract(engineContractId);
+
+    // Conversion: 20.00 -> 200,000,000 (7 decimals)
+    const amountBigInt = BigInt(Math.round(params.amount * 1e7));
+
+    const tx = new StellarSDK.TransactionBuilder(source, {
+      fee: "10000",
+      networkPassphrase: network === "testnet" ? StellarSDK.Networks.TESTNET : StellarSDK.Networks.PUBLIC,
+    })
+      /**
+       * OPERATION 1: Talk to the TOKEN CONTRACT (The Bank)
+       * Action: "Bank, let the Subscription Engine spend 10 years worth of my money"
+       */
+      .addOperation(
+        tokenContract.call(
+          "approve",
+          StellarSDK.nativeToScVal(customerAddress, { type: "address" }), // from
+          StellarSDK.nativeToScVal(engineContractId, { type: "address" }), // spender
+          StellarSDK.nativeToScVal(amountBigInt * BigInt(120), { type: "i128" }), // amount (10 years)
+          StellarSDK.nativeToScVal(9999999, { type: "u32" }) // valid basically forever
+        )
+      )
+      /**
+       * OPERATION 2: Talk to your SUBSCRIPTION ENGINE (The Merchant)
+       * Action: "Register me and take the first month's payment"
+       */
+      .addOperation(
+        engineContract.call(
+          "start",
+          StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
+          StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
+          StellarSDK.nativeToScVal(tokenContractId, { type: "address" }),
+          StellarSDK.nativeToScVal(params.productId, { type: "symbol" }),
+          StellarSDK.nativeToScVal(amountBigInt, { type: "i128" }),
+          StellarSDK.nativeToScVal(Math.floor(params.currentPeriodEnd.getTime() / 1000), { type: "u64" }) // 30 days
+        )
+      )
+      .setTimeout(0)
+      .build();
+
+    return tx.toXDR();
+  };
+
+  retrieveAssetContractId = async (assetCode: string, assetIssuer: string) => {
+    const { networkPassphrase } = this.getServerAndNetwork();
+    const asset = new StellarSDK.Asset(assetCode, assetIssuer);
+    return asset.contractId(networkPassphrase);
   };
 }

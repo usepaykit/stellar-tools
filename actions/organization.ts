@@ -12,7 +12,7 @@ import {
   teamMembers,
 } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
-import { Encryption } from "@/integrations/encryption";
+import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWT } from "@/integrations/jwt";
 import { and, eq, lt, or, sql } from "drizzle-orm";
@@ -240,7 +240,7 @@ export const deleteOrganizationSecret = async (id: string) => {
 // -- Rotate Organization Secret --
 
 export const rotateAllSecrets = async (newVersion: number, performedBy: string) => {
-  const encryption = new Encryption();
+  const encryption = new EncryptionApi();
   const stats = { total: 0, succeeded: 0, failed: 0 };
 
   // 1. Generator: Fetch only records that are behind the current version
@@ -269,17 +269,11 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
       batch.map(async (secret) => {
         try {
           // Re-encrypt testnet (Mandatory field in your schema)
-          const testnetReencrypted = encryption.reencrypt(
-            secret.testnetSecretEncrypted,
-            secret.testnetSecretVersion,
-            newVersion
-          );
+          const testnetReencrypted = encryption.reencrypt(secret.testnetSecretEncrypted);
 
           // Re-encrypt mainnet (Optional field in your schema)
           const hasMainnet = secret.mainnetSecretEncrypted && secret.mainnetSecretVersion;
-          const mainnetReencrypted = hasMainnet
-            ? encryption.reencrypt(secret.mainnetSecretEncrypted!, secret.mainnetSecretVersion!, newVersion)
-            : null;
+          const mainnetReencrypted = hasMainnet ? encryption.reencrypt(secret.mainnetSecretEncrypted!) : null;
 
           await db.transaction(async (tx) => {
             await tx
