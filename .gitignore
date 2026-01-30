@@ -44,3 +44,5 @@ next-env.d.ts
 storybook-static
 packages/*/dist
 packages/*/node_modules
+
+**/target

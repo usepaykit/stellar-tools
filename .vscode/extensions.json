@@ -1,3 +1,8 @@
 {
-  "recommendations": ["Tobermory.es6-string-html", "bierner.comment-tagged-templates"]
+  "recommendations": [
+    "Tobermory.es6-string-html",
+    "bierner.comment-tagged-templates",
+    "rust-lang.rust-analyzer",
+    "vadimcn.vscode-lldb"
+  ]
 }

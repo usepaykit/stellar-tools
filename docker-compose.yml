@@ -1,0 +1,11 @@
+name: stellartools-soroban-rpc
+
+services:
+  quickstart:
+    stdin_open: true
+    tty: true
+    image: stellar/quickstart:latest
+    ports:
+      - "8000:8000"
+    container_name: stellartools-soroban-quickstart
+    command: --standalone --enable-soroban-rpc

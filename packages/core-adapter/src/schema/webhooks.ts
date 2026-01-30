@@ -14,6 +14,9 @@ export const webhookEvent = [
   "refund.created",
   "refund.succeeded",
   "refund.failed",
+  "subscription.created",
+  "subscription.updated",
+  "subscription.canceled",
 ] as const;
 
 export type WebhookEvent = (typeof webhookEvent)[number];

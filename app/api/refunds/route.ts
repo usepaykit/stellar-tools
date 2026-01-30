@@ -4,7 +4,7 @@ import { withEvent } from "@/actions/event";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
-import { Encryption } from "@/integrations/encryption";
+import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { createRefundSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -52,7 +52,7 @@ export const POST = async (req: NextRequest) => {
     amount: data.amount,
   });
 
-  const secretKey = new Encryption().decrypt(secret.encrypted, secret.version);
+  const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
   const refund = await withEvent(
     async () => {
@@ -65,9 +65,7 @@ export const POST = async (req: NextRequest) => {
         txMemo
       );
 
-      if (refundResult.error) {
-        return { error: refundResult.error };
-      }
+      if (refundResult.isErr()) return { error: refundResult.error };
 
       const refund = await postRefund(
         {

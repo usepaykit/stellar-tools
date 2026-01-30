@@ -4,7 +4,9 @@ import {
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
+  productTypeEnum as productTypeEnum$1,
   roles,
+  subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
 import { WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
@@ -157,21 +159,18 @@ export const apiKeys = pgTable("api_key", {
   environment: networkEnum("network").notNull(),
 });
 
-export const assetCodeEnum = pgEnum("asset_code", ["XLM", "USDC"]);
-
 export const assets = pgTable(
   "asset",
   {
     id: text("id").primaryKey(),
-    code: assetCodeEnum("code").notNull(),
+    code: text("code").notNull(),
     issuer: text("issuer"),
-    network: networkEnum("network").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
   },
   (table) => ({
-    uniqueCodeIssuerNetwork: unique().on(table.code, table.issuer, table.network),
+    uniqueCodeIssuer: unique().on(table.code, table.issuer),
   })
 );
 
@@ -211,7 +210,7 @@ export const recurringPeriodEnum = pgEnum("recurring_period", ["day", "week", "m
 
 export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
-export const productTypeEnum = pgEnum("product_type", ["subscription", "one_time", "metered"]);
+const productTypeEnum = pgEnum("product_type", productTypeEnum$1);
 
 export type ProductType = (typeof productTypeEnum.enumValues)[number];
 
@@ -233,6 +232,8 @@ export const products = pgTable("product", {
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
   environment: networkEnum("network").notNull(),
   priceAmount: integer("price_amount").notNull(),
+
+  // Subscription
   recurringPeriod: recurringPeriodEnum("recurring_period"),
 
   // Metered billing
@@ -280,7 +281,7 @@ export const checkouts = pgTable(
   })
 );
 
-export const subscriptionStatusEnum = pgEnum("subscription_status", ["active", "past_due", "canceled", "paused"]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", subscriptionStatusEnum$1);
 
 export const subscriptions = pgTable("subscription", {
   id: text("id").primaryKey(),
