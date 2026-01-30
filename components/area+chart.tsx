@@ -59,8 +59,21 @@ export function AreaChart<T extends BaseChartData>({
 
   const { xAxis, tooltip, area, rest, grid } = splitProps(mixinProps, "xAxis", "tooltip", "area", "grid");
 
+  const chartLabel =
+    typeof rest["aria-label"] === "string"
+      ? rest["aria-label"]
+      : config[activeKey]?.label != null
+        ? String(config[activeKey].label)
+        : "Area chart";
+
   return (
-    <ChartContainer {...rest} config={config} className={cn("aspect-auto h-[250px] w-full", className)}>
+    <ChartContainer
+      {...rest}
+      config={config}
+      role="img"
+      aria-label={rest["aria-label"] ?? chartLabel}
+      className={cn("aspect-auto h-[250px] w-full", className)}
+    >
       <RechartsAreaChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
         <CartesianGrid vertical={false} {...grid} />
 

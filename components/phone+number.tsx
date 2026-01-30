@@ -14,17 +14,18 @@ import { countries } from "country-flag-icons";
 import * as CountryFlags from "country-flag-icons/react/3x2";
 import { Check } from "lucide-react";
 
-export interface PhoneNumber {
+export interface PhoneNumberValue {
   number: string;
   countryCode: string;
 }
 
-export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
+
+
+export const phoneNumberToString = (phoneNumber: PhoneNumberValue) => {
   const { phone } = getCountryData(phoneNumber.countryCode as TCountryCode);
   const prefix = phone?.[0] ? `+${phone[0]}` : "+1";
   const digits = phoneNumber.number.replace(/[^\d]/g, "");
 
-  // Format as (XXX) XXX-XXXX for 10-digit numbers
   if (digits.length === 10) {
     return `${prefix} (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
@@ -32,7 +33,7 @@ export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
   return `${prefix} ${digits}`;
 };
 
-export const phoneNumberFromString = (phoneNumber: string): PhoneNumber => {
+export const phoneNumberFromString = (phoneNumber: string): PhoneNumberValue => {
   const countryCodeMatch = phoneNumber.match(/^(\+\d{1,4})/);
 
   if (!countryCodeMatch) return { number: phoneNumber, countryCode: "US" };
@@ -56,7 +57,7 @@ export const phoneNumberFromString = (phoneNumber: string): PhoneNumber => {
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 
-export interface PhoneNumberPickerProps
+export interface PhoneNumberProps
   extends
     MixinProps<"flag", React.ComponentProps<(typeof CountryFlags)[TCountryCode]>>,
     MixinProps<"label", Omit<LabelProps, "children">>,
@@ -64,8 +65,8 @@ export interface PhoneNumberPickerProps
     MixinProps<"error", Omit<ErrorProps, "children">>,
     MixinProps<"group", Omit<React.ComponentProps<typeof InputGroup>, "children">> {
   id: string;
-  value: PhoneNumber;
-  onChange: (v: PhoneNumber) => void;
+  value: PhoneNumberValue;
+  onChange: (v: PhoneNumberValue) => void;
   disabled?: boolean;
   label: LabelProps["children"] | null;
   error: ErrorProps["children"] | null;
@@ -96,8 +97,8 @@ const CountryFlag = React.memo(({ countryCode, className }: { countryCode: strin
 
 CountryFlag.displayName = "CountryFlag";
 
-export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberPickerProps>(
-  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberPickerProps, ref) => {
+export const PhoneNumber = React.forwardRef<HTMLInputElement, PhoneNumberProps>(
+  ({ id, value, onChange, disabled, label, error, ...mixProps }: PhoneNumberProps, ref) => {
     const {
       group,
       label: labelProps,
@@ -246,4 +247,4 @@ export const PhoneNumberPicker = React.forwardRef<HTMLInputElement, PhoneNumberP
   }
 );
 
-PhoneNumberPicker.displayName = "PhoneNumberPicker";
+PhoneNumber.displayName = "PhoneNumber";

@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { accountValidator } from "@/actions/auth";
 import { Google } from "@/components/icon";
-import { TextField } from "@/components/text-field";
+import { TextField } from "@/components/text+field";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";

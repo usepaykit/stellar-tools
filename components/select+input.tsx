@@ -8,18 +8,20 @@ import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
+import { ChevronsUpDown, Loader2 } from "lucide-react";
 
-export interface PriceValue {
+import { CheckMark } from "./icon";
+
+export interface SelectInputValue {
   amount: string;
-  asset: string;
+  option: string;
 }
 
-interface PricePickerProps {
+export interface SelectInputProps {
   id: string;
-  value: PriceValue;
-  onChange: (value: PriceValue) => void;
-  assets: string[];
+  value: SelectInputValue;
+  onChange: (value: SelectInputValue) => void;
+  options: string[];
   isLoading?: boolean;
   label?: string;
   error?: string;
@@ -28,9 +30,20 @@ interface PricePickerProps {
   className?: string;
 }
 
-export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
+export const SelectInput = React.forwardRef<HTMLInputElement, SelectInputProps>(
   (
-    { id, value, onChange, assets = [], isLoading = false, label, error, disabled, placeholder = "0.00", className },
+    {
+      id,
+      value,
+      onChange,
+      options = [],
+      isLoading = false,
+      label,
+      error,
+      disabled,
+      placeholder = "Select option...",
+      className,
+    },
     ref
   ) => {
     const [open, setOpen] = React.useState(false);
@@ -44,8 +57,8 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
       }
     };
 
-    const handleAssetSelect = (asset: string) => {
-      onChange({ ...value, asset });
+    const handleOptionSelect = (option: string) => {
+      onChange({ ...value, option });
       setOpen(false);
     };
 
@@ -60,7 +73,7 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
         <InputGroup
           className={cn(
             "border-input relative mt-2 flex h-10 w-full rounded-md border bg-transparent text-sm",
-            "has-[[data-slot=input-group-control]:focus-visible]:ring-ring has-[[data-slot=input-group-control]:focus-visible]:ring-2 has-[[data-slot=input-group-control]:focus-visible]:ring-offset-2",
+            "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
             error && "border-destructive"
           )}
         >
@@ -70,14 +83,14 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
                 variant="ghost"
                 role="combobox"
                 aria-expanded={open}
-                disabled={disabled || isLoading || assets.length === 0}
-                className="border-input hover:bg-accent hover:text-accent-foreground flex h-full min-w-[100px] gap-2 rounded-r-none border-r bg-transparent px-3"
+                disabled={disabled || isLoading || options.length === 0}
+                className="border-input hover:bg-accent hover:text-accent-foreground flex h-full min-w-[100px] justify-start gap-2 rounded-r-none border-r bg-transparent px-3"
               >
                 {isLoading ? (
-                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
                 ) : (
                   <>
-                    <span className="font-medium">{value.asset || "Select"}</span>
+                    <span className="font-medium">{value.option || "Select"}</span>
                     <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                   </>
                 )}
@@ -86,14 +99,16 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
 
             <PopoverContent className="w-[200px] p-0" align="start" onWheel={(e) => e.stopPropagation()}>
               <Command>
-                <CommandInput placeholder="Search asset..." />
+                <CommandInput placeholder="Search option..." />
                 <CommandList>
-                  <CommandEmpty>No asset found.</CommandEmpty>
+                  <CommandEmpty>No option found.</CommandEmpty>
                   <CommandGroup>
-                    {assets.map((asset) => (
-                      <CommandItem key={asset} value={asset} onSelect={() => handleAssetSelect(asset)}>
-                        <Check className={cn("mr-2 h-4 w-4", value.asset === asset ? "opacity-100" : "opacity-0")} />
-                        {asset}
+                    {options.map((option) => (
+                      <CommandItem key={option} value={option} onSelect={() => handleOptionSelect(option)}>
+                        <CheckMark
+                          className={cn("mr-2 h-4 w-4", value.option === option ? "opacity-100" : "opacity-0")}
+                        />
+                        {option}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -112,6 +127,7 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
             onChange={handleAmountChange}
             disabled={disabled}
             className="no-autofill-bg flex-1 border-0 bg-transparent px-3 py-1 text-sm shadow-none focus-visible:ring-0"
+            aria-invalid={!!error}
           />
         </InputGroup>
 
@@ -125,4 +141,4 @@ export const PricePicker = React.forwardRef<HTMLInputElement, PricePickerProps>(
   }
 );
 
-PricePicker.displayName = "PricePicker";
+SelectInput.displayName = "SelectInput";

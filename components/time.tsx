@@ -10,7 +10,7 @@ type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
 
-export interface TimePickerProps
+export interface TimeProps
   extends
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">>,
@@ -27,7 +27,7 @@ export interface TimePickerProps
   showSeconds?: boolean;
 }
 
-export const TimePicker = React.forwardRef<HTMLInputElement, TimePickerProps>(
+export const Time = React.forwardRef<HTMLInputElement, TimeProps>(
   (
     {
       id,
@@ -78,6 +78,7 @@ export const TimePicker = React.forwardRef<HTMLInputElement, TimePickerProps>(
             "bg-background w-full appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none",
             inputProps.className
           )}
+          aria-invalid={!!error}
         />
 
         {error && (
@@ -90,4 +91,4 @@ export const TimePicker = React.forwardRef<HTMLInputElement, TimePickerProps>(
   }
 );
 
-TimePicker.displayName = "TimePicker";
+Time.displayName = "Time";

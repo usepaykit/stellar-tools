@@ -2,20 +2,20 @@
 
 import * as React from "react";
 
-import { DataTable } from "@/components/data-table";
+import { DataTable } from "@/components/data+table";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FileSearch, X } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 
-interface LogPickerProps<TData, TValue> extends React.ComponentProps<typeof DataTable<TData, TValue>> {
+interface LogProps<TData, TValue> extends React.ComponentProps<typeof DataTable<TData, TValue>> {
   renderDetail?: (row: TData) => React.ReactNode;
   emptyMessage?: string;
   detailPanelWidth?: number;
   isLoading?: boolean;
 }
 
-export function LogPicker<TData, TValue>({
+export function Log<TData, TValue>({
   data,
   columns,
   onRowClick,
@@ -25,7 +25,7 @@ export function LogPicker<TData, TValue>({
   detailPanelWidth = 350,
   isLoading,
   ...props
-}: LogPickerProps<TData, TValue>) {
+}: LogProps<TData, TValue>) {
   const [selectedRow, setSelectedRow] = React.useState<TData | null>(null);
   const [isAnimating, setIsAnimating] = React.useState(false);
 
@@ -135,4 +135,4 @@ export const LogDetailItem = ({
   </div>
 );
 
-LogPicker.displayName = "LogPicker";
+Log.displayName = "Log";

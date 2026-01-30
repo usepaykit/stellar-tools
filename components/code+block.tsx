@@ -133,6 +133,8 @@ function CopyAction({ copied, onClick, isFloating }: { copied: boolean; onClick:
         <Button
           variant="ghost"
           size="icon"
+          type="button"
+          aria-label={copied ? "Copied" : "Copy code"}
           className={cn(
             "text-muted-foreground hover:text-foreground h-7 w-7",
             isFloating && "bg-muted/80 border backdrop-blur-sm"

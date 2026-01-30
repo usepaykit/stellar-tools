@@ -16,7 +16,7 @@ type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
 type HelpTextProps = React.ComponentProps<"p">;
 
-interface TagInputPickerProps
+export interface TagInputProps
   extends
     MixinProps<
       "input",
@@ -36,7 +36,7 @@ interface TagInputPickerProps
   className?: string;
 }
 
-export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerProps>((props, ref) => {
+export const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>((props, ref) => {
   const { id, className, value = [], onChange, placeholder, label, error, helpText, ...restProps } = props;
 
   const {
@@ -85,7 +85,7 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
         </p>
       )}
 
-      <InputGroup className={cn("bg-background h-auto min-h-10 flex-wrap gap-2 p-2", className)} {...rest}>
+      <InputGroup className={cn("bg-background h-auto min-h-10 flex-wrap gap-2 p-2 ", "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",className)} {...rest}>
         {value.map((t) => (
           <Badge key={t} variant="secondary" {...tag} className={cn("gap-1 pr-1", tag.className)}>
             {t}
@@ -103,6 +103,7 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
         <Input
           {...input}
           ref={ref}
+          data-slot="input-group-control"
           className={cn(
             "h-7 min-w-[80px] flex-1 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0",
             input.className
@@ -112,6 +113,7 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
           onKeyDown={handleKeyDown}
           onBlur={addPendingData}
           placeholder={value.length === 0 ? placeholder : ""}
+          aria-invalid={!!error}
         />
       </InputGroup>
       {error && (
@@ -123,4 +125,4 @@ export const TagInputPicker = React.forwardRef<HTMLInputElement, TagInputPickerP
   );
 });
 
-TagInputPicker.displayName = "TagInputPicker";
+TagInput.displayName = "TagInput";

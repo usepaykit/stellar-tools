@@ -2,12 +2,12 @@
 
 import React from "react";
 
-import { AreaChart } from "@/components/area-chart";
+import { AreaChart } from "@/components/area+chart";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { type ChartColor, LineChart } from "@/components/line-chart";
-import { SelectPicker } from "@/components/select-picker";
+import { type ChartColor, LineChart } from "@/components/line+chart";
+import { SelectField } from "@/components/select+field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -345,7 +345,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-semibold tracking-tight">Your overview</h2>
 
-                <SelectPicker
+                <SelectField
                   id="date-range"
                   value={dateRange}
                   onChange={setDateRange}

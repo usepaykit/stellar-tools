@@ -4,20 +4,20 @@ import * as React from "react";
 import { useState } from "react";
 
 import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
-import { CodeBlock } from "@/components/code-block";
+import { CodeBlock } from "@/components/code+block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data-table";
-import { FileUploadPicker, FileWithPreview } from "@/components/file-upload-picker";
+import { DataTable, TableAction } from "@/components/data+table";
+import { FileUpload, FileWithPreview } from "@/components/file+upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
+  type PhoneNumberValue,
   PhoneNumber,
-  PhoneNumberPicker,
   phoneNumberFromString,
   phoneNumberToString,
-} from "@/components/phone-number-picker";
-import { SelectPicker } from "@/components/select-picker";
-import { TextField } from "@/components/text-field";
+} from "@/components/phone+number";
+import { SelectField } from "@/components/select+field";
+import { TextField } from "@/components/text+field";
 import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -431,13 +431,13 @@ export function CustomerModal({
               control={form.control}
               name="phoneNumber"
               render={({ field, fieldState: { error } }) => {
-                const phoneValue: PhoneNumber = {
+                const phoneValue: PhoneNumberValue = {
                   number: field.value?.number || "",
                   countryCode: field.value?.countryCode || "US",
                 };
 
                 return (
-                  <PhoneNumberPicker
+                  <PhoneNumber
                     id="phone"
                     value={phoneValue}
                     onChange={field.onChange}
@@ -690,7 +690,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
       <div className="grid h-full grid-cols-1 gap-10 pb-10 lg:grid-cols-2">
         <div className="space-y-10">
           <CsvImportSection label="1. Data Source">
-            <FileUploadPicker
+            <FileUpload
               value={csvFile ? [csvFile] : []}
               onFilesChange={onUpload}
               dropzoneMultiple={false}
@@ -710,7 +710,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
                     <span className="text-foreground/80 flex-1 truncate text-sm font-medium">{m.csvHeader}</span>
                     <ArrowRight className="text-muted-foreground/30 size-3" />
                     <div className="flex flex-2 items-center gap-3">
-                      <SelectPicker
+                      <SelectField
                         id={`mapping-target-${i}`}
                         value={m.target}
                         triggerClassName="w-40 h-9 bg-background shadow-none"

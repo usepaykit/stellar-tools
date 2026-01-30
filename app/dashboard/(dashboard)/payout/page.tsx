@@ -4,10 +4,10 @@ import * as React from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data-table";
+import { DataTable, TableAction } from "@/components/data+table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { NumberPicker } from "@/components/number-picker";
-import { TextField } from "@/components/text-field";
+import { NumberField } from "@/components/number+field";
+import { TextField } from "@/components/text+field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -301,7 +301,7 @@ function RequestPayoutModal({ open, onOpenChange }: { open: boolean; onOpenChang
               control={form.control}
               name="amount"
               render={({ field, fieldState: { error } }) => (
-                <NumberPicker
+                <NumberField
                   id="amount"
                   value={field.value}
                   onChange={field.onChange}

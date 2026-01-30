@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data-table";
+import { DataTable, TableAction } from "@/components/data+table";
 import {
   Breadcrumb,
   BreadcrumbItem,

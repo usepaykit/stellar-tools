@@ -3,11 +3,11 @@
 import * as React from "react";
 
 import { postOrganization, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
-import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
+import { FileUpload, type FileWithPreview } from "@/components/file+upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
-import { PhoneNumber, PhoneNumberPicker, phoneNumberToString } from "@/components/phone-number-picker";
-import { TextAreaField, TextField } from "@/components/text-field";
+import { type PhoneNumberValue, PhoneNumber, phoneNumberToString } from "@/components/phone+number";
+import { TextAreaField, TextField } from "@/components/text+field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -303,7 +303,7 @@ const CreateOrganizationModal = ({
                 control={form.control}
                 name="logo"
                 render={({ field, fieldState: { error } }) => (
-                  <FileUploadPicker
+                  <FileUpload
                     label="Organization Logo"
                     id="organization-logo"
                     value={field.value ?? []}
@@ -373,13 +373,13 @@ const CreateOrganizationModal = ({
                 control={form.control}
                 name="phoneNumber"
                 render={({ field, fieldState: { error } }) => {
-                  const phoneValue: PhoneNumber = {
+                  const phoneValue: PhoneNumberValue = {
                     number: field.value?.number || "",
                     countryCode: field.value?.countryCode || "US",
                   };
 
                   return (
-                    <PhoneNumberPicker
+                    <PhoneNumber
                       id={field.name}
                       label="Phone Number"
                       value={phoneValue}

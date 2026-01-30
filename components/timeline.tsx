@@ -21,7 +21,7 @@ export interface TimelineEntry {
   key?: string | number;
 }
 
-interface TimelineProps<T> {
+export interface TimelineProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => TimelineEntry;
   className?: string;
@@ -47,7 +47,7 @@ function TimelineSummary({ data, manualContent }: { data?: any; manualContent?: 
             <span key={key} className="inline-flex items-center">
               <span className="text-muted-foreground mr-1 font-medium">{formatLabel(key)}:</span>
               {href ? (
-                <Link href={href} className="text-primary font-mono text-[13px] hover:underline">
+                <Link href={href} className="text-primary font-mono text-[13px] underline">
                   {String(val)}
                 </Link>
               ) : (

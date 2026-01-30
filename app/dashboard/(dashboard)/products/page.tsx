@@ -5,15 +5,15 @@ import * as React from "react";
 import { postProduct, retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data-table";
-import { FileUploadPicker, type FileWithPreview } from "@/components/file-upload-picker";
+import { DataTable, TableAction } from "@/components/data+table";
+import { FileUpload, type FileWithPreview } from "@/components/file+upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
-import { MarkdownPicker } from "@/components/markdown-picker";
-import { NumberPicker } from "@/components/number-picker";
-import { PricePicker } from "@/components/price-picker";
-import { RadioGroupPicker } from "@/components/radio-group-picker";
-import { SelectPicker } from "@/components/select-picker";
-import { TextAreaField, TextField } from "@/components/text-field";
+import { Markdown } from "@/components/markdown";
+import { NumberField } from "@/components/number+field";
+import { RadioGroup } from "@/components/radio+group";
+import { SelectInput} from "@/components/select+input";
+import { SelectField } from "@/components/select+field";
+import { TextAreaField, TextField } from "@/components/text+field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -478,7 +478,7 @@ function ProductsModal({
               control={form.control}
               name="images"
               render={({ field }) => (
-                <FileUploadPicker
+                <FileUpload
                   value={field.value}
                   onFilesChange={field.onChange}
                   enableTransformation
@@ -509,7 +509,7 @@ function ProductsModal({
                 control={form.control}
                 name="type"
                 render={({ field, fieldState: { error } }) => (
-                  <RadioGroupPicker
+                  <RadioGroup
                     id="type"
                     value={field.value}
                     onChange={field.onChange}
@@ -555,7 +555,7 @@ function ProductsModal({
                     control={form.control}
                     name="unitDivisor"
                     render={({ field, fieldState: { error } }) => (
-                      <NumberPicker
+                      <NumberField
                         {...field}
                         value={field.value || 1}
                         id="unitDivisor"
@@ -570,7 +570,7 @@ function ProductsModal({
                     control={form.control}
                     name="unitsPerCredit"
                     render={({ field, fieldState: { error } }) => (
-                      <NumberPicker
+                      <NumberField
                         {...field}
                         value={field.value || 1}
                         id="unitsPerCredit"
@@ -585,7 +585,7 @@ function ProductsModal({
                     control={form.control}
                     name="creditsGranted"
                     render={({ field, fieldState: { error } }) => (
-                      <NumberPicker
+                      <NumberField
                         {...field}
                         value={field.value || 0}
                         id="creditsGranted"
@@ -604,12 +604,12 @@ function ProductsModal({
                   control={form.control}
                   name="price"
                   render={({ field, fieldState: { error } }) => (
-                    <PricePicker
+                    <SelectInput
                       id="price"
                       className="flex-1"
-                      value={field.value}
-                      onChange={field.onChange}
-                      assets={["XLM", "USDC"]}
+                      value={{ amount: field.value.amount, option: field.value.asset }}
+                      onChange={(value) => field.onChange({ amount: value.amount, option: value.option })}
+                      options={["XLM", "USDC", "USDT", "DAI"]}
                       error={error?.message}
                     />
                   )}
@@ -620,7 +620,7 @@ function ProductsModal({
                     name="recurringPeriod"
                     control={form.control}
                     render={({ field, fieldState: { error } }) => (
-                      <SelectPicker
+                      <SelectField
                         id={field.name}
                         value={field.value as string}
                         onChange={field.onChange}
@@ -690,7 +690,7 @@ function ProductsModal({
         size="full"
         footer={<Button onClick={() => setIsLearnMoreOpen(false)}>Got it</Button>}
       >
-        <MarkdownPicker
+        <Markdown
           content={
             /* html */ `
 ## What is metered billing?
