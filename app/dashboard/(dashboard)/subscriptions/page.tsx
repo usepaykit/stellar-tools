@@ -3,8 +3,9 @@
 import * as React from "react";
 
 import { retrieveCustomers } from "@/actions/customers";
+import { getCurrentOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
-import { postSubscriptionsBulk, retrieveSubscriptions } from "@/actions/subscription";
+import { retrieveSubscriptions } from "@/actions/subscription";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable } from "@/components/data-table";
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
+import { ApiClient, z as Schema } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { Calendar, CheckCircle2, Clock, Pause, Plus, ShieldCheck, XCircle } from "lucide-react";
 import moment from "moment";
@@ -90,6 +92,15 @@ export default function SubscriptionsPage() {
   );
 }
 
+const subscriptionSchema = Schema.object({
+  customerIds: Schema.array(Schema.string()),
+  productId: Schema.string(),
+  billingPeriod: Schema.object({ from: Schema.date(), to: Schema.date() }),
+  cancelAtPeriodEnd: Schema.boolean(),
+});
+
+type Subscription = Schema.infer<typeof subscriptionSchema>;
+
 export function CreateSubscriptionModal({
   open,
   onOpenChange,
@@ -109,7 +120,28 @@ export function CreateSubscriptionModal({
   });
 
   const mutation = useMutation({
-    mutationFn: (data: any) => postSubscriptionsBulk(data),
+    mutationFn: async (data: Subscription) => {
+      const organization = await getCurrentOrganization();
+
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
+        headers: { "x-session-token": organization?.token ?? undefined! },
+      });
+
+      const result = await api.post<{ id: string; success: boolean }>("/api/subscriptions", {
+        body: JSON.stringify({
+          customerIds: data.customerIds,
+          productId: data.productId,
+          period: data.billingPeriod,
+          cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+          metadata: null,
+        }),
+      });
+
+      if (result.isErr()) throw new Error(result.error.message);
+
+      return result.value;
+    },
     onSuccess: () => {
       toast.success("Subscriptions created");
       invalidate(["subscriptions"]);

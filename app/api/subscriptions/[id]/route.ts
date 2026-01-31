@@ -1,9 +1,7 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
-import { triggerWebhooks } from "@/actions/webhook";
 import { subscriptionStatusEnum } from "@/constant/schema.client";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
-import { computeDiff } from "@/lib/utils";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -85,13 +83,6 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
           ...(periodEnd && { currentPeriodEnd: periodEnd }),
           ...(metadata && { metadata: { ...(subscription.metadata ?? {}), ...metadata } }),
         },
-        organizationId,
-        environment
-      );
-
-      await triggerWebhooks(
-        "subscription.updated",
-        { id: subscription.id, changes: computeDiff(subscription, updatedSubscription) },
         organizationId,
         environment
       );

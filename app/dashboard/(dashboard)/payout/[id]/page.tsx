@@ -334,6 +334,7 @@ const mockPayouts: Array<Payout> = [
     createdAt: new Date(),
     completedAt: new Date(),
     metadata: null,
+    asset: "XLM",
   },
   {
     id: "2",
@@ -347,5 +348,6 @@ const mockPayouts: Array<Payout> = [
     createdAt: new Date(),
     completedAt: new Date(),
     metadata: null,
+    asset: "XLM",
   },
 ];

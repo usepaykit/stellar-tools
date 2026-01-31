@@ -1,10 +1,12 @@
 "use server";
 
-import { Network, Subscription, customers, db, products, subscriptions } from "@/db";
+import { withEvent } from "@/actions/event";
+import { resolveOrgContext } from "@/actions/organization";
+import { SubscriptionStatus } from "@/constant/schema.client";
+import { Network, Subscription, assets, customers, db, products, subscriptions } from "@/db";
+import { computeDiff } from "@/lib/utils";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
-
-import { resolveOrgContext } from "./organization";
 
 export const postSubscriptionsBulk = async (
   params: { customerIds: string[]; productId: string; period: { from: Date; to: Date }; cancelAtPeriodEnd: boolean },
@@ -13,20 +15,65 @@ export const postSubscriptionsBulk = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const values = params.customerIds.map((cid) => ({
-    id: `sub_${nanoid(20)}`,
-    customerId: cid,
-    productId: params.productId,
-    status: "active" as const,
-    organizationId,
-    environment,
-    currentPeriodStart: params.period.from,
-    currentPeriodEnd: params.period.to,
-    cancelAtPeriodEnd: params.cancelAtPeriodEnd,
-    nextBillingDate: params.period.to,
-  }));
+  return withEvent(
+    async () => {
+      const values = params.customerIds.map((cid) => ({
+        id: `sub_${nanoid(20)}`,
+        customerId: cid,
+        productId: params.productId,
+        status: "active" as const,
+        organizationId,
+        environment,
+        currentPeriodStart: params.period.from,
+        currentPeriodEnd: params.period.to,
+        cancelAtPeriodEnd: params.cancelAtPeriodEnd,
+      }));
 
-  return await db.insert(subscriptions).values(values).returning();
+      return await db.insert(subscriptions).values(values).returning();
+    },
+    {
+      events: [
+        {
+          type: "subscription::created",
+          map: (subscription) =>
+            subscription.map(
+              ({ customerId, id, status, productId, currentPeriodStart, currentPeriodEnd, cancelAtPeriodEnd }) => ({
+                customerId,
+                data: {
+                  id,
+                  productId,
+                  status,
+                  currentPeriodStart,
+                  currentPeriodEnd,
+                  cancelAtPeriodEnd,
+                },
+              })
+            ),
+        },
+      ],
+      webhooks: {
+        organizationId,
+        environment,
+        triggers: [
+          {
+            event: "subscription.created",
+            map: (subscription) =>
+              subscription.map(
+                ({ id, customerId, productId, status, currentPeriodStart, currentPeriodEnd, cancelAtPeriodEnd }) => ({
+                  id,
+                  status,
+                  customerId,
+                  productId,
+                  currentPeriodStart,
+                  currentPeriodEnd,
+                  cancelAtPeriodEnd,
+                })
+              ),
+          },
+        ],
+      },
+    }
+  );
 };
 
 export const retrieveSubscription = async (id: string) => {
@@ -71,23 +118,59 @@ export const listSubscriptions = async (customerId: string, orgId?: string, env?
 };
 
 export const putSubscription = async (id: string, retUpdate: Partial<Subscription>, orgId?: string, env?: Network) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+  const [{ organizationId, environment }, oldSubscription] = await Promise.all([
+    resolveOrgContext(orgId, env),
+    retrieveSubscription(id),
+  ]);
 
-  const [record] = await db
-    .update(subscriptions)
-    .set({ ...retUpdate, updatedAt: new Date() })
-    .where(
-      and(
-        eq(subscriptions.id, id),
-        eq(subscriptions.organizationId, organizationId),
-        eq(subscriptions.environment, environment)
-      )
-    )
-    .returning();
+  return withEvent(
+    async () => {
+      const [record] = await db
+        .update(subscriptions)
+        .set({ ...retUpdate, updatedAt: new Date() })
+        .where(
+          and(
+            eq(subscriptions.id, id),
+            eq(subscriptions.organizationId, organizationId),
+            eq(subscriptions.environment, environment)
+          )
+        )
+        .returning();
 
-  if (!record) throw new Error("Subscription not found");
+      if (!record) throw new Error("Subscription not found");
 
-  return record;
+      return record;
+    },
+    {
+      events: [
+        {
+          type: "subscription::updated",
+          map: (subscription) => ({
+            customerId: subscription.customerId,
+            data: {
+              $changes: { ...computeDiff(oldSubscription ?? {}, subscription), status: subscription.status } as Record<
+                string,
+                ReturnType<typeof computeDiff> | SubscriptionStatus
+              >,
+            },
+          }),
+        },
+      ],
+      webhooks: {
+        organizationId,
+        environment,
+        triggers: [
+          {
+            event: "subscription.updated",
+            map: (subscription) => ({
+              id: subscription.id,
+              changes: { ...computeDiff(oldSubscription ?? {}, subscription), status: subscription.status },
+            }),
+          },
+        ],
+      },
+    }
+  );
 };
 
 export const deleteSubscription = async (id: string, orgId?: string, env?: Network) => {
@@ -110,13 +193,21 @@ export const deleteSubscription = async (id: string, orgId?: string, env?: Netwo
 export const retrieveDueSubscriptions = async () => {
   const results = await db
     .select({
-      subscription: { id: subscriptions.id, productId: subscriptions.productId },
-      customer: { walletAddresses: customers.walletAddresses },
+      subscription: {
+        id: subscriptions.id,
+        productId: subscriptions.productId,
+        organizationId: subscriptions.organizationId,
+        environment: subscriptions.environment,
+      },
+      customer: { id: customers.id, walletAddresses: customers.walletAddresses },
+      asset: { code: assets.code, issuer: assets.issuer },
     })
     .from(subscriptions)
-    .where(and(lt(subscriptions.nextBillingDate, new Date()), eq(subscriptions.status, "active")))
+    .where(and(lt(subscriptions.currentPeriodEnd, new Date()), eq(subscriptions.status, "active")))
     .innerJoin(customers, eq(subscriptions.customerId, customers.id))
-    .orderBy(desc(subscriptions.nextBillingDate));
+    .innerJoin(products, eq(subscriptions.productId, products.id))
+    .innerJoin(assets, eq(products.assetId, assets.id))
+    .orderBy(desc(subscriptions.currentPeriodEnd));
 
   return results;
 };

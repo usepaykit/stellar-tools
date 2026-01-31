@@ -1,4 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
+import _ from "lodash";
 import { twMerge } from "tailwind-merge";
 import { z } from "zod";
 
@@ -59,3 +60,18 @@ export function computeDiff<T extends Record<string, unknown>>(
 
   return Object.keys(diff).length > 0 ? diff : null;
 }
+
+export const toSnakeCase = (data: unknown): unknown => {
+  if (_.isArray(data)) {
+    return data.map(toSnakeCase);
+  }
+
+  if (_.isPlainObject(data)) {
+    return _.mapValues(
+      _.mapKeys(data as Record<string, unknown>, (_v, k) => _.snakeCase(k)),
+      toSnakeCase
+    );
+  }
+
+  return data;
+};

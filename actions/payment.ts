@@ -1,24 +1,64 @@
 "use server";
 
+import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
+import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { and, desc, eq } from "drizzle-orm";
-
-import { resolveOrgContext } from "./organization";
+import { nanoid } from "nanoid";
 
 export const postPayment = async (
-  params: Omit<Payment, "organizationId" | "environment">,
+  params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
   orgId?: string,
   env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [payment] = await db
-    .insert(payments)
-    .values({ ...params, organizationId, environment })
-    .returning();
+  return withEvent(
+    async () => {
+      const [payment] = await db
+        .insert(payments)
+        .values({ ...params, id: `pay_${nanoid(40)}`, organizationId, environment })
+        .returning();
+      return payment;
+    },
+    (payment) => {
+      let events: EventTrigger<typeof payment>[] = [];
+      const webhooksTriggers: WebhookTrigger<typeof payment>[] = [];
 
-  return payment;
+      if (payment.status == "confirmed") {
+        events.push({
+          type: "payment::completed",
+          map: ({ checkoutId, amount, customerId, id: paymentId }) => {
+            return {
+              customerId: customerId ?? undefined,
+              data: { amount, checkoutId, paymentId },
+            };
+          },
+        });
+        webhooksTriggers.push({
+          event: "payment.confirmed",
+          map: ({ amount, checkoutId, id: paymentId }) => ({ checkoutId, amount, paymentId }),
+        });
+      }
+
+      if (payment.status == "failed") {
+        events.push({
+          type: "payment::failed",
+          map: ({ checkoutId, amount, customerId, id: paymentId }) => ({
+            customerId: customerId ?? undefined,
+            data: { amount, checkoutId, paymentId },
+          }),
+        });
+        webhooksTriggers.push({
+          event: "payment.failed",
+          map: ({ amount, checkoutId, id: paymentId }) => ({ checkoutId, amount, paymentId }),
+        });
+      }
+
+      return { events, webhooks: { organizationId, environment, triggers: webhooksTriggers } };
+    }
+  );
 };
 
 export const retrievePayments = async (orgId?: string, params?: { customerId?: string }, env?: Network) => {

@@ -418,9 +418,14 @@ export class StellarCoreApi {
     return tx.toXDR();
   };
 
-  retrieveAssetContractId = async (assetCode: string, assetIssuer: string) => {
+  retrieveAssetContractId = async (assetCode: string, assetIssuer?: string) => {
     const { networkPassphrase } = this.getServerAndNetwork();
-    const asset = new StellarSDK.Asset(assetCode, assetIssuer);
+
+    const asset =
+      assetCode.toUpperCase() === "XLM" && (!assetIssuer || assetIssuer === "native")
+        ? StellarSDK.Asset.native()
+        : new StellarSDK.Asset(assetCode, assetIssuer!);
+
     return asset.contractId(networkPassphrase);
   };
 }

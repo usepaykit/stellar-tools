@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { postCheckout } from "@/actions/checkout";
-import { retrieveCustomer } from "@/actions/customers";
+import { retrieveCustomers } from "@/actions/customers";
 import { retrieveEvents } from "@/actions/event";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
@@ -162,7 +162,7 @@ export default function CustomerDetailPage() {
     retrievePayments(undefined, { customerId: customerId }, undefined)
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
-    retrieveCustomer({ id: customerId })
+    retrieveCustomers({ id: customerId }).then(([c]) => c)
   );
   const { data: customerEvents, isLoading: isLoadingCustomerEvents } = useOrgQuery(
     ["customer-events", customerId],

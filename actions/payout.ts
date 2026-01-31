@@ -3,10 +3,11 @@
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payout, db, payouts } from "@/db";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-export const postPayouts = async (
-  params: Omit<Payout, "id" | "organizationId" | "environment">[],
+export const postPayout = async (
+  params: Omit<Payout, "organizationId" | "environment" | "createdAt" | "updatedAt">,
   orgId?: string,
   env?: Network
 ) => {
@@ -16,17 +17,46 @@ export const postPayouts = async (
 
       const [result] = await db
         .insert(payouts)
-        .values(params.map((p) => ({ ...p, id: `pay_${nanoid(25)}`, organizationId, environment })))
+        .values({ ...params, organizationId, environment })
         .returning();
 
       return result;
     },
     {
-      type: "payout::requested",
-      map: (payout) => ({
-        merchantId: payout.organizationId,
-        data: { amount: payout.amount, walletAddress: payout.walletAddress, memo: payout.memo },
-      }),
+      events: [
+        {
+          type: "payout::requested",
+          map: (payout) => ({
+            merchantId: payout.organizationId,
+            data: { amount: payout.amount, walletAddress: payout.walletAddress, memo: payout.memo },
+          }),
+        },
+      ],
+    }
+  );
+};
+
+export const putPayout = async (id: string, params: Partial<Payout>) => {
+  return withEvent(
+    async () => {
+      const [payout] = await db.update(payouts).set(params).where(eq(payouts.id, id)).returning();
+      return payout;
+    },
+    {
+      events: [
+        {
+          type: "payout::processed",
+          map: (payout) => ({
+            merchantId: payout.organizationId,
+            data: {
+              amount: payout.amount,
+              walletAddress: payout.walletAddress,
+              memo: payout.memo,
+              transactionHash: payout.transactionHash,
+            },
+          }),
+        },
+      ],
     }
   );
 };

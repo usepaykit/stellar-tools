@@ -78,7 +78,6 @@ export const createSubscription = (options: BillingConfig) =>
       body: z.object({
         productId: z.string(),
         metadata: z.record(z.string(), z.unknown()).optional(),
-        nextBillingDate: z.string().optional(),
         cancelAtPeriodEnd: z.boolean(),
         period: z.object({ from: z.coerce.date(), to: z.coerce.date() }),
       }),

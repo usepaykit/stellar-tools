@@ -1,12 +1,11 @@
 import { putCheckout, retrieveCheckout } from "@/actions/checkout";
-import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { postPayment } from "@/actions/payment";
 import { triggerWebhooks } from "@/actions/webhook";
-import { networkEnum } from "@/constant/schema.client";
+import { networkEnum, productTypeEnum } from "@/constant/schema.client";
+import { JWT } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
-import { Result, z as Schema, validateSchema } from "@stellartools/core";
-import { nanoid } from "nanoid";
+import { ApiClient, Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -19,13 +18,20 @@ export const POST = async (req: NextRequest) => {
         checkoutId: Schema.string(),
         organizationId: Schema.string(),
         environment: Schema.enum(networkEnum),
+        productType: Schema.enum(productTypeEnum),
       }),
       await req.json()
     ),
-    async (data): Promise<Result<any, Error>> => {
+    async (data) => {
       const { organizationId, environment } = await resolveOrgContext(data.organizationId, data.environment);
       const stellar = new StellarCoreApi(environment);
       const txResult = await stellar.retrieveTx(data.txHash);
+
+      const checkout = await retrieveCheckout(data.checkoutId, organizationId, environment);
+
+      if (!checkout) return Result.err(new Error("Checkout not found"));
+
+      const paymentOp = (await stellar.retrievePayment(data.txHash)).value?.records.find((op) => op.type_i === 1);
 
       if (txResult.isErr()) return Result.err(new Error(txResult.error.message));
 
@@ -34,83 +40,78 @@ export const POST = async (req: NextRequest) => {
       if (!txResult.value.successful) {
         await Promise.all([
           putCheckout(data.checkoutId, { status: "failed" }, organizationId, environment),
+          postPayment(
+            {
+              checkoutId: data.checkoutId,
+              customerId: checkout.customerId ?? null,
+              amount: parseInt(paymentOp?.amount || "0"),
+              transactionHash: data.txHash,
+              status: "failed",
+            },
+            organizationId,
+            environment
+          ),
           triggerWebhooks("payment.failed", { checkoutId: data.checkoutId }, organizationId, environment),
         ]);
 
         return Result.err(new Error("Transaction was not successful on Stellar network"));
       }
 
-      const checkout = await retrieveCheckout(data.checkoutId, organizationId, environment);
-
-      if (!checkout) return Result.err(new Error("Checkout not found"));
-
-      const paymentOp = (await stellar.retrievePayment(data.txHash)).value?.records.find((op) => op.type_i === 1);
-
       if (!paymentOp) return Result.err(new Error("Payment operation not found in transaction"));
 
       const amountInStroops = parseInt(paymentOp.amount || "0");
 
-      await withEvent(
-        async () => {
-          const paymentId = `pay_${nanoid(25)}`;
-          const resolvedPromises = await Promise.allSettled([
-            putCheckout(data.checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment),
-            postPayment(
-              {
-                id: paymentId,
-                checkoutId: checkout.id,
-                customerId: checkout.customerId ?? null,
-                amount: amountInStroops,
-                transactionHash: data.txHash,
-                status: "confirmed",
-                createdAt: new Date(txResult.value!.created_at),
-                updatedAt: new Date(),
-              },
-              organizationId,
-              environment
-            ),
-          ]);
+      const createSubscriptionHandler = async () => {
+        if (!checkout.productId) return Result.err(new Error("Product ID is required for subscription"));
 
-          const errors = resolvedPromises.map((result) => (result.status === "rejected" ? result.reason : null));
+        const accessToken = await new JWT().sign({ orgId: organizationId, environment }, "1h");
 
-          if (errors.length > 0) return { error: errors.join(", ") };
+        const api = new ApiClient({
+          baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
+          headers: { "x-session-token": accessToken },
+        });
 
-          return {
-            paymentId,
-            amount: amountInStroops,
-            txHash: data.txHash,
+        const period =
+          checkout.subscriptionData &&
+          "periodStart" in checkout.subscriptionData &&
+          "periodEnd" in checkout.subscriptionData
+            ? {
+                from: new Date(checkout.subscriptionData.periodStart),
+                to: new Date(checkout.subscriptionData.periodEnd),
+              }
+            : null;
+
+        if (!period) return Result.err(new Error("Period is required for subscription"));
+
+        const result = await api.post<{ id: string; success: boolean }>("/api/subscriptions", {
+          body: JSON.stringify({
+            customerIds: [checkout.customerId],
+            productId: checkout.productId,
+            period,
+            cancelAtPeriodEnd: checkout.subscriptionData?.cancelAtPeriodEnd ?? false,
+          }),
+        });
+
+        return Result.ok(result);
+      };
+
+      await Promise.all([
+        putCheckout(data.checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment),
+        postPayment(
+          {
             checkoutId: checkout.id,
             customerId: checkout.customerId ?? null,
-          };
-        },
-        {
-          type: "payment::completed",
-          map: ({ amount, txHash, checkoutId, customerId, paymentId }) => ({
-            customerId: customerId ?? undefined,
-            data: { amount, txHash, checkoutId, paymentId },
-          }),
-        },
-        {
-          events: ["payment.confirmed", "payment.failed"],
-          organizationId,
-          environment,
-          payload: (result) => {
-            if (result?.error) {
-              return { error: result?.error, success: false, timestamp: new Date() };
-            }
-
-            return {
-              paymentId: result?.paymentId,
-              amount: result?.amount,
-              txHash: result?.txHash,
-              checkoutId: result?.checkoutId,
-              customerId: result?.customerId,
-            };
+            amount: amountInStroops,
+            transactionHash: data.txHash,
+            status: "confirmed",
           },
-        }
-      );
+          organizationId,
+          environment
+        ),
+        ...(data.productType === "subscription" ? [createSubscriptionHandler()] : []),
+      ]);
 
-      return Result.ok(result);
+      return Result.ok({});
     }
   );
 

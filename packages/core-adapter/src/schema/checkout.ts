@@ -7,6 +7,23 @@ export const checkoutStatusEnum = z.enum(["open", "completed", "expired", "faile
 
 type CheckoutStatus = z.infer<typeof checkoutStatusEnum>;
 
+export type SubscriptionData = {
+  /**
+   * The start date of the subscription.
+   */
+  periodStart: Date;
+
+  /**
+   * The end date of the subscription.
+   */
+  periodEnd: Date;
+
+  /**
+   * Whether to cancel the subscription at the end of the current period.
+   */
+  cancelAtPeriodEnd?: boolean;
+};
+
 export interface Checkout {
   /**
    * The unique identifier for the checkout.
@@ -87,6 +104,11 @@ export interface Checkout {
    * The success message of the checkout.
    */
   successMessage?: string;
+
+  /**
+   * The subscription data of the checkout.
+   */
+  subscriptionData?: SubscriptionData;
 }
 
 export const checkoutSchema = schemaFor<Checkout>()(
@@ -106,6 +128,13 @@ export const checkoutSchema = schemaFor<Checkout>()(
     environment: environmentSchema,
     successUrl: z.string().optional(),
     successMessage: z.string().optional(),
+    subscriptionData: z
+      .object({
+        periodStart: z.coerce.date(),
+        periodEnd: z.coerce.date(),
+        cancelAtPeriodEnd: z.boolean().default(false).optional(),
+      })
+      .optional(),
   })
 );
 
@@ -147,6 +176,7 @@ export type CreateCheckout = Pick<
   | "assetCode"
   | "successUrl"
   | "successMessage"
+  | "subscriptionData"
 > & {
   /**
    * The email of the guest customer

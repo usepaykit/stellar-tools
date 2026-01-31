@@ -4,7 +4,8 @@ import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Customer, Network, customers, db } from "@/db";
 import { computeDiff } from "@/lib/utils";
-import { SQL, and, eq, sql } from "drizzle-orm";
+import { MaybeArray } from "@stellartools/core";
+import { SQL, and, eq, inArray, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCustomers = async (
@@ -19,91 +20,62 @@ export const postCustomers = async (
     async () => {
       const results = await db
         .insert(customers)
-        .values(
-          params.map((p) => ({
-            ...p,
-            id: `cus_${nanoid(25)}`,
-            organizationId,
-            environment,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }))
-        )
+        .values(params.map((p) => ({ ...p, id: `cus_${nanoid(25)}`, organizationId, environment })))
         .returning();
 
       return results;
     },
-    {
-      type: "customer::created",
-      map: (customers) =>
-        customers.map((c) => ({
-          customerId: c.id,
-          data: {
-            name: c.name,
-            email: c.email,
-            phone: c.phone,
-            metadata: c.metadata,
-            ...(options?.source ? { source: options.source } : {}),
+    (customers) => {
+      const data = customers.map(({ id, name, email, phone, metadata }) => ({
+        id,
+        name,
+        email,
+        phone,
+        metadata,
+        ...(options?.source ? { source: options.source } : {}),
+      }));
+
+      return {
+        events: [
+          {
+            type: "customer::created",
+            map: () => data.map((c) => ({ customerId: c.id, data: c })),
           },
-        })),
-    },
-    {
-      events: ["customer.created"],
-      environment,
-      organizationId,
-      payload: (customers) =>
-        customers.map((c) => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, metadata: c.metadata })),
+        ],
+        webhooks: { organizationId, environment, triggers: [{ event: "customer.created", map: () => data }] },
+      };
     }
   );
 };
 
-export const retrieveCustomers = async (orgId?: string, env?: Network) => {
+type CustomerLookup = { id: string } | { email: string } | { phone: string };
+
+export const retrieveCustomers = async (params?: MaybeArray<CustomerLookup>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  return await db
+  const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
+
+  const ids = lookupArray.filter((p): p is { id: string } => "id" in p).map((p) => p.id);
+  const emails = lookupArray.filter((p): p is { email: string } => "email" in p).map((p) => p.email);
+  const phones = lookupArray.filter((p): p is { phone: string } => "phone" in p).map((p) => p.phone);
+
+  const orFilters: SQL[] = [];
+  if (ids.length) orFilters.push(inArray(customers.id, ids));
+  if (emails.length) orFilters.push(inArray(customers.email, emails));
+  if (phones.length) orFilters.push(inArray(customers.phone, phones));
+
+  const result = await db
     .select()
     .from(customers)
-    .where(and(eq(customers.organizationId, organizationId), eq(customers.environment, environment)));
-};
+    .where(and(or(...orFilters), eq(customers.organizationId, organizationId), eq(customers.environment, environment)));
 
-export const retrieveCustomer = async (
-  params: { id: string } | { email: string } | { phone: string } | undefined,
-  orgId?: string,
-  env?: Network
-) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  let whereClause: SQL<unknown>;
-
-  if (!params) {
-    throw new Error("Invalid customer identifier");
-  }
-
-  if ("id" in params) {
-    whereClause = eq(customers.id, params.id);
-  } else if ("email" in params) {
-    whereClause = eq(customers.email, params.email);
-  } else if ("phone" in params) {
-    whereClause = sql`${customers.phone} = ${params.phone}` as unknown as SQL<unknown>;
-  } else {
-    throw new Error("Invalid customer identifier");
-  }
-
-  const [customer] = await db
-    .select()
-    .from(customers)
-    .where(and(whereClause, eq(customers.organizationId, organizationId), eq(customers.environment, environment)))
-    .limit(1);
-
-  if (!customer) return null;
-
-  return customer;
+  return result ?? null;
 };
 
 export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgId?: string, env?: Network) => {
-  const [{ organizationId, environment }, oldCustomer] = await Promise.all([
+  const [{ organizationId, environment }, [oldCustomer]] = await Promise.all([
     resolveOrgContext(orgId, env),
-    retrieveCustomer({ id }, orgId, env),
+    retrieveCustomers({ id }, orgId, env),
   ]);
 
   return withEvent(
@@ -125,17 +97,28 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
       return customer;
     },
     {
-      type: "customer::updated",
-      map: (newCustomer) => ({
-        customerId: newCustomer.id,
-        data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer) },
-      }),
-    },
-    {
-      events: ["customer.updated"],
-      organizationId,
-      environment,
-      payload: (newCustomer) => ({ id: newCustomer.id, changes: computeDiff(oldCustomer ?? {}, newCustomer) ?? {} }),
+      events: [
+        {
+          type: "customer::updated",
+          map: (newCustomer) => ({
+            customerId: newCustomer.id,
+            data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer) },
+          }),
+        },
+      ],
+      webhooks: {
+        organizationId,
+        environment,
+        triggers: [
+          {
+            event: "customer.updated",
+            map: (newCustomer) => ({
+              customerId: newCustomer.id,
+              data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer) },
+            }),
+          },
+        ],
+      },
     }
   );
 };
@@ -160,15 +143,13 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
 
       return customer;
     },
-    undefined,
     {
-      events: ["customer.deleted"],
-      organizationId,
-      environment,
-      payload: (customer) => ({
-        id: customer.id,
-        deleted: true,
-      }),
+      events: [],
+      webhooks: {
+        organizationId,
+        environment,
+        triggers: [{ event: "customer.deleted", map: (customer) => ({ id: customer.id, deleted: true }) }],
+      },
     }
   );
 };

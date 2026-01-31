@@ -8,7 +8,7 @@ import {
   roles,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
-import { WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
+import { SubscriptionData, WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
@@ -268,6 +268,7 @@ export const checkouts = pgTable(
     // Store data captured during the checkout session
     customerEmail: text("customer_email"),
     customerPhone: text("customer_phone"),
+    subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
   },
   (table) => ({
     amountOrProductCheck: check(
@@ -300,9 +301,6 @@ export const subscriptions = pgTable("subscription", {
   cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
   canceledAt: timestamp("canceled_at"),
   pausedAt: timestamp("paused_at"),
-  lastPaymentId: text("last_payment_id"),
-  nextBillingDate: timestamp("next_billing_date"),
-  failedPaymentCount: integer("failed_payment_count").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
@@ -336,6 +334,7 @@ export const payouts = pgTable("payout", {
   amount: integer("amount").notNull(),
   status: payoutStatusEnum("status").notNull(),
   walletAddress: text("wallet_address").notNull(),
+  asset: text("asset").references(() => assets.id),
   memo: text("memo"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),

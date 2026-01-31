@@ -1,5 +1,7 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, contracttype, token, Address, Env, Symbol};
+use soroban_sdk::{
+    contract, contractimpl, contracttype, token, Address, Env, Symbol, symbol_short
+};
 
 #[contracttype]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -23,14 +25,14 @@ pub struct SubscriptionEngine;
 
 #[contractimpl]
 impl SubscriptionEngine {
-    /// Wallet calls this. Bundled with 'approve' in the XDR.
+    /// Initial signature by Customer. 
+    /// Bundles Approval + Start + First Payment.
     pub fn start(e: Env, customer: Address, merchant: Address, token: Address, product_id: Symbol, amount: i128, duration: u64) {
         customer.require_auth();
 
-        // 1. Take first payment (Requires the 'approve' that was in the same XDR)
+        // Transfer first payment immediately
         token::Client::new(&e, &token).transfer_from(&e.current_contract_address(), &customer, &merchant, &amount);
 
-        // 2. Save Sub
         let sub = Subscription {
             customer: customer.clone(),
             merchant,
@@ -40,71 +42,91 @@ impl SubscriptionEngine {
             period_end: e.ledger().timestamp() + duration,
             status: Status::Active,
         };
-        e.storage().persistent().set(&(customer, product_id), &sub);
+        
+        e.storage().persistent().set(&(customer.clone(), product_id.clone()), &sub);
+
+        // Emit event for backend indexing
+        e.events().publish((symbol_short!("sub_start"), customer, product_id), amount);
     }
 
+    /// Backend/Cron calls this.
+    /// If this returns without error, the payment WAS successful.
     pub fn charge(e: Env, customer: Address, product_id: Symbol) {
-        let key = (customer, product_id);
-        let mut sub: Subscription = e.storage().persistent().get(&key).expect("Not found");
+        let key = (customer.clone(), product_id.clone());
+        let mut sub: Subscription = e.storage().persistent().get(&key).expect("Sub not found");
 
-        if sub.status == Status::Active && e.ledger().timestamp() >= sub.period_end {
-            token::Client::new(&e, &sub.token).transfer_from(&e.current_contract_address(), &sub.customer, &sub.merchant, &sub.amount);
-            sub.period_end += sub.period_duration;
-            e.storage().persistent().set(&key, &sub);
-        }
+        if sub.status != Status::Active { panic!("Inactive sub"); }
+        if e.ledger().timestamp() < sub.period_end { panic!("Period not ended"); }
+
+        // Execute transfer. If user has no funds, this line PANICS.
+        // If it panics, the lines below (updating period_end) NEVER run.
+        token::Client::new(&e, &sub.token).transfer_from(&e.current_contract_address(), &sub.customer, &sub.merchant, &sub.amount);
+
+        // Success! Update state
+        sub.period_end += sub.period_duration;
+        e.storage().persistent().set(&key, &sub);
+
+        // This is what your Webhook system listens for
+        e.events().publish((symbol_short!("sub_pay"), customer, product_id), (sub.amount, sub.period_end));
     }
 
     pub fn resume(e: Env, customer: Address, product_id: Symbol) {
-        customer.require_auth();
-        let mut sub: Subscription = e.storage().persistent().get(&(customer.clone(), product_id.clone())).unwrap();
+        let key = (customer.clone(), product_id.clone());
+        let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
         
-        // Only allow resume if we are still "in period" i.e the period_end is in the future
-        let now = e.ledger().timestamp();
-        if now <= sub.period_end {
-            sub.status = Status::Active;
-            e.storage().persistent().set(&(customer, product_id), &sub);
-        } else {
-            panic!("Subscription period has already ended, cannot resume");
-        }
+        // Authorization: Customer OR Merchant
+        Self::check_auth(&e, &customer, &sub.merchant);
+
+        if e.ledger().timestamp() > sub.period_end { panic!("Period ended"); }
+
+        sub.status = Status::Active;
+        e.storage().persistent().set(&key, &sub);
+        e.events().publish((symbol_short!("sub_res"), customer, product_id), ());
     }
 
     pub fn pause(e: Env, customer: Address, product_id: Symbol) {
-        customer.require_auth();
-        let mut sub: Subscription = e.storage().persistent().get(&(customer.clone(), product_id.clone())).unwrap();
+        let key = (customer.clone(), product_id.clone());
+        let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
+        
+        Self::check_auth(&e, &customer, &sub.merchant);
+
         sub.status = Status::Paused;
-        e.storage().persistent().set(&(customer, product_id), &sub);
+        e.storage().persistent().set(&key, &sub);
+        e.events().publish((symbol_short!("sub_pau"), customer, product_id), ());
     }
 
     pub fn cancel(e: Env, customer: Address, product_id: Symbol) {
-        customer.require_auth();
-        let mut sub: Subscription = e.storage().persistent().get(&(customer.clone(), product_id.clone())).unwrap();
+        let key = (customer.clone(), product_id.clone());
+        let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
+        
+        Self::check_auth(&e,&customer, &sub.merchant);
+
         sub.status = Status::Canceled;
-        e.storage().persistent().set(&(customer, product_id), &sub);
+        e.storage().persistent().set(&key, &sub);
+        e.events().publish((symbol_short!("sub_can"), customer, product_id), ());
+    }
+
+    // --- Helpers ---
+
+    /// Custom Auth Logic: OR (Customer signs OR Merchant signs)
+    fn check_auth(e: &Env, customer: &Address, merchant: &Address) {
+     // 1. We check if the customer has provided authorization for this call.
+    // We look at the authorized addresses in the current environment.
+    let authorized = e.auth().get_authorized_invocations();
+    
+    // 2. We check if the customer is among the authorized signers
+    let is_customer = authorized.iter().any(|inv| inv.address == *customer);
+
+    if is_customer {
+        // If the customer signed it, satisfy the requirement
+        customer.require_auth();
+    } else {
+        // If the customer didn't sign it, the merchant MUST have signed it
+        merchant.require_auth();
+    }
     }
 
     pub fn get_subscription(e: Env, customer: Address, product_id: Symbol) -> Subscription {
-        match e.storage().persistent().get(&(customer.clone(), product_id.clone())) {
-            Some(sub) => sub,
-            None => panic!("Subscription not found"),
-        }
-    }
-
-    pub fn update_subscription(e: Env, customer: Address, product_id: Symbol, status: Option<Status>, period_duration: Option<u64>, period_end: Option<u64>) {
-        customer.require_auth();
-        let mut sub: Subscription = match e.storage().persistent().get(&(customer.clone(), product_id.clone())) {
-            Some(sub) => sub,
-            None => panic!("Subscription not found"),
-        };
-        
-        if let Some(new_status) = status {
-            sub.status = new_status;
-        }
-        if let Some(new_period_duration) = period_duration {
-            sub.period_duration = new_period_duration;
-        }
-        if let Some(new_period_end) = period_end {
-            sub.period_end = new_period_end;
-        }
-        e.storage().persistent().set(&(customer, product_id), &sub);
+        e.storage().persistent().get(&(customer, product_id)).expect("Sub not found")
     }
 }

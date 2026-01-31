@@ -54,16 +54,6 @@ export interface Subscription {
   pausedAt?: string;
 
   /**
-   * The last payment ID of the subscription.
-   */
-  lastPaymentId?: string;
-
-  /**
-   * The next billing date of the subscription.
-   */
-  nextBillingDate?: string;
-
-  /**
    * The number of failed payments of the subscription.
    */
   failedPaymentCount?: number;
@@ -100,8 +90,6 @@ export const subscriptionSchema = schemaFor<Subscription>()(
     cancelAtPeriodEnd: z.boolean(),
     canceledAt: z.string(),
     pausedAt: z.string(),
-    lastPaymentId: z.string().optional(),
-    nextBillingDate: z.string(),
     failedPaymentCount: z.number(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -114,7 +102,6 @@ export const createSubscriptionSchema = z.object({
   customerIds: z.array(z.string()),
   productId: z.string(),
   metadata: z.record(z.string(), z.any()).optional(),
-  nextBillingDate: z.string().optional(),
   cancelAtPeriodEnd: z.boolean().optional().default(false),
   period: z.object({
     from: z.coerce.date(),
@@ -139,7 +126,6 @@ export type ResumeSubscription = Pick<Subscription, "id">;
 export const updateSubscriptionSchema = subscriptionSchema.pick({
   metadata: true,
   cancelAtPeriodEnd: true,
-  nextBillingDate: true,
 });
 
-export type UpdateSubscription = Partial<Pick<Subscription, "metadata" | "cancelAtPeriodEnd" | "nextBillingDate">>;
+export type UpdateSubscription = Partial<Pick<Subscription, "metadata" | "cancelAtPeriodEnd">>;

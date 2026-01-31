@@ -15,7 +15,7 @@ export const postCheckout = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const checkoutId = `cz_${nanoid(25)}`;
+  const checkoutId = `cz_${nanoid(40)}`;
 
   return withEvent(
     async () => {
@@ -27,17 +27,22 @@ export const postCheckout = async (
       return checkout;
     },
     {
-      type: "checkout::created",
-      map: ({ productId, expiresAt, amount }) => ({
-        checkoutId,
-        data: { productId, expiresAt, amount },
-      }),
-    },
-    {
-      events: ["checkout.created"],
-      organizationId,
-      environment,
-      payload: ({ updatedAt: _$, organizationId: _$1, ...checkoutWithoutOrg }) => checkoutWithoutOrg,
+      events: [
+        {
+          type: "checkout::created",
+          map: ({ productId, expiresAt, amount }) => ({ checkoutId, data: { productId, expiresAt, amount } }),
+        },
+      ],
+      webhooks: {
+        organizationId,
+        environment,
+        triggers: [
+          {
+            event: "checkout.created",
+            map: ({ id: checkoutId, productId, expiresAt, amount }) => ({ checkoutId, productId, expiresAt, amount }),
+          },
+        ],
+      },
     }
   );
 };
@@ -113,7 +118,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
 export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const oldCheckout = await retrieveCheckout(id, orgId, env);
+  const oldCheckout = await retrieveCheckout(id, organizationId, environment);
 
   return withEvent(
     async () => {
@@ -134,11 +139,12 @@ export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?:
       return checkout;
     },
     {
-      type: "checkout::updated",
-      map: (newCheckout) => ({
-        checkoutId: newCheckout.id,
-        data: { $changes: computeDiff(oldCheckout, newCheckout) },
-      }),
+      events: [
+        {
+          type: "checkout::updated",
+          map: (checkout) => ({ checkoutId: checkout.id, data: { $changes: computeDiff(oldCheckout, checkout) } }),
+        },
+      ],
     }
   );
 };

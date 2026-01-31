@@ -23,21 +23,19 @@ export class SorobanContractApi {
   async createSubscription(params: {
     customerAddress: string;
     productId: string;
-    amount: bigint;
+    amount: number;
     periodStart: number;
     periodEnd: number;
-  }): Promise<string> {
+  }): Promise<Result<string, Error>> {
     const operation = this.contract.call(
       "create_subscription",
       StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
       StellarSDK.nativeToScVal(params.productId, { type: "symbol" }),
-      StellarSDK.nativeToScVal(params.amount, { type: "i128" }),
+      StellarSDK.nativeToScVal(params.amount * 100000000, { type: "i128" }),
       StellarSDK.nativeToScVal(params.periodEnd, { type: "u64" })
     );
 
-    const result = await this.invoke(operation);
-    if (result.isErr()) throw new Error(result.error.message);
-    return result.value;
+    return await this.invoke(operation);
   }
 
   async pauseSubscription(customerAddress: string, productId: string): Promise<void> {
@@ -103,6 +101,31 @@ export class SorobanContractApi {
     return await this.invoke(operation);
   }
 
+  async charge(
+    customer: string,
+    productId: string
+  ): Promise<
+    Result<
+      {
+        hash: string;
+        events: Array<{
+          topic: string;
+          topics: string[];
+          data: { amount: string; periodEnd: string };
+          success: boolean;
+        }>;
+      },
+      Error
+    >
+  > {
+    const operation = this.contract.call(
+      "charge",
+      StellarSDK.nativeToScVal(customer, { type: "address" }),
+      StellarSDK.nativeToScVal(productId, { type: "symbol" })
+    );
+    return await this.invoke(operation);
+  }
+
   private async invoke(
     operation: StellarSDK.xdr.Operation,
     options: { readOnly?: boolean } = {}
@@ -151,12 +174,29 @@ export class SorobanContractApi {
       const res = await this.server.getTransaction(hash);
 
       if (res.status === "SUCCESS") {
-        // Return the contract's return value (retval) or the hash
-        return Result.ok(res.returnValue ? StellarSDK.scValToNative(res.returnValue) : hash);
+        const rawEvents = res.events?.contractEventsXdr?.flat() ?? [];
+        const parsedEvents = rawEvents.map((eventXdr) => {
+          const event =
+            typeof eventXdr == "string" ? StellarSDK.xdr.ContractEvent.fromXDR(eventXdr, "base64") : eventXdr;
+
+          // 3. Extract topics and data
+          // Topics is an array of ScVals (usually the first one is the Symbol/Event Name)
+          const topics = event
+            .body()
+            .v0()
+            .topics()
+            .map((t) => StellarSDK.scValToNative(t));
+
+          const data = StellarSDK.scValToNative(event.body().v0().data());
+
+          return { topic: topics[0], topics, data, success: true };
+        });
+
+        return Result.ok({ hash, events: parsedEvents });
       }
 
       if (res.status === "FAILED") {
-        return Result.err(new Error(`Transaction failed on ledger: ${JSON.stringify(res.resultXdr)}`));
+        return Result.ok({ hash, events: [], success: false });
       }
 
       // Delay for 10s, expected to be resolved after 10 * 10s = 100s (1m40s)
@@ -165,14 +205,5 @@ export class SorobanContractApi {
 
     console.error(`Transaction polling timed out for hash: ${hash}`);
     return Result.err(new Error("Transaction polling timed out"));
-  }
-
-  async charge(customer: string, productId: string): Promise<Result<string, Error>> {
-    const operation = this.contract.call(
-      "charge",
-      StellarSDK.nativeToScVal(customer, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" })
-    );
-    return await this.invoke(operation);
   }
 }
