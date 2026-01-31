@@ -26,6 +26,7 @@ export interface TableAction<TData> {
   label: string;
   onClick: (row: TData) => void;
   variant?: "default" | "destructive";
+  when?: (row: TData) => boolean;
 }
 
 interface DataTableProps<TData, TValue>
@@ -119,21 +120,23 @@ export const DataTable = <TData, TValue>({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {actions.map((action, index) => (
-                  <DropdownMenuItem
-                    key={index}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      action.onClick(row.original);
-                    }}
-                    className={cn(
-                      "py-1",
-                      action.variant === "destructive" ? "text-destructive focus:text-destructive" : undefined
-                    )}
-                  >
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
+                {actions
+                  .filter((action) => action.when === undefined || action.when(row.original))
+                  .map((action, index) => (
+                    <DropdownMenuItem
+                      key={index}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        action.onClick(row.original);
+                      }}
+                      className={cn(
+                        "py-1",
+                        action.variant === "destructive" ? "text-destructive focus:text-destructive" : undefined
+                      )}
+                    >
+                      {action.label}
+                    </DropdownMenuItem>
+                  ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
