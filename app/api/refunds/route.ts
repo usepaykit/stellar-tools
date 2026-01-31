@@ -1,4 +1,4 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
 import { withEvent } from "@/actions/event";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
@@ -6,111 +6,98 @@ import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
-import { createRefundSchema } from "@stellartools/core";
+import { createRefundSchema, validateSchema } from "@stellartools/core";
+import { Result } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
+  const sessionToken = req.headers.get("x-session-token");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !sessionToken) {
+    return NextResponse.json({ error: "API key or session token is required" }, { status: 400 });
   }
 
-  const { error, data } = createRefundSchema.safeParse(await req.json());
+  const result = await Result.andThenAsync(validateSchema(createRefundSchema, await req.json()), async (data) => {
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey!, sessionToken ?? undefined);
+    const [payment, asset] = await Promise.all([
+      retrievePayment(data.paymentId, organizationId, environment),
+      retrieveAsset(data.assetId),
+    ]);
 
-  if (error) return NextResponse.json({ error }, { status: 400 });
+    if (!payment) return Result.err("Payment not found");
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+    if (!asset) return Result.err("Asset not found");
 
-  const [payment, asset] = await Promise.all([
-    retrievePayment(data.paymentId, organizationId, environment),
-    retrieveAsset(data.assetId),
-  ]);
+    if (payment.environment !== environment) return Result.err("Invalid state");
 
-  if (!payment) {
-    return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-  }
+    const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 
-  if (!asset) {
-    return NextResponse.json({ error: "Asset not found" }, { status: 404 });
-  }
+    if (!secret) return Result.err("Invalid stellar secret");
 
-  if (payment.environment !== environment) {
-    return NextResponse.json({ error: "Invalid state" }, { status: 400 });
-  }
+    const stellar = new StellarCoreApi(environment);
 
-  const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
+    const txMemo = JSON.stringify({ checkoutId: payment.checkoutId, amount: data.amount });
+    const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
-  if (!secret) {
-    return NextResponse.json({ error: "Stellar secret is not set, please contact support" }, { status: 400 });
-  }
+    const refund = await withEvent(
+      async () => {
+        const refundResult = await stellar.sendAssetPayment(
+          secretKey,
+          data.receiverPublicKey,
+          asset.code,
+          asset.issuer || "",
+          (data.amount / 10_000_000).toString(), // Convert stroops to XLM,
+          txMemo
+        );
 
-  const stellar = new StellarCoreApi(environment);
+        if (refundResult.isErr()) return Result.err(refundResult.error);
 
-  const txMemo = JSON.stringify({
-    checkoutId: payment.checkoutId,
-    amount: data.amount,
-  });
+        const refund = await postRefund(
+          {
+            ...data,
+            status: "pending",
+            receiverPublicKey: data.receiverPublicKey,
+            metadata: data.metadata ?? {},
+            customerId: data.customerId,
+            paymentId: data.paymentId,
+            amount: data.amount,
+            reason: data.reason ?? null,
+          },
+          organizationId,
+          environment
+        );
 
-  const secretKey = new EncryptionApi().decrypt(secret.encrypted);
-
-  const refund = await withEvent(
-    async () => {
-      const refundResult = await stellar.sendAssetPayment(
-        secretKey,
-        data.receiverPublicKey,
-        asset.code,
-        asset.issuer || "",
-        (data.amount / 10_000_000).toString(), // Convert stroops to XLM,
-        txMemo
-      );
-
-      if (refundResult.isErr()) return { error: refundResult.error };
-
-      const refund = await postRefund(
-        {
-          ...data,
-          status: "pending",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          receiverPublicKey: data.receiverPublicKey,
-          metadata: data.metadata ?? {},
-          customerId: data.customerId,
-          paymentId: data.paymentId,
-          amount: data.amount,
-          reason: data.reason ?? null,
-        },
+        return Result.ok(refund);
+      },
+      undefined,
+      {
+        events: ["refund.failed", "refund.created", "refund.succeeded"],
         organizationId,
-        environment
-      );
+        environment,
+        payload: (refund) => {
+          if (refund.isErr())
+            return {
+              error: refund.error,
+              success: false,
+              timestamp: new Date(),
+              paymentId: data.paymentId,
+              amount: data.amount,
+            };
 
-      return { data: refund };
-    },
-    undefined,
-    {
-      events: ["refund.failed", "refund.created", "refund.succeeded"],
-      organizationId,
-      environment,
-      payload: (refund) => {
-        if (refund?.error)
           return {
-            error: refund.error,
-            success: false,
+            id: refund?.value?.id,
             timestamp: new Date(),
             paymentId: data.paymentId,
             amount: data.amount,
+            success: true,
           };
+        },
+      }
+    );
 
-        return {
-          id: refund?.data?.id,
-          timestamp: new Date(),
-          paymentId: data.paymentId,
-          amount: data.amount,
-          success: true,
-        };
-      },
-    }
-  );
+    return Result.ok(refund);
+  });
 
-  return NextResponse.json(refund);
+  return NextResponse.json(result);
 };

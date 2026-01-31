@@ -1,61 +1,56 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { creditTransactions, db } from "@/db";
+import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { and, desc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-
-const querySchema = z.object({
-  productId: z.string().optional(),
-  limit: z.coerce.number().default(50),
-  offset: z.coerce.number().default(0),
-});
 
 export const GET = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const { customerId } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
-  }
+  if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
 
   const { searchParams } = new URL(req.url);
-  const { error, data } = querySchema.safeParse({
-    productId: searchParams.get("productId"),
-    limit: searchParams.get("limit"),
-    offset: searchParams.get("offset"),
-  });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
-  }
+  const result = await Result.andThenAsync(
+    validateSchema(
+      Schema.object({
+        productId: Schema.string().optional(),
+        limit: Schema.coerce.number().default(50),
+        offset: Schema.coerce.number().default(0),
+      }),
+      {
+        productId: searchParams.get("productId"),
+        limit: searchParams.get("limit"),
+        offset: searchParams.get("offset"),
+      }
+    ),
+    async ({ productId, limit, offset }) => {
+      const { organizationId } = await resolveApiKeyOrSessionToken(apiKey);
+      const conditions = [
+        eq(creditTransactions.customerId, customerId),
+        eq(creditTransactions.organizationId, organizationId),
+      ];
 
-  const { organizationId } = await resolveApiKey(apiKey);
+      if (productId) {
+        conditions.push(eq(creditTransactions.productId, productId));
+      }
 
-  try {
-    const conditions = [
-      eq(creditTransactions.customerId, customerId),
-      eq(creditTransactions.organizationId, organizationId),
-    ];
+      const transactions = await db
+        .select()
+        .from(creditTransactions)
+        .where(and(...conditions))
+        .orderBy(desc(creditTransactions.createdAt))
+        .limit(limit)
+        .offset(offset);
 
-    if (data.productId) {
-      conditions.push(eq(creditTransactions.productId, data.productId));
+      return Result.ok(transactions);
     }
+  );
 
-    const transactions = await db
-      .select()
-      .from(creditTransactions)
-      .where(and(...conditions))
-      .orderBy(desc(creditTransactions.createdAt))
-      .limit(data.limit)
-      .offset(data.offset);
+  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400 });
 
-    return NextResponse.json({ data: transactions });
-  } catch (error) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ error: "Failed to retrieve transactions" }, { status: 500 });
-  }
+  return NextResponse.json({ data: result.value });
 };

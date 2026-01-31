@@ -66,7 +66,7 @@ export interface Refund {
   /**
    * The metadata for the refund.
    */
-  metadata: Record<string, unknown>;
+  metadata: Record<string, unknown> | null;
 
   /**
    * The environment of the refund.
@@ -92,7 +92,7 @@ export const refundSchema = schemaFor<Refund>()(
     status: refundStatusEnum,
     createdAt: z.string(),
     updatedAt: z.string(),
-    metadata: z.record(z.string(), z.any()).default({}),
+    metadata: z.record(z.string(), z.any()).default({}).nullable(),
     environment: environmentSchema,
     receiverPublicKey: z.string(),
   })

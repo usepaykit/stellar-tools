@@ -1,4 +1,4 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { triggerWebhooks } from "@/actions/webhook";
 import { subscriptionStatusEnum } from "@/constant/schema.client";
@@ -18,7 +18,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
   }
 
   const result = await Result.andThenAsync(validateSchema(Schema.string(), id), async (id) => {
-    const { environment } = await resolveApiKey(apiKey);
+    const { environment } = await resolveApiKeyOrSessionToken(apiKey);
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
     const subscription = await retrieveSubscription(id);
@@ -60,7 +60,7 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
       await req.json()
     ),
     async ({ status, periodEnd, metadata }) => {
-      const { environment, organizationId } = await resolveApiKey(apiKey);
+      const { environment, organizationId } = await resolveApiKeyOrSessionToken(apiKey);
       const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
       const subscription = await retrieveSubscription(id);

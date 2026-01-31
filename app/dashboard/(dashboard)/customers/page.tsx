@@ -320,8 +320,6 @@ export function CustomerModal({
           phone: phoneString,
           walletAddresses: null,
           metadata: metadataRecord,
-          createdAt: new Date(),
-          updatedAt: new Date(),
         },
       ]);
 

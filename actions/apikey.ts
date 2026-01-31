@@ -1,10 +1,10 @@
 "use server";
 
-import { ApiKey, Network, apiKeys, db, organizations } from "@/db";
+import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
+import { ApiKey, Network, apiKeys, db } from "@/db";
+import { JWT } from "@/integrations/jwt";
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-
-import { resolveOrgContext } from "./organization";
 
 export const postApiKey = async (params: Omit<ApiKey, "id" | "organizationId" | "environment">) => {
   const { organizationId, environment } = await resolveOrgContext();
@@ -70,18 +70,26 @@ export const deleteApiKey = async (id: string, orgId?: string, env?: Network) =>
   return null;
 };
 
-export const resolveApiKey = async (apiKey: string) => {
+export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?: string) => {
+  if (sessionToken) {
+    const { orgId, environment } = (await new JWT().verify(sessionToken)) as {
+      orgId: string;
+      environment: Network;
+    };
+
+    const organization = await retrieveOrganization(orgId);
+
+    return {
+      organizationId: organization.id,
+      environment,
+    };
+  }
+
   const [record] = await db.select().from(apiKeys).where(eq(apiKeys.token, apiKey)).limit(1);
 
   if (!record) throw new Error("Invalid apiKey");
 
-  const [organization] = await db
-    .select()
-    .from(organizations)
-    .where(eq(organizations.id, record.organizationId))
-    .limit(1);
-
-  if (!organization) throw new Error("Invalid organization");
+  const organization = await retrieveOrganization(record.organizationId);
 
   return {
     organizationId: organization.id,

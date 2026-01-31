@@ -2,8 +2,8 @@
 
 import * as React from "react";
 
+import { getCurrentOrganization } from "@/actions/organization";
 import { retrievePayment, retrievePaymentsWithDetails } from "@/actions/payment";
-import { postRefund } from "@/actions/refund";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -17,6 +17,7 @@ import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiClient } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Copy, Download, Plus, Settings, Wallet, XCircle } from "lucide-react";
@@ -224,25 +225,27 @@ export function RefundModal({
 
   const createRefundMutation = useMutation({
     mutationFn: async (data: RefundFormData) => {
+      const organization = await getCurrentOrganization();
       const payment = await retrievePayment(data.paymentId);
 
-      return await postRefund(
-        {
-          paymentId: payment.id,
-          amount: payment.amount,
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
+        headers: { "x-session-token": organization?.token ?? undefined! },
+      });
+
+      const result = await api.post<{ id: string; success: boolean }>("/api/refunds", {
+        body: JSON.stringify({
+          paymentId: data.paymentId,
           customerId: payment.customerId,
           receiverPublicKey: data.walletAddress,
           reason: data.reason,
-          status: "pending",
-          metadata: {},
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        payment.organizationId,
-        payment.environment
-      );
+          metadata: null,
+        }),
+      });
 
-      // todo: use sendAssetPayment from stellar core and update the status.
+      if (result.isErr()) throw new Error(result.error.message);
+
+      return result.value;
     },
     onSuccess: () => {
       toast.success("Refund created successfully!");

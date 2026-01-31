@@ -1,104 +1,105 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postCreditTransaction, putCreditBalance, retrieveCreditBalance } from "@/actions/credit";
 import { retrieveProduct } from "@/actions/product";
 import { calculateCredits } from "@/lib/credit-calculator";
+import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
-
-const transactionSchema = z.object({
-  amount: z.number(),
-  type: z.enum(["deduct", "refund", "grant"]),
-  reason: z.string().optional(),
-  metadata: z.record(z.string(), z.any()).optional(),
-  dryRun: z.boolean().optional(), // for credit checks only.
-});
 
 export const POST = async (
   req: NextRequest,
   context: { params: Promise<{ customerId: string; productId: string }> }
 ) => {
-  try {
-    const { customerId, productId } = await context.params;
+  const apiKey = req.headers.get("x-api-key");
 
-    const apiKey = req.headers.get("x-api-key");
+  if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
 
-    if (!apiKey) throw new Error("API key is required");
+  const { customerId, productId } = await context.params;
 
-    const { error, data } = transactionSchema.safeParse(await req.json());
+  const result = await Result.andThenAsync(
+    validateSchema(
+      Schema.object({
+        amount: Schema.number(),
+        type: Schema.enum(["deduct", "refund", "grant"]),
+        reason: Schema.string().optional(),
+        metadata: Schema.record(Schema.string(), Schema.any()).optional(),
+        dryRun: Schema.boolean().optional(),
+      }),
+      await req.json()
+    ),
+    async ({ amount, type, reason, metadata, dryRun }): Promise<Result<{ isSufficient: boolean }, Error>> => {
+      const { organizationId } = await resolveApiKeyOrSessionToken(apiKey);
 
-    if (error) throw new Error(`Invalid parameters: ${error.message}`);
+      const [product, creditBalance] = await Promise.all([
+        retrieveProduct(productId, organizationId),
+        retrieveCreditBalance(customerId, productId, organizationId),
+      ]);
 
-    const { organizationId } = await resolveApiKey(apiKey);
+      if (!creditBalance) return Result.err(new Error("Invalid Meter Configuration"));
 
-    const product = await retrieveProduct(productId, organizationId);
+      const creditsToProcess = calculateCredits({
+        rawAmount: amount,
+        unitDivisor: product.unitDivisor,
+        unitsPerCredit: product.unitsPerCredit,
+      });
 
-    const creditBalance = await retrieveCreditBalance(customerId, productId, organizationId);
+      if (dryRun) {
+        return Result.ok({
+          isSufficient: creditsToProcess <= creditBalance.balance,
+          transaction: null,
+          balance: creditBalance,
+        });
+      }
 
-    if (!creditBalance) throw new Error("Invalid Meter Configuration");
+      const balanceBefore = creditBalance.balance;
+      let balanceAfter = balanceBefore;
+      let newConsumed = creditBalance.consumed;
+      let newGranted = creditBalance.granted;
 
-    const creditsToProcess = calculateCredits({
-      rawAmount: data.amount,
-      unitDivisor: product.unitDivisor,
-      unitsPerCredit: product.unitsPerCredit,
-    });
+      switch (type) {
+        case "deduct":
+          if (balanceBefore < creditsToProcess) {
+            return Result.err(new Error("Insufficient credits"));
+          }
+          balanceAfter = balanceBefore - creditsToProcess;
+          newConsumed = creditBalance.consumed + creditsToProcess;
+          break;
 
-    if (data.dryRun) {
-      return NextResponse.json({
+        case "refund":
+          balanceAfter = balanceBefore + creditsToProcess;
+          newConsumed = Math.max(0, creditBalance.consumed - creditsToProcess);
+          break;
+
+        case "grant":
+          balanceAfter = balanceBefore + creditsToProcess;
+          newGranted = creditBalance.granted + creditsToProcess;
+          break;
+      }
+
+      const [transaction, updatedBalance] = await Promise.all([
+        postCreditTransaction({
+          organizationId,
+          customerId,
+          productId,
+          balanceId: creditBalance.id,
+          amount: creditsToProcess,
+          balanceBefore,
+          balanceAfter,
+          type,
+          reason,
+          metadata,
+        }),
+        putCreditBalance(creditBalance.id, { balance: balanceAfter, consumed: newConsumed, granted: newGranted }),
+      ]);
+
+      return Result.ok({
         isSufficient: creditsToProcess <= creditBalance.balance,
+        transaction,
+        balance: updatedBalance,
       });
     }
+  );
 
-    const balanceBefore = creditBalance.balance;
-    let balanceAfter = balanceBefore;
-    let newConsumed = creditBalance.consumed;
-    let newGranted = creditBalance.granted;
+  if (result.isErr()) return NextResponse.json({ error: result.error });
 
-    switch (data.type) {
-      case "deduct":
-        if (balanceBefore < creditsToProcess) {
-          throw new Error("Insufficient credits");
-        }
-        balanceAfter = balanceBefore - creditsToProcess;
-        newConsumed = creditBalance.consumed + creditsToProcess;
-        break;
-
-      case "refund":
-        balanceAfter = balanceBefore + creditsToProcess;
-        newConsumed = Math.max(0, creditBalance.consumed - creditsToProcess);
-        break;
-
-      case "grant":
-        balanceAfter = balanceBefore + creditsToProcess;
-        newGranted = creditBalance.granted + creditsToProcess;
-        break;
-    }
-
-    const [transaction, updatedBalance] = await Promise.all([
-      postCreditTransaction({
-        organizationId,
-        customerId,
-        productId,
-        balanceId: creditBalance.id,
-        amount: creditsToProcess,
-        balanceBefore,
-        balanceAfter,
-        type: data.type,
-        reason: data.reason,
-        metadata: data.metadata,
-      }),
-      putCreditBalance(creditBalance.id, {
-        balance: balanceAfter,
-        consumed: newConsumed,
-        granted: newGranted,
-      }),
-    ]);
-
-    return NextResponse.json({
-      data: { ...updatedBalance, transaction },
-    });
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-  }
+  return NextResponse.json(result);
 };

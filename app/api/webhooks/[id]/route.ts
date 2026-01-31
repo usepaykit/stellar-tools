@@ -1,4 +1,4 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { deleteWebhook, putWebhook, retrieveWebhook } from "@/actions/webhook";
 import { Webhook } from "@/db";
 import { WebhookEvent, schemaFor, webhookEvent } from "@stellartools/core";
@@ -14,7 +14,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
 
   const webhook = await retrieveWebhook(id, organizationId, environment);
 
@@ -44,7 +44,7 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
 
   if (error) return NextResponse.json({ error }, { status: 400 });
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
 
   const webhook = await putWebhook(id, data, organizationId, environment);
 
@@ -60,7 +60,7 @@ export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: 
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
 
   await deleteWebhook(id, organizationId, environment);
 

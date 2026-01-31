@@ -1,6 +1,7 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { deleteCustomer, putCustomer, retrieveCustomer } from "@/actions/customers";
 import { updateCustomerSchema } from "@stellartools/core";
+import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
@@ -10,13 +11,20 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ custome
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { customerId } = await context.params;
+  const result = await Result.andThenAsync(
+    validateSchema(Schema.object({ customerId: Schema.string() }), context.params),
+    async ({ customerId }) => {
+      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+      const customer = await retrieveCustomer({ id: customerId }, organizationId, environment);
+      return Result.ok(customer);
+    }
+  );
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  const customer = await retrieveCustomer({ id: customerId }, organizationId, environment);
-
-  return NextResponse.json({ data: customer });
+  return NextResponse.json({ data: result.value });
 };
 
 export const PUT = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
@@ -28,15 +36,17 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ custome
 
   const { customerId } = await context.params;
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  const result = await Result.andThenAsync(validateSchema(updateCustomerSchema, await req.json()), async (data) => {
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+    const customer = await putCustomer(customerId, data, organizationId, environment);
+    return Result.ok(customer);
+  });
 
-  const { error, data } = updateCustomerSchema.safeParse(await req.json());
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  if (error) return NextResponse.json({ error }, { status: 400 });
-
-  const customer = await putCustomer(customerId, data, organizationId, environment);
-
-  return NextResponse.json({ data: customer });
+  return NextResponse.json({ data: result.value });
 };
 
 export const DELETE = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
@@ -46,11 +56,18 @@ export const DELETE = async (req: NextRequest, context: { params: Promise<{ cust
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { customerId } = await context.params;
+  const result = await Result.andThenAsync(
+    validateSchema(Schema.object({ customerId: Schema.string() }), context.params),
+    async ({ customerId }) => {
+      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+      await deleteCustomer(customerId, organizationId, environment);
+      return Result.ok(null);
+    }
+  );
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  await deleteCustomer(customerId, organizationId, environment);
-
-  return NextResponse.json({ data: null });
+  return NextResponse.json({ data: result.value });
 };

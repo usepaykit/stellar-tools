@@ -116,13 +116,18 @@ export default function CheckoutPage() {
 
       if (result.isErr()) throw new Error(result.error.message);
 
-      // Verify server-side
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
-        headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY! },
+        headers: {},
       });
-      await api.post("/api/verify-wallet-payment", {
-        body: JSON.stringify({ txHash: result.value?.hash, checkoutId }),
+
+      await api.post<{ status: boolean; error?: string }>("/api/verify-wallet-payment", {
+        body: JSON.stringify({
+          txHash: result.value?.hash,
+          checkoutId,
+          organizationId: checkout.organizationId,
+          environment: checkout.environment,
+        }),
       });
 
       toast.success("Payment successful!");
@@ -150,7 +155,6 @@ export default function CheckoutPage() {
       )}
 
       <main className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 py-12 lg:grid-cols-2">
-        {/* Left: Summary */}
         <div className="space-y-8">
           <div className="bg-card space-y-4 rounded-xl border p-8 shadow-sm">
             <div className="space-y-2">
@@ -173,7 +177,6 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Right: Actions */}
         <Card className="border-primary/10 shadow-2xl">
           <CardContent className="space-y-8 p-8">
             <form onSubmit={form.handleSubmit(handlePay)} className="space-y-6">

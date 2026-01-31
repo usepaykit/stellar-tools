@@ -1,4 +1,4 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postWebhook } from "@/actions/webhook";
 import { createWebhookSchema } from "@stellartools/core";
 import { nanoid } from "nanoid";
@@ -11,7 +11,7 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
 
   const { error, data } = createWebhookSchema.safeParse(await req.json());
 

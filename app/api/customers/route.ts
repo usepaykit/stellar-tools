@@ -1,6 +1,6 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postCustomers, retrieveCustomers } from "@/actions/customers";
-import { createCustomerSchema } from "@stellartools/core";
+import { Result, z as Schema, createCustomerSchema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
@@ -8,28 +8,22 @@ export const POST = async (req: NextRequest) => {
 
   if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
 
-  const { error, data } = createCustomerSchema.safeParse(await req.json());
+  const result = await Result.andThenAsync(validateSchema(createCustomerSchema, await req.json()), async (data) => {
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+    const [customer] = await postCustomers(
+      [{ ...data, walletAddresses: null, phone: data?.phone ?? null }],
+      organizationId,
+      environment,
+      { source: "API" }
+    );
+    return Result.ok(customer);
+  });
 
-  if (error) return NextResponse.json({ error }, { status: 400 });
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
-
-  const [customer] = await postCustomers(
-    [
-      {
-        ...data,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        walletAddresses: null,
-        phone: data?.phone ?? null,
-      },
-    ],
-    organizationId,
-    environment,
-    { source: "API" }
-  );
-
-  return NextResponse.json({ data: customer });
+  return NextResponse.json({ data: result.value });
 };
 
 export const GET = async (req: NextRequest) => {
@@ -39,9 +33,18 @@ export const GET = async (req: NextRequest) => {
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKey(apiKey);
+  const result = await Result.andThenAsync(
+    validateSchema(Schema.object({ organizationId: Schema.string() }), req.json()),
+    async (data) => {
+      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+      const customers = await retrieveCustomers(organizationId, environment);
+      return Result.ok(customers);
+    }
+  );
 
-  const customers = await retrieveCustomers(organizationId, environment);
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  return NextResponse.json({ data: customers });
+  return NextResponse.json({ data: result.value });
 };

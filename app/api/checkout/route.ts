@@ -1,50 +1,45 @@
-import { resolveApiKey } from "@/actions/apikey";
+import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { postCustomers, retrieveCustomer } from "@/actions/customers";
-import { Customer } from "@/db";
 import { createCheckoutSchema } from "@stellartools/core";
+import { Result, validateSchema } from "@stellartools/core";
 import moment from "moment";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
-  }
+  if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
 
-  const { error, data } = createCheckoutSchema.safeParse(await req.json());
-
-  if (error) return NextResponse.json({ error }, { status: 400 });
-
-  const { organizationId, environment } = await resolveApiKey(apiKey);
-
-  let customer: Customer | null = null;
-
-  if (data?.customerId) {
-    customer = await retrieveCustomer({ id: data.customerId }, organizationId, environment);
-  } else if (data?.customerEmail) {
-    [customer] = await postCustomers(
-      [
-        {
-          email: data.customerEmail as string,
-          name: data.customerEmail?.split("@")[0],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          phone: null,
-          walletAddresses: null,
-          metadata: data?.metadata ?? null,
-        },
-      ],
+  const result = await Result.andThenAsync(validateSchema(createCheckoutSchema, await req.json()), async (data) => {
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+    let customer = await retrieveCustomer(
+      {
+        ...((data.customerId && { id: data.customerId }) as { id: string }),
+        ...((data.customerEmail && { email: data.customerEmail }) as { email: string }),
+      },
       organizationId,
       environment
     );
-  } else {
-    throw new Error("Customer ID or email is required");
-  }
 
-  const checkout = await postCheckout(
-    {
+    if (!customer && data.customerEmail) {
+      [customer] = await postCustomers(
+        [
+          {
+            email: data.customerEmail as string,
+            name: data.customerEmail?.split("@")[0],
+            phone: null,
+            walletAddresses: null,
+            metadata: data?.metadata ?? null,
+          },
+        ],
+        organizationId,
+        environment,
+        { source: "Checkout API" }
+      );
+    }
+
+    const checkout = await postCheckout({
       customerId: customer?.id ?? null,
       status: "open",
       expiresAt: moment().add(1, "day").toDate(),
@@ -58,10 +53,12 @@ export const POST = async (req: NextRequest) => {
       successUrl: data.successUrl ?? null,
       customerEmail: customer?.email ?? null,
       customerPhone: customer?.phone ?? null,
-    },
-    organizationId,
-    environment
-  );
+    });
 
-  return NextResponse.json({ data: checkout });
+    return Result.ok(checkout);
+  });
+
+  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400 });
+
+  return NextResponse.json({ data: result.value });
 };

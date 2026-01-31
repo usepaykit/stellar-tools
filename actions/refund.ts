@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 import { resolveOrgContext } from "./organization";
 
 export const postRefund = async (
-  params: Omit<Refund, "id" | "organizationId" | "environment">,
+  params: Omit<Refund, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
   orgId?: string,
   env?: Network
 ) => {
@@ -20,6 +20,8 @@ export const postRefund = async (
       id: `rf_${nanoid(25)}`,
       organizationId,
       environment,
+      createdAt: new Date(),
+      updatedAt: new Date(),
       ...params,
     } as Refund)
     .returning();

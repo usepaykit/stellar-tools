@@ -8,7 +8,7 @@ import { SQL, and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCustomers = async (
-  params: Omit<Customer, "id" | "organizationId" | "environment">[],
+  params: Omit<Customer, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">[],
   orgId?: string,
   env?: Network,
   options?: { source?: string }
@@ -19,7 +19,16 @@ export const postCustomers = async (
     async () => {
       const results = await db
         .insert(customers)
-        .values(params.map((p) => ({ ...p, id: `cus_${nanoid(25)}`, organizationId, environment })))
+        .values(
+          params.map((p) => ({
+            ...p,
+            id: `cus_${nanoid(25)}`,
+            organizationId,
+            environment,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }))
+        )
         .returning();
 
       return results;

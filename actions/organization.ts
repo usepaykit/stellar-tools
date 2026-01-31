@@ -154,7 +154,7 @@ export const getCurrentOrganization = async () => {
 
   const organization = await retrieveOrganization(orgId);
 
-  return { id: organization.id, environment };
+  return { id: organization.id, environment, token };
 };
 
 export const switchEnvironment = async (environment: Network) => {
