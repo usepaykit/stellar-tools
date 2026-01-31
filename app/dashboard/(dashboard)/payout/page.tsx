@@ -38,6 +38,7 @@ const mockPayouts: Payout[] = [
     createdAt: new Date(),
     completedAt: new Date(),
     metadata: null,
+    asset: "XLM",
   },
   {
     id: "2",
@@ -51,6 +52,7 @@ const mockPayouts: Payout[] = [
     createdAt: new Date(),
     completedAt: new Date(),
     metadata: null,
+    asset: "XLM",
   },
   {
     id: "3",
@@ -64,6 +66,7 @@ const mockPayouts: Payout[] = [
     createdAt: new Date(),
     completedAt: new Date(),
     metadata: null,
+    asset: "XLM",
   },
   {
     id: "4",
@@ -77,6 +80,7 @@ const mockPayouts: Payout[] = [
     createdAt: new Date(),
     completedAt: new Date(),
     metadata: null,
+    asset: "XLM",
   },
 ];
 

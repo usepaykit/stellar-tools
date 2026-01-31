@@ -1,11 +1,10 @@
 import * as React from "react";
 
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-
-import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
@@ -42,7 +41,7 @@ export const SelectField = ({
   error,
   helpText,
   isLoading = false,
-  placeholder = "Select…",
+  placeholder = "Select...",
   ...mixProps
 }: SelectFieldProps) => {
   const {

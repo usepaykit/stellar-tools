@@ -8,6 +8,7 @@ import { computeDiff } from "@/lib/utils";
 import { LooseAutoComplete, MaybeArray, WebhookEvent, chunk } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
+import _ from "lodash";
 import { nanoid } from "nanoid";
 
 type EventDataDiff = { $changes?: Record<string, ReturnType<typeof computeDiff>> };
@@ -19,61 +20,63 @@ interface EmitParams {
   data?: Record<string, string | number | boolean | null | undefined | Date | EventDataDiff>;
 }
 
-export async function withEvent<T>(
-  action: () => Promise<T>,
-  eventConfig?: {
-    type: EventType;
-    map: (result: T) => MaybeArray<Omit<EmitParams, "type">>;
-  },
-  webhookConfig?: {
+export interface EventTrigger<T> {
+  type: EventType;
+  map: (result: T) => MaybeArray<Omit<EmitParams, "type">>;
+}
+
+export interface WebhookTrigger<T> {
+  event: WebhookEvent;
+  map: (result: T) => MaybeArray<Record<string, unknown>>;
+}
+
+export interface EventConfig<T> {
+  events?: MaybeArray<EventTrigger<T>>;
+  webhooks?: {
     organizationId: string;
     environment: Network;
-    payload: (result: T) => MaybeArray<Record<string, unknown>>;
-    events: Array<WebhookEvent>;
-  }
+    triggers: MaybeArray<WebhookTrigger<T>>;
+  };
+}
+
+export async function withEvent<T>(
+  action: () => Promise<T>,
+  configs?: EventConfig<T> | ((result: T) => EventConfig<T> | undefined)
 ): Promise<T> {
   const result = await action();
 
   const runSideEffects = async () => {
     try {
-      if (eventConfig) {
-        const mapped = eventConfig.map(result);
-        const eventArray = Array.isArray(mapped) ? mapped : [mapped];
+      const resolved = typeof configs === "function" ? configs(result) : configs;
 
-        await emitEvents(eventArray.map((e) => ({ ...e, type: eventConfig.type })));
+      if (!resolved) return;
+
+      const { events: eventConfigs, webhooks: webhookConfig } = resolved;
+
+      if (eventConfigs) {
+        const configsArray = Array.isArray(eventConfigs) ? eventConfigs : [eventConfigs];
+        const internalEvents = configsArray.flatMap((cfg) => {
+          const mapped = cfg.map(result);
+          return (Array.isArray(mapped) ? mapped : [mapped]).map((data) => ({ ...data, type: cfg.type }));
+        });
+
+        if (internalEvents.length > 0) await emitEvents(internalEvents);
       }
 
-      if (webhookConfig) {
-        const data = webhookConfig.payload(result);
-        const dataArray = Array.isArray(data) ? data : [data];
+      if (webhookConfig?.triggers) {
+        const { triggers, organizationId, environment } = webhookConfig;
+        const triggersArray = Array.isArray(triggers) ? triggers : [triggers];
 
-        const calls = dataArray.flatMap((item) =>
-          webhookConfig.events.map((event) => ({
-            event,
-            payload: item,
-            orgId: webhookConfig.organizationId,
-            env: webhookConfig.environment,
-          }))
-        );
-
-        // Configuration for the background throttler
-        const BATCH_SIZE = 5;
-        const BATCH_DELAY = 150; // ms between batches
-        const batches = chunk(calls, BATCH_SIZE);
-
-        for (const batch of batches) {
-          await Promise.allSettled(
-            batch.map(({ event, payload, orgId, env }) =>
-              triggerWebhooks(event, payload, orgId, env).catch((err) => {
-                console.error(`[Webhook Error] ${event} for ${orgId}:`, err);
-              })
-            )
+        const deliveries = triggersArray.flatMap((trigger) => {
+          const payloads = trigger.map(result);
+          return (Array.isArray(payloads) ? payloads : [payloads]).map((payload) =>
+            triggerWebhooks(trigger.event, payload, organizationId, environment).catch((err) => {
+              console.error(`[Webhook Error] ${trigger.event} for ${organizationId}:`, err);
+            })
           );
+        });
 
-          if (batches.length > 1) {
-            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY));
-          }
-        }
+        if (deliveries.length > 0) await Promise.allSettled(deliveries);
       }
     } catch (err) {
       console.error(`[Side-Effect Critical Failure]:`, err);

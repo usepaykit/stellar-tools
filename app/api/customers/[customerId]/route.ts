@@ -1,5 +1,5 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
-import { deleteCustomer, putCustomer, retrieveCustomer } from "@/actions/customers";
+import { deleteCustomer, putCustomer, retrieveCustomers } from "@/actions/customers";
 import { updateCustomerSchema } from "@stellartools/core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -15,7 +15,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ custome
     validateSchema(Schema.object({ customerId: Schema.string() }), context.params),
     async ({ customerId }) => {
       const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
-      const customer = await retrieveCustomer({ id: customerId }, organizationId, environment);
+      const [customer] = await retrieveCustomers({ id: customerId }, organizationId, environment);
       return Result.ok(customer);
     }
   );

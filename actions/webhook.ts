@@ -3,6 +3,7 @@
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
+import { toSnakeCase } from "@/lib/utils";
 import { WebhookEvent } from "@stellartools/core";
 import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -232,6 +233,8 @@ export const triggerWebhooks = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
+  const snakePayload = toSnakeCase(payload);
+
   const orgWebhooks = await db
     .select()
     .from(webhooks)
@@ -251,7 +254,9 @@ export const triggerWebhooks = async (
   }
 
   const results = await Promise.allSettled(
-    subscribedWebhooks.map((webhook) => new WebhookDelivery().deliver(webhook, eventType, payload))
+    subscribedWebhooks.map((webhook) =>
+      new WebhookDelivery().deliver(webhook, eventType, snakePayload as Record<string, unknown>)
+    )
   );
 
   const delivered = results.filter((r) => r.status === "fulfilled").length;

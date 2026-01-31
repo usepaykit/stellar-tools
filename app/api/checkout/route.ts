@@ -1,6 +1,6 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
-import { postCustomers, retrieveCustomer } from "@/actions/customers";
+import { postCustomers, retrieveCustomers } from "@/actions/customers";
 import { createCheckoutSchema } from "@stellartools/core";
 import { Result, validateSchema } from "@stellartools/core";
 import moment from "moment";
@@ -13,7 +13,7 @@ export const POST = async (req: NextRequest) => {
 
   const result = await Result.andThenAsync(validateSchema(createCheckoutSchema, await req.json()), async (data) => {
     const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
-    let customer = await retrieveCustomer(
+    let [customer] = await retrieveCustomers(
       {
         ...((data.customerId && { id: data.customerId }) as { id: string }),
         ...((data.customerEmail && { email: data.customerEmail }) as { email: string }),

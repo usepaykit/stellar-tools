@@ -11,7 +11,6 @@ export const webhookEvent = [
   "payment.pending",
   "payment.confirmed",
   "payment.failed",
-  "refund.created",
   "refund.succeeded",
   "refund.failed",
   "subscription.created",

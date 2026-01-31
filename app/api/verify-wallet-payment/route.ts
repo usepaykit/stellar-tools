@@ -1,12 +1,10 @@
 import { putCheckout, retrieveCheckout } from "@/actions/checkout";
-import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { postPayment } from "@/actions/payment";
 import { triggerWebhooks } from "@/actions/webhook";
 import { networkEnum } from "@/constant/schema.client";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
-import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -50,65 +48,20 @@ export const POST = async (req: NextRequest) => {
 
       const amountInStroops = parseInt(paymentOp.amount || "0");
 
-      await withEvent(
-        async () => {
-          const paymentId = `pay_${nanoid(25)}`;
-          const resolvedPromises = await Promise.allSettled([
-            putCheckout(data.checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment),
-            postPayment(
-              {
-                id: paymentId,
-                checkoutId: checkout.id,
-                customerId: checkout.customerId ?? null,
-                amount: amountInStroops,
-                transactionHash: data.txHash,
-                status: "confirmed",
-                createdAt: new Date(txResult.value!.created_at),
-                updatedAt: new Date(),
-              },
-              organizationId,
-              environment
-            ),
-          ]);
-
-          const errors = resolvedPromises.map((result) => (result.status === "rejected" ? result.reason : null));
-
-          if (errors.length > 0) return { error: errors.join(", ") };
-
-          return {
-            paymentId,
-            amount: amountInStroops,
-            txHash: data.txHash,
+      await Promise.all([
+        putCheckout(data.checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment),
+        postPayment(
+          {
             checkoutId: checkout.id,
             customerId: checkout.customerId ?? null,
-          };
-        },
-        {
-          type: "payment::completed",
-          map: ({ amount, txHash, checkoutId, customerId, paymentId }) => ({
-            customerId: customerId ?? undefined,
-            data: { amount, txHash, checkoutId, paymentId },
-          }),
-        },
-        {
-          events: ["payment.confirmed", "payment.failed"],
-          organizationId,
-          environment,
-          payload: (result) => {
-            if (result?.error) {
-              return { error: result?.error, success: false, timestamp: new Date() };
-            }
-
-            return {
-              paymentId: result?.paymentId,
-              amount: result?.amount,
-              txHash: result?.txHash,
-              checkoutId: result?.checkoutId,
-              customerId: result?.customerId,
-            };
+            amount: amountInStroops,
+            transactionHash: data.txHash,
+            status: "confirmed",
           },
-        }
-      );
+          organizationId,
+          environment
+        ),
+      ]);
 
       return Result.ok(result);
     }

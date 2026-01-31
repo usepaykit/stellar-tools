@@ -27,17 +27,11 @@ export const POST = async (req: NextRequest) => {
 };
 
 export const GET = async (req: NextRequest) => {
-  const apiKey = req.headers.get("x-api-key");
-
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
-  }
-
   const result = await Result.andThenAsync(
-    validateSchema(Schema.object({ organizationId: Schema.string() }), req.json()),
-    async (data) => {
+    validateSchema(Schema.object({ apiKey: Schema.string() }), { apiKey: req.headers.get("x-api-key") }),
+    async ({ apiKey }) => {
       const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
-      const customers = await retrieveCustomers(organizationId, environment);
+      const customers = await retrieveCustomers(undefined, organizationId, environment);
       return Result.ok(customers);
     }
   );

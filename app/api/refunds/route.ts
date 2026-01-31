@@ -1,6 +1,6 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
-import { withEvent } from "@/actions/event";
+import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
@@ -40,7 +40,7 @@ export const POST = async (req: NextRequest) => {
     const txMemo = JSON.stringify({ checkoutId: payment.checkoutId, amount: data.amount });
     const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
-    const refund = await withEvent(
+    const result = await withEvent(
       async () => {
         const refundResult = await stellar.sendAssetPayment(
           secretKey,
@@ -56,7 +56,7 @@ export const POST = async (req: NextRequest) => {
         const refund = await postRefund(
           {
             ...data,
-            status: "pending",
+            status: "succeeded",
             receiverPublicKey: data.receiverPublicKey,
             metadata: data.metadata ?? {},
             customerId: data.customerId,
@@ -70,34 +70,53 @@ export const POST = async (req: NextRequest) => {
 
         return Result.ok(refund);
       },
-      undefined,
-      {
-        events: ["refund.failed", "refund.created", "refund.succeeded"],
-        organizationId,
-        environment,
-        payload: (refund) => {
-          if (refund.isErr())
-            return {
-              error: refund.error,
+      (refund) => {
+        let events: EventTrigger<typeof refund>[] = [];
+        let webhooksTriggers: WebhookTrigger<typeof refund>[] = [];
+
+        if (refund.isErr()) {
+          webhooksTriggers.push({
+            event: "refund.failed",
+            map: (refund) => ({
+              error: refund.isErr() ? refund.error.message : undefined,
               success: false,
               timestamp: new Date(),
               paymentId: data.paymentId,
               amount: data.amount,
-            };
+            }),
+          });
+        }
 
-          return {
-            id: refund?.value?.id,
-            timestamp: new Date(),
-            paymentId: data.paymentId,
-            amount: data.amount,
-            success: true,
-          };
-        },
+        if (refund.isOk()) {
+          events.push({
+            type: "refund::created",
+            map: (refund) => {
+              if (refund.isErr()) return {};
+              const { amount, paymentId, customerId, id } = refund.value;
+              return {
+                customerId: customerId!,
+                data: { amount, paymentId, id },
+              };
+            },
+          });
+          webhooksTriggers.push({
+            event: "refund.succeeded",
+            map: (refund) => {
+              if (refund.isErr()) return {};
+              const { amount, paymentId, customerId, id } = refund.value;
+              return { amount, paymentId, customerId, id };
+            },
+          });
+        }
+
+        return { events, webhooks: { organizationId, environment, triggers: webhooksTriggers } };
       }
     );
 
-    return Result.ok(refund);
+    return Result.ok(result);
   });
 
-  return NextResponse.json(result);
+  if (result.isErr()) return NextResponse.json({ error: result.error }, { status: 400 });
+
+  return NextResponse.json(result.value);
 };
