@@ -2,7 +2,12 @@
 
 import * as React from "react";
 
-import { getWebhooksWithAnalytics, postWebhook } from "@/actions/webhook";
+import {
+  deleteWebhook,
+  getWebhooksWithAnalytics,
+  postWebhook,
+  putWebhook,
+} from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -47,12 +52,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-interface WebhookDestination extends Pick<WebhookSchema, "id" | "name" | "url" | "isDisabled"> {
+interface WebhookDestination
+  extends Pick<WebhookSchema, "id" | "name" | "url" | "isDisabled"> {
   eventCount: number;
   eventsFrom: "account" | "test";
   activity?: number[];
   responseTime?: number[];
   errorRate: number;
+  description?: string | null;
+  events?: string[];
 }
 
 const StatusBadge = ({ isDisabled }: { isDisabled: boolean }) => {
@@ -70,7 +78,6 @@ const StatusBadge = ({ isDisabled }: { isDisabled: boolean }) => {
   );
 };
 
-// Chart configurations
 const activityChartConfig: ChartConfig = {
   value: {
     label: "Activity",
@@ -147,7 +154,7 @@ const ResponseTimeChart = ({ data }: { data?: number[] }) => {
   );
 };
 
-// Column definitions
+
 const columns: ColumnDef<WebhookDestination>[] = [
   {
     accessorKey: "type",
@@ -246,8 +253,11 @@ const columns: ColumnDef<WebhookDestination>[] = [
 
 function WebhooksPageContent() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [editingWebhook, setEditingWebhook] = React.useState<WebhookDestination | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics(), {
     select: (webhooksData) => {
@@ -262,13 +272,39 @@ function WebhooksPageContent() {
     },
   });
 
+  const disableWebhookMutation = useMutation({
+    mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) =>
+      putWebhook(id, { isDisabled }),
+    onSuccess: (_, { isDisabled }) => {
+      invalidateOrgQuery(["webhooks"]);
+      toast.success(isDisabled ? "Webhook disabled" : "Webhook enabled");
+    },
+    onError: () => {
+      toast.error("Failed to update webhook");
+    },
+  });
+
+  const deleteWebhookMutation = useMutation({
+    mutationFn: (id: string) => deleteWebhook(id),
+    onSuccess: () => {
+      invalidateOrgQuery(["webhooks"]);
+      toast.success("Webhook deleted");
+      setDeleteConfirmId(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete webhook");
+    },
+  });
+
   React.useEffect(() => {
     if (searchParams.get("create") === "true") {
+      setEditingWebhook(null);
       setIsModalOpen(true);
     }
   }, [searchParams]);
 
   const handleModalChange = (open: boolean) => {
+    if (!open) setEditingWebhook(null);
     setIsModalOpen(open);
     const params = new URLSearchParams(searchParams.toString());
     if (open) {
@@ -279,27 +315,33 @@ function WebhooksPageContent() {
     router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
+  const handleEditWebhook = (webhook: WebhookDestination) => {
+    setEditingWebhook(webhook);
+    setIsModalOpen(true);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("create");
+    const query = params.toString();
+    router.replace(`${window.location.pathname}${query ? `?${query}` : ""}`);
+  };
+
   const tableActions: TableAction<WebhookDestination>[] = [
     {
       label: "Edit",
-      onClick: (webhook) => {
-        console.log("Edit webhook:", webhook.id);
-        // Add your edit logic here
-      },
+      onClick: handleEditWebhook,
     },
     {
       label: "Disable",
-      onClick: (webhook) => {
-        console.log("Disable webhook:", webhook.id);
-        // Add your disable logic here
-      },
+      onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: true }),
+      when: (webhook) => !webhook.isDisabled,
+    },
+    {
+      label: "Enable",
+      onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: false }),
+      when: (webhook) => webhook.isDisabled,
     },
     {
       label: "Delete",
-      onClick: (webhook) => {
-        console.log("Delete webhook:", webhook.id);
-        // Add your delete logic here
-      },
+      onClick: (webhook) => setDeleteConfirmId(webhook.id),
       variant: "destructive",
     },
   ];
@@ -403,6 +445,7 @@ function WebhooksPageContent() {
                     actions={tableActions}
                     isLoading={isLoading}
                     skeletonRowCount={5}
+                    emptyMessage="No webhooks found. Add a destination to get started."
                     onRowClick={(row) => {
                       router.push(`/webhooks/${row.id}`);
                     }}
@@ -414,7 +457,45 @@ function WebhooksPageContent() {
         </DashboardSidebarInset>
       </DashboardSidebar>
 
-      <WebooksModal open={isModalOpen} onOpenChange={setIsModalOpen} />
+      <WebooksModal
+        open={isModalOpen}
+        onOpenChange={handleModalChange}
+        editingWebhook={editingWebhook}
+        onEditingWebhookChange={setEditingWebhook}
+      />
+
+      <FullScreenModal
+        open={!!deleteConfirmId}
+        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
+        title="Delete webhook?"
+        size="small"
+
+        description="This will permanently remove this webhook destination. Events will no longer be sent to this endpoint."
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteConfirmId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => deleteConfirmId && deleteWebhookMutation.mutate(deleteConfirmId)}
+              disabled={deleteWebhookMutation.isPending}
+              isLoading={deleteWebhookMutation.isPending}
+            >
+              {deleteWebhookMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-muted-foreground text-sm">
+          This action cannot be undone. The webhook endpoint will stop receiving events immediately.
+        </p>
+      </FullScreenModal>
     </div>
   );
 }
@@ -555,21 +636,32 @@ const WEBHOOK_EVENTS = [
 interface WebhooksModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingWebhook?: WebhookDestination | null;
+  onEditingWebhookChange?: (webhook: WebhookDestination | null) => void;
 }
 
-function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
+function WebooksModal({
+  open,
+  onOpenChange,
+  editingWebhook = null,
+  onEditingWebhookChange,
+}: WebhooksModalProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const [webhookSecret, setWebhookSecret] = React.useState<string>("");
   const { copied, handleCopy } = useCopy();
+  const isEditMode = !!editingWebhook;
 
-  // Generate webhook secret when modal opens
+  // Generate webhook secret when modal opens (create only); prefill form when editing
   React.useEffect(() => {
     if (open) {
-      const secret = `whsec_${nanoid(32)}`;
-      setWebhookSecret(secret);
+      if (editingWebhook) {
+        setWebhookSecret("");
+      } else {
+        setWebhookSecret(`whsec_${nanoid(32)}`);
+      }
     }
-  }, [open]);
+  }, [open, editingWebhook]);
 
   const handleCopySecret = async () => {
     if (webhookSecret) {
@@ -591,6 +683,30 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
   });
 
   const events = form.watch("events");
+
+  // Prefill form when opening for edit; reset when opening for create or when closing
+  React.useEffect(() => {
+    if (!open) {
+      form.reset();
+      onEditingWebhookChange?.(null);
+      return;
+    }
+    if (editingWebhook) {
+      form.reset({
+        destinationName: editingWebhook.name ?? "",
+        endpointUrl: editingWebhook.url ?? "",
+        description: (editingWebhook.description ?? "") as string,
+        events: (editingWebhook.events ?? []) as WebhookEvent[],
+      });
+    } else {
+      form.reset({
+        destinationName: "",
+        endpointUrl: "",
+        description: "",
+        events: [],
+      });
+    }
+  }, [open, editingWebhook, form, onEditingWebhookChange]);
 
   // Create webhook mutation
   const createWebhookMutation = useMutation({
@@ -617,12 +733,28 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
     },
   });
 
-  // Reset form when modal closes
-  React.useEffect(() => {
-    if (!open) {
+  // Update webhook mutation
+  const updateWebhookMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof schema>) => {
+      if (!editingWebhook) return;
+      return await putWebhook(editingWebhook.id, {
+        name: data.destinationName,
+        url: data.endpointUrl,
+        description: data.description ?? null,
+        events: data.events,
+      });
+    },
+    onSuccess: () => {
+      invalidateOrgQuery(["webhooks"]);
+      toast.success("Webhook destination updated successfully");
       form.reset();
-    }
-  }, [open, form]);
+      onOpenChange(false);
+      onEditingWebhookChange?.(null);
+    },
+    onError: () => {
+      toast.error("Failed to update webhook destination");
+    },
+  });
 
   const handleSelectAll = () => {
     if (events.length === WEBHOOK_EVENTS.length) {
@@ -636,8 +768,14 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
   };
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
-    createWebhookMutation.mutate(data);
+    if (isEditMode) {
+      updateWebhookMutation.mutate(data);
+    } else {
+      createWebhookMutation.mutate(data);
+    }
   };
+
+  const isPending = createWebhookMutation.isPending || updateWebhookMutation.isPending;
 
   const footer = (
     <div className="flex w-full justify-between">
@@ -658,10 +796,10 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
           type="button"
           onClick={() => form.handleSubmit(onSubmit)()}
           className="gap-2"
-          disabled={createWebhookMutation.isPending}
-          isLoading={createWebhookMutation.isPending}
+          disabled={isPending}
+          isLoading={isPending}
         >
-          Create destination
+          {isEditMode ? "Save changes" : "Create destination"}
         </Button>
       </div>
     </div>
@@ -671,8 +809,12 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
     <FullScreenModal
       open={open}
       onOpenChange={onOpenChange}
-      title="Configure destination"
-      description="Tell StellarTools where to send events and give your destination a helpful description."
+      title={isEditMode ? "Edit destination" : "Configure destination"}
+      description={
+        isEditMode
+          ? "Update where StellarTools sends events for this destination."
+          : "Tell StellarTools where to send events and give your destination a helpful description."
+      }
       footer={footer}
       dialogClassName="flex"
     >
@@ -779,23 +921,37 @@ function WebooksModal({ open, onOpenChange }: WebhooksModalProps) {
         <div className="min-w-0 flex-1 space-y-6 lg:max-w-2xl">
           <div className="space-y-2">
             <Label>Webhook Secret</Label>
-            <div className="flex items-center gap-2">
-              <div className="bg-muted border-border flex-1 rounded-md border p-3 shadow-none">
-                <code className="font-mono text-sm break-all">{webhookSecret}</code>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={handleCopySecret}
-                className="shrink-0 shadow-none"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Use this secret to verify webhook signatures. Keep it secure and never expose it in client-side code.
-            </p>
+            {isEditMode ? (
+              <>
+                <div className="bg-muted border-border flex items-center rounded-md border p-3 shadow-none">
+                  <span className="text-muted-foreground text-sm italic">Secret is hidden for security</span>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  The webhook secret cannot be viewed or changed after creation. Use your existing secret to verify
+                  signatures.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <div className="bg-muted border-border flex-1 rounded-md border p-3 shadow-none">
+                    <code className="font-mono text-sm break-all">{webhookSecret}</code>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopySecret}
+                    className="shrink-0 shadow-none"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Use this secret to verify webhook signatures. Keep it secure and never expose it in client-side code.
+                </p>
+              </>
+            )}
           </div>
 
           <div className="space-y-2">
