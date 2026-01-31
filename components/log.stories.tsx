@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import type { ColumnDef } from "@tanstack/react-table";
+
 import { Log, LogDetailItem, LogDetailSection } from "./log";
 
 type LogEntry = {
@@ -11,8 +12,20 @@ type LogEntry = {
 };
 
 const sampleLogs: LogEntry[] = [
-  { id: "1", timestamp: "2025-01-30T10:00:00Z", level: "info", message: "Request processed successfully", requestId: "req_abc123" },
-  { id: "2", timestamp: "2025-01-30T10:01:15Z", level: "warn", message: "Rate limit approaching", requestId: "req_def456" },
+  {
+    id: "1",
+    timestamp: "2025-01-30T10:00:00Z",
+    level: "info",
+    message: "Request processed successfully",
+    requestId: "req_abc123",
+  },
+  {
+    id: "2",
+    timestamp: "2025-01-30T10:01:15Z",
+    level: "warn",
+    message: "Rate limit approaching",
+    requestId: "req_def456",
+  },
   { id: "3", timestamp: "2025-01-30T10:02:30Z", level: "error", message: "Payment failed", requestId: "req_ghi789" },
   { id: "4", timestamp: "2025-01-30T10:03:00Z", level: "info", message: "Webhook delivered", requestId: "req_jkl012" },
   { id: "5", timestamp: "2025-01-30T10:04:22Z", level: "debug", message: "Cache hit", requestId: "req_mno345" },
@@ -23,7 +36,7 @@ const columns: ColumnDef<LogEntry>[] = [
     accessorKey: "timestamp",
     header: "Time",
     cell: ({ row }) => (
-      <span className="font-mono text-xs text-muted-foreground">
+      <span className="text-muted-foreground font-mono text-xs">
         {new Date(row.original.timestamp).toLocaleTimeString()}
       </span>
     ),
@@ -39,7 +52,9 @@ const columns: ColumnDef<LogEntry>[] = [
           row.original.level === "warn" && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
           row.original.level === "info" && "bg-primary/10 text-primary",
           row.original.level === "debug" && "bg-muted text-muted-foreground",
-        ].filter(Boolean).join(" ")}
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         {row.original.level}
       </span>
@@ -48,7 +63,7 @@ const columns: ColumnDef<LogEntry>[] = [
   {
     accessorKey: "message",
     header: "Message",
-    cell: ({ row }) => <span className="truncate max-w-[200px]">{row.original.message}</span>,
+    cell: ({ row }) => <span className="max-w-[200px] truncate">{row.original.message}</span>,
   },
 ];
 

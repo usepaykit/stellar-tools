@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,7 +48,7 @@ export const Destructive: Story = {
   render: () => (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <button className="rounded-md border border-destructive px-4 py-2 text-sm font-medium text-destructive">
+        <button className="border-destructive text-destructive rounded-md border px-4 py-2 text-sm font-medium">
           Delete
         </button>
       </AlertDialogTrigger>

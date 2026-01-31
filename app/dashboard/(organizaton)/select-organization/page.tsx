@@ -2,13 +2,13 @@
 
 import * as React from "react";
 
-import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import {
   postOrganization,
   postOrganizationSecret,
   retrieveOrganizations,
   setCurrentOrganization,
 } from "@/actions/organization";
+import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
 import { type PhoneNumber, PhoneNumberField, phoneNumberToString } from "@/components/phone-number-field";

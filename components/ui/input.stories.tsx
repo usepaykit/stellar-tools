@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+
 import { Input } from "./input";
 
 const meta = {
@@ -31,4 +32,3 @@ export const Disabled: Story = {
 export const Invalid: Story = {
   args: { placeholder: "Error state", "aria-invalid": true },
 };
-

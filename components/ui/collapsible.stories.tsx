@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+
 import { Button } from "./button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./collapsible";
 
@@ -18,13 +19,11 @@ export const Default: Story = {
       <CollapsibleTrigger asChild>
         <Button variant="outline" className="w-full justify-between">
           Toggle
-          <span className="data-[state=open]:rotate-180 transition-transform">▼</span>
+          <span className="transition-transform data-[state=open]:rotate-180">▼</span>
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="rounded-md border p-4 text-sm">
-          Collapsible content. This can be shown or hidden.
-        </div>
+        <div className="rounded-md border p-4 text-sm">Collapsible content. This can be shown or hidden.</div>
       </CollapsibleContent>
     </Collapsible>
   ),

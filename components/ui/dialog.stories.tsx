@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+
 import { Button } from "./button";
 import {
   Dialog,
@@ -29,9 +30,7 @@ export const Default: Story = {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Dialog title</DialogTitle>
-          <DialogDescription>
-            A description of the dialog content. You can put any content here.
-          </DialogDescription>
+          <DialogDescription>A description of the dialog content. You can put any content here.</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline">Cancel</Button>

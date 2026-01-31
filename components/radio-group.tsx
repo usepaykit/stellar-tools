@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { RadioGroup as RadioGroupRoot, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroupItem, RadioGroup as RadioGroupRoot } from "@/components/ui/radio-group";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
 

@@ -60,7 +60,7 @@ type Story = StoryObj<typeof meta>;
 const ResourceFieldWithState = (args: any) => {
   const [value, setValue] = useState<string[]>(args.value ?? []);
   return (
-    <div className="w-full max-w-md h-[500px]">
+    <div className="h-[500px] w-full max-w-md">
       <ResourceField<SampleResource>
         items={args.items ?? sampleItems}
         value={value}

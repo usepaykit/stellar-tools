@@ -68,12 +68,8 @@ export const SelectField = ({
         </p>
       )}
 
-      <Select {...rest} value={value} onValueChange={(v) => onChange(v)} >
-        <SelectTrigger
-          {...triggerProps}
-          aria-invalid={!!error}
-          className={cn("w-full", triggerProps?.className)}
-        >
+      <Select {...rest} value={value} onValueChange={(v) => onChange(v)}>
+        <SelectTrigger {...triggerProps} aria-invalid={!!error} className={cn("w-full", triggerProps?.className)}>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

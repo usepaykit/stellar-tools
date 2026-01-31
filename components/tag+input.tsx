@@ -85,7 +85,14 @@ export const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>((props
         </p>
       )}
 
-      <InputGroup className={cn("bg-background h-auto min-h-10 flex-wrap gap-2 p-2 ", "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",className)} {...rest}>
+      <InputGroup
+        className={cn(
+          "bg-background h-auto min-h-10 flex-wrap gap-2 p-2",
+          "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+          className
+        )}
+        {...rest}
+      >
         {value.map((t) => (
           <Badge key={t} variant="secondary" {...tag} className={cn("gap-1 pr-1", tag.className)}>
             {t}

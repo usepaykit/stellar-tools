@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+
 import { ScrollArea } from "./scroll-area";
 
 const meta = {
@@ -22,9 +23,5 @@ const content = (
 );
 
 export const Default: Story = {
-  render: () => (
-    <ScrollArea className="h-[200px] w-[250px] rounded-md border">
-      {content}
-    </ScrollArea>
-  ),
+  render: () => <ScrollArea className="h-[200px] w-[250px] rounded-md border">{content}</ScrollArea>,
 };

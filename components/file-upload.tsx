@@ -153,9 +153,6 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
             ref={ref}
             {...getInputProps({
               id,
-        
-             
-          
             })}
             aria-label={typeof label === "string" ? label : "Upload file"}
             disabled={disabled || isTransforming}

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+
 import { Markdown } from "./markdown";
 
 const meta = {
@@ -85,8 +86,6 @@ export const WithLinks: Story = {
   },
 };
 
-
-
 export const WithHorizontalRule: Story = {
   args: {
     content: `Section one
@@ -119,4 +118,3 @@ console.log("Hello");
 > Blockquotes are supported.`,
   },
 };
-
