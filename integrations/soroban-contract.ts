@@ -32,7 +32,8 @@ export class SorobanContractApi {
       StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
       StellarSDK.nativeToScVal(params.productId, { type: "symbol" }),
       StellarSDK.nativeToScVal(params.amount * 100000000, { type: "i128" }),
-      StellarSDK.nativeToScVal(params.periodEnd, { type: "u64" })
+      StellarSDK.nativeToScVal(params.periodEnd, { type: "u64" }),
+      StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
 
     return await this.invoke(operation);
@@ -42,7 +43,8 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "pause_subscription",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" })
+      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
+      StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     const result = await this.invoke(operation);
     if (result.isErr()) throw new Error(result.error.message);
@@ -53,7 +55,8 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "resume_subscription",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" })
+      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
+      StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     const result = await this.invoke(operation);
     if (result.isErr()) throw new Error(result.error.message);
@@ -64,7 +67,8 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "cancel_subscription",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" })
+        StellarSDK.nativeToScVal(productId, { type: "symbol" }),
+      StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     const result = await this.invoke(operation);
     if (result.isErr()) throw new Error(result.error.message);
@@ -95,7 +99,8 @@ export class SorobanContractApi {
       StellarSDK.nativeToScVal(productId, { type: "symbol" }),
       StellarSDK.nativeToScVal(status, { type: "status" }),
       StellarSDK.nativeToScVal(periodDuration, { type: "u64" }),
-      StellarSDK.nativeToScVal(periodEnd, { type: "u64" })
+      StellarSDK.nativeToScVal(periodEnd, { type: "u64" }),
+      StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
 
     return await this.invoke(operation);
@@ -121,7 +126,8 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "charge",
       StellarSDK.nativeToScVal(customer, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" })
+      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
+      StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     return await this.invoke(operation);
   }

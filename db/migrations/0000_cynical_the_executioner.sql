@@ -1,9 +1,10 @@
-CREATE TYPE "public"."asset_code" AS ENUM('XLM', 'USDC');--> statement-breakpoint
 CREATE TYPE "public"."auth_provider" AS ENUM('google', 'local');--> statement-breakpoint
 CREATE TYPE "public"."checkout_status" AS ENUM('open', 'completed', 'expired', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."credit_transaction_type" AS ENUM('deduct', 'refund', 'grant');--> statement-breakpoint
+CREATE TYPE "public"."event_type" AS ENUM('customer::created', 'customer::updated', 'payment::completed', 'payment::failed', 'payout::requested', 'payout::processed', 'checkout::created', 'checkout::updated', 'refund::created', 'subscription::created', 'subscription::updated', 'subscription::deleted');--> statement-breakpoint
 CREATE TYPE "public"."network" AS ENUM('testnet', 'mainnet');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('pending', 'confirmed', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."payout_status" AS ENUM('pending', 'succeeded', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."product_status" AS ENUM('active', 'archived');--> statement-breakpoint
 CREATE TYPE "public"."product_type" AS ENUM('subscription', 'one_time', 'metered');--> statement-breakpoint
 CREATE TYPE "public"."recurring_period" AS ENUM('day', 'week', 'month', 'year');--> statement-breakpoint
@@ -40,7 +41,7 @@ CREATE TABLE "api_key" (
 --> statement-breakpoint
 CREATE TABLE "asset" (
 	"id" text PRIMARY KEY NOT NULL,
-	"code" "asset_code" NOT NULL,
+	"code" text NOT NULL,
 	"issuer" text,
 	"network" "network" NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -77,6 +78,9 @@ CREATE TABLE "checkout" (
 	"network" "network" NOT NULL,
 	"success_url" text,
 	"success_message" text,
+	"customer_email" text,
+	"customer_phone" text,
+	"subscription_data" jsonb,
 	CONSTRAINT "amount_or_product_check" CHECK ("checkout"."product_id" IS NOT NULL OR "checkout"."amount" IS NOT NULL),
 	CONSTRAINT "success_url_or_message_check" CHECK ("checkout"."success_url" IS NOT NULL OR "checkout"."success_message" IS NOT NULL)
 );
@@ -125,6 +129,17 @@ CREATE TABLE "customer" (
 	"network" "network" NOT NULL,
 	"wallet_addresses" jsonb,
 	CONSTRAINT "customer_organization_id_email_unique" UNIQUE("organization_id","email")
+);
+--> statement-breakpoint
+CREATE TABLE "event" (
+	"id" text PRIMARY KEY NOT NULL,
+	"organization_id" text NOT NULL,
+	"network" "network" NOT NULL,
+	"type" "event_type" NOT NULL,
+	"customer_id" text,
+	"merchant_id" text,
+	"data" jsonb,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "organization_secret" (
@@ -178,6 +193,22 @@ CREATE TABLE "payment" (
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"network" "network" NOT NULL,
 	CONSTRAINT "payment_tx_hash_unique" UNIQUE("tx_hash")
+);
+--> statement-breakpoint
+CREATE TABLE "payout" (
+	"id" text PRIMARY KEY NOT NULL,
+	"organization_id" text NOT NULL,
+	"amount" integer NOT NULL,
+	"status" "payout_status" NOT NULL,
+	"wallet_address" text NOT NULL,
+	"asset" text,
+	"memo" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"completed_at" timestamp,
+	"metadata" jsonb,
+	"network" "network" NOT NULL,
+	"transaction_hash" text NOT NULL,
+	CONSTRAINT "payout_transaction_hash_unique" UNIQUE("transaction_hash")
 );
 --> statement-breakpoint
 CREATE TABLE "product" (
@@ -240,9 +271,6 @@ CREATE TABLE "subscription" (
 	"cancel_at_period_end" boolean DEFAULT false,
 	"canceled_at" timestamp,
 	"paused_at" timestamp,
-	"last_payment_id" text,
-	"next_billing_date" timestamp,
-	"failed_payment_count" integer DEFAULT 0,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"metadata" jsonb,
@@ -258,7 +286,7 @@ CREATE TABLE "team_invite" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"metadata" jsonb,
-	"network" "network" NOT NULL
+	"role" "role" NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "team_member" (
@@ -270,6 +298,14 @@ CREATE TABLE "team_member" (
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	"metadata" jsonb,
 	CONSTRAINT "team_member_organization_id_account_id_unique" UNIQUE("organization_id","account_id")
+);
+--> statement-breakpoint
+CREATE TABLE "waitlist" (
+	"id" text PRIMARY KEY NOT NULL,
+	"email" text NOT NULL,
+	"phone_number" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "waitlist_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE "webhook_log" (
@@ -317,12 +353,17 @@ ALTER TABLE "credit_transaction" ADD CONSTRAINT "credit_transaction_customer_id_
 ALTER TABLE "credit_transaction" ADD CONSTRAINT "credit_transaction_product_id_product_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."product"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "credit_transaction" ADD CONSTRAINT "credit_transaction_balance_id_credit_balance_id_fk" FOREIGN KEY ("balance_id") REFERENCES "public"."credit_balance"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customer" ADD CONSTRAINT "customer_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event" ADD CONSTRAINT "event_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event" ADD CONSTRAINT "event_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "event" ADD CONSTRAINT "event_merchant_id_organization_id_fk" FOREIGN KEY ("merchant_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization_secret" ADD CONSTRAINT "organization_secret_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "organization" ADD CONSTRAINT "organization_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."account"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "password_reset" ADD CONSTRAINT "password_reset_account_id_account_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."account"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_checkout_id_checkout_id_fk" FOREIGN KEY ("checkout_id") REFERENCES "public"."checkout"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payment" ADD CONSTRAINT "payment_customer_id_customer_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customer"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payout" ADD CONSTRAINT "payout_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "payout" ADD CONSTRAINT "payout_asset_asset_id_fk" FOREIGN KEY ("asset") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product" ADD CONSTRAINT "product_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product" ADD CONSTRAINT "product_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "refund" ADD CONSTRAINT "refund_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

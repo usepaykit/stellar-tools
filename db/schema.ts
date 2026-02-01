@@ -219,7 +219,7 @@ export const recurringPeriodEnum = pgEnum("recurring_period", ["day", "week", "m
 
 export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
 
-const productTypeEnum = pgEnum("product_type", productTypeEnum$1);
+export const productTypeEnum = pgEnum("product_type", productTypeEnum$1);
 
 export type ProductType = (typeof productTypeEnum.enumValues)[number];
 

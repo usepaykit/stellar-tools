@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1768389096161,
-      "tag": "0000_stiff_scarlet_spider",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1768435142219,
-      "tag": "0001_special_onslaught",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1768498781941,
-      "tag": "0002_magenta_chameleon",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1768610148952,
-      "tag": "0003_amazing_wendell_vaughn",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1768639404792,
-      "tag": "0004_glorious_master_mold",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1768920423411,
-      "tag": "0005_rare_paper_doll",
+      "when": 1769906912799,
+      "tag": "0000_cynical_the_executioner",
       "breakpoints": true
     }
   ]

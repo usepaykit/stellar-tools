@@ -9,12 +9,14 @@ services:
       - "8000:8000"
     container_name: stellartools-soroban-quickstart
     command: --standalone --enable-soroban-rpc
+    networks:
+      - stellartools-soroban-network
 
   database:
     image: postgres:15
     container_name: stellartools-soroban-database
     ports:
-      - "5435:5432"
+      - "5436:5432"
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
@@ -29,3 +31,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+networks:
+  stellartools-soroban-network:
+    driver: bridge
+
+volumes:
+  stellartools-soroban-database-data:
