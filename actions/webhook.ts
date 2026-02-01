@@ -75,6 +75,8 @@ export const getWebhooksWithAnalytics = async (orgId?: string, env?: Network) =>
     .where(and(eq(webhooks.organizationId, organizationId), eq(webhooks.environment, environment)))
     .groupBy(webhooks.id);
 
+  if (!result.length) return [];
+
   return result.map((webhook) => {
     const rawLogs = webhook.responseTime ?? [];
 
