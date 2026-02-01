@@ -111,9 +111,9 @@ impl SubscriptionEngine {
     /// Custom Auth Logic: OR (Customer signs OR Merchant signs)
     fn check_auth(e: &Env, customer: &Address, merchant: &Address) {
      // 1. We check if the customer has provided authorization for this call.
-    // We look at the authorized addresses in the current environment.
-    let authorized = e.auth().get_authorized_invocations();
-    
+        // We look at the authorized addresses in the current environment.
+        let authorized = e.auth().get_authorized_invocations();
+        
     // 2. We check if the customer is among the authorized signers
     let is_customer = authorized.iter().any(|inv| inv.address == *customer);
 

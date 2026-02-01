@@ -8,7 +8,12 @@ import {
   roles,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
-import { SubscriptionData, WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
+import {
+  SubscriptionData,
+  SuggestedString,
+  WebhookEvent,
+  checkoutStatusEnum as checkoutStatusEnum$1,
+} from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
@@ -159,18 +164,22 @@ export const apiKeys = pgTable("api_key", {
   environment: networkEnum("network").notNull(),
 });
 
+type AssetCode = SuggestedString<"XLM" | "USDC">;
+type AssetIssuer = SuggestedString<"native">;
+
 export const assets = pgTable(
   "asset",
   {
     id: text("id").primaryKey(),
-    code: text("code").notNull(),
-    issuer: text("issuer"),
+    code: text("code").notNull().$type<AssetCode>(),
+    issuer: text("issuer").$type<AssetIssuer>(),
+    environment: networkEnum("network").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
   },
   (table) => ({
-    uniqueCodeIssuer: unique().on(table.code, table.issuer),
+    uniqueCodeIssuerEnvironment: unique().on(table.code, table.issuer, table.environment),
   })
 );
 

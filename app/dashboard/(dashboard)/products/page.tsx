@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrieveAssets } from "@/actions/asset";
 import { postProduct, retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -19,9 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
-import { RecurringPeriod } from "@/db";
-import { Product as ProductSchema } from "@/db";
-import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { Product as ProductSchema, RecurringPeriod } from "@/db";
+import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
@@ -323,6 +323,12 @@ function ProductsModal({
   const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
   const isEditMode = !!editingProduct;
   const invalidateOrgQuery = useInvalidateOrgQuery();
+  const { data: orgContext } = useOrgContext();
+  const { data: assets, isLoading: isLoadingAssets } = useOrgQuery(
+    ["assets"],
+    () => retrieveAssets(orgContext?.environment!),
+    { enabled: !!orgContext?.environment }
+  );
 
   const form = RHF.useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -606,10 +612,11 @@ function ProductsModal({
                   render={({ field, fieldState: { error } }) => (
                     <SelectInput
                       id="price"
+                      isLoading={isLoadingAssets}
                       className="flex-1"
                       value={{ amount: field.value.amount, option: field.value.asset }}
                       onChange={(value) => field.onChange({ amount: value.amount, option: value.option })}
-                      options={["XLM", "USDC", "USDT", "DAI"]}
+                      options={assets?.map((asset) => asset.code) ?? []}
                       error={error?.message}
                     />
                   )}

@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useCopy } from "@/hooks/use-copy";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
-import { LooseAutoComplete } from "@stellartools/core";
+import { SuggestedString } from "@stellartools/core";
 import { Check, Copy } from "lucide-react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
@@ -24,7 +24,7 @@ SyntaxHighlighter.registerLanguage("typescript", typescript);
 SyntaxHighlighter.registerLanguage("bash", bash);
 SyntaxHighlighter.registerLanguage("json", json);
 
-type Language = LooseAutoComplete<"tsx" | "typescript" | "bash" | "json" | "shell" | "sh" | "zsh">;
+type Language = SuggestedString<"tsx" | "typescript" | "bash" | "json" | "shell" | "sh" | "zsh">;
 
 interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
   language?: Language;

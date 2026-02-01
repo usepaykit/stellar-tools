@@ -1,6 +1,6 @@
 "use server";
 
-import { Asset, assets, db } from "@/db";
+import { Asset, Network, assets, db } from "@/db";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -21,6 +21,10 @@ export const retrieveAsset = async (id: string) => {
   if (!asset) throw new Error("Asset not found");
 
   return asset as Asset;
+};
+
+export const retrieveAssets = async (env: Network) => {
+  return await db.select().from(assets).where(eq(assets.environment, env));
 };
 
 export const putAsset = async (id: string, asset: Partial<Asset>) => {

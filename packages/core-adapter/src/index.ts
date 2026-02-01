@@ -58,7 +58,6 @@ export { ApiClient };
 export { Result };
 export { schemaFor, validateRequiredKeys, validateSchema, chunk } from "./utils";
 export { raceAsyncIterator, batchProcess } from "./promisify";
-export type { LooseAutoComplete } from "./types";
 export { z };
 export * from "./schema/customer";
 export * from "./schema/checkout";

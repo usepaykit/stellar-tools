@@ -1,7 +1,7 @@
-import { LooseAutoComplete } from "@stellartools/core";
+import { SuggestedString } from "@stellartools/core";
 import { cookies } from "next/headers";
 
-type CookieKey = LooseAutoComplete<"accessToken" | "refreshToken" | "selectedOrg">;
+type CookieKey = SuggestedString<"accessToken" | "refreshToken" | "selectedOrg">;
 
 export class CookieManager {
   private readonly BASE_OPTIONS = {

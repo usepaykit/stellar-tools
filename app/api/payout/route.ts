@@ -64,10 +64,7 @@ export const POST = async (req: NextRequest) => {
         );
 
         if (result.isErr()) {
-          await putPayout(payoutId, {
-            status: "failed",
-            completedAt: new Date(),
-          });
+          await putPayout(payoutId, { status: "failed", completedAt: new Date() });
           return Result.err(result.error);
         }
 

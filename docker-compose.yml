@@ -9,3 +9,23 @@ services:
       - "8000:8000"
     container_name: stellartools-soroban-quickstart
     command: --standalone --enable-soroban-rpc
+
+  database:
+    image: postgres:15
+    container_name: stellartools-soroban-database
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: local
+    volumes:
+      - stellartools-soroban-database-data:/var/lib/postgresql/data
+    networks:
+      - stellartools-soroban-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

@@ -1,10 +1,9 @@
 "use server";
 
-import { withEvent } from "@/actions/event";
+import { EventTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payout, db, payouts } from "@/db";
 import { eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 export const postPayout = async (
   params: Omit<Payout, "organizationId" | "environment" | "createdAt" | "updatedAt">,
@@ -42,9 +41,11 @@ export const putPayout = async (id: string, params: Partial<Payout>) => {
       const [payout] = await db.update(payouts).set(params).where(eq(payouts.id, id)).returning();
       return payout;
     },
-    {
-      events: [
-        {
+    (payout) => {
+      let events: EventTrigger<typeof payout>[] = [];
+
+      if (payout.status == "succeeded") {
+        events.push({
           type: "payout::processed",
           map: (payout) => ({
             merchantId: payout.organizationId,
@@ -55,8 +56,10 @@ export const putPayout = async (id: string, params: Partial<Payout>) => {
               transactionHash: payout.transactionHash,
             },
           }),
-        },
-      ],
+        });
+      }
+
+      return { events };
     }
   );
 };

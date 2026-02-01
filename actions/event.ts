@@ -5,7 +5,7 @@ import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
 import { computeDiff } from "@/lib/utils";
-import { LooseAutoComplete, MaybeArray, WebhookEvent, chunk } from "@stellartools/core";
+import { MaybeArray, SuggestedString, WebhookEvent, chunk } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
@@ -105,7 +105,7 @@ type NarrowedEvent<T extends EventType> = Event & { type: T };
 type NarrowedEvents<T extends readonly EventType[]> = Array<NarrowedEvent<T[number]>>;
 
 export const retrieveEvents = async <T extends readonly EventType[]>(
-  filters: { customerId?: string; merchantId?: LooseAutoComplete<"current"> },
+  filters: { customerId?: string; merchantId?: SuggestedString<"current"> },
   eventTypes?: T,
   orgId?: string,
   env?: Network
