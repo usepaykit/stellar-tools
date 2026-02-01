@@ -147,6 +147,7 @@ export const createCheckoutSchema = checkoutSchema
     metadata: true,
     successUrl: true,
     successMessage: true,
+    subscriptionData: true,
   })
   .refine((data) => data.productId !== undefined || data.amount !== undefined, {
     message: "Either productId or amount must be specified",

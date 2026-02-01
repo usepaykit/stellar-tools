@@ -149,7 +149,7 @@ export function CreateSubscriptionModal({
     },
   });
 
-  const selectedProduct = allProducts?.find((p) => p.id === form.productId);
+  const selectedProduct = allProducts?.find((p) => p.product.id === form.productId);
 
   return (
     <FullScreenModal
@@ -160,7 +160,7 @@ export function CreateSubscriptionModal({
         <div className="flex w-full items-center justify-between">
           <div className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
             <ShieldCheck className="text-primary size-3.5" />
-            {form.customerIds.length} Clients • {selectedProduct?.name || "Awaiting Selection"}
+            {form.customerIds.length} Clients • {selectedProduct?.product.name || "Awaiting Selection"}
           </div>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
@@ -192,14 +192,14 @@ export function CreateSubscriptionModal({
           <ResourceField
             isLoading={isLoadingProducts}
             label="Subscription Plan"
-            items={allProducts?.filter((p) => p.type === "subscription") ?? []}
+            items={allProducts?.filter((p) => p.product.type === "subscription") ?? []}
             value={form.productId ? [form.productId] : []}
             onChange={(ids) => setForm({ ...form, productId: ids[0] || "" })}
             renderItem={(p) => ({
-              id: p.id,
-              title: p.name,
-              subtitle: `${formatXLM(p.priceAmount)} XLM`,
-              searchValue: p.name,
+              id: p.product.id,
+              title: p.product.name,
+              subtitle: `${formatXLM(p.product.priceAmount)} XLM`,
+              searchValue: [p.product.name, p.asset.code].join(" "),
             })}
           />
         </div>
@@ -249,7 +249,7 @@ export function CreateSubscriptionModal({
               <div className="flex items-end justify-between">
                 <span className="text-primary text-[10px] font-bold uppercase">Est. Revenue</span>
                 <span className="text-primary text-lg font-black">
-                  {selectedProduct ? formatXLM(selectedProduct.priceAmount * form.customerIds.length) : "0.00"}{" "}
+                  {selectedProduct ? formatXLM(selectedProduct.product.priceAmount * form.customerIds.length) : "0.00"}{" "}
                   <span className="text-[10px] opacity-60">XLM</span>
                 </span>
               </div>

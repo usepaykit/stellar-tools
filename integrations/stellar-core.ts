@@ -10,12 +10,12 @@ export class StellarCoreApi {
     if (this.network == "testnet") {
       return {
         networkPassphrase: StellarSDK.Networks.TESTNET,
-        server: new StellarSDK.Horizon.Server(process.env.STELLAR_HORIZON_TESTNET!),
+        server: new StellarSDK.Horizon.Server(process.env.NEXT_PUBLIC_STELLAR_HORIZON_TESTNET!),
       };
     } else {
       return {
         networkPassphrase: StellarSDK.Networks.PUBLIC,
-        server: new StellarSDK.Horizon.Server(process.env.STELLAR_HORIZON_MAINNET!),
+        server: new StellarSDK.Horizon.Server(process.env.NEXT_PUBLIC_STELLAR_HORIZON_MAINNET!),
       };
     }
   }

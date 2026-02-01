@@ -134,17 +134,11 @@ export default function WebhooksPage() {
           </header>
 
           <Tabs defaultValue="webhooks">
-            <TabsList className="h-auto gap-6 rounded-none border-b bg-transparent p-0">
-              <TabsTrigger
-                value="overview"
-                className="data-[state=active]:border-primary rounded-none border-b-2 border-transparent bg-transparent px-0 py-2 shadow-none"
-              >
+            <TabsList>
+              <TabsTrigger value="overview" className="data-[state=active]:shadow-none">
                 Overview
               </TabsTrigger>
-              <TabsTrigger
-                value="webhooks"
-                className="data-[state=active]:border-primary rounded-none border-b-2 border-transparent bg-transparent px-0 py-2 shadow-none"
-              >
+              <TabsTrigger value="webhooks" className="data-[state=active]:shadow-none">
                 Webhooks
               </TabsTrigger>
             </TabsList>

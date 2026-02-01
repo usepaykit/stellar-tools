@@ -9,7 +9,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postCheckout = async (
-  params: Omit<Checkout, "id" | "organizationId" | "environment">,
+  params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
   orgId?: string,
   env?: Network
 ) => {
@@ -30,7 +30,10 @@ export const postCheckout = async (
       events: [
         {
           type: "checkout::created",
-          map: ({ productId, expiresAt, amount }) => ({ checkoutId, data: { productId, expiresAt, amount } }),
+          map: ({ productId, expiresAt, amount, customerId, id: checkoutId }) => ({
+            customerId: customerId ?? undefined,
+            data: { productId, expiresAt, amount, checkoutId },
+          }),
         },
       ],
       webhooks: {
@@ -39,7 +42,13 @@ export const postCheckout = async (
         triggers: [
           {
             event: "checkout.created",
-            map: ({ id: checkoutId, productId, expiresAt, amount }) => ({ checkoutId, productId, expiresAt, amount }),
+            map: ({ id: checkoutId, productId, expiresAt, amount, customerId }) => ({
+              checkoutId,
+              productId,
+              expiresAt,
+              amount,
+              customerId,
+            }),
           },
         ],
       },

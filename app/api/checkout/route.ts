@@ -1,8 +1,7 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { postCustomers, retrieveCustomers } from "@/actions/customers";
-import { createCheckoutSchema } from "@stellartools/core";
-import { Result, validateSchema } from "@stellartools/core";
+import { Result, createCheckoutSchema, validateSchema } from "@stellartools/core";
 import moment from "moment";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -46,13 +45,12 @@ export const POST = async (req: NextRequest) => {
       metadata: data?.metadata ?? {},
       amount: data.amount ?? null,
       description: data.description ?? null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
       productId: data.productId ?? null,
       successMessage: data.successMessage ?? null,
       successUrl: data.successUrl ?? null,
       customerEmail: customer?.email ?? null,
       customerPhone: customer?.phone ?? null,
+      subscriptionData: data.subscriptionData ?? null,
     });
 
     return Result.ok(checkout);

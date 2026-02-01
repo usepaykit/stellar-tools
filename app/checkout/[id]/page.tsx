@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { AnimatedCheckmark } from "@/components/icon";
 import { type PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,7 @@ export default function CheckoutPage() {
   const [showBanner, setShowBanner] = React.useState(true);
   const [connectedAddress, setConnectedAddress] = React.useState<string | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [isSuccess, setIsSuccess] = React.useState(false);
 
   const stellarWalletsKit = StellarWalletsKitApi.getInstance();
 
@@ -130,13 +132,17 @@ export default function CheckoutPage() {
         }),
       });
 
-      toast.success("Payment successful!");
+      setIsSuccess(true);
     } catch (e: any) {
       toast.error(e.message || "Payment failed");
     } finally {
       setIsProcessing(false);
     }
   };
+
+  if (isSuccess) {
+    return <CheckoutSuccess checkout={checkout} checkoutId={checkoutId} customerEmail={checkout.customerEmail} />;
+  }
 
   return (
     <div className="bg-background min-h-screen">
@@ -278,3 +284,40 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+const CheckoutSuccess = ({ checkout, checkoutId, customerEmail }: any) => {
+  return (
+    <div className="bg-background flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-md space-y-8 text-center">
+        <AnimatedCheckmark />
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Thank you for your purchase!</h1>
+          <p className="text-muted-foreground text-lg leading-relaxed">
+            {checkout.successMessage || "Your payment was processed successfully."}
+          </p>
+        </div>
+
+        <div className="bg-muted/50 space-y-3 rounded-2xl border p-6 text-left">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground font-medium">Order ID</span>
+            <span className="font-mono font-bold">{truncate(checkoutId, { start: 8, end: 0 })}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground font-medium">Status</span>
+            <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">
+              Paid
+            </Badge>
+          </div>
+        </div>
+
+        {checkout.successUrl && (
+          <div className="pt-4">
+            <Button asChild className="h-12 w-full text-base font-bold" size="lg">
+              <Link href={checkout.successUrl}>Continue to {checkout.productName}</Link>
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -38,9 +38,13 @@ export const retrieveProducts = async (orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const productsList = await db
-    .select()
+    .select({
+      product: products,
+      asset: assets,
+    })
     .from(products)
-    .where(and(eq(products.organizationId, organizationId), eq(products.environment, environment)));
+    .where(and(eq(products.organizationId, organizationId), eq(products.environment, environment)))
+    .innerJoin(assets, eq(products.assetId, assets.id));
 
   return productsList;
 };

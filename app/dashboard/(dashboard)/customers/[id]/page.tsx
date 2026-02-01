@@ -377,8 +377,8 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
   const { data: products, isLoading: isLoadingProducts } = useOrgQuery(["products"], () => retrieveProducts(), {
     select: (data) =>
       data
-        .filter((p) => p.status === "active")
-        .map((p) => ({ value: p.id, label: `${p.name} - ${p.priceAmount} ${p.assetId}` })),
+        .filter((p) => p.product.status === "active")
+        .map((p) => ({ value: p.product.id, label: `${p.product.name} - ${p.product.priceAmount} ${p.asset.code}` })),
   });
 
   const mutation = useMutation({
@@ -390,7 +390,6 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
         customerId,
         expiresAt: expires,
         status: "open",
-        createdAt: new Date(),
       });
     },
     onSuccess: async () => {
@@ -446,7 +445,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
             )}
           />
         </div>
-        <div className="space-y-4">
+        {/* <div className="space-y-4">
           <RHF.Controller
             control={form.control}
             name="expiresAt"
@@ -454,7 +453,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
               <DateTimeField id="expiresAt" label="Expiration" value={field.value} onChange={field.onChange} />
             )}
           />
-        </div>
+        </div> */}
       </form>
     </FullScreenModal>
   );

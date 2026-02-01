@@ -28,6 +28,7 @@ export interface SelectInputProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  optionsDisabled?: boolean;
 }
 
 export const SelectInput = React.forwardRef<HTMLInputElement, SelectInputProps>(
@@ -43,10 +44,27 @@ export const SelectInput = React.forwardRef<HTMLInputElement, SelectInputProps>(
       disabled,
       placeholder = "Select option...",
       className,
+      optionsDisabled,
     },
     ref
   ) => {
     const [open, setOpen] = React.useState(false);
+
+    // Auto-reconcile partial values (e.g., "USDC" -> "USDC:ast_123")
+    React.useEffect(() => {
+      if (!value.option || options.length === 0) return;
+
+      // 1. If the value is already a perfect match for an option, do nothing.
+      if (options.includes(value.option)) return;
+
+      // 2. If not, check if it's a "shorthand" (e.g., "USDC" matches "USDC:ast_123")
+      // We only match if it's followed by the delimiter to avoid partial word matches
+      const fullMatch = options.find((opt) => opt.startsWith(`${value.option}:`));
+
+      if (fullMatch) {
+        onChange({ ...value, option: fullMatch });
+      }
+    }, [options, value.option, onChange]);
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
@@ -90,7 +108,9 @@ export const SelectInput = React.forwardRef<HTMLInputElement, SelectInputProps>(
                   <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
                 ) : (
                   <>
-                    <span className="font-medium">{value.option || "Select"}</span>
+                    <span className="font-medium">
+                      {value.option.includes(":") ? value.option.split(":")[0]! : (value.option ?? "Select")}
+                    </span>
                     <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                   </>
                 )}
@@ -103,14 +123,24 @@ export const SelectInput = React.forwardRef<HTMLInputElement, SelectInputProps>(
                 <CommandList>
                   <CommandEmpty>No option found.</CommandEmpty>
                   <CommandGroup>
-                    {options.map((option) => (
-                      <CommandItem key={option} value={option} onSelect={() => handleOptionSelect(option)}>
-                        <CheckMark
-                          className={cn("mr-2 h-4 w-4", value.option === option ? "opacity-100" : "opacity-0")}
-                        />
-                        {option}
-                      </CommandItem>
-                    ))}
+                    {options.map((option) => {
+                      const hasDelimiter = option.includes(":");
+                      const [displayValue, _] = hasDelimiter ? option.split(":") : [option, option];
+
+                      return (
+                        <CommandItem
+                          key={option}
+                          value={option}
+                          onSelect={() => handleOptionSelect(option)}
+                          disabled={optionsDisabled}
+                        >
+                          <CheckMark
+                            className={cn("mr-2 h-4 w-4", value.option === option ? "opacity-100" : "opacity-0")}
+                          />
+                          {displayValue}
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </CommandList>
               </Command>

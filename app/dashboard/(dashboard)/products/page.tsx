@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { Product as ProductSchema, RecurringPeriod } from "@/db";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { urlToFile } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
@@ -44,7 +45,10 @@ import * as RHF from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import { z } from "zod";
 
-interface Product extends Pick<ProductSchema, "id" | "name" | "status" | "createdAt" | "updatedAt"> {
+interface Product extends Pick<
+  ProductSchema,
+  "id" | "name" | "status" | "createdAt" | "updatedAt" | "type" | "images"
+> {
   pricing: {
     amount: number;
     asset: string;
@@ -142,7 +146,7 @@ const columns: ColumnDef<Product>[] = [
       return (
         <div className="flex flex-col py-1">
           <div className="font-semibold">
-            ${p.amount} {p.asset}
+            {p.amount} {p.asset}
           </div>
           {p.isRecurring && (
             <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
@@ -191,6 +195,8 @@ function ProductsPageContent() {
           status: product.status,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
+          type: product.type,
+          images: product.images,
         };
       });
     },
@@ -206,8 +212,10 @@ function ProductsPageContent() {
   );
 
   const handleModalChange = React.useCallback(
-    (value: boolean) => {
+    (value: boolean, syncUrlState: boolean) => {
       const params = new URLSearchParams(searchParams.toString());
+
+      if (!syncUrlState) return setIsModalOpen(value);
 
       if (value) {
         params.set("mode", "create");
@@ -217,6 +225,7 @@ function ProductsPageContent() {
         router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
         setEditingProduct(null);
       }
+
       setIsModalOpen(value);
     },
     [searchParams, router]
@@ -227,7 +236,7 @@ function ProductsPageContent() {
       label: "Edit",
       onClick: (p) => {
         setEditingProduct(p);
-        handleModalChange(true);
+        handleModalChange(true, false);
       },
     },
     {
@@ -250,7 +259,7 @@ function ProductsPageContent() {
               <Button
                 onClick={() => {
                   setEditingProduct(null);
-                  handleModalChange(true);
+                  handleModalChange(true, true);
                 }}
                 className="gap-2 shadow-sm"
               >
@@ -293,7 +302,11 @@ function ProductsPageContent() {
               />
             </div>
 
-            <ProductsModal open={isModalOpen} onOpenChange={handleModalChange} editingProduct={editingProduct} />
+            <ProductsModal
+              open={isModalOpen}
+              onOpenChange={(value) => handleModalChange(value, editingProduct ? false : true)}
+              editingProduct={editingProduct}
+            />
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
@@ -392,7 +405,7 @@ function ProductsModal({
         description: data.description ?? null,
         images: [],
         type: data.type,
-        assetId: data.price.asset,
+        assetId: data.price.asset.split(":")[1],
         status: "active" as const,
         metadata,
         priceAmount: parseFloat(data.price.amount),
@@ -425,6 +438,15 @@ function ProductsModal({
   const onSubmit = async (data: ProductFormData) => {
     createProductMutation.mutate(data);
   };
+
+  React.useEffect(() => {
+    if (isEditMode && editingProduct?.images?.[0]) {
+      urlToFile(editingProduct.images[0], "existing-image.png").then((file) => {
+        console.log("updating images..");
+        form.setValue("images", [{ ...file, preview: URL.createObjectURL(file) }]);
+      });
+    }
+  }, [editingProduct, isEditMode]);
 
   return (
     <>
@@ -517,10 +539,11 @@ function ProductsModal({
                 render={({ field, fieldState: { error } }) => (
                   <RadioGroup
                     id="type"
-                    value={field.value}
+                    disabled={isEditMode}
+                    value={isEditMode ? editingProduct?.type : field.value}
                     onChange={field.onChange}
                     items={[
-                      { value: "recurring", label: "Recurring" },
+                      { value: "subscription", label: "Recurring" },
                       { value: "one_time", label: "One-off" },
                       { value: "metered", label: "Metered (Credits)" },
                     ]}
@@ -528,6 +551,7 @@ function ProductsModal({
                     label={null}
                     helpText={null}
                     itemLayout="horizontal"
+                    defaultValue={isEditMode ? editingProduct?.type : undefined}
                   />
                 )}
               />
@@ -618,8 +642,9 @@ function ProductsModal({
                       onChange={(value) =>
                         field.onChange({ ...field.value, amount: value.amount, asset: value.option })
                       }
-                      options={assets?.map((asset) => asset.code) ?? []}
-                      error={error?.message}
+                      options={assets?.map((asset) => `${asset.code}:${asset.id}`) ?? []}
+                      error={(error as any)?.asset?.message ?? (error as any)?.amount?.message}
+                      optionsDisabled={isEditMode}
                     />
                   )}
                 />
@@ -677,7 +702,7 @@ function ProductsModal({
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground font-medium">Total Price</span>
                     <span className="font-bold">
-                      {total.toFixed(2)} {watched.price?.asset || "XLM"}
+                      {total.toFixed(2)} {watched.price?.asset?.split(":")?.[0] ?? "XLM"}
                     </span>
                   </div>
                   {watched.type === "subscription" && (
