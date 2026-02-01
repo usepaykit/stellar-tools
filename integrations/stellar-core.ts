@@ -10,12 +10,12 @@ export class StellarCoreApi {
     if (this.network == "testnet") {
       return {
         networkPassphrase: StellarSDK.Networks.TESTNET,
-        server: new StellarSDK.Horizon.Server(process.env.STELLAR_TESTNET_HORIZON_URL!),
+        server: new StellarSDK.Horizon.Server(process.env.STELLAR_HORIZON_TESTNET!),
       };
     } else {
       return {
         networkPassphrase: StellarSDK.Networks.PUBLIC,
-        server: new StellarSDK.Horizon.Server(process.env.STELLAR_MAINNET_HORIZON_URL!),
+        server: new StellarSDK.Horizon.Server(process.env.STELLAR_HORIZON_MAINNET!),
       };
     }
   }
@@ -31,7 +31,7 @@ export class StellarCoreApi {
     if (networkPassphrase == StellarSDK.Networks.TESTNET) {
       const keypair = StellarSDK.Keypair.random();
 
-      server.friendbot(keypair.publicKey());
+      await server.friendbot(keypair.publicKey()).call();
 
       const account = await server.loadAccount(keypair.publicKey());
 

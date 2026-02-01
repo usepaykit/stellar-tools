@@ -615,7 +615,9 @@ function ProductsModal({
                       isLoading={isLoadingAssets}
                       className="flex-1"
                       value={{ amount: field.value.amount, option: field.value.asset }}
-                      onChange={(value) => field.onChange({ amount: value.amount, option: value.option })}
+                      onChange={(value) =>
+                        field.onChange({ ...field.value, amount: value.amount, asset: value.option })
+                      }
                       options={assets?.map((asset) => asset.code) ?? []}
                       error={error?.message}
                     />

@@ -4,7 +4,7 @@ import * as React from "react";
 
 import {
   postOrganization,
-  postOrganizationSecret,
+  postOrganizationSecretWithEncryption,
   retrieveOrganizations,
   setCurrentOrganization,
 } from "@/actions/organization";
@@ -18,7 +18,6 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -208,7 +207,10 @@ const CreateOrganizationModal = ({
        * Mainnet account is created later when the organization is activated
        */
       const account = await new StellarCoreApi(defaultEnvironment).createAccount();
-
+      console.log({
+        error: account.isErr() ? account.error?.message : "no error",
+        value: account.isOk() ? account.value?.keypair.publicKey() : "no value",
+      });
       if (account.isErr()) throw new Error(account.error?.message);
 
       const org = await postOrganization(
@@ -227,16 +229,14 @@ const CreateOrganizationModal = ({
         formData
       );
 
-      const encryption = new EncryptionApi();
-
-      await postOrganizationSecret(
+      await postOrganizationSecretWithEncryption(
         {
-          testnetSecretEncrypted: encryption.encrypt(account.value!.keypair.secret()),
+          testnetSecret: account.value!.keypair.secret(),
           testnetSecretVersion: parseInt(process.env.NEXT_PUBLIC_CURRENT_ENCRYPTION_KEY_VERSION!) || 1,
           testnetPublicKey: account.value!.keypair.publicKey(),
-          mainnetSecretEncrypted: null,
-          mainnetSecretVersion: 0,
+          mainnetSecret: null,
           mainnetPublicKey: null,
+          mainnetSecretVersion: 0,
         },
         org.id,
         "testnet"

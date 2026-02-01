@@ -79,11 +79,11 @@ export const organizationSecrets = pgTable("organization_secret", {
   organizationId: text("organization_id")
     .notNull()
     .references(() => organizations.id),
-  testnetSecretEncrypted: text("testnet_secret_encrypted").notNull(),
+  testnetSecretEncrypted: text("testnet_secret_encrypted"),
   testnetSecretVersion: integer("testnet_secret_version")
     .notNull()
     .default(parseInt(process.env.ENCRYPTION_KEY_VERSION!)),
-  testnetPublicKey: text("testnet_public_key").notNull(),
+  testnetPublicKey: text("testnet_public_key"),
   mainnetSecretEncrypted: text("mainnet_secret_encrypted"),
   mainnetSecretVersion: integer("mainnet_secret_version")
     .notNull()

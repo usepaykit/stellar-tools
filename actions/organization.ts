@@ -204,22 +204,39 @@ export const retrieveOrganizationSecret = async (id: string) => {
   return secret;
 };
 
-export const postOrganizationSecret = async (
-  params: Omit<OrganizationSecret, "id" | "organizationId" | "createdAt" | "updatedAt">,
+export const postOrganizationSecretWithEncryption = async (
+  params: {
+    mainnetPublicKey: string | null;
+    testnetPublicKey: string | null;
+    testnetSecretVersion: number;
+    mainnetSecretVersion: number;
+    testnetSecret: string | null;
+    mainnetSecret: string | null;
+  },
   orgId?: string,
   env?: Network
 ) => {
+  const encryption = new EncryptionApi();
   const { organizationId } = await resolveOrgContext(orgId, env);
 
   const [secret] = await db
     .insert(organizationSecrets)
-    .values({ ...params, id: `sec_${nanoid(25)}`, organizationId })
+    .values({
+      mainnetPublicKey: params.mainnetPublicKey,
+      testnetPublicKey: params.testnetPublicKey,
+      mainnetSecretVersion: params.testnetSecretVersion,
+      testnetSecretVersion: params.testnetSecretVersion,
+      mainnetSecretEncrypted: params.mainnetSecret ? encryption.encrypt(params.mainnetSecret) : null,
+      testnetSecretEncrypted: params.testnetSecret ? encryption.encrypt(params.testnetSecret) : null,
+      id: `sec_${nanoid(25)}`,
+      organizationId,
+    })
     .returning();
 
   return secret;
 };
 
-export const putOrganizationSecret = async (id: string, params: Partial<OrganizationSecret>) => {
+export const putOrganizationSecretWithEncryption = async (id: string, params: Partial<OrganizationSecret>) => {
   const [secret] = await db
     .update(organizationSecrets)
     .set({ ...params, updatedAt: new Date() })
@@ -269,7 +286,9 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
       batch.map(async (secret) => {
         try {
           // Re-encrypt testnet (Mandatory field in your schema)
-          const testnetReencrypted = encryption.reencrypt(secret.testnetSecretEncrypted);
+          const testnetReencrypted = secret.testnetSecretEncrypted
+            ? encryption.reencrypt(secret.testnetSecretEncrypted)
+            : null;
 
           // Re-encrypt mainnet (Optional field in your schema)
           const hasMainnet = secret.mainnetSecretEncrypted && secret.mainnetSecretVersion;
