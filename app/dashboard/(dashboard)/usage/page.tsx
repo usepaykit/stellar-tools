@@ -216,7 +216,6 @@ export default function UsagePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Filter records based on search query
   const filteredRecords = React.useMemo(() => {
     if (!searchQuery.trim()) return mockUsageRecords;
 
@@ -281,7 +280,6 @@ export default function UsagePage() {
               </BreadcrumbList>
             </Breadcrumb>
 
-            {/* Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Usage</h1>
@@ -289,7 +287,6 @@ export default function UsagePage() {
               </div>
             </div>
 
-            {/* Search */}
             <div className="max-w-md">
               <InputGroup>
                 <InputGroupAddon align="inline-start">
@@ -304,13 +301,11 @@ export default function UsagePage() {
               </InputGroup>
             </div>
 
-            {/* Table */}
             <DataTable
               columns={columns}
               data={filteredRecords}
               actions={tableActions}
               onRowClick={(row) => {
-                // Navigate to customer page
                 router.push(`/usage/${row.id}`);
               }}
             />

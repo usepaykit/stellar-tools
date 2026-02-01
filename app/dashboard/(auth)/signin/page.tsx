@@ -250,13 +250,14 @@ export default function SignIn() {
               name="password"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup className="w-full shadow-none" aria-invalid={error ? "true" : "false"}>
+                  <InputGroup className="w-full shadow-none">
                     <InputGroupInput
                       {...field}
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder={"•".repeat(8)}
                       className="shadow-none"
+                      aria-invalid={!!error}
                     />
                     <InputGroupAddon align="inline-end">
                       <Button

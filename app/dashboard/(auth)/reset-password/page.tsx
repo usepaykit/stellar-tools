@@ -200,8 +200,9 @@ export default function UpdatePassword() {
                       {...field}
                       id="newPassword"
                       type={showNewPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder={"•".repeat(8)}
                       className="shadow-none"
+                      aria-invalid={!!error}
                     />
                     <InputGroupAddon align="inline-end">
                       <Button
