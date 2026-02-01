@@ -90,6 +90,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
         priceAmount: products.priceAmount,
         name: products.name,
         recurringPeriod: products.recurringPeriod,
+        images: products.images,
       },
       assets: { code: assets.code, issuer: assets.issuer },
       finalAmount: sql<number>`COALESCE(${checkouts.amount}, ${products.priceAmount})`.as("final_amount"),
@@ -121,6 +122,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     customerPhone: customer?.phone || checkout.customerPhone,
     assetCode: assets$1?.code ?? null,
     assetIssuer: assets$1?.issuer ?? null,
+    productImage: product?.images?.[0] ?? null,
   };
 };
 

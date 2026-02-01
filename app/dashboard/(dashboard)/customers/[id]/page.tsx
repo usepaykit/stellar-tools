@@ -16,7 +16,7 @@ import { DataTable } from "@/components/data-table";
 import { DateTimeField } from "@/components/date-field";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectField } from "@/components/select-field";
-import { TextAreaField } from "@/components/text-field";
+import { TextAreaField, TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,6 +28,14 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -364,59 +372,146 @@ export default function CustomerDetailPage() {
 const checkoutSchema = z.object({
   productId: z.string().min(1, "Product required"),
   description: z.string().optional(),
-  expiresAt: z.object({ date: z.date(), time: z.string() }),
+  successUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  successMessage: z.string().optional(),
 });
 
 function CheckoutModal({ open, onOpenChange, customerId }: any) {
   const invalidate = useInvalidateOrgQuery();
+  const [createdUrl, setCreatedUrl] = React.useState<string | null>(null);
+  const { handleCopy } = useCopy();
+
   const form = RHF.useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { productId: "", description: "" },
+    defaultValues: {
+      productId: "",
+      description: "",
+      successUrl: "",
+      successMessage: "",
+    },
   });
 
-  const { data: products, isLoading: isLoadingProducts } = useOrgQuery(["products"], () => retrieveProducts(), {
-    select: (data) =>
-      data
-        .filter((p) => p.product.status === "active")
-        .map((p) => ({ value: p.product.id, label: `${p.product.name} - ${p.product.priceAmount} ${p.asset.code}` })),
-  });
+  const handleClose = () => {
+    onOpenChange(false);
+    setCreatedUrl(null);
+    form.reset();
+  };
+
+  const { data: productsData, isLoading: isLoadingProducts } = useOrgQuery(["products"], () => retrieveProducts());
+
+  const products = React.useMemo(() => {
+    return (
+      productsData
+        ?.filter((p) => p.product.status === "active")
+        .map((p) => ({
+          value: p.product.id,
+          label: `${p.product.name} - ${p.product.priceAmount} ${p.asset.code}`,
+          type: p.product.type,
+          recurringPeriod: p.product.recurringPeriod,
+        })) ?? []
+    );
+  }, [productsData]);
+
+  const selectedProductId = form.watch("productId");
+  const selectedProduct = React.useMemo(
+    () => products.find((p) => p.value === selectedProductId),
+    [products, selectedProductId]
+  );
 
   const mutation = useMutation({
-    mutationFn: (data: any) => {
-      const expires = new Date(data.expiresAt.date);
-      expires.setHours(expires.getHours() + parseInt(data.expiresAt.time || "0"));
+    mutationFn: (data: z.infer<typeof checkoutSchema>) => {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 1);
+
+      let subscriptionData = null;
+
+      if (selectedProduct?.type === "subscription") {
+        const periodStart = new Date();
+        const periodEnd = new Date();
+
+        switch (selectedProduct.recurringPeriod) {
+          case "day":
+            periodEnd.setDate(periodEnd.getDate() + 1);
+            break;
+          case "week":
+            periodEnd.setDate(periodEnd.getDate() + 7);
+            break;
+          case "month":
+            periodEnd.setMonth(periodEnd.getMonth() + 1);
+            break;
+          case "year":
+            periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+            break;
+        }
+
+        subscriptionData = {
+          periodStart,
+          periodEnd,
+        };
+      }
+
       return postCheckout({
-        ...data,
+        productId: data.productId,
+        description: data.description || null,
+        successUrl: data.successUrl || null,
+        successMessage: data.successMessage || null,
+        subscriptionData,
         customerId,
-        expiresAt: expires,
+        expiresAt,
         status: "open",
+        metadata: {},
+        amount: null,
+        customerEmail: null,
+        customerPhone: null,
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       invalidate(["payments", customerId]);
       toast.success("Checkout created");
-      onOpenChange(false);
+      const url = `${process.env.NEXT_PUBLIC_CHECKOUT_DOMAIN}/${data.id}`;
+      setCreatedUrl(url);
     },
   });
 
   return (
     <FullScreenModal
       open={open}
-      onOpenChange={onOpenChange}
-      title="Create Checkout"
+      onOpenChange={handleClose}
+      title={createdUrl ? "Checkout Link Ready" : "Create Checkout"}
+      description={
+        createdUrl
+          ? "The checkout session has been created. You can now share this link with the customer."
+          : "Create a new checkout session for this customer."
+      }
+      size="small"
       footer={
         <div className="flex w-full justify-end gap-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={form.handleSubmit((d) => mutation.mutate(d))} isLoading={mutation.isPending}>
-            Create
-          </Button>
+          {createdUrl ? (
+            <Button onClick={handleClose}>Done</Button>
+          ) : (
+            <>
+              <Button variant="ghost" type="button" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button onClick={form.handleSubmit((d) => mutation.mutate(d))} isLoading={mutation.isPending}>
+                Create Checkout
+              </Button>
+            </>
+          )}
         </div>
       }
     >
-      <form className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
+      {createdUrl ? (
+        <div className="space-y-6 py-4">
+          <div className="bg-muted/50 flex items-center justify-between gap-4 rounded-xl border p-4">
+            <code className="text-muted-foreground flex-1 truncate text-sm">{createdUrl}</code>
+            <Button variant="outline" size="sm" onClick={() => handleCopy({ text: createdUrl, message: "Copied" })}>
+              Copy Link
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <form className="space-y-4 py-4">
           <RHF.Controller
             control={form.control}
             name="productId"
@@ -424,7 +519,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
               <SelectField
                 id="productId"
                 label="Product"
-                items={products ?? []}
+                items={products}
                 value={field.value}
                 onChange={field.onChange}
                 isLoading={isLoadingProducts}
@@ -444,17 +539,38 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
               />
             )}
           />
-        </div>
-        {/* <div className="space-y-4">
+
           <RHF.Controller
             control={form.control}
-            name="expiresAt"
-            render={({ field }) => (
-              <DateTimeField id="expiresAt" label="Expiration" value={field.value} onChange={field.onChange} />
+            name="successUrl"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                id="successUrl"
+                label="Success URL"
+                placeholder="https://example.com/success"
+                {...field}
+                value={field.value || ""}
+                error={error?.message}
+              />
             )}
           />
-        </div> */}
-      </form>
+
+          <RHF.Controller
+            control={form.control}
+            name="successMessage"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                id="successMessage"
+                label="Success Message"
+                placeholder="Thanks for your purchase!"
+                {...field}
+                value={field.value || ""}
+                error={error?.message}
+              />
+            )}
+          />
+        </form>
+      )}
     </FullScreenModal>
   );
 }
