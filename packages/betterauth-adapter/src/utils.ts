@@ -1,7 +1,7 @@
 import { Result, StellarTools } from "@stellartools/core";
 import { APIError, GenericEndpointContext } from "better-auth";
 
-import { StellarToolsBetterAuthOptions } from "./types";
+import { BillingConfig } from "./types";
 
 export const unwrap = <T>(result: Result<T, Error>): T => {
   if (result.isErr()) {
@@ -11,7 +11,7 @@ export const unwrap = <T>(result: Result<T, Error>): T => {
   return result.value!;
 };
 
-export const getContext = (ctx: GenericEndpointContext, options: StellarToolsBetterAuthOptions) => {
+export const getContext = (ctx: GenericEndpointContext, options: BillingConfig) => {
   const session = ctx.context.session;
   if (!session?.user) throw new APIError("UNAUTHORIZED");
 
