@@ -33,7 +33,7 @@ export class StellarTools {
     this.config = data;
 
     const apiClient = new ApiClient({
-      baseUrl: "https://localhost:3000",
+      baseUrl: process.env.STELLAR_TOOLS_BASE_URL!,
       headers: {
         "Content-Type": "application/json",
         "x-api-key": this.config.apiKey,

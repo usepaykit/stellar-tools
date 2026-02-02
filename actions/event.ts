@@ -5,7 +5,7 @@ import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
 import { computeDiff } from "@/lib/utils";
-import { MaybeArray, SuggestedString, WebhookEvent, chunk } from "@stellartools/core";
+import { MaybeArray, SuggestedString, WebhookEvent } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
