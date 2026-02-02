@@ -2,12 +2,7 @@
 
 import * as React from "react";
 
-import {
-  postOrganization,
-  postOrganizationSecretWithEncryption,
-  retrieveOrganizations,
-  setCurrentOrganization,
-} from "@/actions/organization";
+import { postOrganizationAndSecret, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
@@ -18,7 +13,6 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { StellarCoreApi } from "@/integrations/stellar-core";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -206,14 +200,7 @@ const CreateOrganizationModal = ({
        * Creates a testnet account for the organization
        * Mainnet account is created later when the organization is activated
        */
-      const account = await new StellarCoreApi(defaultEnvironment).createAccount();
-      console.log({
-        error: account.isErr() ? account.error?.message : "no error",
-        value: account.isOk() ? account.value?.keypair.publicKey() : "no value",
-      });
-      if (account.isErr()) throw new Error(account.error?.message);
-
-      const org = await postOrganization(
+      const org = await postOrganizationAndSecret(
         {
           name: data.name,
           phoneNumber: phoneNumberToString(data.phoneNumber),
@@ -226,20 +213,8 @@ const CreateOrganizationModal = ({
           address: null,
           socialLinks: null,
         },
-        formData
-      );
-
-      await postOrganizationSecretWithEncryption(
-        {
-          testnetSecret: account.value!.keypair.secret(),
-          testnetSecretVersion: parseInt(process.env.NEXT_PUBLIC_CURRENT_ENCRYPTION_KEY_VERSION!) || 1,
-          testnetPublicKey: account.value!.keypair.publicKey(),
-          mainnetSecret: null,
-          mainnetPublicKey: null,
-          mainnetSecretVersion: 0,
-        },
-        org.id,
-        "testnet"
+        formData,
+        defaultEnvironment
       );
 
       return org;

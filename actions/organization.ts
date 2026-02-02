@@ -15,15 +15,17 @@ import { CookieManager } from "@/integrations/cookie-manager";
 import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWT } from "@/integrations/jwt";
+import { StellarCoreApi } from "@/integrations/stellar-core";
 import { and, eq, lt, or, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { resolveAccountContext } from "./account";
 import { postTeamMember } from "./team-member";
 
-export const postOrganization = async (
+export const postOrganizationAndSecret = async (
   params: Omit<Organization, "id" | "accountId">,
-  formDataWithFiles?: FormData
+  formDataWithFiles?: FormData,
+  defaultEnvironment: Network = "testnet"
 ) => {
   const organizationId = `org_${nanoid(25)}`;
   const logoFile = formDataWithFiles?.get("logo");
@@ -50,7 +52,27 @@ export const postOrganization = async (
     metadata: null,
   });
 
-  return organization;
+  const account = await new StellarCoreApi(defaultEnvironment).createAccount();
+
+  if (account.isErr()) throw new Error(account.error?.message);
+
+  await Promise.allSettled([
+    postTeamMember({ organizationId: organization.id, accountId, role: "owner", metadata: null }),
+    await postOrganizationSecretWithEncryption(
+      {
+        testnetSecret: account.value!.keypair.secret(),
+        testnetSecretVersion: parseInt(process.env.NEXT_PUBLIC_CURRENT_ENCRYPTION_KEY_VERSION!) || 1,
+        testnetPublicKey: account.value!.keypair.publicKey(),
+        mainnetSecret: null,
+        mainnetPublicKey: null,
+        mainnetSecretVersion: 0,
+      },
+      organization.id,
+      defaultEnvironment
+    ),
+  ]);
+
+  return { success: true, id: organization.id };
 };
 
 export const retrieveOrganizations = async (accId?: string) => {
@@ -203,6 +225,8 @@ export const retrieveOrganizationSecret = async (id: string) => {
 
   return secret;
 };
+
+// -- Internal --
 
 export const postOrganizationSecretWithEncryption = async (
   params: {
