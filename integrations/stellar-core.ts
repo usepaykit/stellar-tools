@@ -320,42 +320,35 @@ export class StellarCoreApi {
 
   makeCheckoutURI = (params: {
     id: string;
-    memo: string;
     type: ProductType;
+    network: Network;
     destination: string;
     amount: string;
-    callback?: string;
-    network: Network;
-    productId: string;
-    currentPeriodEnd: Date | null;
-    assetCode: string | null;
-    assetIssuer: string | null;
+    assetCode?: string;
+    assetIssuer?: string;
+    memo: string;
   }): string => {
-    let urlParams: URLSearchParams;
+    const { id, type, destination, amount, assetCode, assetIssuer, memo } = params;
 
-    if (params.type === "subscription") {
-      urlParams = new URLSearchParams({
-        merchantAddress: params.destination,
-        network: params.network,
-        productId: params.productId,
-        amount: params.amount.toString(),
-        periodEnd: params.currentPeriodEnd!.toISOString(),
-        assetCode: params.assetCode!,
-        assetIssuer: params.assetIssuer!,
-      });
-      // Allows wallet to request the transaction details from the server once the user is authenticated
-      const requestUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/checkouts/${params.id}/initiate-subscription?merchantAddress=${params.destination}`;
-      return `web+stellar:tx?url=${encodeURIComponent(requestUrl)}`;
+    if (type === "subscription") {
+      const requestUrl = new URL(`/api/checkout/_/${id}/initiate-subscription`, process.env.NEXT_PUBLIC_APP_URL!);
+      return `web+stellar:tx?url=${encodeURIComponent(requestUrl.toString())}`;
     }
 
-    urlParams = new URLSearchParams({
-      destination: params.destination,
-      amount: params.amount,
-      memo: params.memo,
-      ...(params.callback ? { callback: params.callback } : {}),
+    const query = new URLSearchParams({
+      destination,
+      amount: amount.toString(),
+      memo,
     });
 
-    return `web+stellar:pay?${urlParams.toString()}`;
+    if (assetCode && assetCode !== "XLM" && assetCode !== "native") {
+      query.set("asset_code", assetCode);
+      if (assetIssuer) {
+        query.set("asset_issuer", assetIssuer);
+      }
+    }
+
+    return `web+stellar:pay?${query.toString()}`;
   };
 
   buildSubscriptionXDR = async (params: {

@@ -2,7 +2,7 @@ import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { subscriptionStatusEnum } from "@/constant/schema.client";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
-import { Result, z as Schema, validateSchema } from "@stellartools/core";
+import { Result, z as Schema, updateSubscriptionSchema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -49,38 +49,26 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
   }
 
   const result = await Result.andThenAsync(
-    validateSchema(
-      Schema.object({
-        status: z.enum(subscriptionStatusEnum).optional(),
-        periodEnd: z.coerce.date().optional(),
-        metadata: z.record(z.string(), z.any()).optional(),
-      }),
-      await req.json()
-    ),
-    async ({ status, periodEnd, metadata }) => {
+    validateSchema(updateSubscriptionSchema, await req.json()),
+    async ({ metadata, cancelAtPeriodEnd }) => {
       const { environment, organizationId } = await resolveApiKeyOrSessionToken(apiKey);
       const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
       const subscription = await retrieveSubscription(id);
       const walletAddress = ""; // todo: get wallet address from customer
 
-      const result = await api.updateSubscription(
-        walletAddress,
-        subscription.productId,
-        status ?? null,
-        periodEnd && subscription.currentPeriodStart
-          ? Math.floor((periodEnd.getTime() - new Date(subscription.currentPeriodStart).getTime()) / 1000)
-          : null,
-        periodEnd ? Math.floor(periodEnd.getTime() / 1000) : null
-      );
+      let cancellationResult: Result<string, Error> | null = null;
 
-      if (result.isErr()) return Result.err(result.error);
+      if (cancelAtPeriodEnd) {
+        cancellationResult = await api.cancelSubscription(walletAddress, subscription.productId);
+      }
+
+      if (cancellationResult?.isErr()) return Result.err(cancellationResult.error);
 
       const updatedSubscription = await putSubscription(
         id,
         {
-          ...(status && { status }),
-          ...(periodEnd && { currentPeriodEnd: periodEnd }),
+          ...(cancelAtPeriodEnd !== undefined && { cancelAtPeriodEnd }),
           ...(metadata && { metadata: { ...(subscription.metadata ?? {}), ...metadata } }),
         },
         organizationId,

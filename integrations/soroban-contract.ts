@@ -1,7 +1,7 @@
 import { SubscriptionStatus } from "@/constant/schema.client";
 import { Network } from "@/db";
 import * as StellarSDK from "@stellar/stellar-sdk";
-import { Result, Subscription } from "@stellartools/core";
+import { Result } from "@stellartools/core";
 
 export class SorobanContractApi {
   private CONTRACT_ID = process.env.SUBSCRIPTION_CONTRACT_ID!;
@@ -63,27 +63,25 @@ export class SorobanContractApi {
     return result.value;
   }
 
-  async cancelSubscription(customerAddress: string, productId: string): Promise<void> {
+  async cancelSubscription(customerAddress: string, productId: string) {
     const operation = this.contract.call(
       "cancel_subscription",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
       StellarSDK.nativeToScVal(productId, { type: "symbol" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
-    const result = await this.invoke(operation);
-    if (result.isErr()) throw new Error(result.error.message);
-    return result.value;
+
+    return await this.invoke(operation);
   }
 
-  async getSubscription(customerAddress: string, productId: string): Promise<Subscription> {
+  async getSubscription(customerAddress: string, productId: string) {
     const operation = this.contract.call(
       "get_subscription",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
       StellarSDK.nativeToScVal(productId, { type: "symbol" })
     );
-    const result = await this.invoke(operation, { readOnly: true });
-    if (result.isErr()) throw new Error(result.error.message);
-    return StellarSDK.scValToNative(result.value);
+
+    return await this.invoke(operation, { readOnly: true });
   }
 
   async updateSubscription(

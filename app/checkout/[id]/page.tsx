@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { AnimatedCheckmark } from "@/components/icon";
 import { PhoneNumberField, phoneNumberFromString } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
@@ -18,6 +18,7 @@ import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Lock, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -51,6 +52,23 @@ export default function CheckoutPage() {
     queryFn: () => retrieveCheckoutAndCustomer(checkoutId),
   });
 
+  const { data: status } = useQuery({
+    queryKey: ["checkout-status", checkoutId],
+    queryFn: async () => {
+      const checkout = await retrieveCheckout(checkoutId);
+      return checkout.status;
+    },
+    refetchInterval: 5000,
+    enabled: !isSuccess,
+  });
+
+  React.useEffect(() => {
+    if (status === "completed") {
+      setIsSuccess(true);
+      toast.success("Payment detected!");
+    }
+  }, [status]);
+
   const form = RHF.useForm({
     resolver: zodResolver(schema(!!checkout?.hasEmail, !!checkout?.hasPhone)),
     values: {
@@ -75,10 +93,8 @@ export default function CheckoutPage() {
     return new StellarCoreApi(checkout.environment).makeCheckoutURI({
       id: checkoutId,
       network: checkout.environment,
-      productId: checkout.productId!,
-      currentPeriodEnd: expiry,
-      assetCode: checkout.assetCode,
-      assetIssuer: checkout.assetIssuer,
+      assetCode: checkout.assetCode!,
+      assetIssuer: checkout.assetIssuer!,
       destination: checkout.merchantPublicKey,
       amount: checkout.finalAmount.toString(),
       memo: `ORD-${checkoutId}`,
@@ -91,6 +107,7 @@ export default function CheckoutPage() {
   }, [stellarWalletsKit]);
 
   if (isLoading) return <Skeleton className="h-screen w-full" />;
+
   if (!checkout) return notFound();
 
   const handlePay = async (data: any) => {
@@ -114,12 +131,13 @@ export default function CheckoutPage() {
       if (result.isErr()) throw new Error(result.error.message);
 
       const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_APP_URL!, headers: {} });
-      await api.post("/api/verify-wallet-payment", {
+      await api.post("/api/checkout/verify-callback", {
         body: JSON.stringify({
           txHash: result.value?.hash,
           checkoutId,
           organizationId: checkout.organizationId,
           environment: checkout.environment,
+          productType: checkout.productType,
         }),
       });
 
@@ -135,14 +153,14 @@ export default function CheckoutPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      {showBanner && (
+      {showBanner && checkout.environment === "testnet" && (
         <div className="bg-primary relative p-3 text-center">
           <p className="text-primary-foreground text-xs font-medium">
-            Verify your details to generate your secure payment QR code
+            Note: Please use a Testnet-compatible wallet like Solar or xBull to scan this code.
           </p>
           <button
             onClick={() => setShowBanner(false)}
-            className="text-primary-foreground/50 absolute top-1/2 right-4 -translate-y-1/2 hover:text-white"
+            className="text-primary-foreground/50 absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer hover:text-white"
           >
             <X className="size-4" />
           </button>
@@ -226,9 +244,9 @@ export default function CheckoutPage() {
                         padding={1}
                         className="size-50"
                       />
-                      {/* <BeautifulQRCode data={paymentURI ?? "-".repeat(10)} width={220} height={220} radius={1} padding={1} /> */}
                     </div>
                   </div>
+
                   {!isUnlocked && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center space-y-2 text-center">
                       <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">

@@ -214,16 +214,13 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
 
   const paymentUri = stellar.makeCheckoutURI({
     id: checkout.id,
-    network: result.checkout.environment,
-    productId: product!.id,
-    currentPeriodEnd: null,
+    type: product!.type,
+    network: result.checkout.environment!,
     destination: secret.publicKey,
     amount: amountNormalized,
     assetCode,
     assetIssuer,
-    memo: checkout.id,
-    callback: checkout.successUrl ?? undefined,
-    type: product!.type,
+    memo: `ORD-${checkout.id}`,
   });
 
   return {

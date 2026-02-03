@@ -1,9 +1,14 @@
 "use server";
 
+import { retrieveCheckout } from "@/actions/checkout";
+import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
+import { ProductType } from "@/constant/schema.client";
 import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
+import { JWT } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { ApiClient, Result } from "@stellartools/core";
 import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -47,12 +52,12 @@ export const postPayment = async (
           type: "payment::failed",
           map: ({ checkoutId, amount, customerId, id: paymentId }) => ({
             customerId: customerId ?? undefined,
-            data: { amount, checkoutId, paymentId },
+            data: { customerId, amount, checkoutId, paymentId },
           }),
         });
         webhooksTriggers.push({
           event: "payment.failed",
-          map: ({ amount, checkoutId, id: paymentId }) => ({ checkoutId, amount, paymentId }),
+          map: ({ customerId, amount, checkoutId, id: paymentId }) => ({ customerId, amount, checkoutId, paymentId }),
         });
       }
 
@@ -160,3 +165,90 @@ export const refreshTxStatus = async (
     putPayment(paymentId, organizationId, { status: "failed" });
   }
 };
+
+export async function verifyAndProcessPayment(
+  txHash: string,
+  checkoutId: string,
+  environment: Network,
+  organizationId: string,
+  productType: ProductType
+) {
+  const stellar = new StellarCoreApi(environment);
+
+  const tx = await stellar.retrieveTx(txHash);
+  if (tx.isErr()) throw new Error(tx.error?.message);
+
+  const [checkout, paymentOp] = await Promise.all([
+    retrieveCheckout(checkoutId),
+    stellar.retrievePayment(txHash).then((result) => result.value?.records.find((op) => op.type_i === 1)),
+  ]);
+
+  if (!checkout) throw new Error("Checkout record lost");
+
+  if (!paymentOp) throw new Error("Payment operation not found in transaction");
+
+  const amountInStroops = parseInt(paymentOp.amount || "0");
+
+  if (!tx.value?.successful) {
+    await Promise.all([
+      putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
+      postPayment(
+        {
+          checkoutId,
+          customerId: checkout.customerId ?? null,
+          amount: amountInStroops,
+          transactionHash: txHash,
+          status: "failed",
+        },
+        organizationId,
+        environment
+      ),
+    ]);
+  }
+
+  const createSubscriptionHandler = async () => {
+    if (!checkout.productId) return Result.err(new Error("Product ID is required for subscription"));
+
+    const accessToken = await new JWT().sign({ orgId: organizationId, environment }, 5 * 60);
+
+    const api = new ApiClient({
+      baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
+      headers: { "x-session-token": accessToken },
+    });
+
+    const period =
+      checkout.subscriptionData &&
+      "periodStart" in checkout.subscriptionData &&
+      "periodEnd" in checkout.subscriptionData
+        ? {
+            from: new Date(checkout.subscriptionData.periodStart),
+            to: new Date(checkout.subscriptionData.periodEnd),
+          }
+        : null;
+
+    if (!period) return Result.err(new Error("Period is required for subscription"));
+
+    const result = await api.post<{ id: string; success: boolean }>("/api/subscriptions", {
+      body: JSON.stringify({
+        customerIds: [checkout.customerId],
+        productId: checkout.productId,
+        period,
+        cancelAtPeriodEnd: checkout.subscriptionData?.cancelAtPeriodEnd ?? false,
+      }),
+    });
+
+    return Result.ok(result);
+  };
+
+  return await Promise.all([
+    putCheckout(checkoutId, { status: "completed" }),
+    postPayment({
+      customerId: checkout.customerId,
+      checkoutId,
+      amount: amountInStroops,
+      transactionHash: txHash,
+      status: "confirmed",
+    }),
+    ...(productType === "subscription" ? [createSubscriptionHandler()] : []),
+  ]);
+}

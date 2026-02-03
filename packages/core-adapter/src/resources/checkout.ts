@@ -17,35 +17,35 @@ export class CheckoutApi {
 
   async create(params: CreateCheckout) {
     return Result.andThenAsync(validateSchema(createCheckoutSchema, params), async (data) => {
-      const response = await this.apiClient.post<Checkout>("checkouts", data);
+      const response = await this.apiClient.post<Checkout>("checkout", data);
       return response.map((r) => r.data);
     });
   }
 
   async retrieve(id: string) {
     return Result.andThenAsync(validateSchema(retrieveCheckoutSchema, { id }), async (id) => {
-      const response = await this.apiClient.get<Checkout>(`checkouts/${id}`);
+      const response = await this.apiClient.get<Checkout>(`checkout/_/${id}`);
       return response.map((r) => r.data);
     });
   }
 
   async update(id: string, params: UpdateCheckout) {
     return Result.andThenAsync(validateSchema(updateCheckoutSchema, params), async (data) => {
-      const response = await this.apiClient.put<Checkout>(`checkouts/${id}`, data);
+      const response = await this.apiClient.put<Checkout>(`checkout/_/${id}`, data);
       return response.map((r) => r.data);
     });
   }
 
   async delete(id: string) {
     return Result.andThenAsync(validateSchema(retrieveCheckoutSchema, { id }), async (id) => {
-      const response = await this.apiClient.delete<Checkout>(`checkouts/${id}`);
+      const response = await this.apiClient.delete<Checkout>(`checkout/_/${id}`);
       return response.map((r) => r.data);
     });
   }
 
   async retrieveEmbedDetails(id: string) {
     return Result.andThenAsync(validateSchema(retrieveCheckoutSchema, { id }), async (id) => {
-      const response = await this.apiClient.get<CheckoutEmbedDetails>(`checkouts/${id}/embed-details`);
+      const response = await this.apiClient.get<CheckoutEmbedDetails>(`checkout/_/${id}/embed-details`);
       return response.map((r) => r.data);
     });
   }
