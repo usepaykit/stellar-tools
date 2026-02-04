@@ -46,3 +46,8 @@ packages/*/dist
 packages/*/node_modules
 
 **/target
+
+
+# adapters test
+/better-auth-test
+/.pnpm-store
