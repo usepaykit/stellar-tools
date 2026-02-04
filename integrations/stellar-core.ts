@@ -1,6 +1,7 @@
 import { ProductType } from "@/constant/schema.client";
 import { Network } from "@/db";
 import * as StellarSDK from "@stellar/stellar-sdk";
+import { Sep7Pay } from "@stellar/typescript-wallet-sdk";
 import { Result } from "@stellartools/core";
 
 export class StellarCoreApi {
@@ -321,34 +322,34 @@ export class StellarCoreApi {
   makeCheckoutURI = (params: {
     id: string;
     type: ProductType;
-    network: Network;
     destination: string;
     amount: string;
-    assetCode?: string;
-    assetIssuer?: string;
-    memo: string;
+    network: Network;
+    assetCode: string;
+    assetIssuer: string;
+    baseUrl: string;
   }): string => {
-    const { id, type, destination, amount, assetCode, assetIssuer, memo } = params;
+    const { id, type, destination, amount, network, baseUrl, assetCode, assetIssuer } = params;
 
-    if (type === "subscription") {
-      const requestUrl = new URL(`/api/checkout/_/${id}/initiate-subscription`, process.env.NEXT_PUBLIC_APP_URL!);
+    if (type == "subscription") {
+      const requestUrl = new URL(`/api/checkouts/${id}/initiate-subscription`, baseUrl);
       return `web+stellar:tx?url=${encodeURIComponent(requestUrl.toString())}`;
     }
 
-    const query = new URLSearchParams({
-      destination,
-      amount: amount.toString(),
-      memo,
-    });
+    const pay = Sep7Pay.forDestination(destination);
+    pay.amount = amount;
+    pay.memo = id;
 
     if (assetCode && assetCode !== "XLM" && assetCode !== "native") {
-      query.set("asset_code", assetCode);
-      if (assetIssuer) {
-        query.set("asset_issuer", assetIssuer);
-      }
+      pay.assetCode = assetCode;
+      pay.assetIssuer = assetIssuer;
     }
 
-    return `web+stellar:pay?${query.toString()}`;
+    pay.callback = `url:${new URL(`/checkout/verify-callback?checkoutId=${id}`, baseUrl)}`;
+
+    if (network === "testnet") pay.networkPassphrase = StellarSDK.Networks.TESTNET;
+
+    return pay.toString();
   };
 
   buildSubscriptionXDR = async (params: {

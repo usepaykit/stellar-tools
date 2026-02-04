@@ -4,9 +4,8 @@ import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { Checkout, Network, assets, checkouts, customers, db, organizationSecrets, products } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
-import { computeDiff } from "@/lib/utils";
+import { computeDiff, generateResourceId } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 export const postCheckout = async (
   params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
@@ -15,7 +14,9 @@ export const postCheckout = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const checkoutId = `cz_${nanoid(40)}`;
+  // Should have no more than 25 chars so that it fits in the memo field of the SEP-7 Pay or Tx request
+  const checkoutId = generateResourceId("cz", organizationId, 20);
+  console.log({ checkoutId, length: checkoutId.length });
 
   return withEvent(
     async () => {
@@ -220,7 +221,7 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
     amount: amountNormalized,
     assetCode,
     assetIssuer,
-    memo: `ORD-${checkout.id}`,
+    baseUrl: process.env.NEXT_PUBLIC_TUNNEL_URL!,
   });
 
   return {

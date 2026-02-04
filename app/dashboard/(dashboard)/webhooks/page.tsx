@@ -17,14 +17,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
-import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn } from "@/lib/utils";
+import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { cn, generateResourceId } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z as Schema, Webhook, webhookEvent } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { BarChart3, Copy, Info, Plus, Sparkles } from "lucide-react";
-import { nanoid } from "nanoid";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 
@@ -168,9 +167,11 @@ export default function WebhooksPage() {
 }
 
 function WebhooksModal({ open, onOpenChange }: any) {
-  const invalidate = useInvalidateOrgQuery();
   const { handleCopy } = useCopy();
-  const secret = React.useMemo(() => `whsec_${nanoid(32)}`, [open]);
+  const { data: organization } = useOrgContext();
+  const invalidate = useInvalidateOrgQuery();
+
+  const secret = React.useMemo(() => generateResourceId("whsec", organization?.id!, 32), [open]);
 
   const form = RHF.useForm({
     resolver: zodResolver(schema),

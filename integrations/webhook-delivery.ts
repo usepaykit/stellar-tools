@@ -1,12 +1,12 @@
 import { postWebhookLog } from "@/actions/webhook";
 import { Webhook as WebhookSchema } from "@/db/schema";
+import { generateResourceId } from "@/lib/utils";
 import { ApiClient, WebhookEvent, WebhookSigner } from "@stellartools/core";
-import { nanoid } from "nanoid";
 
 export class WebhookDelivery {
   deliver = async (webhook: WebhookSchema, eventType: WebhookEvent, payload: Record<string, unknown>) => {
     const startTime = Date.now();
-    const webhookEventId = `wh+evt_${nanoid(52)}`;
+    const webhookEventId = generateResourceId("wh+evt", webhook.id, 52);
 
     const webhookPayload = {
       id: webhookEventId,
@@ -73,12 +73,12 @@ export class WebhookDelivery {
     );
 
     if (!isSuccess) {
-      console.error(`❌ Webhook failed: ${webhook.url} (${statusCode})`);
+      console.error(`✗ Webhook failed: ${webhook.url} (${statusCode})`);
       if (result.isErr()) console.log(result.error.message);
       throw new Error(errorMessage ?? "Delivery failed");
     }
 
-    console.log(`✅ Webhook delivered: ${webhook.url} in ${duration}ms`);
+    console.log(`✓ Webhook delivered: ${webhook.url} in ${duration}ms`);
     return { success: true };
   };
 }

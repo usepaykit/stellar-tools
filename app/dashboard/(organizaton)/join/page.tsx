@@ -77,12 +77,7 @@ function JoinTeamContent() {
       if (fullInvite?.email !== user.email) throw new Error("Invite email mismatch");
 
       await Promise.all([
-        postTeamMember({
-          accountId: user.id,
-          organizationId: orgId!,
-          role: invite!.role,
-          metadata: null,
-        }),
+        postTeamMember({ accountId: user.id, role: invite!.role, metadata: null }, orgId!),
         putTeamInvite(invite!.id, { status: "accepted" }),
       ]);
     },

@@ -26,7 +26,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight, Copy, ExternalLink, Info, Plus } from "lucide-react";
-import { nanoid } from "nanoid";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -435,8 +434,6 @@ function ApiKeyModal({
 
   const createApiKeyMutation = useMutation({
     mutationFn: async (data: ApiKeyFormData) => {
-      const token = `st_key_${nanoid(52)}`;
-
       return await postApiKey({
         name: data.name,
         scope: ["*"],
@@ -444,7 +441,6 @@ function ApiKeyModal({
         createdAt: new Date(),
         updatedAt: new Date(),
         metadata: null,
-        token,
         lastUsedAt: null,
       });
     },

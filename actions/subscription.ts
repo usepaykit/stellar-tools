@@ -4,9 +4,8 @@ import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { SubscriptionStatus } from "@/constant/schema.client";
 import { Network, Subscription, assets, customers, db, products, subscriptions } from "@/db";
-import { computeDiff } from "@/lib/utils";
+import { computeDiff, generateResourceId } from "@/lib/utils";
 import { and, desc, eq, lt } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 export const postSubscriptionsBulk = async (
   params: { customerIds: string[]; productId: string; period: { from: Date; to: Date }; cancelAtPeriodEnd: boolean },
@@ -18,7 +17,7 @@ export const postSubscriptionsBulk = async (
   return withEvent(
     async () => {
       const values = params.customerIds.map((cid) => ({
-        id: `sub_${nanoid(20)}`,
+        id: generateResourceId("sub", organizationId, 20),
         customerId: cid,
         productId: params.productId,
         status: "active" as const,

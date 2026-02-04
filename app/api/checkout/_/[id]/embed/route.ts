@@ -1,9 +1,9 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { getCheckoutPaymentDetails } from "@/actions/checkout";
 import { FileUploadApi } from "@/integrations/file-upload";
+import { generateResourceId } from "@/lib/utils";
 import { CheckoutEmbedDetails } from "@stellartools/core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
-import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 import QRCode from "qrcode";
 
@@ -23,7 +23,9 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
       const { paymentUri, ...details } = await getCheckoutPaymentDetails(id, organizationId, environment);
 
       const buffer = await QRCode.toBuffer(paymentUri);
-      const file = new File([new Uint8Array(buffer)], `qr_${nanoid(10)}.png`, { type: "image/png" });
+      const file = new File([new Uint8Array(buffer)], `${generateResourceId("qr", organizationId, 10)}.png`, {
+        type: "image/png",
+      });
       const uploadResult = await new FileUploadApi().upload([file]);
       const qrCodeUrl = uploadResult?.[0] ?? null;
 

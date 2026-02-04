@@ -3,23 +3,27 @@
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { ApiKey, Network, apiKeys, db } from "@/db";
 import { JWT } from "@/integrations/jwt";
+import { generateResourceId } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
-export const postApiKey = async (params: Omit<ApiKey, "id" | "organizationId" | "environment">) => {
-  const { organizationId, environment } = await resolveOrgContext();
+export const postApiKey = async (
+  params: Omit<ApiKey, "id" | "organizationId" | "environment" | "token">,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [apiKey] = await db
+  return await db
     .insert(apiKeys)
     .values({
       ...params,
-      id: `st_api_${nanoid(25)}`,
+      id: generateResourceId("st_api", organizationId, 25),
       organizationId,
       environment,
-    } as ApiKey)
-    .returning();
-
-  return apiKey;
+      token: generateResourceId("st_key", organizationId, 52),
+    })
+    .returning()
+    .then(([apiKey]) => apiKey);
 };
 
 export const retrieveApiKeys = async (orgId?: string, env?: Network) => {
@@ -34,40 +38,33 @@ export const retrieveApiKeys = async (orgId?: string, env?: Network) => {
 export const retrieveApiKey = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [apiKey] = await db
+  return await db
     .select()
     .from(apiKeys)
     .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)))
-    .limit(1);
-
-  if (!apiKey) throw new Error("Api key not found");
-
-  return apiKey;
+    .limit(1)
+    .then(([apiKey]) => apiKey);
 };
 
 export const putApiKey = async (id: string, retUpdate: Partial<ApiKey>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [apiKey] = await db
+  return await db
     .update(apiKeys)
     .set({ ...retUpdate, updatedAt: new Date() })
     .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)))
-    .returning();
-
-  if (!apiKey) throw new Error("Api key not found");
-
-  return apiKey;
+    .returning()
+    .then(([apiKey]) => apiKey);
 };
 
 export const deleteApiKey = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  await db
+  return await db
     .delete(apiKeys)
     .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)))
-    .returning();
-
-  return null;
+    .returning()
+    .then(() => null);
 };
 
 export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?: string) => {
@@ -79,10 +76,7 @@ export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?:
 
     const organization = await retrieveOrganization(orgId);
 
-    return {
-      organizationId: organization.id,
-      environment,
-    };
+    return { organizationId: organization.id, environment };
   }
 
   const [record] = await db.select().from(apiKeys).where(eq(apiKeys.token, apiKey)).limit(1);

@@ -1,11 +1,10 @@
 "use server";
 
+import { resolveOrgContext } from "@/actions/organization";
 import { Network, TeamInvite, accounts, db, organizations, teamInvites } from "@/db";
+import { generateResourceId } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
 import moment from "moment";
-import { nanoid } from "nanoid";
-
-import { resolveOrgContext } from "./organization";
 
 export const postTeamInvite = async (
   params: Omit<TeamInvite, "id" | "organizationId" | "environment" | "expiresAt" | "status">,
@@ -18,7 +17,7 @@ export const postTeamInvite = async (
     .insert(teamInvites)
     .values({
       ...params,
-      id: `ti_${nanoid(25)}`,
+      id: generateResourceId("ti", organizationId, 25),
       expiresAt: moment().add(7, "days").toDate(),
       status: "pending",
       organizationId,

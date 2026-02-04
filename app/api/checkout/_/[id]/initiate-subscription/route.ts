@@ -14,7 +14,8 @@ const buildSubscriptionXDRSchema = Schema.object({
 });
 
 export async function POST(req: NextRequest) {
-  const searchParams = validateSchema(buildSubscriptionXDRSchema, req.nextUrl.searchParams);
+  console.log("initiating subscription");
+  const searchParams = validateSchema(buildSubscriptionXDRSchema, Object.fromEntries(req.nextUrl.searchParams));
 
   if (searchParams.isErr()) throw new Error(searchParams.error.message);
 
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
     async ({ account }) => {
       const { merchantAddress, network, productId, amount, periodEnd, assetCode, assetIssuer } = searchParams.value;
 
+      console.log(merchantAddress, network, productId, amount, periodEnd, assetCode, assetIssuer);
       const stellar = new StellarCoreApi(network as Network);
 
       const contractId = await stellar.retrieveAssetContractId(assetCode, assetIssuer);

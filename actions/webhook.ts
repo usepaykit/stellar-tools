@@ -4,9 +4,9 @@ import { resolveOrgContext } from "@/actions/organization";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { toSnakeCase } from "@/lib/utils";
+import { generateResourceId } from "@/lib/utils";
 import { WebhookEvent } from "@stellartools/core";
 import { and, eq, sql } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 export const postWebhook = async (
   orgId?: string,
@@ -19,7 +19,7 @@ export const postWebhook = async (
     .insert(webhooks)
     .values({
       ...data,
-      id: `wh_${nanoid(25)}`,
+      id: generateResourceId("wh", organizationId, 25),
       isDisabled: false,
       organizationId,
       environment,

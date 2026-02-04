@@ -1,11 +1,10 @@
 "use server";
 
+import { resolveOrgContext } from "@/actions/organization";
 import { Network, Refund, refunds } from "@/db";
 import { db } from "@/db";
+import { generateResourceId } from "@/lib/utils";
 import { and, desc, eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
-
-import { resolveOrgContext } from "./organization";
 
 export const postRefund = async (
   params: Omit<Refund, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
@@ -17,7 +16,7 @@ export const postRefund = async (
   const [refund] = await db
     .insert(refunds)
     .values({
-      id: `rf_${nanoid(25)}`,
+      id: generateResourceId("rf", organizationId, 25),
       organizationId,
       environment,
       createdAt: new Date(),

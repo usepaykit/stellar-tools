@@ -4,12 +4,11 @@ import { resolveOrgContext } from "@/actions/organization";
 import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
-import { computeDiff } from "@/lib/utils";
+import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray, SuggestedString, WebhookEvent } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
-import { nanoid } from "nanoid";
 
 type EventDataDiff = { $changes?: Record<string, ReturnType<typeof computeDiff>> };
 
@@ -97,7 +96,11 @@ export const emitEvents = async (params: Array<EmitParams>, orgId?: string, env?
 
   return await db
     .insert(events)
-    .values(params.map((p) => ({ id: `evt_${nanoid(25)}`, organizationId, environment, ...p })));
+    .values(
+      params.map((p) => ({ id: generateResourceId("evt", organizationId, 25), organizationId, environment, ...p }))
+    )
+    .returning()
+    .then(([event]) => event);
 };
 
 type NarrowedEvent<T extends EventType> = Event & { type: T };

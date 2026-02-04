@@ -97,8 +97,8 @@ export default function CheckoutPage() {
       assetIssuer: checkout.assetIssuer!,
       destination: checkout.merchantPublicKey,
       amount: checkout.finalAmount.toString(),
-      memo: `ORD-${checkoutId}`,
       type: checkout.productType,
+      baseUrl: process.env.NEXT_PUBLIC_TUNNEL_URL!,
     });
   }, [isUnlocked, checkout, checkoutId]);
 
@@ -120,7 +120,7 @@ export default function CheckoutPage() {
           sourcePublicKey: address,
           destination: checkout.merchantPublicKey,
           amount: checkout.finalAmount.toString(),
-          memo: `ORD-${checkoutId}`,
+          memo: checkoutId,
         },
         async (xdr) => {
           const { signedTxXdr } = await stellarWalletsKit.signTransaction(xdr, { address });

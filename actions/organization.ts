@@ -16,8 +16,8 @@ import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWT } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { generateResourceId } from "@/lib/utils";
 import { and, eq, lt, or, sql } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 import { resolveAccountContext } from "./account";
 import { postTeamMember } from "./team-member";
@@ -27,7 +27,6 @@ export const postOrganizationAndSecret = async (
   formDataWithFiles?: FormData,
   defaultEnvironment: Network = "testnet"
 ) => {
-  const organizationId = `org_${nanoid(25)}`;
   const logoFile = formDataWithFiles?.get("logo");
 
   if (logoFile) {
@@ -40,24 +39,21 @@ export const postOrganizationAndSecret = async (
 
   const { accountId } = await resolveAccountContext();
 
+  const organizationId = generateResourceId("org", accountId, 25);
+
   const [organization] = await db
     .insert(organizations)
     .values({ ...params, id: organizationId, accountId })
     .returning();
 
-  await postTeamMember({
-    organizationId: organization.id,
-    accountId,
-    role: "owner",
-    metadata: null,
-  });
+  await postTeamMember({ accountId, role: "owner", metadata: null }, organization.id);
 
   const account = await new StellarCoreApi(defaultEnvironment).createAccount();
 
   if (account.isErr()) throw new Error(account.error?.message);
 
   await Promise.allSettled([
-    postTeamMember({ organizationId: organization.id, accountId, role: "owner", metadata: null }),
+    postTeamMember({ accountId, role: "owner", metadata: null }, organization.id),
     await postOrganizationSecretWithEncryption(
       {
         testnetSecret: account.value!.keypair.secret(),
@@ -252,7 +248,7 @@ export const postOrganizationSecretWithEncryption = async (
       testnetSecretVersion: params.testnetSecretVersion,
       mainnetSecretEncrypted: params.mainnetSecret ? encryption.encrypt(params.mainnetSecret) : null,
       testnetSecretEncrypted: params.testnetSecret ? encryption.encrypt(params.testnetSecret) : null,
-      id: `sec_${nanoid(25)}`,
+      id: generateResourceId("org_sec", organizationId, 25),
       organizationId,
     })
     .returning();
@@ -334,7 +330,7 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
 
             const logs: SecretAccessLog[] = [
               {
-                id: `log_${nanoid(25)}`,
+                id: generateResourceId("log", secret.organizationId, 25),
                 organizationId: secret.organizationId,
                 secretId: secret.id,
                 action: "rotate" as const,
@@ -351,7 +347,7 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
 
             if (mainnetReencrypted) {
               logs.push({
-                id: `log_${nanoid(25)}`,
+                id: generateResourceId("log", secret.organizationId, 25),
                 organizationId: secret.organizationId,
                 secretId: secret.id,
                 action: "rotate" as const,
@@ -371,7 +367,7 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
 
           stats.succeeded++;
         } catch (error) {
-          console.error(`❌ Failed to rotate ${secret.organizationId}:`, error);
+          console.error(`✗ Failed to rotate ${secret.organizationId}:`, error);
           stats.failed++;
         } finally {
           stats.total++;

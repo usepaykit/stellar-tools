@@ -1,7 +1,7 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postWebhook } from "@/actions/webhook";
+import { generateResourceId } from "@/lib/utils";
 import { createWebhookSchema } from "@stellartools/core";
-import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
@@ -25,7 +25,7 @@ export const POST = async (req: NextRequest) => {
     description: data.description ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    secret: `whsec_${nanoid(32)}`,
+    secret: generateResourceId("whsec", organizationId, 32),
   });
 
   return NextResponse.json({ data: webhook });

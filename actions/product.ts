@@ -2,14 +2,16 @@
 
 import { Network, Product, assets, db, products } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
+import { generateResourceId } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 import { resolveOrgContext } from "./organization";
 
 export const postProduct = async (
   params: Omit<Product, "id" | "organizationId" | "environment">,
-  formDataWithFiles?: FormData
+  formDataWithFiles?: FormData,
+  orgId?: string,
+  env?: Network
 ) => {
   const imageFiles = formDataWithFiles?.getAll("images");
 
@@ -19,16 +21,11 @@ export const postProduct = async (
     params.images = imageUploadResult || [];
   }
 
-  const { organizationId, environment } = await resolveOrgContext();
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const [product] = await db
     .insert(products)
-    .values({
-      ...params,
-      id: `prod_${nanoid(25)}`,
-      organizationId,
-      environment,
-    })
+    .values({ ...params, id: generateResourceId("prod", organizationId, 25), organizationId, environment })
     .returning();
 
   return product;

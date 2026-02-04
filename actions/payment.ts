@@ -8,9 +8,9 @@ import { ProductType } from "@/constant/schema.client";
 import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
 import { JWT } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { generateResourceId } from "@/lib/utils";
 import { ApiClient, Result } from "@stellartools/core";
 import { and, desc, eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 export const postPayment = async (
   params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
@@ -23,7 +23,7 @@ export const postPayment = async (
     async () => {
       const [payment] = await db
         .insert(payments)
-        .values({ ...params, id: `pay_${nanoid(40)}`, organizationId, environment })
+        .values({ ...params, id: generateResourceId("pay", organizationId, 40), organizationId, environment })
         .returning();
       return payment;
     },

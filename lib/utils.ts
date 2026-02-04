@@ -1,7 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
+import crypto from "crypto";
 import _ from "lodash";
 import { twMerge } from "tailwind-merge";
 import { z } from "zod";
+
+export const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -81,3 +84,23 @@ export const urlToFile = async (url: string, fileName: string): Promise<File> =>
   const blob = await response.blob();
   return new File([blob], fileName, { type: blob.type });
 };
+
+export function generateResourceId(prefix: string, baseSignature: string, length: number): string {
+  const hash = crypto.createHash("shake128", { outputLength: 3 }).update(baseSignature).digest();
+
+  // Map the 3 bytes to 4 characters of our alphabet
+  let signature = "";
+  let value = (hash[0] << 16) | (hash[1] << 8) | hash[2];
+  for (let i = 0; i < 4; i++) {
+    signature += ALPHABET[value % 62];
+    value = Math.floor(value / 62);
+  }
+
+  const bytes = crypto.randomBytes(length);
+  let entropy = "";
+  for (let i = 0; i < length; i++) {
+    entropy += ALPHABET[bytes[i] % 62];
+  }
+
+  return `${prefix}_${signature}${entropy}`;
+}

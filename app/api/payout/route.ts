@@ -4,9 +4,9 @@ import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { postPayout, putPayout } from "@/actions/payout";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { generateResourceId } from "@/lib/utils";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
-import { nanoid } from "nanoid";
 import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
@@ -30,7 +30,7 @@ export const POST = async (req: NextRequest) => {
 
       if (!secret) return Result.err("Invalid stellar secret");
 
-      const payoutId = `pay_${nanoid(25)}`;
+      const payoutId = generateResourceId("pay", organizationId, 25);
 
       const payout = await postPayout(
         {

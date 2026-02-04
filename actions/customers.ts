@@ -3,10 +3,9 @@
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Customer, Network, customers, db } from "@/db";
-import { computeDiff } from "@/lib/utils";
+import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
 import { SQL, and, eq, inArray, or } from "drizzle-orm";
-import { nanoid } from "nanoid";
 
 export const postCustomers = async (
   params: Omit<Customer, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">[],
@@ -20,7 +19,9 @@ export const postCustomers = async (
     async () => {
       const results = await db
         .insert(customers)
-        .values(params.map((p) => ({ ...p, id: `cus_${nanoid(25)}`, organizationId, environment })))
+        .values(
+          params.map((p) => ({ ...p, id: generateResourceId("cus", organizationId, 25), organizationId, environment }))
+        )
         .returning();
 
       return results;
