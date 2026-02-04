@@ -11,6 +11,15 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.pngaaa.com",
       },
+      {
+        protocol: "https",
+        hostname: "*.usestellartools.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "*.vercel.app",
+      },
+
     ],
   },
 };
