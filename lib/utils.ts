@@ -86,9 +86,12 @@ export const urlToFile = async (url: string, fileName: string): Promise<File> =>
 };
 
 export function generateResourceId(prefix: string, baseSignature: string, length: number): string {
+  if (!baseSignature || !prefix || length <= 0) {
+    throw new Error("Invalid arguments: baseSignature, prefix, and length (> 0) are required");
+  }
+
   const hash = crypto.createHash("shake128", { outputLength: 3 }).update(baseSignature).digest();
 
-  // Map the 3 bytes to 4 characters of our alphabet
   let signature = "";
   let value = (hash[0] << 16) | (hash[1] << 8) | hash[2];
   for (let i = 0; i < 4; i++) {
