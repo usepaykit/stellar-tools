@@ -8,21 +8,30 @@ import { computeDiff, generateResourceId } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
 
 export const postCheckout = async (
-  params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
+  params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "initialPagingToken">,
   orgId?: string,
   env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
+  const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
+
   // Should have no more than 25 chars so that it fits in the memo field of the SEP-7 Pay or Tx request
   const checkoutId = generateResourceId("cz", organizationId, 20);
-  console.log({ checkoutId, length: checkoutId.length });
+
+  const stellar = new StellarCoreApi(environment);
+
+  const $pagingTokenResult = await stellar.getLatestPagingToken(secret?.publicKey!);
+
+  if ($pagingTokenResult.isErr()) throw new Error($pagingTokenResult.error.message);
+
+  const initialPagingToken = $pagingTokenResult.value;
 
   return withEvent(
     async () => {
       const [checkout] = await db
         .insert(checkouts)
-        .values({ id: checkoutId, organizationId, environment, ...params })
+        .values({ ...params, id: checkoutId, organizationId, environment, initialPagingToken })
         .returning();
 
       return checkout;
@@ -206,7 +215,6 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
 
   const rawAmount = product?.priceAmount ?? checkout.amount ?? 0;
   const assetCode = asset!.code!;
-  const assetIssuer = asset!.issuer!;
 
   // Normalize units (Stellar uses 7 decimal places)
   const amountNormalized = (rawAmount / 10_000_000).toFixed(7);
@@ -214,14 +222,8 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
   const stellar = new StellarCoreApi(result.checkout.environment);
 
   const paymentUri = stellar.makeCheckoutURI({
-    id: checkout.id,
-    type: product!.type,
-    network: result.checkout.environment!,
-    destination: secret.publicKey,
-    amount: amountNormalized,
-    assetCode,
-    assetIssuer,
     baseUrl: process.env.NEXT_PUBLIC_TUNNEL_URL!,
+    id: checkout.id,
   });
 
   return {

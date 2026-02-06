@@ -1,9 +1,9 @@
 "use server";
 
-import { retrieveCheckout } from "@/actions/checkout";
+import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
-import { resolveOrgContext } from "@/actions/organization";
+import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { ProductType } from "@/constant/schema.client";
 import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
 import { JWT } from "@/integrations/jwt";
@@ -166,50 +166,28 @@ export const refreshTxStatus = async (
   }
 };
 
-export async function verifyAndProcessPayment(
-  txHash: string,
-  checkoutId: string,
-  environment: Network,
-  organizationId: string,
-  productType: ProductType
-) {
+export const sweepAndProcessPayment = async (checkoutId: string) => {
+  const checkout = await retrieveCheckoutAndCustomer(checkoutId);
+
+  if (!checkout || checkout.status !== "open") return checkout;
+
+  const { organizationId, environment, initialPagingToken, merchantPublicKey, productType, customerId } = checkout;
+
   const stellar = new StellarCoreApi(environment);
 
-  const tx = await stellar.retrieveTx(txHash);
-  if (tx.isErr()) throw new Error(tx.error?.message);
+  const result = await stellar.verifyPaymentByPagingToken(merchantPublicKey, checkoutId, initialPagingToken ?? "now");
 
-  const [checkout, paymentOp] = await Promise.all([
-    retrieveCheckout(checkoutId),
-    stellar.retrievePayment(txHash).then((result) => result.value?.records.find((op) => op.type_i === 1)),
-  ]);
+  if (result.isErr()) throw new Error(result.error.message);
 
-  if (!checkout) throw new Error("Checkout record lost");
-
-  if (!paymentOp) throw new Error("Payment operation not found in transaction");
-
-  const amountInStroops = parseInt(paymentOp.amount || "0");
-
-  if (!tx.value?.successful) {
-    await Promise.all([
-      putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
-      postPayment(
-        {
-          checkoutId,
-          customerId: checkout.customerId ?? null,
-          amount: amountInStroops,
-          transactionHash: txHash,
-          status: "failed",
-        },
-        organizationId,
-        environment
-      ),
-    ]);
-  }
+  const { hash, amount, successful } = result.value;
 
   const createSubscriptionHandler = async () => {
     if (!checkout.productId) return Result.err(new Error("Product ID is required for subscription"));
 
-    const accessToken = await new JWT().sign({ orgId: organizationId, environment }, 5 * 60);
+    const accessToken = await new JWT().sign(
+      { orgId: checkout.organizationId, environment: checkout.environment },
+      1 * 60 // 1 minute
+    );
 
     const api = new ApiClient({
       baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
@@ -240,15 +218,26 @@ export async function verifyAndProcessPayment(
     return Result.ok(result);
   };
 
-  return await Promise.all([
-    putCheckout(checkoutId, { status: "completed" }),
-    postPayment({
-      customerId: checkout.customerId,
-      checkoutId,
-      amount: amountInStroops,
-      transactionHash: txHash,
-      status: "confirmed",
-    }),
+  if (!successful) {
+    await Promise.all([
+      putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
+      postPayment(
+        { checkoutId, customerId, amount: parseInt(amount), transactionHash: hash, status: "failed" },
+        organizationId,
+        environment
+      ),
+    ]);
+  }
+
+  await Promise.all([
+    putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment),
+    postPayment(
+      { customerId, checkoutId, amount: parseInt(amount), transactionHash: hash, status: "confirmed" },
+      organizationId,
+      environment
+    ),
     ...(productType === "subscription" ? [createSubscriptionHandler()] : []),
   ]);
-}
+
+  return checkout;
+};

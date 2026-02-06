@@ -5,7 +5,7 @@ import { Environment, environmentSchema } from "./shared";
 
 export const checkoutStatusEnum = z.enum(["open", "completed", "expired", "failed"]);
 
-type CheckoutStatus = z.infer<typeof checkoutStatusEnum>;
+export type CheckoutStatus = z.infer<typeof checkoutStatusEnum>;
 
 export type SubscriptionData = {
   /**

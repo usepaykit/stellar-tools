@@ -1,3 +1,5 @@
+import { SuggestedString } from "@stellartools/core";
+
 export const roles = ["owner", "admin", "developer", "viewer"] as const;
 
 export const networkEnum = ["testnet", "mainnet"] as const;
@@ -38,3 +40,7 @@ export type EventType = (typeof eventTypeEnum)[number];
 export type ProductType = (typeof productTypeEnum)[number];
 
 export type SubscriptionStatus = (typeof subscriptionStatusEnum)[number];
+
+export type AssetCode = SuggestedString<"XLM" | "USDC">;
+
+export type AssetIssuer = SuggestedString<"native">;

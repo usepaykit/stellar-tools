@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { AnimatedCheckmark } from "@/components/icon";
 import { PhoneNumberField, phoneNumberFromString } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
@@ -16,9 +16,8 @@ import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
 import { cn, truncate } from "@/lib/utils";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ApiClient } from "@stellartools/core";
+import { ApiClient, CheckoutStatus } from "@stellartools/core";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { Lock, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,6 +37,8 @@ const schema = (hasEmail: boolean, hasPhone: boolean) =>
         }),
   });
 
+const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: {} });
+
 export default function CheckoutPage() {
   const { id: checkoutId } = useParams<{ id: string }>();
   const [showBanner, setShowBanner] = React.useState(true);
@@ -55,11 +56,11 @@ export default function CheckoutPage() {
   const { data: status } = useQuery({
     queryKey: ["checkout-status", checkoutId],
     queryFn: async () => {
-      const checkout = await retrieveCheckout(checkoutId);
-      return checkout.status;
+      const response = await api.get<{ status: CheckoutStatus }>(`checkout/${checkoutId}/status`);
+      return response.isErr() ? null : response.value.data.status;
     },
-    refetchInterval: 5000,
-    enabled: !isSuccess,
+    refetchInterval: 10 * 1000,
+    enabled: !isSuccess && !!checkout,
   });
 
   React.useEffect(() => {
@@ -82,25 +83,26 @@ export default function CheckoutPage() {
 
   const isUnlocked = form.formState.isValid;
 
-  const paymentURI = React.useMemo(() => {
-    if (!isUnlocked || !checkout?.merchantPublicKey) return null;
+  const [paymentURI, setPaymentURI] = React.useState<string | null>(null);
 
-    const intervals: Record<string, number> = { day: 1, week: 7, month: 30, year: 365 };
-    const expiry = checkout.recurringPeriod
-      ? new Date(Date.now() + (intervals[checkout.recurringPeriod] || 0) * 864e5)
-      : null;
+  React.useEffect(() => {
+    if (!isUnlocked || !checkoutId) return;
 
-    return new StellarCoreApi(checkout.environment).makeCheckoutURI({
-      id: checkoutId,
-      network: checkout.environment,
-      assetCode: checkout.assetCode!,
-      assetIssuer: checkout.assetIssuer!,
-      destination: checkout.merchantPublicKey,
-      amount: checkout.finalAmount.toString(),
-      type: checkout.productType,
-      baseUrl: process.env.NEXT_PUBLIC_TUNNEL_URL!,
-    });
-  }, [isUnlocked, checkout, checkoutId]);
+    const fetchURI = async () => {
+      try {
+        const response = await api.get<{ uri: string }>(
+          `checkout/${checkoutId}/uri?environment=${checkout?.environment}`
+        );
+        const uri = response.isErr() ? null : response.value.data.uri;
+        console.log({ uri });
+        setPaymentURI(uri);
+      } catch (e) {
+        console.error("Failed to fetch payment URI", e);
+      }
+    };
+
+    fetchURI();
+  }, [isUnlocked, checkoutId]);
 
   React.useEffect(() => {
     return stellarWalletsKit.onConnectionChange(setConnectedAddress);
@@ -124,22 +126,14 @@ export default function CheckoutPage() {
         },
         async (xdr) => {
           const { signedTxXdr } = await stellarWalletsKit.signTransaction(xdr, { address });
+          await api.post<{ ok: boolean }>(`api/checkout/verify-callback?checkoutId=${checkoutId}`, {
+            xdr: signedTxXdr,
+          });
           return signedTxXdr;
         }
       );
 
       if (result.isErr()) throw new Error(result.error.message);
-
-      const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_APP_URL!, headers: {} });
-      await api.post("/api/checkout/verify-callback", {
-        body: JSON.stringify({
-          txHash: result.value?.hash,
-          checkoutId,
-          organizationId: checkout.organizationId,
-          environment: checkout.environment,
-          productType: checkout.productType,
-        }),
-      });
 
       setIsSuccess(true);
     } catch (e: any) {

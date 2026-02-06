@@ -1,4 +1,6 @@
 import {
+  AssetCode,
+  AssetIssuer,
   AuthProvider,
   authProviderEnum as authProviderEnum$1,
   eventTypeEnum as eventTypeEnum$1,
@@ -8,12 +10,7 @@ import {
   roles,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
-import {
-  SubscriptionData,
-  SuggestedString,
-  WebhookEvent,
-  checkoutStatusEnum as checkoutStatusEnum$1,
-} from "@stellartools/core";
+import { SubscriptionData, WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
@@ -164,9 +161,6 @@ export const apiKeys = pgTable("api_key", {
   environment: networkEnum("network").notNull(),
 });
 
-type AssetCode = SuggestedString<"XLM" | "USDC">;
-type AssetIssuer = SuggestedString<"native">;
-
 export const assets = pgTable(
   "asset",
   {
@@ -278,6 +272,7 @@ export const checkouts = pgTable(
     customerEmail: text("customer_email"),
     customerPhone: text("customer_phone"),
     subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
+    initialPagingToken: text("initial_paging_token"),
   },
   (table) => ({
     amountOrProductCheck: check(
