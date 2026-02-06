@@ -5,7 +5,7 @@ import { twMerge } from "tailwind-merge";
 import { z } from "zod";
 
 export const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
+type HashAlgorithm = "shake128" | "sha256";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -85,10 +85,13 @@ export const urlToFile = async (url: string, fileName: string): Promise<File> =>
   return new File([blob], fileName, { type: blob.type });
 };
 
-export function generateResourceId(prefix: string, baseSignature: string, length: number): string {
-  const hash = crypto.createHash("shake128", { outputLength: 3 }).update(baseSignature).digest();
+export function generateResourceId(prefix: string, baseSignature: string, length: number, hashAlgorithm: HashAlgorithm = 'shake128'): string {
+  if (!baseSignature || !prefix || length <= 0) {
+    throw new Error("Invalid arguments: baseSignature, prefix, and length (> 0) are required");
+  }
 
-  // Map the 3 bytes to 4 characters of our alphabet
+  const hash = crypto.createHash(hashAlgorithm, { outputLength: 3 }).update(baseSignature).digest();
+
   let signature = "";
   let value = (hash[0] << 16) | (hash[1] << 8) | hash[2];
   for (let i = 0; i < 4; i++) {
