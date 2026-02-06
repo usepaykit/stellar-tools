@@ -82,16 +82,7 @@ export async function GET(req: NextRequest) {
   const dashboardHost = process.env.NEXT_PUBLIC_DASHBOARD_HOST;
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
 
-  let redirectUrl: URL;
-
-  if (!dashboardHost || dashboardHost === "undefined") {
-    console.error("NEXT_PUBLIC_DASHBOARD_HOST is not set or invalid.");
-    return NextResponse.json({ error: "Dashboard host is not configured" }, { status: 500 });
-  }
-
-  redirectUrl = new URL(`/select-organization`, `${protocol}://${dashboardHost}`);
-
-  return NextResponse.redirect(redirectUrl);
+  return NextResponse.redirect(new URL(`/select-organization`, `${protocol}://${dashboardHost}`));
   } catch (error) {
     console.error("OAuth callback error:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
