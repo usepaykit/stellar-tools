@@ -128,20 +128,22 @@ export const accountValidator = async (
   sessionMetadata?: Record<string, unknown>
 ) => {
   const { provider, sub: rawSub } = sso;
-  let account = await retrieveAccount({ email });
-  const isNewUser = !account;
+let account = await retrieveAccount({ email });
+const isNewUser = !account;
 
-  if (!account) {
- 
+if (!account) {
+  if (intent === "SIGN_IN") {
+    throw new Error("Account not found. Please sign up first.");
+  }
 
-    const sub = provider === "local" ? await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS) : rawSub;
+  const sub = provider === "local" ? await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS) : rawSub;
 
-    account = await postAccount({
-      email,
-      sso: { values: [{ provider, sub }] },
-      profile: profile ?? null,
-    });
-  } else {
+  account = await postAccount({
+    email,
+    sso: { values: [{ provider, sub }] },
+    profile: profile ?? null,
+  });
+} else {
     const existingSso = account.sso?.values?.find((s) => s.provider === provider);
 
     if (provider === "local") {
@@ -168,7 +170,6 @@ export const accountValidator = async (
 
   // 3. Session Generation
   const { accessToken, refreshToken } = await generateAndSetSession(account);
-  console.log("Generated tokens for account:", { accountId: account.id, email: account.email });
   await postAuth({
     accountId: account.id,
     provider,

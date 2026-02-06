@@ -71,7 +71,6 @@ export async function GET(req: NextRequest) {
     const nameParts = payload.name?.split(/\s+/) || [];
     const firstName = payload.given_name || nameParts[0] || "";
     const lastName = payload.family_name || nameParts.slice(1).join(" ") || "";
-   console.log("User information:", { email: payload.email, firstName, lastName }, "about to authenticate");
     await accountValidator(
       payload.email,
       { provider: "google", sub: payload.sub },
@@ -80,12 +79,20 @@ export async function GET(req: NextRequest) {
       { ...stateData }
     );
 
-    const dashboardHost = process.env.NEXT_PUBLIC_DASHBOARD_HOST; 
+  const dashboardHost = process.env.NEXT_PUBLIC_DASHBOARD_HOST;
   const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
 
-  return NextResponse.redirect(
-    `${protocol}://${dashboardHost}/select-organization`
-  );
+  let redirectUrl: URL;
+
+  if (!dashboardHost || dashboardHost === "undefined") {
+    // Fallback to the current host or fail fast with a clear error
+    console.error("NEXT_PUBLIC_DASHBOARD_HOST is not set or invalid.");
+    return NextResponse.json({ error: "Dashboard host is not configured" }, { status: 500 });
+  }
+
+  redirectUrl = new URL(`/select-organization`, `${protocol}://${dashboardHost}`);
+
+  return NextResponse.redirect(redirectUrl);
   } catch (error) {
     console.error("OAuth callback error:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
