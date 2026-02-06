@@ -5,19 +5,22 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
   if (!host) return new NextResponse("Missing Host header", { status: 400 });
 
   const url = req.nextUrl.clone();
-
+  if (req.nextUrl.pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
   let prefix = "/landing";
 
-  if (host == process.env.NGROK_HOST) {
-    prefix = "/api";
-  }
-
-  if (host === process.env.NEXT_PUBLIC_DASHBOARD_HOST) {
-    prefix = "/dashboard";
-  } else if (host === process.env.NEXT_PUBLIC_CHECKOUT_HOST) {
-    prefix = "/checkout";
-  } else if (host == process.env.NEXT_PUBLIC_API_HOST) {
-    prefix = "/api";
+    switch (host) {
+    case process.env.NGROK_HOST:
+    case process.env.NEXT_PUBLIC_API_HOST:
+      prefix = "/api";
+      break;
+    case process.env.NEXT_PUBLIC_DASHBOARD_HOST:
+      prefix = "/dashboard";
+      break;
+    case process.env.NEXT_PUBLIC_CHECKOUT_HOST:
+      prefix = "/checkout";
+      break;
   }
 
   url.pathname = `${prefix}${url.pathname}`;
