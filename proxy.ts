@@ -5,9 +5,7 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
   if (!host) return new NextResponse("Missing Host header", { status: 400 });
 
   const url = req.nextUrl.clone();
-  if (req.nextUrl.pathname.startsWith("/api/auth")) {
-    return NextResponse.next();
-  }
+
   let prefix = "/landing";
 
   switch (host) {

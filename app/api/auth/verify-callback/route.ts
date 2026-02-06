@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     const client = new OAuth2Client(
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
       process.env.GOOGLE_CLIENT_SECRET!,
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-callback`
+      `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-callback`
     );
 
     const { tokens } = await client.getToken(code);
@@ -85,7 +85,6 @@ export async function GET(req: NextRequest) {
   let redirectUrl: URL;
 
   if (!dashboardHost || dashboardHost === "undefined") {
-    // Fallback to the current host or fail fast with a clear error
     console.error("NEXT_PUBLIC_DASHBOARD_HOST is not set or invalid.");
     return NextResponse.json({ error: "Dashboard host is not configured" }, { status: 500 });
   }

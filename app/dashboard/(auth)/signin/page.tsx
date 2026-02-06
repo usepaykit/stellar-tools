@@ -59,12 +59,12 @@ export default function SignIn() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const redirect = searchParams.get("redirect") ?? "/";
-  const error = searchParams.get("error");
+  const redirect = searchParams?.get("redirect") ?? "/";
+  const error = searchParams?.get("error");
 
   React.useEffect(() => {
     if (dismissedError && error) {
-      const newSearchParams = new URLSearchParams(searchParams.toString());
+      const newSearchParams = new URLSearchParams(searchParams?.toString());
       newSearchParams.delete("error");
       router.replace(`/signin?${newSearchParams.toString()}`);
       setDismissedError(false);
@@ -103,7 +103,7 @@ export default function SignIn() {
 
     const authUrlParams = {
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-callback`,
+      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-callback`,
       response_type: "code",
       scope: "openid profile email",
       access_type: "offline",
