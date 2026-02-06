@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
     );
 
     const dashboardHost = process.env.NEXT_PUBLIC_DASHBOARD_HOST; 
-  const protocol = process.env.NODE_ENV !== "development" ? "http" : "https";
+  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
 
   return NextResponse.redirect(
     `${protocol}://${dashboardHost}/select-organization`
