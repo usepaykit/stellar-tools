@@ -98,7 +98,7 @@ export default function CheckoutPage() {
       destination: checkout.merchantPublicKey,
       amount: checkout.finalAmount.toString(),
       type: checkout.productType,
-      baseUrl: process.env.NEXT_PUBLIC_TUNNEL_URL!,
+      apiUrl: process.env.NEXT_PUBLIC_API_URL!,
     });
   }, [isUnlocked, checkout, checkoutId]);
 

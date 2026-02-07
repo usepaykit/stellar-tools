@@ -8,18 +8,14 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
 
   let prefix = "/landing";
 
-  switch (host) {
-    case process.env.NGROK_HOST:
-    case process.env.NEXT_PUBLIC_API_HOST:
-      prefix = "/api";
-      break;
-    case process.env.NEXT_PUBLIC_DASHBOARD_HOST:
-      prefix = "/dashboard";
-      break;
-    case process.env.NEXT_PUBLIC_CHECKOUT_HOST:
-      prefix = "/checkout";
-      break;
-    // default: keep prefix as "/landing"
+  if (host == new URL(process.env.NEXT_PUBLIC_API_URL!).host) {
+    prefix = "/api";
+  } else if (host == new URL(process.env.NEXT_PUBLIC_DASHBOARD_URL!).host) {
+    prefix = "/dashboard";
+  } else if (host == new URL(process.env.NEXT_PUBLIC_CHECKOUT_URL!).host) {
+    prefix = "/checkout";
+  } else {
+    prefix = "/landing";
   }
 
   url.pathname = `${prefix}${url.pathname}`;

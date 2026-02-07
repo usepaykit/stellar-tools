@@ -221,7 +221,7 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
     amount: amountNormalized,
     assetCode,
     assetIssuer,
-    baseUrl: process.env.NEXT_PUBLIC_TUNNEL_URL!,
+    apiUrl: process.env.NEXT_PUBLIC_API_URL!,
   });
 
   return {

@@ -103,7 +103,7 @@ export default function SignIn() {
 
     const authUrlParams = {
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-      redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-callback`,
+      redirect_uri: `${process.env.NEXT_PUBLIC_API_URL}/auth/verify-callback`,
       response_type: "code",
       scope: "openid profile email",
       access_type: "offline",
