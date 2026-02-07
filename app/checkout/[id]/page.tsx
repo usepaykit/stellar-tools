@@ -57,7 +57,7 @@ export default function CheckoutPage() {
     queryKey: ["checkout-status", checkoutId],
     queryFn: async () => {
       const response = await api.get<{ status: CheckoutStatus }>(`checkout/${checkoutId}/status`);
-      return response.isErr() ? null : response.value.data.status;
+      return response.isErr() ? null : response.value.status;
     },
     refetchInterval: 10 * 1000,
     enabled: !isSuccess && !!checkout,
@@ -93,8 +93,7 @@ export default function CheckoutPage() {
         const response = await api.get<{ uri: string }>(
           `checkout/${checkoutId}/uri?environment=${checkout?.environment}`
         );
-        const uri = response.isErr() ? null : response.value.data.uri;
-        console.log({ uri });
+        const uri = response.isErr() ? null : response.value.uri;
         setPaymentURI(uri);
       } catch (e) {
         console.error("Failed to fetch payment URI", e);
@@ -147,20 +146,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      {showBanner && checkout.environment === "testnet" && (
-        <div className="bg-primary relative p-3 text-center">
-          <p className="text-primary-foreground text-xs font-medium">
-            Note: Please use a Testnet-compatible wallet like Solar or xBull to scan this code.
-          </p>
-          <button
-            onClick={() => setShowBanner(false)}
-            className="text-primary-foreground/50 absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer hover:text-white"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-      )}
-
+      {showBanner && checkout.environment === "testnet" && <TestnetSpoiler onClose={() => setShowBanner(false)} />}
       <main className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 py-12 lg:grid-cols-2">
         <div className="space-y-8">
           <div className="bg-card space-y-4 rounded-xl border p-8 shadow-sm">
@@ -324,3 +310,19 @@ const CheckoutSuccess = ({ checkout, checkoutId }: any) => (
     </div>
   </div>
 );
+
+const TestnetSpoiler = ({ onClose }: { onClose: () => void }) => {
+  return (
+    <div className="bg-primary relative p-3 text-center">
+      <p className="text-primary-foreground text-xs font-medium">
+        Note: Please use a Testnet-compatible wallet like Solar or xBull to scan this code.
+      </p>
+      <button
+        onClick={onClose}
+        className="text-primary-foreground/50 absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer hover:text-white"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+};

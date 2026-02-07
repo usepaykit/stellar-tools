@@ -138,7 +138,7 @@ export class SorobanContractApi {
       // 1. Prepare Base Transaction
       const source = await this.server.getAccount(this.sourceKeypair.publicKey());
       let tx = new StellarSDK.TransactionBuilder(source, {
-        fee: "10000", // Base fee, will be adjusted by simulation
+        fee: StellarSDK.BASE_FEE, // Base fee, will be adjusted by simulation
         networkPassphrase: this.networkPassphrase,
       })
         .addOperation(operation)

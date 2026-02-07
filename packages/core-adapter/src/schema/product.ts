@@ -5,11 +5,11 @@ import { Environment, environmentSchema } from "./shared";
 
 export const productTypeEnum = z.enum(["one_time", "subscription", "metered"]);
 
-type ProductType = z.infer<typeof productTypeEnum>;
+export type ProductType = z.infer<typeof productTypeEnum>;
 
-const productStatusEnum = z.enum(["active", "archived"]);
+export const productStatusEnum = z.enum(["active", "archived"]);
 
-type ProductStatus = z.infer<typeof productStatusEnum>;
+export type ProductStatus = z.infer<typeof productStatusEnum>;
 
 export interface Product {
   /**

@@ -1,4 +1,5 @@
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { subscriptionIntervals } from "@/constant";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -37,12 +38,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           assetIssuer,
         } = checkout;
 
-        const intervals: Record<string, number> = { day: 1, week: 7, month: 30, year: 365 };
         const expiry = checkout.recurringPeriod
-          ? new Date(Date.now() + (intervals[checkout.recurringPeriod] || 0) * 864e5)
+          ? new Date(Date.now() + subscriptionIntervals[checkout.recurringPeriod] * 864e5)
           : null;
 
-        const periodEnd = expiry ? new Date(Date.now() + (intervals[recurringPeriod] || 0) * 864e5) : null;
+        const periodEnd = expiry ? new Date(Date.now() + subscriptionIntervals[recurringPeriod] * 864e5) : null;
 
         const xdrResult = await stellar.buildPaymentXDR({
           customerAddress: "GA5OJOBKLD4MJEZ6SE7FCNDXKHUQAEOKPDXAZTURGNTXL6BJHPMIC6BW",
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (result.isErr()) throw new Error(result.error.message);
 
-    const callbackUrl = new URL(`/api/checkout/verify-callback`, process.env.NEXT_PUBLIC_TUNNEL_URL!);
+    const callbackUrl = new URL(`/api/checkout/verify-callback`, process.env.NEXT_PUBLIC_API_URL!);
     callbackUrl.searchParams.set("checkoutId", id);
     return NextResponse.json(
       {

@@ -355,8 +355,6 @@ export class StellarCoreApi {
       const { networkPassphrase, server } = this.getServerAndNetwork();
       const { customerAddress, merchantAddress, amount, assetCode, subscriptionData, assetIssuer } = params;
 
-      const amountBigInt = BigInt(Math.round(Number(amount) * 1e7));
-
       const sourceAccount = await server.loadAccount(customerAddress);
 
       const asset =
@@ -369,11 +367,12 @@ export class StellarCoreApi {
         networkPassphrase,
       })
         .addOperation(
-          StellarSDK.Operation.payment({ destination: merchantAddress.trim(), asset, amount: amountBigInt.toString() })
+          StellarSDK.Operation.payment({ destination: merchantAddress.trim(), asset, amount: String(amount) })
         )
         .addMemo(StellarSDK.Memo.text(params.memo));
 
       if (subscriptionData) {
+        const amountBigInt = BigInt(Math.round(Number(params.amount) * 1e7));
         const contractId = await this.retrieveAssetContractId(params.assetCode!, params.assetIssuer!);
 
         const tokenContract = new StellarSDK.Contract(contractId);
@@ -434,7 +433,7 @@ export class StellarCoreApi {
     merchantAddress: string,
     memo: string,
     sinceToken: string
-  ): Promise<Result<{ hash: string; amount: string; successful: boolean }, Error>> => {
+  ): Promise<Result<{ hash: string; amount: string; successful: boolean } | null, Error>> => {
     try {
       const { server } = this.getServerAndNetwork();
 
@@ -453,7 +452,7 @@ export class StellarCoreApi {
         }
       }
 
-      return Result.err(new Error("Not found yet"));
+      return Result.ok(null);
     } catch (e: any) {
       return Result.err(e instanceof Error ? e : new Error(String(e)));
     }

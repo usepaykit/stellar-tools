@@ -6,11 +6,19 @@ import {
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
-  productTypeEnum as productTypeEnum$1,
+  recurringPeriodEnum as recurringPeriodEnum$1,
   roles,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
-import { SubscriptionData, WebhookEvent, checkoutStatusEnum as checkoutStatusEnum$1 } from "@stellartools/core";
+import {
+  ProductStatus,
+  ProductType,
+  SubscriptionData,
+  WebhookEvent,
+  checkoutStatusEnum as checkoutStatusEnum$1,
+  productStatusEnum as productStatusEnum$1,
+  productTypeEnum as productTypeEnum$1,
+} from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
@@ -202,20 +210,15 @@ export const customers = pgTable(
   },
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
+    uniqueOrgPhone: unique().on(table.organizationId, table.phone),
   })
 );
 
-export const productStatusEnum = pgEnum("product_status", ["active", "archived"]);
+export const productStatusEnum = pgEnum("product_status", productStatusEnum$1.enum);
 
-export type ProductStatus = (typeof productStatusEnum.enumValues)[number];
+export const recurringPeriodEnum = pgEnum("recurring_period", recurringPeriodEnum$1);
 
-export const recurringPeriodEnum = pgEnum("recurring_period", ["day", "week", "month", "year"]);
-
-export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
-
-export const productTypeEnum = pgEnum("product_type", productTypeEnum$1);
-
-export type ProductType = (typeof productTypeEnum.enumValues)[number];
+export const productTypeEnum = pgEnum("product_type", productTypeEnum$1.enum);
 
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
@@ -527,3 +530,4 @@ export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
+export type { ProductStatus, ProductType };

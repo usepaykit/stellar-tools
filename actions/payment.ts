@@ -1,10 +1,9 @@
 "use server";
 
-import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
-import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
-import { ProductType } from "@/constant/schema.client";
+import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
 import { JWT } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
@@ -55,6 +54,7 @@ export const postPayment = async (
             data: { customerId, amount, checkoutId, paymentId },
           }),
         });
+
         webhooksTriggers.push({
           event: "payment.failed",
           map: ({ customerId, amount, checkoutId, id: paymentId }) => ({ customerId, amount, checkoutId, paymentId }),
@@ -175,9 +175,11 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   const stellar = new StellarCoreApi(environment);
 
-  const result = await stellar.verifyPaymentByPagingToken(merchantPublicKey, checkoutId, initialPagingToken ?? "now");
+  const result = await stellar.verifyPaymentByPagingToken(merchantPublicKey, checkoutId, initialPagingToken!);
 
   if (result.isErr()) throw new Error(result.error.message);
+
+  if (!result.value) return checkout;
 
   const { hash, amount, successful } = result.value;
 
