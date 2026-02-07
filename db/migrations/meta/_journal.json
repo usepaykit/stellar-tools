@@ -8,6 +8,13 @@
       "when": 1769906912799,
       "tag": "0000_cynical_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770387192732,
+      "tag": "0001_curious_bromley",
+      "breakpoints": true
     }
   ]
 }

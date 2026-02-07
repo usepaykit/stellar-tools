@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     const client = new OAuth2Client(
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
       process.env.GOOGLE_CLIENT_SECRET!,
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify-callback`
+      `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-callback`
     );
 
     const { tokens } = await client.getToken(code);
@@ -71,7 +71,6 @@ export async function GET(req: NextRequest) {
     const nameParts = payload.name?.split(/\s+/) || [];
     const firstName = payload.given_name || nameParts[0] || "";
     const lastName = payload.family_name || nameParts.slice(1).join(" ") || "";
-
     await accountValidator(
       payload.email,
       { provider: "google", sub: payload.sub },
@@ -80,7 +79,10 @@ export async function GET(req: NextRequest) {
       { ...stateData }
     );
 
-    return NextResponse.redirect(new URL("/select-organization", req.url));
+  const dashboardHost = process.env.NEXT_PUBLIC_DASHBOARD_HOST;
+  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+
+  return NextResponse.redirect(new URL(`/select-organization`, `${protocol}://${dashboardHost}`));
   } catch (error) {
     console.error("OAuth callback error:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");

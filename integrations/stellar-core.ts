@@ -327,12 +327,12 @@ export class StellarCoreApi {
     network: Network;
     assetCode: string;
     assetIssuer: string;
-    baseUrl: string;
+    apiUrl: string;
   }): string => {
-    const { id, type, destination, amount, network, baseUrl, assetCode, assetIssuer } = params;
+    const { id, type, destination, amount, network, apiUrl, assetCode, assetIssuer } = params;
 
     if (type == "subscription") {
-      const requestUrl = new URL(`/api/checkouts/${id}/initiate-subscription`, baseUrl);
+      const requestUrl = new URL(`/api/checkouts/${id}/initiate-subscription`, apiUrl);
       return `web+stellar:tx?url=${encodeURIComponent(requestUrl.toString())}`;
     }
 
@@ -345,7 +345,7 @@ export class StellarCoreApi {
       pay.assetIssuer = assetIssuer;
     }
 
-    pay.callback = `url:${new URL(`/checkout/verify-callback?checkoutId=${id}`, baseUrl)}`;
+    pay.callback = `url:${new URL(`/checkout/verify-callback?checkoutId=${id}`, apiUrl)}`;
 
     if (network === "testnet") pay.networkPassphrase = StellarSDK.Networks.TESTNET;
 
