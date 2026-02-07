@@ -222,7 +222,7 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
   const stellar = new StellarCoreApi(result.checkout.environment);
 
   const paymentUri = stellar.makeCheckoutURI({
-    baseUrl: process.env.NEXT_PUBLIC_TUNNEL_URL!,
+    apiUrl: process.env.NEXT_PUBLIC_API_URL!,
     id: checkout.id,
   });
 

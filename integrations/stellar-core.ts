@@ -300,9 +300,9 @@ export class StellarCoreApi {
     }
   };
 
-  makeCheckoutURI = (params: { id: string; baseUrl: string }): string => {
-    const domain = new URL(params.baseUrl).hostname;
-    const initiateUrl = `${params.baseUrl}/api/checkout/${params.id}/initiate`;
+  makeCheckoutURI = (params: { id: string; apiUrl: string }): string => {
+    const domain = new URL(params.apiUrl).hostname;
+    const initiateUrl = `${params.apiUrl}/api/checkout/${params.id}/initiate`;
     const testnetPassphrase = "Test SDF Network ; September 2015";
 
     // 1. Manually construct the base string.

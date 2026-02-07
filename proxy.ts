@@ -9,19 +9,14 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
 
   let prefix = "/landing";
 
-  if (host == process.env.NGROK_HOST) {
-    console.log("NGROK_HOST", host);
-    const response = new NextResponse(null, { status: 200 });
-    response.headers.set("ngrok-skip-browser-warning", "true");
+  if (host == new URL(process.env.NEXT_PUBLIC_API_URL!).host) {
     prefix = "/api";
-  }
-
-  if (host === process.env.NEXT_PUBLIC_DASHBOARD_URL?.split("://")[1]) {
+  } else if (host == new URL(process.env.NEXT_PUBLIC_DASHBOARD_URL!).host) {
     prefix = "/dashboard";
-  } else if (host === process.env.NEXT_PUBLIC_CHECKOUT_URL?.split("://")[1]) {
+  } else if (host == new URL(process.env.NEXT_PUBLIC_CHECKOUT_URL!).host) {
     prefix = "/checkout";
-  } else if (host == process.env.NEXT_PUBLIC_API_URL?.split("://")[1]) {
-    prefix = "/api";
+  } else {
+    prefix = "/landing";
   }
 
   url.pathname = `${prefix}${url.pathname}`;
