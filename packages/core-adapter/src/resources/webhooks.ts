@@ -46,29 +46,25 @@ export class WebhookApi extends WebhookSigner {
 
   async create(params: CreateWebhook) {
     return Result.andThenAsync(validateSchema(createWebhookSchema, params), async (data) => {
-      const response = await this.apiClient.post<Webhook>("/webhooks", data);
-      return response.map((r) => r.data);
+      return await this.apiClient.post<Webhook>("/webhooks", data);
     });
   }
 
   async retrieve(id: string) {
     return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
-      const response = await this.apiClient.get<Webhook>(`/webhooks/${id}`);
-      return response.map((r) => r.data);
+      return await this.apiClient.get<Webhook>(`/webhooks/${id}`);
     });
   }
 
   async update(id: string, params: UpdateWebhook) {
     return Result.andThenAsync(validateSchema(updateWebhookSchema, params), async (data) => {
-      const response = await this.apiClient.put<Webhook>(`/webhooks/${id}`, data);
-      return response.map((r) => r.data);
+      return await this.apiClient.put<Webhook>(`/webhooks/${id}`, data);
     });
   }
 
   async delete(id: string): Promise<Result<Webhook, Error>> {
     return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
-      const response = await this.apiClient.delete<Webhook>(`/webhooks/${id}`);
-      return response.map((r) => r.data);
+      return await this.apiClient.delete<Webhook>(`/webhooks/${id}`);
     });
   }
 }

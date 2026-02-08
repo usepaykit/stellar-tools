@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export default async function middleware(req: NextRequest): Promise<NextResponse> {
   const host = req.headers.get("host");
+
   if (!host) return new NextResponse("Missing Host header", { status: 400 });
 
   const url = req.nextUrl.clone();

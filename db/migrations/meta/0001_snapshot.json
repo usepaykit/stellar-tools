@@ -1,5 +1,5 @@
 {
-  "id": "fc2bd43d-68b1-4d2d-b48a-bd9b4d862ea5",
+  "id": "f99770de-586b-47ee-9148-7ea8639aa9f9",
   "prevId": "d7a5882a-038a-4bfa-8cb4-fdee7701bddb",
   "version": "7",
   "dialect": "postgresql",
@@ -439,6 +439,12 @@
         "subscription_data": {
           "name": "subscription_data",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "initial_paging_token": {
+          "name": "initial_paging_token",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }

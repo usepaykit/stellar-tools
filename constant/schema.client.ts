@@ -1,3 +1,5 @@
+import { SuggestedString } from "@stellartools/core";
+
 export const roles = ["owner", "admin", "developer", "viewer"] as const;
 
 export const networkEnum = ["testnet", "mainnet"] as const;
@@ -6,9 +8,9 @@ export const authProviderEnum = ["google", "local"] as const;
 
 export const payoutStatusEnum = ["pending", "succeeded", "failed"] as const;
 
-export const productTypeEnum = ["subscription", "one_time", "metered"] as const;
-
 export const subscriptionStatusEnum = ["active", "past_due", "canceled", "paused"] as const;
+
+export const recurringPeriodEnum = ["day", "week", "month", "year"] as const;
 
 export const eventTypeEnum = [
   "customer::created",
@@ -35,6 +37,10 @@ export type PayoutStatus = (typeof payoutStatusEnum)[number];
 
 export type EventType = (typeof eventTypeEnum)[number];
 
-export type ProductType = (typeof productTypeEnum)[number];
-
 export type SubscriptionStatus = (typeof subscriptionStatusEnum)[number];
+
+export type RecurringPeriod = (typeof recurringPeriodEnum)[number];
+
+export type AssetCode = SuggestedString<"XLM" | "USDC">;
+
+export type AssetIssuer = SuggestedString<"native">;

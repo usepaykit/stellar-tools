@@ -2,7 +2,7 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { Customer, Network, customers, db } from "@/db";
+import { Customer, Network, ResolvedCustomer, customerWallets, customers, db } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
 import { SQL, and, eq, inArray, or } from "drizzle-orm";
@@ -51,32 +51,62 @@ export const postCustomers = async (
 
 type CustomerLookup = { id: string } | { email: string } | { phone: string };
 
-export const retrieveCustomers = async (params?: MaybeArray<CustomerLookup>, orgId?: string, env?: Network) => {
+export const retrieveCustomers = async (
+  params?: MaybeArray<CustomerLookup>,
+  options?: { withWallets?: boolean },
+  orgId?: string,
+  env?: Network
+): Promise<ResolvedCustomer[]> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
-
   const ids = lookupArray.filter((p): p is { id: string } => "id" in p).map((p) => p.id);
   const emails = lookupArray.filter((p): p is { email: string } => "email" in p).map((p) => p.email);
   const phones = lookupArray.filter((p): p is { phone: string } => "phone" in p).map((p) => p.phone);
 
-  const orFilters: SQL[] = [];
+  const orFilters: (SQL | undefined)[] = [];
   if (ids.length) orFilters.push(inArray(customers.id, ids));
   if (emails.length) orFilters.push(inArray(customers.email, emails));
   if (phones.length) orFilters.push(inArray(customers.phone, phones));
 
-  const result = await db
-    .select()
+  const rows = await db
+    .select({
+      customer: customers,
+      wallet: customerWallets,
+    })
     .from(customers)
-    .where(and(or(...orFilters), eq(customers.organizationId, organizationId), eq(customers.environment, environment)));
+    .leftJoin(customerWallets, eq(customers.id, customerWallets.customerId))
+    .where(
+      and(
+        orFilters.length ? or(...orFilters.filter((f): f is SQL => !!f)) : undefined,
+        eq(customers.organizationId, organizationId),
+        eq(customers.environment, environment)
+      )
+    );
 
-  return result ?? null;
+  const customerMap = new Map<string, ResolvedCustomer>();
+
+  for (const { customer, wallet } of rows) {
+    if (!customerMap.has(customer.id)) {
+      customerMap.set(customer.id, {
+        ...customer,
+        ...(options?.withWallets && { wallets: [] }),
+      });
+    }
+
+    if (options?.withWallets && wallet) {
+      const entry = customerMap.get(customer.id);
+      entry?.wallets?.push(wallet);
+    }
+  }
+
+  return Array.from(customerMap.values());
 };
 
 export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgId?: string, env?: Network) => {
   const [{ organizationId, environment }, [oldCustomer]] = await Promise.all([
     resolveOrgContext(orgId, env),
-    retrieveCustomers({ id }, orgId, env),
+    retrieveCustomers({ id }, undefined, orgId, env),
   ]);
 
   return withEvent(
@@ -103,7 +133,7 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
           type: "customer::updated",
           map: (newCustomer) => ({
             customerId: newCustomer.id,
-            data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer) },
+            data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer, undefined, ".") },
           }),
         },
       ],

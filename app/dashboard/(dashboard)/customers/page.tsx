@@ -27,7 +27,7 @@ import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
-import { Customer } from "@/db";
+import { Customer, ResolvedCustomer } from "@/db";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -68,7 +68,7 @@ function SortableHeader({
   );
 }
 
-const columns: ColumnDef<Customer>[] = [
+const columns: ColumnDef<ResolvedCustomer>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => <SortableHeader column={column} label="Customer" ariaLabelPrefix="Sort by name" />,
@@ -93,7 +93,7 @@ const columns: ColumnDef<Customer>[] = [
     ),
     cell: ({ row }) => (
       <div className="text-muted-foreground font-mono text-sm">
-        {truncate(row.original.walletAddresses?.[0]?.address ?? "-")}
+        {truncate(row.original.wallets?.find((w) => w.isDefault)?.address ?? row.original.wallets?.[0]?.address ?? "-")}
       </div>
     ),
     enableSorting: true,
@@ -318,7 +318,6 @@ export function CustomerModal({
           name: data.name,
           email: data.email,
           phone: phoneString,
-          walletAddresses: null,
           metadata: metadataRecord,
         },
       ]);

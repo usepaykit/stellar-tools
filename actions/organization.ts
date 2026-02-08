@@ -111,12 +111,11 @@ export const retrieveOrganizationIdAndSecret = async (id: string, environment: N
         version: number;
         publicKey: string;
       } | null>`
-        CASE 
-          WHEN ${sql.identifier(`${prefix}SecretEncrypted`)} IS NOT NULL THEN
+        CASE WHEN ${sql.raw(`"organization_secret"."${prefix}_secret_encrypted"`)} IS NOT NULL THEN
             jsonb_build_object(
-              'encrypted', ${organizationSecrets[environment === "testnet" ? "testnetSecretEncrypted" : "mainnetSecretEncrypted"]},
-              'version', ${organizationSecrets[environment === "testnet" ? "testnetSecretVersion" : "mainnetSecretVersion"]},
-              'publicKey', ${organizationSecrets[environment === "testnet" ? "testnetPublicKey" : "mainnetPublicKey"]}
+              'encrypted', ${sql.raw(`"organization_secret"."${prefix}_secret_encrypted"`)},
+              'version', ${sql.raw(`"organization_secret"."${prefix}_secret_version"`)},
+              'publicKey', ${sql.raw(`"organization_secret"."${prefix}_public_key"`)}
             )
           ELSE NULL 
         END`,

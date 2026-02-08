@@ -13,7 +13,6 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable } from "@/components/data-table";
-import { DateTimeField } from "@/components/date-field";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
@@ -28,14 +27,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -170,7 +161,7 @@ export default function CustomerDetailPage() {
     retrievePayments(undefined, { customerId: customerId }, undefined)
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
-    retrieveCustomers({ id: customerId }).then(([c]) => c)
+    retrieveCustomers({ id: customerId }, { withWallets: true }).then(([c]) => c)
   );
   const { data: customerEvents, isLoading: isLoadingCustomerEvents } = useOrgQuery(
     ["customer-events", customerId],
@@ -281,7 +272,7 @@ export default function CustomerDetailPage() {
                   </Button>
                 </div>
                 <div className="space-y-3">
-                  {customer.walletAddresses?.map(({ address, memo }) => (
+                  {customer.wallets?.map(({ address, name }) => (
                     <div key={address} className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4">
                       <Image
                         src="/images/integrations/stellar-official.png"
@@ -294,7 +285,7 @@ export default function CustomerDetailPage() {
                         <div className="font-mono text-xs break-all sm:text-sm">
                           {hiddenWallets.has(address) ? "•".repeat(20) : address}
                         </div>
-                        {memo && <p className="text-muted-foreground text-[10px]">{memo}</p>}
+                        {name && <p className="text-muted-foreground text-[10px]">{name}</p>}
                       </div>
                       <div className="flex gap-1">
                         <Button
@@ -468,7 +459,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
     onSuccess: async (data) => {
       invalidate(["payments", customerId]);
       toast.success("Checkout created");
-      const url = `${process.env.NEXT_PUBLIC_CHECKOUT_DOMAIN}/${data.id}`;
+      const url = `${process.env.NEXT_PUBLIC_CHECKOUT_URL}/${data.id}`;
       setCreatedUrl(url);
     },
   });

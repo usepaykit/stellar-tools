@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { AnimatedCheckmark } from "@/components/icon";
 import { PhoneNumberField, phoneNumberFromString } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
@@ -16,9 +16,8 @@ import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
 import { cn, truncate } from "@/lib/utils";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ApiClient } from "@stellartools/core";
+import { ApiClient, CheckoutStatus } from "@stellartools/core";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import { Lock, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,6 +37,8 @@ const schema = (hasEmail: boolean, hasPhone: boolean) =>
         }),
   });
 
+const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: {} });
+
 export default function CheckoutPage() {
   const { id: checkoutId } = useParams<{ id: string }>();
   const [showBanner, setShowBanner] = React.useState(true);
@@ -55,11 +56,11 @@ export default function CheckoutPage() {
   const { data: status } = useQuery({
     queryKey: ["checkout-status", checkoutId],
     queryFn: async () => {
-      const checkout = await retrieveCheckout(checkoutId);
-      return checkout.status;
+      const response = await api.get<{ status: CheckoutStatus }>(`checkout/${checkoutId}/status`);
+      return response.isErr() ? null : response.value.status;
     },
-    refetchInterval: 5000,
-    enabled: !isSuccess,
+    refetchInterval: 10 * 1000,
+    enabled: !isSuccess && !!checkout,
   });
 
   React.useEffect(() => {
@@ -82,25 +83,25 @@ export default function CheckoutPage() {
 
   const isUnlocked = form.formState.isValid;
 
-  const paymentURI = React.useMemo(() => {
-    if (!isUnlocked || !checkout?.merchantPublicKey) return null;
+  const [paymentURI, setPaymentURI] = React.useState<string | null>(null);
 
-    const intervals: Record<string, number> = { day: 1, week: 7, month: 30, year: 365 };
-    const expiry = checkout.recurringPeriod
-      ? new Date(Date.now() + (intervals[checkout.recurringPeriod] || 0) * 864e5)
-      : null;
+  React.useEffect(() => {
+    if (!isUnlocked || !checkoutId) return;
 
-    return new StellarCoreApi(checkout.environment).makeCheckoutURI({
-      id: checkoutId,
-      network: checkout.environment,
-      assetCode: checkout.assetCode!,
-      assetIssuer: checkout.assetIssuer!,
-      destination: checkout.merchantPublicKey,
-      amount: checkout.finalAmount.toString(),
-      type: checkout.productType,
-      apiUrl: process.env.NEXT_PUBLIC_API_URL!,
-    });
-  }, [isUnlocked, checkout, checkoutId]);
+    const fetchURI = async () => {
+      try {
+        const response = await api.get<{ uri: string }>(
+          `checkout/${checkoutId}/uri?environment=${checkout?.environment}`
+        );
+        const uri = response.isErr() ? null : response.value.uri;
+        setPaymentURI(uri);
+      } catch (e) {
+        console.error("Failed to fetch payment URI", e);
+      }
+    };
+
+    fetchURI();
+  }, [isUnlocked, checkoutId]);
 
   React.useEffect(() => {
     return stellarWalletsKit.onConnectionChange(setConnectedAddress);
@@ -124,22 +125,14 @@ export default function CheckoutPage() {
         },
         async (xdr) => {
           const { signedTxXdr } = await stellarWalletsKit.signTransaction(xdr, { address });
+          await api.post<{ ok: boolean }>(`api/checkout/verify-callback?checkoutId=${checkoutId}`, {
+            xdr: signedTxXdr,
+          });
           return signedTxXdr;
         }
       );
 
       if (result.isErr()) throw new Error(result.error.message);
-
-      const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_APP_URL!, headers: {} });
-      await api.post("/api/checkout/verify-callback", {
-        body: JSON.stringify({
-          txHash: result.value?.hash,
-          checkoutId,
-          organizationId: checkout.organizationId,
-          environment: checkout.environment,
-          productType: checkout.productType,
-        }),
-      });
 
       setIsSuccess(true);
     } catch (e: any) {
@@ -153,20 +146,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="bg-background min-h-screen">
-      {showBanner && checkout.environment === "testnet" && (
-        <div className="bg-primary relative p-3 text-center">
-          <p className="text-primary-foreground text-xs font-medium">
-            Note: Please use a Testnet-compatible wallet like Solar or xBull to scan this code.
-          </p>
-          <button
-            onClick={() => setShowBanner(false)}
-            className="text-primary-foreground/50 absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer hover:text-white"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-      )}
-
+      {showBanner && checkout.environment === "testnet" && <TestnetSpoiler onClose={() => setShowBanner(false)} />}
       <main className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 px-4 py-12 lg:grid-cols-2">
         <div className="space-y-8">
           <div className="bg-card space-y-4 rounded-xl border p-8 shadow-sm">
@@ -330,3 +310,19 @@ const CheckoutSuccess = ({ checkout, checkoutId }: any) => (
     </div>
   </div>
 );
+
+const TestnetSpoiler = ({ onClose }: { onClose: () => void }) => {
+  return (
+    <div className="bg-primary relative p-3 text-center">
+      <p className="text-primary-foreground text-xs font-medium">
+        Note: Please use a Testnet-compatible wallet like Solar or xBull to scan this code.
+      </p>
+      <button
+        onClick={onClose}
+        className="text-primary-foreground/50 absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer hover:text-white"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+};

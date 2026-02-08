@@ -9,8 +9,7 @@ export class RefundApi {
 
   async create(params: CreateRefund) {
     return Result.andThenAsync(validateSchema(createRefundSchema, params), async (data) => {
-      const response = await this.apiClient.post<Refund>("/refunds", data);
-      return response.map((r) => r.data);
+      return await this.apiClient.post<Refund>("/refunds", data);
     });
   }
 }

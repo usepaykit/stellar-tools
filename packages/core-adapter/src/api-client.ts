@@ -41,14 +41,13 @@ export class ApiClient {
     });
   };
 
-  get = <T>(url: string, searchParams?: any) =>
-    this.request(() => this.api.get(url, { searchParams }).json<{ data: T }>());
+  get = <T>(url: string, searchParams?: any) => this.request(() => this.api.get(url, { searchParams }).json<T>());
 
-  post = <T>(url: string, body?: any) => this.request(() => this.api.post(url, { json: body }).json<{ data: T }>());
+  post = <T>(url: string, body?: any) => this.request(() => this.api.post(url, { json: body }).json<T>());
 
-  put = <T>(url: string, body?: any) => this.request(() => this.api.put(url, { json: body }).json<{ data: T }>());
+  put = <T>(url: string, body?: any) => this.request(() => this.api.put(url, { json: body }).json<T>());
 
-  delete = <T>(url: string) => this.request(() => this.api.delete(url).json<{ data: T }>());
+  delete = <T>(url: string) => this.request(() => this.api.delete(url).json<T>());
 
   // For External Calls (like Webhooks).
   requestDetailed = async <T>(call: () => Promise<Response>): Promise<Result<DetailedResponse<T>, Error>> => {

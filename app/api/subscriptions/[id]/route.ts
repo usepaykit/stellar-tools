@@ -1,10 +1,8 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
-import { subscriptionStatusEnum } from "@/constant/schema.client";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { Result, z as Schema, updateSubscriptionSchema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;

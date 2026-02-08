@@ -9,8 +9,7 @@ export class PaymentApi {
 
   async retrieve(id: string, opts?: RetrievePayment) {
     return Result.andThenAsync(validateSchema(retrievePaymentSchema, opts), async (data) => {
-      const response = await this.apiClient.get<Payment>(`/payments/${id}`, data);
-      return response.map((r) => r.data);
+      return await this.apiClient.get<Payment>(`/payments/${id}`, data);
     });
   }
 }
