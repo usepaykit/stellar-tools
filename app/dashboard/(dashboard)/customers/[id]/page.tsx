@@ -161,7 +161,7 @@ export default function CustomerDetailPage() {
     retrievePayments(undefined, { customerId: customerId }, undefined)
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
-    retrieveCustomers({ id: customerId }).then(([c]) => c)
+    retrieveCustomers({ id: customerId }, { withWallets: true }).then(([c]) => c)
   );
   const { data: customerEvents, isLoading: isLoadingCustomerEvents } = useOrgQuery(
     ["customer-events", customerId],
@@ -272,7 +272,7 @@ export default function CustomerDetailPage() {
                   </Button>
                 </div>
                 <div className="space-y-3">
-                  {customer.walletAddresses?.map(({ address, memo }) => (
+                  {customer.wallets?.map(({ address, name }) => (
                     <div key={address} className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4">
                       <Image
                         src="/images/integrations/stellar-official.png"
@@ -285,7 +285,7 @@ export default function CustomerDetailPage() {
                         <div className="font-mono text-xs break-all sm:text-sm">
                           {hiddenWallets.has(address) ? "•".repeat(20) : address}
                         </div>
-                        {memo && <p className="text-muted-foreground text-[10px]">{memo}</p>}
+                        {name && <p className="text-muted-foreground text-[10px]">{name}</p>}
                       </div>
                       <div className="flex gap-1">
                         <Button

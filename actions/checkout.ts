@@ -143,7 +143,7 @@ export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?:
 
   return withEvent(
     async () => {
-      const [checkout] = await db
+      return await db
         .update(checkouts)
         .set({ ...params, updatedAt: new Date() })
         .where(
@@ -153,17 +153,17 @@ export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?:
             eq(checkouts.environment, environment)
           )
         )
-        .returning();
-
-      if (!checkout) throw new Error("Checkout not found");
-
-      return checkout;
+        .returning()
+        .then(([checkout]) => checkout);
     },
     {
       events: [
         {
           type: "checkout::updated",
-          map: (checkout) => ({ checkoutId: checkout.id, data: { $changes: computeDiff(oldCheckout, checkout) } }),
+          map: (checkout) => ({
+            checkoutId: checkout.id,
+            data: { $changes: computeDiff(oldCheckout, checkout, undefined, ".") },
+          }),
         },
       ],
     }

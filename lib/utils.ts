@@ -40,26 +40,40 @@ export const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
-export function computeDiff<T extends Record<string, unknown>>(
+export function computeDiff<T extends Record<string, any>>(
   oldData: T,
   newData: Partial<T>,
-  ignoreKeys: string[] = ["updatedAt", "createdAt", "id"]
+  ignoreKeys: string[] = ["updatedAt", "createdAt", "id"],
+  delimiter?: string, // e.g., "." to enable deep diff
+  _path = ""
 ) {
   const diff: Record<string, { from: unknown; to: unknown }> = {};
 
-  Object.keys(newData).forEach((key) => {
-    if (ignoreKeys.includes(key)) return;
+  for (const key in newData) {
+    if (ignoreKeys.includes(key)) continue;
 
-    const oldVal = oldData[key as keyof T];
-    const newVal = newData[key as keyof T];
+    const oldVal = oldData?.[key];
+    const newVal = newData[key];
+    const currentPath = _path ? `${_path}${delimiter}${key}` : key;
 
-    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-      diff[key] = {
+    const isObject = (v: unknown) => v && typeof v === "object" && !Array.isArray(v);
+
+    if (delimiter && isObject(oldVal) && isObject(newVal)) {
+      const nestedDiff = computeDiff(
+        oldVal as Partial<T[keyof T]>,
+        newVal as Partial<T[keyof T]>,
+        ignoreKeys,
+        delimiter,
+        currentPath
+      );
+      if (nestedDiff) Object.assign(diff, nestedDiff);
+    } else if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+      diff[currentPath] = {
         from: oldVal ?? null,
         to: newVal ?? null,
       };
     }
-  });
+  }
 
   return Object.keys(diff).length > 0 ? diff : null;
 }
@@ -85,7 +99,12 @@ export const urlToFile = async (url: string, fileName: string): Promise<File> =>
   return new File([blob], fileName, { type: blob.type });
 };
 
-export function generateResourceId(prefix: string, baseSignature: string, length: number, hashAlgorithm: HashAlgorithm = 'shake128'): string {
+export function generateResourceId(
+  prefix: string,
+  baseSignature: string,
+  length: number,
+  hashAlgorithm: HashAlgorithm = "shake128"
+): string {
   if (!baseSignature || !prefix || length <= 0) {
     throw new Error("Invalid arguments: baseSignature, prefix, and length (> 0) are required");
   }

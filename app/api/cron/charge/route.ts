@@ -8,7 +8,7 @@ export const GET = async () => {
   const subs = await retrieveDueSubscriptions();
 
   for (const sub of subs) {
-    const walletAddress = sub.customer.walletAddresses?.[0]?.address;
+    const walletAddress = sub.wallet.address;
 
     if (!walletAddress) continue;
 

@@ -206,11 +206,29 @@ export const customers = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),
-    walletAddresses: jsonb("wallet_addresses").$type<CustomerWalletAddress[]>(),
   },
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
     uniqueOrgPhone: unique().on(table.organizationId, table.phone),
+  })
+);
+
+export const customerWallets = pgTable(
+  "customer_wallet",
+  {
+    id: text("id").primaryKey(),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    address: text("address").notNull(),
+    name: text("name"), // e.g. "My LOBSTR"
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  },
+  (table) => ({
+    uniqueWallet: unique().on(table.customerId, table.address),
   })
 );
 
@@ -296,6 +314,7 @@ export const subscriptions = pgTable("subscription", {
   customerId: text("customer_id")
     .notNull()
     .references(() => customers.id),
+  walletId: text("wallet_id").references(() => customerWallets.id),
   productId: text("product_id")
     .notNull()
     .references(() => products.id),
@@ -513,6 +532,7 @@ export type TeamMember = InferSelectModel<typeof teamMembers>;
 export type ApiKey = InferSelectModel<typeof apiKeys>;
 export type Asset = InferSelectModel<typeof assets>;
 export type Customer = InferSelectModel<typeof customers>;
+export type CustomerWallet = InferSelectModel<typeof customerWallets>;
 export type Product = InferSelectModel<typeof products>;
 export type Checkout = InferSelectModel<typeof checkouts>;
 export type Payment = InferSelectModel<typeof payments>;
@@ -531,3 +551,5 @@ export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
 export type { ProductStatus, ProductType };
+
+export type ResolvedCustomer = Customer & { wallets?: Array<CustomerWallet> };

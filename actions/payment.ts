@@ -11,19 +11,10 @@ import { generateResourceId } from "@/lib/utils";
 import { ApiClient, Result } from "@stellartools/core";
 import { and, desc, eq } from "drizzle-orm";
 
-export const postPayment = async (
-  params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
-  orgId?: string,
-  env?: Network
-) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
+const paymentActionHandler = (call: () => Promise<Payment>, organizationId: string, environment: Network) => {
   return withEvent(
     async () => {
-      const [payment] = await db
-        .insert(payments)
-        .values({ ...params, id: generateResourceId("pay", organizationId, 40), organizationId, environment })
-        .returning();
+      const payment = await call();
       return payment;
     },
     (payment) => {
@@ -42,7 +33,7 @@ export const postPayment = async (
         });
         webhooksTriggers.push({
           event: "payment.confirmed",
-          map: ({ amount, checkoutId, id: paymentId }) => ({ checkoutId, amount, paymentId }),
+          map: ({ amount, checkoutId, customerId, id: paymentId }) => ({ customerId, checkoutId, amount, paymentId }),
         });
       }
 
@@ -63,6 +54,26 @@ export const postPayment = async (
 
       return { events, webhooks: { organizationId, environment, triggers: webhooksTriggers } };
     }
+  );
+};
+
+export const postPayment = async (
+  params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  return paymentActionHandler(
+    async () => {
+      const [payment] = await db
+        .insert(payments)
+        .values({ ...params, id: generateResourceId("pay", organizationId, 25), organizationId, environment })
+        .returning();
+      return payment;
+    },
+    organizationId,
+    environment
   );
 };
 
@@ -124,16 +135,24 @@ export const retrievePaymentsWithDetails = async (orgId?: string, env?: Network)
   return result;
 };
 
-export const putPayment = async (id: string, organizationId: string, params: Partial<Payment>) => {
-  const [payment] = await db
-    .update(payments)
-    .set({ ...params, updatedAt: new Date() })
-    .where(and(eq(payments.id, id), eq(payments.organizationId, organizationId)))
-    .returning();
-
-  if (!payment) throw new Error("Payment not found");
-
-  return payment;
+export const putPayment = async (
+  id: string,
+  organizationId: string,
+  environment: Network,
+  params: Partial<Payment>
+) => {
+  return paymentActionHandler(
+    async () => {
+      return await db
+        .update(payments)
+        .set({ ...params, updatedAt: new Date() })
+        .where(and(eq(payments.id, id), eq(payments.organizationId, organizationId)))
+        .returning()
+        .then(([payment]) => payment);
+    },
+    organizationId,
+    environment
+  );
 };
 
 export const deletePayment = async (id: string, organizationId: string) => {
@@ -160,9 +179,9 @@ export const refreshTxStatus = async (
   if (txResult.isErr()) throw new Error(txResult.error?.message);
 
   if (txResult.value?.successful) {
-    putPayment(paymentId, organizationId, { status: "confirmed" });
+    putPayment(paymentId, organizationId, environment, { status: "confirmed" });
   } else {
-    putPayment(paymentId, organizationId, { status: "failed" });
+    putPayment(paymentId, organizationId, environment, { status: "failed" });
   }
 };
 

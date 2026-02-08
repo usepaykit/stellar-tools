@@ -12,7 +12,7 @@ export const POST = async (req: NextRequest) => {
   const sessionToken = req.headers.get("x-session-token");
 
   if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or session token is required" }, { status: 400 });
+    return NextResponse.json({ error: "Auth required" }, { status: 401 });
   }
 
   const result = await Result.andThenAsync(validateSchema(createSubscriptionSchema, await req.json()), async (data) => {
@@ -21,26 +21,25 @@ export const POST = async (req: NextRequest) => {
     const [customers, product] = await Promise.all([
       retrieveCustomers(
         data.customerIds.map((id) => ({ id })),
+        { withWallets: true },
         organizationId,
         environment
       ),
       retrieveProduct(data.productId, organizationId),
     ]);
 
-    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
+    if (product.type !== "subscription") return Result.err(new Error("Product must be a subscription type"));
 
+    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
     const successfulCustomerIds: string[] = [];
     const failedLogs: string[] = [];
 
-    if (product.type !== "subscription") {
-      return Result.err(new Error("Product is not a subscription"));
-    }
-
     for (const customer of customers) {
-      const customerAddress = customer.walletAddresses?.[0]?.address;
+      const wallet = customer.wallets?.find((w) => w.isDefault) ?? customer.wallets?.[0];
+      const customerAddress = wallet?.address;
 
       if (!customerAddress) {
-        failedLogs.push(`Customer ${customer.id}: No wallet address found.`);
+        failedLogs.push(`Customer ${customer.id}: Missing wallet.`);
         continue;
       }
 
@@ -52,12 +51,15 @@ export const POST = async (req: NextRequest) => {
         periodEnd: Math.floor(data.period.to.getTime() / 1000),
       });
 
-      if (onChainResult.isOk()) successfulCustomerIds.push(customer.id);
-      else failedLogs.push(`Customer ${customer.id}: ${onChainResult.error.message}`);
+      if (onChainResult.isOk()) {
+        successfulCustomerIds.push(customer.id);
+      } else {
+        failedLogs.push(`Customer ${customer.id}: ${onChainResult.error.message}`);
+      }
     }
 
     if (successfulCustomerIds.length === 0) {
-      return Result.err(new Error(`Failed to create any subscriptions. Errors: ${failedLogs.join(", ")}`));
+      return Result.err(new Error(`All transactions failed: ${failedLogs.join(" | ")}`));
     }
 
     await postSubscriptionsBulk(
@@ -71,13 +73,13 @@ export const POST = async (req: NextRequest) => {
       environment
     );
 
-    return Result.ok({ count: successfulCustomerIds.length });
+    return Result.ok({
+      count: successfulCustomerIds.length,
+      failed: failedLogs,
+    });
   });
 
-  if (result.isErr()) {
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
-  }
-
+  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400 });
   return NextResponse.json({ data: result.value });
 };
 

@@ -17,6 +17,7 @@ export const POST = async (req: NextRequest) => {
         ...((data.customerId && { id: data.customerId }) as { id: string }),
         ...((data.customerEmail && { email: data.customerEmail }) as { email: string }),
       },
+      undefined,
       organizationId,
       environment
     );
@@ -28,7 +29,6 @@ export const POST = async (req: NextRequest) => {
             email: data.customerEmail as string,
             name: data.customerEmail?.split("@")[0],
             phone: null,
-            walletAddresses: null,
             metadata: data?.metadata ?? null,
           },
         ],
