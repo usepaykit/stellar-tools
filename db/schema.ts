@@ -1,18 +1,23 @@
 import {
+  AssetCode,
+  AssetIssuer,
   AuthProvider,
   authProviderEnum as authProviderEnum$1,
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
-  productTypeEnum as productTypeEnum$1,
+  recurringPeriodEnum as recurringPeriodEnum$1,
   roles,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
 import {
+  ProductStatus,
+  ProductType,
   SubscriptionData,
-  SuggestedString,
   WebhookEvent,
   checkoutStatusEnum as checkoutStatusEnum$1,
+  productStatusEnum as productStatusEnum$1,
+  productTypeEnum as productTypeEnum$1,
 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
@@ -164,9 +169,6 @@ export const apiKeys = pgTable("api_key", {
   environment: networkEnum("network").notNull(),
 });
 
-type AssetCode = SuggestedString<"XLM" | "USDC">;
-type AssetIssuer = SuggestedString<"native">;
-
 export const assets = pgTable(
   "asset",
   {
@@ -204,24 +206,37 @@ export const customers = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),
-    walletAddresses: jsonb("wallet_addresses").$type<CustomerWalletAddress[]>(),
   },
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
+    uniqueOrgPhone: unique().on(table.organizationId, table.phone),
   })
 );
 
-export const productStatusEnum = pgEnum("product_status", ["active", "archived"]);
+export const customerWallets = pgTable(
+  "customer_wallet",
+  {
+    id: text("id").primaryKey(),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    address: text("address").notNull(),
+    name: text("name"), // e.g. "My LOBSTR"
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  },
+  (table) => ({
+    uniqueWallet: unique().on(table.customerId, table.address),
+  })
+);
 
-export type ProductStatus = (typeof productStatusEnum.enumValues)[number];
+export const productStatusEnum = pgEnum("product_status", productStatusEnum$1.enum);
 
-export const recurringPeriodEnum = pgEnum("recurring_period", ["day", "week", "month", "year"]);
+export const recurringPeriodEnum = pgEnum("recurring_period", recurringPeriodEnum$1);
 
-export type RecurringPeriod = (typeof recurringPeriodEnum.enumValues)[number];
-
-export const productTypeEnum = pgEnum("product_type", productTypeEnum$1);
-
-export type ProductType = (typeof productTypeEnum.enumValues)[number];
+export const productTypeEnum = pgEnum("product_type", productTypeEnum$1.enum);
 
 export const products = pgTable("product", {
   id: text("id").primaryKey(),
@@ -278,6 +293,7 @@ export const checkouts = pgTable(
     customerEmail: text("customer_email"),
     customerPhone: text("customer_phone"),
     subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
+    initialPagingToken: text("initial_paging_token"),
   },
   (table) => ({
     amountOrProductCheck: check(
@@ -298,6 +314,7 @@ export const subscriptions = pgTable("subscription", {
   customerId: text("customer_id")
     .notNull()
     .references(() => customers.id),
+  walletId: text("wallet_id").references(() => customerWallets.id),
   productId: text("product_id")
     .notNull()
     .references(() => products.id),
@@ -515,6 +532,7 @@ export type TeamMember = InferSelectModel<typeof teamMembers>;
 export type ApiKey = InferSelectModel<typeof apiKeys>;
 export type Asset = InferSelectModel<typeof assets>;
 export type Customer = InferSelectModel<typeof customers>;
+export type CustomerWallet = InferSelectModel<typeof customerWallets>;
 export type Product = InferSelectModel<typeof products>;
 export type Checkout = InferSelectModel<typeof checkouts>;
 export type Payment = InferSelectModel<typeof payments>;
@@ -532,3 +550,6 @@ export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
+export type { ProductStatus, ProductType };
+
+export type ResolvedCustomer = Customer & { wallets?: Array<CustomerWallet> };

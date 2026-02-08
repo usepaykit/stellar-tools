@@ -2,27 +2,46 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
-import { Checkout, Network, assets, checkouts, customers, db, organizationSecrets, products } from "@/db";
+import {
+  Checkout,
+  Network,
+  assets,
+  checkouts,
+  customers,
+  db,
+  organizationSecrets,
+  organizations,
+  products,
+} from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
 
 export const postCheckout = async (
-  params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
+  params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "initialPagingToken">,
   orgId?: string,
   env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
+  const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
+
   // Should have no more than 25 chars so that it fits in the memo field of the SEP-7 Pay or Tx request
   const checkoutId = generateResourceId("cz", organizationId, 20);
-  console.log({ checkoutId, length: checkoutId.length });
+
+  const stellar = new StellarCoreApi(environment);
+
+  const $pagingTokenResult = await stellar.getLatestPagingToken(secret?.publicKey!);
+
+  if ($pagingTokenResult.isErr()) throw new Error($pagingTokenResult.error.message);
+
+  const initialPagingToken = $pagingTokenResult.value;
 
   return withEvent(
     async () => {
       const [checkout] = await db
         .insert(checkouts)
-        .values({ id: checkoutId, organizationId, environment, ...params })
+        .values({ ...params, id: checkoutId, organizationId, environment, initialPagingToken })
         .returning();
 
       return checkout;
@@ -100,15 +119,27 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
         WHEN ${checkouts.environment} = 'testnet' THEN ${organizationSecrets.testnetPublicKey}
         ELSE ${organizationSecrets.mainnetPublicKey}
       END`.as("merchant_public_key"),
+      organizationName: organizations.name,
+      organizationLogo: organizations.logoUrl,
     })
     .from(checkouts)
     .leftJoin(customers, eq(checkouts.customerId, customers.id))
     .leftJoin(organizationSecrets, eq(checkouts.organizationId, organizationSecrets.organizationId))
     .leftJoin(products, eq(checkouts.productId, products.id))
     .leftJoin(assets, eq(products.assetId, assets.id))
+    .leftJoin(organizations, eq(checkouts.organizationId, organizations.id))
     .where(eq(checkouts.id, id));
 
-  const { checkout, customer, finalAmount, merchantPublicKey, product, assets: assets$1 } = result;
+  const {
+    checkout,
+    customer,
+    finalAmount,
+    merchantPublicKey,
+    product,
+    assets: assets$1,
+    organizationName,
+    organizationLogo,
+  } = result;
 
   return {
     ...checkout,
@@ -117,13 +148,13 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     productType: product?.type ?? "one_time",
     productName: product?.name ?? "Payment",
     recurringPeriod: product?.recurringPeriod ?? "month",
-    hasEmail: !!(customer?.email || checkout.customerEmail),
-    hasPhone: !!(customer?.phone || checkout.customerPhone),
     customerEmail: customer?.email || checkout.customerEmail,
     customerPhone: customer?.phone || checkout.customerPhone,
     assetCode: assets$1?.code ?? null,
     assetIssuer: assets$1?.issuer ?? null,
     productImage: product?.images?.[0] ?? null,
+    organizationName,
+    organizationLogo,
   };
 };
 
@@ -134,7 +165,7 @@ export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?:
 
   return withEvent(
     async () => {
-      const [checkout] = await db
+      return await db
         .update(checkouts)
         .set({ ...params, updatedAt: new Date() })
         .where(
@@ -144,17 +175,17 @@ export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?:
             eq(checkouts.environment, environment)
           )
         )
-        .returning();
-
-      if (!checkout) throw new Error("Checkout not found");
-
-      return checkout;
+        .returning()
+        .then(([checkout]) => checkout);
     },
     {
       events: [
         {
           type: "checkout::updated",
-          map: (checkout) => ({ checkoutId: checkout.id, data: { $changes: computeDiff(oldCheckout, checkout) } }),
+          map: (checkout) => ({
+            checkoutId: checkout.id,
+            data: { $changes: computeDiff(oldCheckout, checkout, undefined, ".") },
+          }),
         },
       ],
     }
@@ -206,7 +237,6 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
 
   const rawAmount = product?.priceAmount ?? checkout.amount ?? 0;
   const assetCode = asset!.code!;
-  const assetIssuer = asset!.issuer!;
 
   // Normalize units (Stellar uses 7 decimal places)
   const amountNormalized = (rawAmount / 10_000_000).toFixed(7);
@@ -214,14 +244,8 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
   const stellar = new StellarCoreApi(result.checkout.environment);
 
   const paymentUri = stellar.makeCheckoutURI({
-    id: checkout.id,
-    type: product!.type,
-    network: result.checkout.environment!,
-    destination: secret.publicKey,
-    amount: amountNormalized,
-    assetCode,
-    assetIssuer,
     apiUrl: process.env.NEXT_PUBLIC_API_URL!,
+    id: checkout.id,
   });
 
   return {

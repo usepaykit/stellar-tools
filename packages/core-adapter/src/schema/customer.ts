@@ -3,6 +3,38 @@ import { z } from "zod";
 import { schemaFor } from "../utils";
 import { Environment, environmentSchema } from "./shared";
 
+export interface CustomerWallet {
+  /**
+   * The unique identifier for the wallet.
+   */
+  id: string;
+
+  /**
+   * The address of the wallet.
+   */
+  address: string;
+
+  /**
+   * The name of the wallet.
+   */
+  name?: string;
+
+  /**
+   * Whether the wallet is the default wallet for the customer.
+   */
+  isDefault: boolean;
+
+  /**
+   * The metadata of the wallet.
+   */
+  metadata?: Record<string, unknown>;
+
+  /**
+   * The created at timestamp for the wallet.
+   */
+  createdAt: string;
+}
+
 export interface Customer {
   /**
    * The unique identifier for the customer.
@@ -22,6 +54,11 @@ export interface Customer {
    * The name of the customer.
    */
   name: string;
+
+  /**
+   * The wallets of the customer.
+   */
+  wallets: CustomerWallet[];
 
   /**
    * The phone number of the customer.
@@ -49,6 +86,18 @@ export interface Customer {
   environment: Environment;
 }
 
+export const customerWalletSchema = schemaFor<CustomerWallet>()(
+  z.object({
+    id: z.string(),
+    address: z.string(),
+    name: z.string().optional(),
+    isDefault: z.boolean(),
+    metadata: z.record(z.string(), z.any()).optional(),
+    createdAt: z.string(),
+    lastUsedAt: z.string().optional(),
+  })
+);
+
 export const customerSchema = schemaFor<Customer>()(
   z.object({
     id: z.string(),
@@ -60,6 +109,7 @@ export const customerSchema = schemaFor<Customer>()(
     createdAt: z.string(),
     updatedAt: z.string(),
     environment: environmentSchema,
+    wallets: z.array(customerWalletSchema),
   })
 );
 
@@ -68,6 +118,7 @@ export const createCustomerSchema = customerSchema.pick({
   name: true,
   phone: true,
   metadata: true,
+  wallets: true,
 });
 
 export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata"> {}

@@ -1,8 +1,8 @@
-import { ProductType } from "@/constant/schema.client";
-import { Network } from "@/db";
+import { AssetCode, AssetIssuer, Network } from "@/constant/schema.client";
 import * as StellarSDK from "@stellar/stellar-sdk";
 import { Sep7Pay } from "@stellar/typescript-wallet-sdk";
 import { Result } from "@stellartools/core";
+import { createHash } from "crypto";
 
 export class StellarCoreApi {
   constructor(private network: Network) {}
@@ -238,25 +238,6 @@ export class StellarCoreApi {
     return Result.ok(transactions);
   };
 
-  retrievePaymentHistory = async (accountId: string, limit: number = 20, cursor?: string) => {
-    const { server } = this.getServerAndNetwork();
-    const query = server.payments().forAccount(accountId);
-
-    if (cursor) {
-      query.cursor(cursor);
-    }
-
-    if (limit) {
-      query.limit(limit);
-    }
-
-    query.order("desc");
-
-    const payments = await query.call();
-
-    return Result.ok(payments);
-  };
-
   retrieveTx = async (
     transactionHash: string
   ): Promise<Result<StellarSDK.Horizon.ServerApi.TransactionRecord | null, Error>> => {
@@ -319,100 +300,121 @@ export class StellarCoreApi {
     }
   };
 
-  makeCheckoutURI = (params: {
-    id: string;
-    type: ProductType;
-    destination: string;
-    amount: string;
-    network: Network;
-    assetCode: string;
-    assetIssuer: string;
-    apiUrl: string;
-  }): string => {
-    const { id, type, destination, amount, network, apiUrl, assetCode, assetIssuer } = params;
+  makeCheckoutURI = (params: { id: string; apiUrl: string }): string => {
+    const domain = new URL(params.apiUrl).hostname;
+    const initiateUrl = `${params.apiUrl}/api/checkout/${params.id}/initiate`;
+    const testnetPassphrase = "Test SDF Network ; September 2015";
 
-    if (type == "subscription") {
-      const requestUrl = new URL(`/api/checkouts/${id}/initiate-subscription`, apiUrl);
-      return `web+stellar:tx?url=${encodeURIComponent(requestUrl.toString())}`;
+    // 1. Manually construct the base string.
+    // We use fixed encoding to ensure the wallet sees exactly what we signed.
+    let baseParams = `url=${encodeURIComponent(initiateUrl)}`;
+    baseParams += `&origin_domain=${encodeURIComponent(domain)}`;
+
+    if (this.network === "testnet") {
+      baseParams += `&network_passphrase=${encodeURIComponent(testnetPassphrase)}`;
     }
 
-    const pay = Sep7Pay.forDestination(destination);
-    pay.amount = amount;
-    pay.memo = id;
+    baseParams += `&msg=${encodeURIComponent("Secure Checkout with StellarTools")}`;
 
-    if (assetCode && assetCode !== "XLM" && assetCode !== "native") {
-      pay.assetCode = assetCode;
-      pay.assetIssuer = assetIssuer;
-    }
+    const baseUri = `web+stellar:tx?${baseParams}`;
 
-    pay.callback = `url:${new URL(`/checkout/verify-callback?checkoutId=${id}`, apiUrl)}`;
+    const signature = this.signURI(baseUri);
 
-    if (network === "testnet") pay.networkPassphrase = StellarSDK.Networks.TESTNET;
-
-    return pay.toString();
+    // 4. Final URI (Append signature as the last param)
+    return `${baseUri}&signature=${encodeURIComponent(signature)}`;
   };
 
-  buildSubscriptionXDR = async (params: {
+  signURI = (baseUri: string): string => {
+    const signer = StellarSDK.Keypair.fromSecret(process.env.KEEPER_SECRET!);
+
+    const prefix = Buffer.alloc(36);
+    prefix[35] = 4;
+
+    const SEP7_ID = "stellar.sep.7 - URI Scheme";
+    const payload = Buffer.concat([prefix, Buffer.from(SEP7_ID + baseUri)]);
+
+    return signer.sign(payload).toString("base64");
+  };
+
+  buildPaymentXDR = async (params: {
     customerAddress: string;
     merchantAddress: string;
-    amount: number;
-    tokenContractId: string;
-    engineContractId: string;
-    productId: string;
+    amount: string | number;
+    assetCode?: string | null;
+    assetIssuer?: string | null;
+    memo: string;
     network: Network;
-    currentPeriodEnd: Date;
-  }) => {
-    const { network, customerAddress, engineContractId, tokenContractId } = params;
+    subscriptionData?: {
+      contractId: string;
+      productId: string;
+      currentPeriodEnd: Date;
+    };
+    checkoutExpiresAt: Date;
+  }): Promise<Result<string, Error>> => {
+    try {
+      const { networkPassphrase, server } = this.getServerAndNetwork();
+      const { customerAddress, merchantAddress, amount, assetCode, subscriptionData, assetIssuer } = params;
 
-    const server = new StellarSDK.rpc.Server(process.env.RPC_URL!);
+      const sourceAccount = await server.loadAccount(customerAddress);
 
-    const source = await server.getAccount(customerAddress);
+      const asset =
+        !assetCode || assetCode.toUpperCase() === "XLM"
+          ? StellarSDK.Asset.native()
+          : new StellarSDK.Asset(assetCode, assetIssuer!);
 
-    const tokenContract = new StellarSDK.Contract(tokenContractId);
-    const engineContract = new StellarSDK.Contract(engineContractId);
-
-    // Conversion: 20.00 -> 200,000,000 (7 decimals)
-    const amountBigInt = BigInt(Math.round(params.amount * 1e7));
-
-    const tx = new StellarSDK.TransactionBuilder(source, {
-      fee: "10000",
-      networkPassphrase: network === "testnet" ? StellarSDK.Networks.TESTNET : StellarSDK.Networks.PUBLIC,
-    })
-      /**
-       * OPERATION 1: Talk to the TOKEN CONTRACT (The Bank)
-       * Action: "Bank, let the Subscription Engine spend 10 years worth of my money"
-       */
-      .addOperation(
-        tokenContract.call(
-          "approve",
-          StellarSDK.nativeToScVal(customerAddress, { type: "address" }), // from
-          StellarSDK.nativeToScVal(engineContractId, { type: "address" }), // spender
-          StellarSDK.nativeToScVal(amountBigInt * BigInt(120), { type: "i128" }), // amount (10 years)
-          StellarSDK.nativeToScVal(9999999, { type: "u32" }) // valid basically forever
+      let tx = new StellarSDK.TransactionBuilder(sourceAccount, {
+        fee: "10000",
+        networkPassphrase,
+      })
+        .addOperation(
+          StellarSDK.Operation.payment({ destination: merchantAddress.trim(), asset, amount: String(amount) })
         )
-      )
-      /**
-       * OPERATION 2: Talk to your SUBSCRIPTION ENGINE (The Merchant)
-       * Action: "Register me and take the first month's payment"
-       */
-      .addOperation(
-        engineContract.call(
-          "start",
-          StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-          StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
-          StellarSDK.nativeToScVal(tokenContractId, { type: "address" }),
-          StellarSDK.nativeToScVal(params.productId, { type: "symbol" }),
-          StellarSDK.nativeToScVal(amountBigInt, { type: "i128" }),
-          StellarSDK.nativeToScVal(Math.floor(params.currentPeriodEnd.getTime() / 1000), { type: "u64" }) // 30 days
-        )
-      )
-      .setTimeout(0)
-      .build();
+        .addMemo(StellarSDK.Memo.text(params.memo));
 
-    return tx.toXDR();
+      if (subscriptionData) {
+        const amountBigInt = BigInt(Math.round(Number(params.amount) * 1e7));
+        const contractId = await this.retrieveAssetContractId(params.assetCode!, params.assetIssuer!);
+
+        const tokenContract = new StellarSDK.Contract(contractId);
+        const engineContract = new StellarSDK.Contract(subscriptionData.contractId);
+
+        tx.addOperation(
+          tokenContract.call(
+            "approve",
+            StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }), // from
+            StellarSDK.nativeToScVal(contractId, { type: "address" }), // spender
+            StellarSDK.nativeToScVal(amountBigInt * BigInt(120), { type: "i128" }), // amount (10 years)
+            StellarSDK.nativeToScVal(9999999, { type: "u32" }) // valid forever
+          )
+        )
+          /**
+           * OPERATION 2: Talk to your SUBSCRIPTION ENGINE (The Merchant)
+           * Action: "Register me and take the first month's payment"
+           */
+          .addOperation(
+            engineContract.call(
+              "start",
+              StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
+              StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
+              StellarSDK.nativeToScVal(contractId, { type: "address" }),
+              StellarSDK.nativeToScVal(subscriptionData.productId, { type: "symbol" }),
+              StellarSDK.nativeToScVal(amountBigInt, { type: "i128" }),
+              StellarSDK.nativeToScVal(Math.floor(subscriptionData.currentPeriodEnd.getTime() / 1000), {
+                type: "u64",
+              })
+            )
+          );
+      }
+
+      const transaction = tx.setTimeout(Math.floor(params.checkoutExpiresAt.getTime() / 1000)).build();
+
+      return Result.ok(transaction.toEnvelope().toXDR().toString("base64"));
+    } catch (error: any) {
+      return Result.err(error);
+    }
   };
 
-  retrieveAssetContractId = async (assetCode: string, assetIssuer?: string) => {
+  retrieveAssetContractId = async (assetCode: AssetCode, assetIssuer?: AssetIssuer) => {
     const { networkPassphrase } = this.getServerAndNetwork();
 
     const asset =
@@ -421,5 +423,46 @@ export class StellarCoreApi {
         : new StellarSDK.Asset(assetCode, assetIssuer!);
 
     return asset.contractId(networkPassphrase);
+  };
+
+  getNetworkPassphrase = (network: Network) => {
+    return network === "testnet" ? StellarSDK.Networks.TESTNET : StellarSDK.Networks.PUBLIC;
+  };
+
+  verifyPaymentByPagingToken = async (
+    merchantAddress: string,
+    memo: string,
+    sinceToken: string
+  ): Promise<Result<{ hash: string; amount: string; successful: boolean } | null, Error>> => {
+    try {
+      const { server } = this.getServerAndNetwork();
+
+      const response = await server.transactions().forAccount(merchantAddress).cursor(sinceToken).order("asc").call();
+
+      const match = response.records.find((tx) => tx.memo === memo);
+
+      if (match) {
+        const ops = await server.payments().forTransaction(match.hash).call();
+        const paymentOp = ops.records.find(
+          (op): op is StellarSDK.Horizon.ServerApi.PaymentOperationRecord => op.type === "payment"
+        );
+
+        if (paymentOp) {
+          return Result.ok({ hash: match.hash, amount: paymentOp.amount, successful: match.successful });
+        }
+      }
+
+      return Result.ok(null);
+    } catch (e: any) {
+      return Result.err(e instanceof Error ? e : new Error(String(e)));
+    }
+  };
+
+  getLatestPagingToken = async (publicKey: string) => {
+    const { server } = this.getServerAndNetwork();
+    return await Result.tryPromise(async () => {
+      const txs = await server.transactions().forAccount(publicKey).order("desc").limit(1).call();
+      return txs.records[0]?.paging_token || "now";
+    }).catch(() => Result.ok("now"));
   };
 }

@@ -32,6 +32,16 @@ services:
       timeout: 5s
       retries: 5
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: stellartools-cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    command: tunnel run
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
 networks:
   stellartools-soroban-network:
     driver: bridge

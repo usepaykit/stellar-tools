@@ -3,7 +3,7 @@
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { SubscriptionStatus } from "@/constant/schema.client";
-import { Network, Subscription, assets, customers, db, products, subscriptions } from "@/db";
+import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { and, desc, eq, lt } from "drizzle-orm";
 
@@ -147,10 +147,10 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
           map: (subscription) => ({
             customerId: subscription.customerId,
             data: {
-              $changes: { ...computeDiff(oldSubscription ?? {}, subscription), status: subscription.status } as Record<
-                string,
-                ReturnType<typeof computeDiff> | SubscriptionStatus
-              >,
+              $changes: {
+                ...computeDiff(oldSubscription ?? {}, subscription, undefined, "."),
+                status: subscription.status,
+              } as Record<string, ReturnType<typeof computeDiff> | SubscriptionStatus>,
             },
           }),
         },
@@ -198,14 +198,16 @@ export const retrieveDueSubscriptions = async () => {
         organizationId: subscriptions.organizationId,
         environment: subscriptions.environment,
       },
-      customer: { id: customers.id, walletAddresses: customers.walletAddresses },
+      customer: { id: customers.id },
       asset: { code: assets.code, issuer: assets.issuer },
+      wallet: customerWallets,
     })
     .from(subscriptions)
     .where(and(lt(subscriptions.currentPeriodEnd, new Date()), eq(subscriptions.status, "active")))
     .innerJoin(customers, eq(subscriptions.customerId, customers.id))
     .innerJoin(products, eq(subscriptions.productId, products.id))
     .innerJoin(assets, eq(products.assetId, assets.id))
+    .innerJoin(customerWallets, eq(subscriptions.walletId, customerWallets.id))
     .orderBy(desc(subscriptions.currentPeriodEnd));
 
   return results;

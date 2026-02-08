@@ -10,12 +10,9 @@ export const POST = async (req: NextRequest) => {
 
   const result = await Result.andThenAsync(validateSchema(createCustomerSchema, await req.json()), async (data) => {
     const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
-    const [customer] = await postCustomers(
-      [{ ...data, walletAddresses: null, phone: data?.phone ?? null }],
-      organizationId,
-      environment,
-      { source: "API" }
-    );
+    const [customer] = await postCustomers([{ ...data, phone: data?.phone ?? null }], organizationId, environment, {
+      source: "API",
+    });
     return Result.ok(customer);
   });
 
@@ -31,7 +28,7 @@ export const GET = async (req: NextRequest) => {
     validateSchema(Schema.object({ apiKey: Schema.string() }), { apiKey: req.headers.get("x-api-key") }),
     async ({ apiKey }) => {
       const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
-      const customers = await retrieveCustomers(undefined, organizationId, environment);
+      const customers = await retrieveCustomers(undefined, { withWallets: true }, organizationId, environment);
       return Result.ok(customers);
     }
   );

@@ -38,13 +38,13 @@ export class WebhookDelivery {
     const duration = Date.now() - startTime;
 
     let statusCode: number | null = null;
-    let responseData: any = null;
+    let responseData: unknown = null;
     let isSuccess = false;
     let errorMessage: string | null = null;
 
     if (result.isOk()) {
       statusCode = result.value.status;
-      responseData = result.value.data;
+      responseData = result.value;
       isSuccess = result.value.ok;
       if (!isSuccess) errorMessage = `Server returned ${statusCode}`;
     } else {
@@ -61,7 +61,7 @@ export class WebhookDelivery {
         statusCode,
         errorMessage,
         responseTime: duration,
-        response: responseData,
+        response: responseData as Record<string, unknown> | null,
         description: `Delivery to ${webhook.url}`,
         createdAt: new Date(),
         updatedAt: new Date(),
