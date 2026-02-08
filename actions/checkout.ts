@@ -2,7 +2,17 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
-import { Checkout, Network, assets, checkouts, customers, db, organizationSecrets, products } from "@/db";
+import {
+  Checkout,
+  Network,
+  assets,
+  checkouts,
+  customers,
+  db,
+  organizationSecrets,
+  organizations,
+  products,
+} from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
@@ -109,15 +119,27 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
         WHEN ${checkouts.environment} = 'testnet' THEN ${organizationSecrets.testnetPublicKey}
         ELSE ${organizationSecrets.mainnetPublicKey}
       END`.as("merchant_public_key"),
+      organizationName: organizations.name,
+      organizationLogo: organizations.logoUrl,
     })
     .from(checkouts)
     .leftJoin(customers, eq(checkouts.customerId, customers.id))
     .leftJoin(organizationSecrets, eq(checkouts.organizationId, organizationSecrets.organizationId))
     .leftJoin(products, eq(checkouts.productId, products.id))
     .leftJoin(assets, eq(products.assetId, assets.id))
+    .leftJoin(organizations, eq(checkouts.organizationId, organizations.id))
     .where(eq(checkouts.id, id));
 
-  const { checkout, customer, finalAmount, merchantPublicKey, product, assets: assets$1 } = result;
+  const {
+    checkout,
+    customer,
+    finalAmount,
+    merchantPublicKey,
+    product,
+    assets: assets$1,
+    organizationName,
+    organizationLogo,
+  } = result;
 
   return {
     ...checkout,
@@ -126,13 +148,13 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     productType: product?.type ?? "one_time",
     productName: product?.name ?? "Payment",
     recurringPeriod: product?.recurringPeriod ?? "month",
-    hasEmail: !!(customer?.email || checkout.customerEmail),
-    hasPhone: !!(customer?.phone || checkout.customerPhone),
     customerEmail: customer?.email || checkout.customerEmail,
     customerPhone: customer?.phone || checkout.customerPhone,
     assetCode: assets$1?.code ?? null,
     assetIssuer: assets$1?.issuer ?? null,
     productImage: product?.images?.[0] ?? null,
+    organizationName,
+    organizationLogo,
   };
 };
 
