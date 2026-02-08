@@ -41,14 +41,20 @@ export class ApiClient {
     });
   };
 
+  private toPath(url: string): string {
+    return url.startsWith("/") ? url.slice(1) : url;
+  }
+
   get = <T>(url: string, searchParams?: any) =>
-    this.request(() => this.api.get(url, { searchParams }).json<{ data: T }>());
+    this.request(() => this.api.get(this.toPath(url), { searchParams }).json<{ data: T }>());
 
-  post = <T>(url: string, body?: any) => this.request(() => this.api.post(url, { json: body }).json<{ data: T }>());
+  post = <T>(url: string, body?: any) =>
+    this.request(() => this.api.post(this.toPath(url), { json: body }).json<{ data: T }>());
 
-  put = <T>(url: string, body?: any) => this.request(() => this.api.put(url, { json: body }).json<{ data: T }>());
+  put = <T>(url: string, body?: any) =>
+    this.request(() => this.api.put(this.toPath(url), { json: body }).json<{ data: T }>());
 
-  delete = <T>(url: string) => this.request(() => this.api.delete(url).json<{ data: T }>());
+  delete = <T>(url: string) => this.request(() => this.api.delete(this.toPath(url)).json<{ data: T }>());
 
   // For External Calls (like Webhooks).
   requestDetailed = async <T>(call: () => Promise<Response>): Promise<Result<DetailedResponse<T>, Error>> => {
@@ -79,5 +85,6 @@ export class ApiClient {
     });
   };
 
-  postDetailed = <T>(url: string, body?: any) => this.requestDetailed<T>(() => this.api.post(url, { body }));
+  postDetailed = <T>(url: string, body?: any) =>
+    this.requestDetailed<T>(() => this.api.post(this.toPath(url), { body }));
 }
