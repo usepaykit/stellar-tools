@@ -143,8 +143,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg" disabled={isSwitching}>
-                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
+                  <SidebarMenuButton size="lg" disabled={isSwitching} tooltip={currentOrg?.name ?? "Organization"}>
+                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
                       {currentOrg?.logoUrl ? (
                         <Image
                           src={currentOrg.logoUrl}
@@ -157,11 +157,11 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                         <Building2 className="size-4" />
                       )}
                     </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                       <span className="truncate font-semibold">{currentOrg?.name || "Loading..."}</span>
                       <span className="truncate text-xs capitalize">{currentOrg?.role || "Member"}</span>
                     </div>
-                    <ChevronsUpDown className="ml-auto" />
+                    <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent

@@ -95,7 +95,10 @@ export const resolveApiKeyOrSessionToken$1 = async (apiKey: string, sessionToken
 export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?: string) => {
   const context = await (async () => {
     if (sessionToken) {
-      const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as { orgId: string; environment: Network };
+      const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
+        orgId: string;
+        environment: Network;
+      };
 
       return await db
         .select({
