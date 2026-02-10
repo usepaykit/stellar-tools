@@ -27,7 +27,7 @@ export const POST = async (
       await req.json()
     ),
     async ({ amount, type, reason, metadata, dryRun }): Promise<Result<{ isSufficient: boolean }, Error>> => {
-      const { organizationId } = await resolveApiKeyOrSessionToken(apiKey);
+      const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey);
 
       const [product, creditBalance] = await Promise.all([
         retrieveProduct(productId, organizationId),
@@ -76,18 +76,21 @@ export const POST = async (
       }
 
       const [transaction, updatedBalance] = await Promise.all([
-        postCreditTransaction({
+        postCreditTransaction(
+          {
+            customerId,
+            productId,
+            balanceId: creditBalance.id,
+            amount: creditsToProcess,
+            balanceBefore,
+            balanceAfter,
+            type,
+            reason: reason ?? null,
+            metadata: metadata ?? null,
+          },
           organizationId,
-          customerId,
-          productId,
-          balanceId: creditBalance.id,
-          amount: creditsToProcess,
-          balanceBefore,
-          balanceAfter,
-          type,
-          reason,
-          metadata,
-        }),
+          environment
+        ),
         putCreditBalance(creditBalance.id, { balance: balanceAfter, consumed: newConsumed, granted: newGranted }),
       ]);
 

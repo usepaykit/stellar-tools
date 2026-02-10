@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm -C packages/core-adapter build && next build",
+    "build": "pnpm -C packages/core-adapter build:dev && next build",
     "start": "next start",
     "lint": "eslint",
     "scan": "npx fix-react2shell-next",

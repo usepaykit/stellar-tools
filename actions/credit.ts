@@ -62,7 +62,7 @@ export const deleteCreditBalance = async (id: string) => {
 // TRANSACTIONS
 
 export const postCreditTransaction = async (
-  params: Omit<CreditTransaction, "id" | "organizationId" | "createdAt" | "updatedAt">,
+  params: Omit<CreditTransaction, "id" | "organizationId" | "createdAt" | "updatedAt" | "environment">,
   organizationId: string,
   env: Network
 ) => {
