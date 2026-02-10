@@ -3,7 +3,7 @@
 import React from "react";
 
 import { retrieveOverviewStats } from "@/actions/organization";
-import { retrieveAccountPlan } from "@/actions/plan";
+import { retrieveOwnerPlan } from "@/actions/plan";
 import { CircularProgress } from "@/components/circular-progress";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -165,7 +165,7 @@ export default function DashboardPage() {
 
   const { data: accountPlan } = useQuery({
     queryKey: ["account-plan"],
-    queryFn: () => retrieveAccountPlan(),
+    queryFn: () => retrieveOwnerPlan({ currentUser: true }),
   });
 
   const { data: stats, isLoading } = useOrgQuery(["overview-stats"], () => retrieveOverviewStats(), {

@@ -6,59 +6,44 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { APP_PRICE_CONFIG } from "@/constant";
 import type { AccountBillingCycle } from "@/constant/schema.client";
+import type { Plan as PlanSchema } from "@/db";
 import { useCheckout } from "@/hooks/use-checkout";
 import { cn } from "@/lib/utils";
 import NumberFlow from "@number-flow/react";
 import { Check, Loader2, Star } from "lucide-react";
 import Link from "next/link";
 
-export type PlanRow = {
-  id: string;
-  name: string;
-  billingEvents: number;
-  customers: number;
-  subscriptions: number;
-  usageRecords: number;
-  payments: number;
-  organizations: number;
-  products: number;
-  isCustom: boolean;
-};
-
-function formatLimit(value: number): string {
+function formatLimit(value: number): string | null {
   if (value === -1) return "Unlimited";
+  if (value < 0) return null;
   return value.toLocaleString();
 }
 
-function buildBenefits(plan: PlanRow): string[] {
+function buildBenefits(plan: PlanSchema): string[] {
   const items: string[] = [];
-  if (plan.customers > 0) items.push(`${formatLimit(plan.customers)} customers`);
-  if (plan.subscriptions > 0) items.push(`${formatLimit(plan.subscriptions)} subscriptions`);
-  if (plan.billingEvents > 0) items.push(`${formatLimit(plan.billingEvents)} billing events`);
-  if (plan.payments > 0) items.push(`${formatLimit(plan.payments)} payments`);
-  if (plan.organizations > 0) items.push(`${formatLimit(plan.organizations)} organization(s)`);
-  if (plan.products > 0) items.push(`${formatLimit(plan.products)} products`);
-  if (plan.usageRecords > 0) items.push(`${formatLimit(plan.usageRecords)} usage records`);
-  if (items.length === 0) items.push("Contact for details");
+  if (plan.customers) items.push(`${formatLimit(plan.customers)} customers`);
+  if (plan.subscriptions) items.push(`${formatLimit(plan.subscriptions)} subscriptions`);
+  if (plan.billingEvents) items.push(`${formatLimit(plan.billingEvents)} billing events`);
+  if (plan.payments) items.push(`${formatLimit(plan.payments)} payments`);
+  if (plan.organizations) items.push(`${formatLimit(plan.organizations)} organization(s)`);
+  if (plan.products) items.push(`${formatLimit(plan.products)} products`);
+  if (plan.usageRecords) items.push(`${formatLimit(plan.usageRecords)} usage records`);
   return items;
 }
 
-function getPriceConfig(planId: string, cycle: AccountBillingCycle) {
-  const key = planId.toLowerCase();
-  const config = APP_PRICE_CONFIG[key];
-  if (!config) return { amount: 0, savingsPercent: 0, perMonth: 0 };
-  const monthly = config.monthlyAmount ?? 0;
-  const yearly = config.yearlyAmount ?? 0;
+function getPriceConfig(plan: PlanSchema, cycle: AccountBillingCycle) {
+  const monthly = plan.monthlyAmountUsdCents / 100;
+  const yearly = plan.yearlyAmountUsdCents / 100;
   const savingsPercent =
     cycle === "yearly" && monthly > 0 && yearly > 0 ? Math.round(((monthly * 12 - yearly) / (monthly * 12)) * 100) : 0;
   const perMonth = cycle === "yearly" ? yearly / 12 : monthly;
-  return { amount: cycle === "yearly" ? yearly : monthly, savingsPercent, perMonth };
+  const amount = cycle === "yearly" ? yearly : monthly;
+  return { amount, savingsPercent, perMonth };
 }
 
 interface PricingGridProps {
-  plans: PlanRow[];
+  plans: PlanSchema[];
 }
 
 export function PricingGrid({ plans }: PricingGridProps) {
@@ -69,21 +54,22 @@ export function PricingGrid({ plans }: PricingGridProps) {
     return Math.max(
       0,
       ...plans.map((p) => {
-        const { savingsPercent } = getPriceConfig(p.id, "yearly");
+        const { savingsPercent } = getPriceConfig(p, "yearly");
         return savingsPercent;
       })
     );
   }, [plans]);
 
-  const handleSelect = async (plan: PlanRow) => {
+  const handleSelect = async (plan: PlanSchema) => {
     if (plan.isCustom) return;
-    const config = APP_PRICE_CONFIG[plan.id.toLowerCase()];
-    const priceKey = config?.polar ?? config?.usdc ?? "";
-    if (!priceKey && (config?.monthlyAmount ?? 0) > 0) return;
+    const pm = plan.paymentMethods;
+    const priceKey = pm?.polarId ?? pm?.usdcId ?? pm?.paystackId ?? "";
+    const method = pm?.polarId ? "polar" : pm?.usdcId ? "usdc" : pm?.paystackId ? "paystack" : "usdc";
+    if (!priceKey && plan.monthlyAmountUsdCents > 0) return;
     const { url, error } = await startCheckout({
       price_key: priceKey || "placeholder",
       source: "pricing_page",
-      method: "usdc",
+      method,
       plan_id: plan.id,
       billing_cycle: cycle,
     });
@@ -111,7 +97,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
 
       <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {plans.map((plan) => {
-          const { amount, savingsPercent, perMonth } = getPriceConfig(plan.id, cycle);
+          const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
           const benefits = buildBenefits(plan);
           const isCustom = plan.isCustom;
           const isPopular = /starter/i.test(plan.name);
@@ -140,7 +126,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
                 <CardDescription
                   className={cn("text-base", isPopular ? "text-primary-foreground/80" : "text-muted-foreground")}
                 >
-                  {isCustom ? "For teams and custom needs" : `Up to ${formatLimit(plan.customers)} customers`}
+                  {plan.description}
                 </CardDescription>
               </CardHeader>
 
@@ -228,3 +214,5 @@ export function PricingGrid({ plans }: PricingGridProps) {
     </>
   );
 }
+
+export { PlanSchema };

@@ -1,5 +1,6 @@
 "use server";
 
+import { getCurrentUser } from "@/actions/auth";
 import { Network, accounts, db, organizations, plan } from "@/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
@@ -18,7 +19,7 @@ export const retrievePlan = async (id: string) => {
     .then(([plan]) => plan);
 };
 
-export const retrieveOwnerPlan = async (filter: { accId?: string; orgId?: string }) => {
+export const retrieveOwnerPlan = async (filter: { accId?: string; orgId?: string; currentUser?: boolean }) => {
   let accountId: string | undefined;
 
   if (filter.accId) {
@@ -30,15 +31,17 @@ export const retrieveOwnerPlan = async (filter: { accId?: string; orgId?: string
       .where(eq(organizations.id, filter.orgId))
       .limit(1);
     accountId = org.accountId;
+  } else if (filter.currentUser) {
+    accountId = (await getCurrentUser())?.id;
   } else {
     throw new Error("No account or organization ID provided");
   }
 
   return await db
-    .select({ account: { id: accounts.id }, plan: { id: plan.id } })
+    .select({ account: { id: accounts.id }, plan })
     .from(accounts)
     .leftJoin(plan, eq(accounts.planId, plan.id))
-    .where(eq(accounts.id, accountId))
+    .where(accountId ? eq(accounts.id, accountId) : undefined)
     .limit(1)
     .then(([accountPlan]) => ({ plan: accountPlan?.plan! }));
 };
@@ -72,8 +75,13 @@ export interface GatingCheck {
   type: "capacity" | "throughput";
 }
 
-export const validateLimits = async (orgId: string, env: Network, checks: GatingCheck[]) => {
-  if (checks.length === 0) return;
+export const validateLimits = async (
+  orgId: string,
+  env: Network,
+  checks: GatingCheck[],
+  options: { throwOnError?: boolean } = { throwOnError: true }
+) => {
+  if (checks.length === 0) throw new Error("No checks provided");
 
   const startOfCycle = moment().startOf("month").toISOString();
 
@@ -102,10 +110,8 @@ export const validateLimits = async (orgId: string, env: Network, checks: Gating
     {} as Record<string, any>
   );
 
-  // 2. Execute ONE query to rule them all
   const [results] = await db.select(selectShape).from(sql`(SELECT 1) as dummy`);
 
-  // 3. Evaluate results
   const violations = checks
     .map((check, index) => {
       const currentUsage = results[`check_${index}`] ?? 0;
@@ -116,8 +122,9 @@ export const validateLimits = async (orgId: string, env: Network, checks: Gating
     })
     .filter(Boolean);
 
-  // 4. Atomic Error Reporting
-  if (violations.length > 0) {
+  if (options?.throwOnError && violations.length > 0) {
     throw new Error(`Plan limits reached: ${violations.join(", ")}`);
   }
+
+  return results as Record<string, number>;
 };

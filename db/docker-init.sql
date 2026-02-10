@@ -23,37 +23,48 @@ INSERT INTO public.asset (code, issuer, network) VALUES
   ('USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'testnet'),
   ('USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'mainnet');
 
+
 INSERT INTO public.plan
-(id, name, description, amount_usd_cents, billing_events, customers, subscriptions, usage_records, payments, organizations, products)
+(id, name, description, billing_events, customers, subscriptions, usage_records, payments, organizations, products, custom, monthly_amount_usd_cents, yearly_amount_usd_cents, payment_methods)
 VALUES
   (
     'pl_wKIn5iBwnpvKCPbxrzTY',
     'Free',
     'For hobby projects and testing.',
+    1000, 200, 50, 0, 1000, 1, 5,
+    false,
     0,
-    1000, 200, 50, 0, 1000, 1, 5
+    0,
+    NULL
   ),
-
   (
     'pl_YfjSEEcHVKuF1091XNxIAg',
     'Starter',
     'For indie hackers and small teams.',
+    10000, 5000, 1000, 50000, 10000, 3, 100,
+    false,
     2900,
-    10000, 5000, 1000, 50000, 10000, 3, 100
+    24360,
+    '{"polarId": null, "paystackId": null, "usdcId": null}'::jsonb
   ),
-
   (
     'pl_nxpAeER1SMSgyzbc7aoqPg',
     'Growth',
     'For growing startups with real users.',
+    100000, 50000, 10000, 500000, 100000, 5, 1000,
+    false,
     9900,
-    100000, 50000, 10000, 500000, 100000, 5, 1000
+    71280,
+    '{"polarId": null, "paystackId": null, "usdcId": null}'::jsonb
   ),
-
   (
     'pl_YQXMJUc2WEpbQT7c/JT8tA',
     'Scale',
     'For high-volume production systems.',
+    1000000, 500000, 100000, 5000000, 1000000, 10, 10000,
+    false,
     29900,
-    1000000, 500000, 100000, 5000000, 1000000, 10, 10000
+    233220,
+    '{"polarId": null, "paystackId": null, "usdcId": null}'::jsonb
   )
+  

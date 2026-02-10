@@ -50,6 +50,13 @@
       "when": 1770756014228,
       "tag": "0006_breezy_ben_urich",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770762124507,
+      "tag": "0007_smooth_dagger",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,13 @@
 import * as React from "react";
 
 import { retrievePlans } from "@/actions/plan";
-import { type PlanRow, PricingGrid } from "@/app/landing/pricing/pricing-grid";
+import { PricingGrid } from "@/app/landing/pricing/pricing-grid";
 import { AuroraBackground } from "@/components/aurora-background";
 import { FooterSection } from "@/components/landing/footer-section";
 import { Header } from "@/components/ui/navbar";
+import { Plan as PlanSchema } from "@/db";
 
-const enterprise = {
+const enterprise: PlanSchema = {
   id: "enterprise",
   name: "Enterprise",
   description: "For large teams with custom needs",
@@ -18,31 +19,22 @@ const enterprise = {
   organizations: -1,
   products: -1,
   isCustom: true,
-  amountUsdCents: -1,
+  monthlyAmountUsdCents: -1,
+  yearlyAmountUsdCents: -1,
+  paymentMethods: null,
+  metadata: null,
 };
-
-const PLAN_DISPLAY_ORDER = ["free", "starter", "growth", "scale", "enterprise"] as const;
 
 const PricingContent = async () => {
   const plans = await retrievePlans();
-  const rows: PlanRow[] = [enterprise, ...plans]
-    .map((p) => ({
-      id: p.id,
-      name: p.name,
-      billingEvents: p.billingEvents,
-      customers: p.customers,
-      subscriptions: p.subscriptions,
-      usageRecords: p.usageRecords,
-      payments: p.payments,
-      organizations: p.organizations,
-      products: p.products,
-      isCustom: p.isCustom,
-    }))
-    .sort((a, b) => {
-      const i = PLAN_DISPLAY_ORDER.indexOf(a.id.toLowerCase() as (typeof PLAN_DISPLAY_ORDER)[number]);
-      const j = PLAN_DISPLAY_ORDER.indexOf(b.id.toLowerCase() as (typeof PLAN_DISPLAY_ORDER)[number]);
-      return (i === -1 ? 99 : i) - (j === -1 ? 99 : j);
-    });
+  const rows: PlanSchema[] = [enterprise, ...plans].sort((a, b) => {
+    const ac = a.customers;
+    const bc = b.customers;
+    if (ac === -1 && bc === -1) return 0;
+    if (ac === -1) return 1;
+    if (bc === -1) return -1;
+    return ac - bc;
+  });
 
   return (
     <>

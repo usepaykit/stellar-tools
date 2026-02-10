@@ -6,7 +6,6 @@ import { switchEnvironment } from "@/actions/organization";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { Network } from "@/db";
-import { useOrgContext } from "@/hooks/use-org-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 

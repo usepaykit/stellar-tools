@@ -1,6 +1,7 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
+import { retrieveOwnerPlan, validateLimits } from "@/actions/plan";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { toSnakeCase } from "@/lib/utils";
@@ -229,38 +230,69 @@ export const triggerWebhooks = async (
   orgId?: string,
   env?: Network
 ) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+  const [{ organizationId, environment }, { plan }] = await Promise.all([
+    resolveOrgContext(orgId, env),
+    retrieveOwnerPlan({ orgId }),
+  ]);
 
   const snakePayload = toSnakeCase(payload);
 
-  const orgWebhooks = await db
-    .select()
-    .from(webhooks)
-    .where(
-      and(
-        eq(webhooks.organizationId, organizationId),
-        eq(webhooks.isDisabled, false),
-        eq(webhooks.environment, environment)
-      )
-    );
-
-  const subscribedWebhooks = orgWebhooks.filter((webhook) => webhook.events.includes(eventType));
-
-  if (subscribedWebhooks.length === 0) {
-    console.log(`No webhooks subscribed to ${eventType} for org ${organizationId} in environment ${environment}`);
-    return { success: true, delivered: 0 };
-  }
-
-  const results = await Promise.allSettled(
-    subscribedWebhooks.map((webhook) =>
-      new WebhookDelivery().deliver(webhook, eventType, snakePayload as Record<string, unknown>)
-    )
+  const usage = await validateLimits(
+    organizationId,
+    environment,
+    [{ domain: "billing_events", table: webhookLogs, limit: plan.billingEvents, type: "throughput" }],
+    { throwOnError: false }
   );
 
-  const delivered = results.filter((r) => r.status === "fulfilled").length;
-  const failed = results.filter((r) => r.status === "rejected").length;
+  const isOverLimit = (usage["billing_events"] ?? 0) >= plan.billingEvents;
 
-  console.log(`Webhooks triggered for ${eventType}: ${delivered} delivered, ${failed} failed`);
+  const subscribers = (
+    await db
+      .select()
+      .from(webhooks)
+      .where(
+        and(
+          eq(webhooks.organizationId, organizationId),
+          eq(webhooks.isDisabled, false),
+          eq(webhooks.environment, environment)
+        )
+      )
+  ).filter((w) => w.events.includes(eventType));
 
-  return { success: true, delivered, failed };
+  if (subscribers.length === 0) return { success: true, delivered: 0 };
+
+  const results = await Promise.allSettled(
+    subscribers.map(async (webhook) => {
+      if (isOverLimit) {
+        return await postWebhookLog(
+          webhook.id,
+          {
+            id: generateResourceId("wh+evt", webhook.id, 52),
+            eventType,
+            request: snakePayload,
+            statusCode: 429, // Too Many Requests / Quota Exceeded
+            errorMessage: "Webhook skipped: billing events limit reached.",
+            responseTime: 0,
+            response: null,
+            description: `Automatic skip (Limit: ${plan.billingEvents})`,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            nextRetry: null,
+            apiVersion: "2025-12-27.stellartools",
+          },
+          organizationId,
+          environment
+        );
+      }
+
+      // NORMAL: Deliver via network
+      return new WebhookDelivery().deliver(webhook, eventType, snakePayload as any);
+    })
+  );
+
+  return {
+    success: true,
+    delivered: results.filter((r) => r.status === "fulfilled").length,
+    skipped: isOverLimit,
+  };
 };

@@ -52,20 +52,35 @@ export const accounts = pgTable("account", {
   planId: text("plan_id").references(() => plan.id),
 });
 
-export const plan = pgTable("plan", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  billingEvents: integer("billing_events").notNull(),
-  customers: integer("customers").notNull(),
-  subscriptions: integer("subscriptions").notNull(),
-  usageRecords: integer("usage_records").notNull(),
-  payments: integer("payments").notNull(),
-  organizations: integer("organizations").notNull().default(1),
-  products: integer("products").notNull().default(0),
-  isCustom: boolean("custom").default(false).notNull(), // for enterprise accounts
-  amountUsdCents: integer("amount_usd_cents").notNull(),
-});
+export type PaymentMethodWithIds = {
+  polarId: string | null;
+  paystackId: string | null;
+  usdcId: string | null;
+};
+
+export const plan = pgTable(
+  "plan",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    billingEvents: integer("billing_events").notNull(),
+    customers: integer("customers").notNull(),
+    subscriptions: integer("subscriptions").notNull(),
+    usageRecords: integer("usage_records").notNull(),
+    payments: integer("payments").notNull(),
+    organizations: integer("organizations").notNull().default(1),
+    products: integer("products").notNull().default(0),
+    isCustom: boolean("custom").default(false).notNull(), // for enterprise accounts
+    monthlyAmountUsdCents: integer("monthly_amount_usd_cents").notNull(),
+    yearlyAmountUsdCents: integer("yearly_amount_usd_cents").notNull(),
+    paymentMethods: jsonb("payment_methods").$type<PaymentMethodWithIds | null>(),
+    metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+  },
+  (table) => ({
+    uniqueMonthlyAmount: unique().on(table.monthlyAmountUsdCents, table.yearlyAmountUsdCents),
+  })
+);
 
 export const auth = pgTable("auth", {
   id: text("id").primaryKey(),
@@ -426,7 +441,7 @@ export const webhookLogs = pgTable("webhook_log", {
     .notNull()
     .references(() => organizations.id),
   eventType: text("event_type").notNull(),
-  request: jsonb("request").$type<Record<string, unknown>>().notNull(),
+  request: jsonb("request").$type<unknown>().notNull(),
   statusCode: integer("status_code"),
   errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -582,6 +597,7 @@ export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
+export type Plan = InferSelectModel<typeof plan>;
 
 export type { ProductStatus, ProductType };
 
