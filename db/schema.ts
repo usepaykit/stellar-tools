@@ -236,8 +236,8 @@ export const customers = pgTable(
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
     uniqueOrgPhone: unique().on(table.organizationId, table.phone),
-    idxOrgEnv: index("idx_org_env").on(table.organizationId, table.environment),
-    idxOrgCreatedAt: index("idx_org_created_at").on(table.organizationId, table.createdAt),
+    idxOrgEnv: index("idx_customer_org_env").on(table.organizationId, table.environment),
+    idxOrgCreatedAt: index("idx_customer_org_created_at").on(table.organizationId, table.createdAt),
   })
 );
 
@@ -323,7 +323,9 @@ export const checkouts = pgTable(
     subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
     initialPagingToken: text("initial_paging_token"),
     asset: text("asset").references(() => assets.id),
-    internalPlanId: text("internal_plan_id").notNull().references(() => plan.id),
+    internalPlanId: text("internal_plan_id")
+      .notNull()
+      .references(() => plan.id),
   },
   (table) => ({
     amountOrProductCheck: check(

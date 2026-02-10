@@ -18,7 +18,7 @@ export const POST = async (req: NextRequest) => {
   }
 
   const result = await Result.andThenAsync(validateSchema(createSubscriptionSchema, await req.json()), async (data) => {
-    const { environment, organizationId, entitlements } = await resolveApiKeyOrSessionToken(apiKey!, sessionToken!);
+    const { environment, organizationId, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
 
     await validateLimits(organizationId, environment, [
       { domain: "subscriptions", table: subscriptionsSchema, limit: entitlements.subscriptions, type: "capacity" },

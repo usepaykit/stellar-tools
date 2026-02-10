@@ -22,7 +22,7 @@ export const POST = async (req: NextRequest) => {
       await req.json()
     ),
     async (data) => {
-      const { entitlements } = await resolveApiKeyOrSessionToken(apiKey!, sessionToken ?? undefined);
+      const { entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
       const formData = await req.formData();
 
       /**

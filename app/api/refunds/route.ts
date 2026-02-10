@@ -19,7 +19,7 @@ export const POST = async (req: NextRequest) => {
   }
 
   const result = await Result.andThenAsync(validateSchema(createRefundSchema, await req.json()), async (data) => {
-    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey!, sessionToken ?? undefined);
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
     const [payment, asset] = await Promise.all([
       retrievePayment(data.paymentId, organizationId, environment),
       retrieveAsset(data.assetId),

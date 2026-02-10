@@ -1,7 +1,6 @@
 "use server";
 
-import { getCurrentUser } from "@/actions/auth";
-import { Network, accounts, db, plan } from "@/db";
+import { Network, accounts, db, organizations, plan } from "@/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
 import moment from "moment";
@@ -19,16 +18,24 @@ export const retrievePlan = async (id: string) => {
     .then(([plan]) => plan);
 };
 
-export const retrieveAccountPlan = async (accId?: string) => {
-  const accountId = accId ? accId : (await getCurrentUser())?.id;
+export const retrieveOwnerPlan = async (filter: { accId?: string; orgId?: string }) => {
+  let accountId: string | undefined;
 
-  if (!accountId) return null;
+  if (filter.accId) {
+    accountId = filter.accId;
+  } else if (filter.orgId) {
+    const [org] = await db
+      .select({ accountId: organizations.accountId })
+      .from(organizations)
+      .where(eq(organizations.id, filter.orgId))
+      .limit(1);
+    accountId = org.accountId;
+  } else {
+    throw new Error("No account or organization ID provided");
+  }
 
   return await db
-    .select({
-      account: accounts,
-      plan: plan,
-    })
+    .select({ account: { id: accounts.id }, plan: { id: plan.id } })
     .from(accounts)
     .leftJoin(plan, eq(accounts.planId, plan.id))
     .where(eq(accounts.id, accountId))

@@ -17,7 +17,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO root;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO root;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO root;
 
-INSERT INTO public.asset (code, issuer, environment) VALUES
+INSERT INTO public.asset (code, issuer, network) VALUES
   ('XLM', 'native', 'testnet'),
   ('XLM', 'native', 'mainnet'),
   ('USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'testnet'),
@@ -56,5 +56,4 @@ VALUES
     'For high-volume production systems.',
     29900,
     1000000, 500000, 100000, 5000000, 1000000, 10, 10000
-  ),
-
+  )

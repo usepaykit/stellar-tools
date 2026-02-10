@@ -92,7 +92,7 @@ export const resolveApiKeyOrSessionToken$1 = async (apiKey: string, sessionToken
   };
 };
 
-export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?: string) => {
+export const resolveApiKeyOrSessionToken = async (apiKey?: string | null, sessionToken?: string | null) => {
   const context = await (async () => {
     if (sessionToken) {
       const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
@@ -125,7 +125,7 @@ export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?:
       .innerJoin(organizations, eq(apiKeys.organizationId, organizations.id))
       .innerJoin(accounts, eq(organizations.accountId, accounts.id))
       .leftJoin(plan, eq(accounts.planId, plan.id))
-      .where(eq(apiKeys.token, apiKey))
+      .where(apiKey ? eq(apiKeys.token, apiKey) : undefined)
       .limit(1)
       .then(([res]) => res);
   })();

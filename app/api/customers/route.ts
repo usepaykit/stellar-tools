@@ -12,10 +12,7 @@ export const POST = async (req: NextRequest) => {
   }
 
   const result = await Result.andThenAsync(validateSchema(createCustomerSchema, await req.json()), async (data) => {
-    const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(
-      apiKey!,
-      sessionToken ?? undefined
-    );
+    const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
     const [customer] = await postCustomers([{ ...data, phone: data?.phone ?? null }], organizationId, environment, {
       source: "API",
       customerCount: entitlements.customers,

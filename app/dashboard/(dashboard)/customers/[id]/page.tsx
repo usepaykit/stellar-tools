@@ -2,9 +2,9 @@
 
 import * as React from "react";
 
-import { postCheckout } from "@/actions/checkout";
 import { retrieveCustomers } from "@/actions/customers";
 import { retrieveEvents } from "@/actions/event";
+import { getCurrentOrganization } from "@/actions/organization";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
 import { CustomerModal } from "@/app/dashboard/(dashboard)/customers/page";
@@ -41,6 +41,7 @@ import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiClient, Checkout } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import _ from "lodash";
@@ -410,7 +411,13 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
   );
 
   const mutation = useMutation({
-    mutationFn: (data: z.infer<typeof checkoutSchema>) => {
+    mutationFn: async (data: z.infer<typeof checkoutSchema>) => {
+      const organization = await getCurrentOrganization();
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-session-token": organization?.token! },
+      });
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 1);
 
@@ -438,24 +445,29 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
         subscriptionData = {
           periodStart,
           periodEnd,
+          cancelAtPeriodEnd: false,
         };
       }
 
-      return postCheckout({
-        productId: data.productId,
-        description: data.description || null,
-        successUrl: data.successUrl || null,
-        successMessage: data.successMessage || null,
-        subscriptionData,
-        customerId,
-        expiresAt,
-        status: "open",
-        metadata: {},
-        amount: null,
-        customerEmail: null,
-        customerPhone: null,
-        asset: null,
+      const response = await api.post<Checkout>("/api/checkout", {
+        body: JSON.stringify({
+          customerId,
+          customerEmail: null,
+          customerPhone: null,
+          productId: data.productId,
+          description: data.description || null,
+          successUrl: data.successUrl || null,
+          successMessage: data.successMessage || null,
+          subscriptionData,
+          metadata: null,
+        }),
       });
+
+      if (response.isErr()) {
+        throw new Error(response.error.message);
+      }
+
+      return response.value;
     },
     onSuccess: async (data) => {
       invalidate(["payments", customerId]);

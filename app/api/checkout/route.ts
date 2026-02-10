@@ -1,6 +1,7 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { upsertCustomer } from "@/actions/customers";
+import { retrieveOwnerPlan } from "@/actions/plan";
 import {
   Result,
   z as Schema,
@@ -12,13 +13,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
+  const sessionToken = req.headers.get("x-session-token");
 
-  if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !sessionToken)
+    return NextResponse.json({ error: "API key or session token is required" }, { status: 400 });
 
   const result = await Result.andThenAsync(
     validateSchema(Schema.union([createCheckoutSchema, createDirectCheckoutSchema]), await req.json()),
     async (data) => {
-      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
 
       const customer = await upsertCustomer(
         {
@@ -32,7 +35,9 @@ export const POST = async (req: NextRequest) => {
         environment
       );
 
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const planResult = await retrieveOwnerPlan({ orgId: organizationId });
+
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
 
       const checkoutPayload = {
         customerId: customer.id,
@@ -45,6 +50,7 @@ export const POST = async (req: NextRequest) => {
         successUrl: data.successUrl ?? null,
         successMessage: data.successMessage ?? null,
         subscriptionData: data.subscriptionData ?? null,
+        internalPlanId: planResult.plan.id,
         ...("productId" in data ? { productId: data.productId } : {}),
         ...("amount" in data ? { amount: data.amount, assetCode: data.assetCode } : {}),
         ...("assetCode" in data ? { asset: data.assetCode } : {}),
