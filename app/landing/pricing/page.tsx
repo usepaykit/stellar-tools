@@ -6,11 +6,26 @@ import { AuroraBackground } from "@/components/aurora-background";
 import { FooterSection } from "@/components/landing/footer-section";
 import { Header } from "@/components/ui/navbar";
 
+const enterprise = {
+  id: "enterprise",
+  name: "Enterprise",
+  description: "For large teams with custom needs",
+  billingEvents: -1,
+  customers: -1,
+  subscriptions: -1,
+  usageRecords: -1,
+  payments: -1,
+  organizations: -1,
+  products: -1,
+  isCustom: true,
+  amountUsdCents: -1,
+};
+
 const PLAN_DISPLAY_ORDER = ["free", "starter", "growth", "scale", "enterprise"] as const;
 
 const PricingContent = async () => {
   const plans = await retrievePlans();
-  const rows: PlanRow[] = plans
+  const rows: PlanRow[] = [enterprise, ...plans]
     .map((p) => ({
       id: p.id,
       name: p.name,

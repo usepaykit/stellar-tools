@@ -2,7 +2,7 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { validateLimit } from "@/actions/plan";
+import { validateLimits } from "@/actions/plan";
 import { Customer, CustomerMetadata, Network, ResolvedCustomer, customerWallets, customers, db } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
@@ -16,7 +16,11 @@ export const postCustomers = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  await validateLimit(customers, options?.customerCount ?? 0, organizationId, environment, "customers");
+  if (options?.customerCount) {
+    await validateLimits(organizationId, environment, [
+      { domain: "customers", table: customers, limit: options.customerCount, type: "capacity" },
+    ]);
+  }
 
   return withEvent(
     async () => {
@@ -116,7 +120,13 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
     async () => {
       const [customer] = await db
         .update(customers)
-        .set({ ...retUpdate, updatedAt: new Date() })
+        .set({
+          ...retUpdate,
+          updatedAt: new Date(),
+          ...(retUpdate.metadata
+            ? { metadata: { ...(oldCustomer?.metadata ?? {}), ...(retUpdate.metadata ?? {}) } }
+            : {}),
+        })
         .where(
           and(
             eq(customers.id, id),

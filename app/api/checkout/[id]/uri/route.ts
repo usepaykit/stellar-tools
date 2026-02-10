@@ -1,6 +1,8 @@
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { GatingCheck, retrievePlan, validateLimits } from "@/actions/plan";
 import { CORS_HEADERS, subscriptionIntervals } from "@/constant";
 import { Network } from "@/constant/schema.client";
+import { payments as paymentsSchema, subscriptions as subscriptionsSchema } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -21,11 +23,38 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
       expiresAt,
       productType,
       recurringPeriod,
+      internalPlanId,
+      organizationId,
     } = await retrieveCheckoutAndCustomer(id);
+
+    let limitError: Error | null = null;
+
+    try {
+      const plan = await retrievePlan(internalPlanId);
+
+      const limitsArray: GatingCheck[] = [
+        { domain: "payments", table: paymentsSchema, limit: plan.payments, type: "throughput" },
+      ];
+
+      if (productType === "subscription") {
+        limitsArray.push({
+          domain: "subscriptions",
+          table: subscriptionsSchema,
+          limit: plan.subscriptions,
+          type: "capacity",
+        });
+      }
+
+      await validateLimits(organizationId, environment, limitsArray);
+    } catch (error) {
+      limitError = error as Error;
+    }
+
+    if (limitError) return NextResponse.json({ error: limitError.message }, { headers: CORS_HEADERS });
 
     const expiry = recurringPeriod ? new Date(Date.now() + subscriptionIntervals[recurringPeriod] * 864e5) : null;
     const periodEnd = expiry ? new Date(Date.now() + subscriptionIntervals[recurringPeriod] * 864e5) : null;
-
+    const contractId = process.env.SUBSCRIPTION_CONTRACT_ID!;
     const xdrResult = await stellar.buildPaymentXDR({
       customerAddress: "GA5OJOBKLD4MJEZ6SE7FCNDXKHUQAEOKPDXAZTURGNTXL6BJHPMIC6BW",
       merchantAddress: merchantPublicKey,
@@ -36,11 +65,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
       assetIssuer,
       checkoutExpiresAt: expiresAt,
       ...(productType == "subscription" && {
-        subscriptionData: {
-          currentPeriodEnd: periodEnd!,
-          contractId: process.env.SUBSCRIPTION_CONTRACT_ID!,
-          productId: productId!,
-        },
+        subscriptionData: { currentPeriodEnd: periodEnd!, contractId, productId: productId! },
       }),
     });
 

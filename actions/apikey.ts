@@ -4,7 +4,7 @@ import { resolveOrgContext, retrieveOrganization } from "@/actions/organization"
 import { ApiKey, Network, accounts, apiKeys, db, organizations, plan } from "@/db";
 import { JWTApi } from "@/integrations/jwt";
 import { generateResourceId } from "@/lib/utils";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export const postApiKey = async (
   params: Omit<ApiKey, "id" | "organizationId" | "environment" | "token">,
@@ -108,14 +108,7 @@ export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?:
         })
         .from(organizations)
         .innerJoin(accounts, eq(organizations.accountId, accounts.id))
-        .leftJoin(
-          plan,
-          eq(
-            accounts.planId,
-            // Fallback to the cheapest aka "FREE" plan ID  directly in the JOIN condition
-            sql`COALESCE(${accounts.planId}, (SELECT ${plan.id} FROM ${plan} ORDER BY ${plan.customers} ASC LIMIT 1))`
-          )
-        )
+        .leftJoin(plan, eq(accounts.planId, plan.id))
         .where(eq(organizations.id, orgId))
         .limit(1)
         .then(([r]) => r);
@@ -131,14 +124,7 @@ export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?:
       .from(apiKeys)
       .innerJoin(organizations, eq(apiKeys.organizationId, organizations.id))
       .innerJoin(accounts, eq(organizations.accountId, accounts.id))
-      .leftJoin(
-        plan,
-        eq(
-          accounts.planId,
-          // Fallback to the cheapest aka "FREE" plan ID  directly in the JOIN condition
-          sql`COALESCE(${accounts.planId}, (SELECT ${plan.id} FROM ${plan} ORDER BY ${plan.customers} ASC LIMIT 1))`
-        )
-      )
+      .leftJoin(plan, eq(accounts.planId, plan.id))
       .where(eq(apiKeys.token, apiKey))
       .limit(1)
       .then(([res]) => res);

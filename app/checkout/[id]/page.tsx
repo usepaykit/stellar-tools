@@ -53,7 +53,8 @@ export default function CheckoutPage() {
   const [paymentURI, setPaymentURI] = React.useState<{
     status: "pending" | "loading" | "success" | "error";
     uri: string | null;
-  }>({ status: "pending", uri: null });
+    message?: string | null;
+  }>({ status: "pending", uri: null, message: null });
 
   const { data: checkout, isLoading } = useQuery({
     queryKey: ["checkout", checkoutId],
@@ -106,7 +107,7 @@ export default function CheckoutPage() {
     const fetchURI = async () => {
       setPaymentURI({ status: "loading", uri: null });
 
-      const response = await api.get<{ uri: string }>(
+      const response = await api.get<{ uri: string } | { error: string }>(
         `checkout/${checkoutId}/uri?environment=${checkout?.environment}`
       );
 
@@ -115,7 +116,11 @@ export default function CheckoutPage() {
         return;
       }
 
-      setPaymentURI({ status: "success", uri: response.value.uri });
+      setPaymentURI({
+        status: "uri" in response.value ? "success" : "error",
+        uri: "uri" in response.value ? response.value.uri : null,
+        message: "error" in response.value ? response.value.error : null,
+      });
     };
 
     fetchURI();

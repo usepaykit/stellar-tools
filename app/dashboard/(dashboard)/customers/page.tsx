@@ -304,7 +304,7 @@ export function CustomerModal({
       const metadataRecord = (data.metadata || []).reduce(
         (acc, item) => {
           if (item.key) {
-            acc[item.key] = item.value || "";
+            acc[item.key] = String(item.value) || "";
           }
           return acc;
         },

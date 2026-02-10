@@ -12,10 +12,7 @@ export const POST = async (req: NextRequest) => {
   }
 
   const result = await Result.andThenAsync(validateSchema(createProductSchema, await req.json()), async (data) => {
-    const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(
-      apiKey!,
-      sessionToken ?? undefined
-    );
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey!, sessionToken ?? undefined);
 
     const formData = await req.formData();
 

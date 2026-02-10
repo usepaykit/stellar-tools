@@ -28,7 +28,7 @@ export type PlanRow = {
 };
 
 function formatLimit(value: number): string {
-  if (value === Infinity || value >= 1_000_000) return "Unlimited";
+  if (value === -1) return "Unlimited";
   return value.toLocaleString();
 }
 

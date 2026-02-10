@@ -1,16 +1,22 @@
 "use server";
 
+import { getCurrentUser } from "@/actions/auth";
 import { AuthProvider } from "@/constant/schema.client";
-import { Account, accounts, db } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { Account, accounts, db, plan } from "@/db";
+import { asc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
-import { getCurrentUser } from "./auth";
-
 export const postAccount = async (params: Partial<Account>) => {
+  const freePlan = await db
+    .select({ id: plan.id })
+    .from(plan)
+    .orderBy(asc(plan.customers))
+    .limit(1)
+    .then(([p]) => p);
+
   const [account] = await db
     .insert(accounts)
-    .values({ id: `ac_${nanoid(25)}`, ...params } as Account)
+    .values({ id: `ac_${nanoid(25)}`, planId: freePlan.id, ...params } as Account)
     .returning();
 
   return account;

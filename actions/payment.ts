@@ -4,6 +4,7 @@ import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
+import { validateLimits } from "@/actions/plan";
 import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
@@ -60,9 +61,16 @@ const paymentActionHandler = (call: () => Promise<Payment>, organizationId: stri
 export const postPayment = async (
   params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
   orgId?: string,
-  env?: Network
+  env?: Network,
+  options?: { paymentCount?: number }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  if (options?.paymentCount) {
+    await validateLimits(organizationId, environment, [
+      { domain: "payments", table: payments, limit: options.paymentCount, type: "throughput" },
+    ]);
+  }
 
   return paymentActionHandler(
     async () => {

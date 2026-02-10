@@ -1,7 +1,7 @@
 "use server";
 
 import { resolveAccountContext } from "@/actions/account";
-import { validateLimit } from "@/actions/plan";
+import { validateLimits } from "@/actions/plan";
 import { postTeamMember } from "@/actions/team-member";
 import {
   Network,
@@ -46,13 +46,12 @@ export const postOrganizationAndSecret = async (
 
   const organizationId = generateResourceId("org", accountId, 25);
 
-  await validateLimit(
-    { ...organizations, organizationId: organizations.id, environment: null },
-    options?.organizationCount ?? 0,
-    organizationId,
-    defaultEnvironment,
-    "organizations"
-  );
+  if (options?.organizationCount) {
+    const organizationTable = { ...organizations, organizationId: organizations.id, environment: null };
+    await validateLimits(organizationId, defaultEnvironment, [
+      { domain: "organizations", table: organizationTable, limit: options.organizationCount, type: "capacity" },
+    ]);
+  }
 
   const [organization] = await db
     .insert(organizations)

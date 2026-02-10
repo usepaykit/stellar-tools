@@ -55,6 +55,7 @@ export const accounts = pgTable("account", {
 export const plan = pgTable("plan", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
+  description: text("description"),
   billingEvents: integer("billing_events").notNull(),
   customers: integer("customers").notNull(),
   subscriptions: integer("subscriptions").notNull(),
@@ -63,6 +64,7 @@ export const plan = pgTable("plan", {
   organizations: integer("organizations").notNull().default(1),
   products: integer("products").notNull().default(0),
   isCustom: boolean("custom").default(false).notNull(), // for enterprise accounts
+  amountUsdCents: integer("amount_usd_cents").notNull(),
 });
 
 export const auth = pgTable("auth", {
@@ -80,22 +82,28 @@ export const auth = pgTable("auth", {
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
 });
 
-export const organizations = pgTable("organization", {
-  id: text("id").primaryKey(),
-  accountId: text("account_id")
-    .notNull()
-    .references(() => accounts.id),
-  name: text("name").notNull(),
-  description: text("description"),
-  logoUrl: text("logo_url"),
-  phoneNumber: text("phone_number"),
-  address: text("address"),
-  socialLinks: jsonb("social_links").$type<Record<string, string> | null>(),
-  settings: jsonb("settings").$type<Record<string, unknown> | null>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-});
+export const organizations = pgTable(
+  "organization",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    name: text("name").notNull(),
+    description: text("description"),
+    logoUrl: text("logo_url"),
+    phoneNumber: text("phone_number"),
+    address: text("address"),
+    socialLinks: jsonb("social_links").$type<Record<string, string> | null>(),
+    settings: jsonb("settings").$type<Record<string, unknown> | null>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+  },
+  (table) => ({
+    idxOrgCreatedAt: index("idx_org_created_at").on(table.accountId, table.createdAt),
+  })
+);
 
 export const organizationSecrets = pgTable("organization_secret", {
   id: text("id").primaryKey(),
@@ -229,6 +237,7 @@ export const customers = pgTable(
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
     uniqueOrgPhone: unique().on(table.organizationId, table.phone),
     idxOrgEnv: index("idx_org_env").on(table.organizationId, table.environment),
+    idxOrgCreatedAt: index("idx_org_created_at").on(table.organizationId, table.createdAt),
   })
 );
 
@@ -314,6 +323,7 @@ export const checkouts = pgTable(
     subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
     initialPagingToken: text("initial_paging_token"),
     asset: text("asset").references(() => assets.id),
+    internalPlanId: text("internal_plan_id").notNull().references(() => plan.id),
   },
   (table) => ({
     amountOrProductCheck: check(

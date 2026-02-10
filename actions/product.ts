@@ -1,7 +1,7 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
-import { validateLimit } from "@/actions/plan";
+import { validateLimits } from "@/actions/plan";
 import { Network, Product, assets, db, products } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { generateResourceId } from "@/lib/utils";
@@ -24,7 +24,11 @@ export const postProduct = async (
 
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  await validateLimit(products, options?.productCount ?? 0, organizationId, environment, "products");
+  if (options?.productCount) {
+    await validateLimits(organizationId, environment, [
+      { domain: "products", table: products, limit: options.productCount, type: "capacity" },
+    ]);
+  }
 
   const [product] = await db
     .insert(products)

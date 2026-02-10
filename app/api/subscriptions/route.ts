@@ -1,7 +1,9 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { retrieveCustomers } from "@/actions/customers";
+import { validateLimits } from "@/actions/plan";
 import { retrieveProduct } from "@/actions/product";
 import { listSubscriptions, postSubscriptionsBulk } from "@/actions/subscription";
+import { subscriptions as subscriptionsSchema } from "@/db";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { createSubscriptionSchema } from "@stellartools/core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
@@ -16,7 +18,11 @@ export const POST = async (req: NextRequest) => {
   }
 
   const result = await Result.andThenAsync(validateSchema(createSubscriptionSchema, await req.json()), async (data) => {
-    const { environment, organizationId } = await resolveApiKeyOrSessionToken(apiKey!, sessionToken!);
+    const { environment, organizationId, entitlements } = await resolveApiKeyOrSessionToken(apiKey!, sessionToken!);
+
+    await validateLimits(organizationId, environment, [
+      { domain: "subscriptions", table: subscriptionsSchema, limit: entitlements.subscriptions, type: "capacity" },
+    ]);
 
     const [customers, product] = await Promise.all([
       retrieveCustomers(
@@ -70,7 +76,8 @@ export const POST = async (req: NextRequest) => {
         cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? false,
       },
       organizationId,
-      environment
+      environment,
+      { subscriptionCount: entitlements.subscriptions }
     );
 
     return Result.ok({

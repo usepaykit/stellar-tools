@@ -1,9 +1,13 @@
 import { postPayment } from "@/actions/payment";
 import { putSubscription, retrieveDueSubscriptions } from "@/actions/subscription";
+import { Network } from "@/db";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
+import { NextRequest } from "next/server";
 
-export const GET = async () => {
-  const api = new SorobanContractApi("mainnet", process.env.KEEPER_SECRET!);
+export const GET = async (req: NextRequest) => {
+  const searchParams = req.nextUrl.searchParams;
+  const environment = (searchParams.get("environment") as Network) ?? "mainnet";
+  const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
   const subs = await retrieveDueSubscriptions();
 

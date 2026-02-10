@@ -2,6 +2,7 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
+import { validateLimits } from "@/actions/plan";
 import { SubscriptionStatus } from "@/constant/schema.client";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
@@ -10,9 +11,16 @@ import { and, desc, eq, lt } from "drizzle-orm";
 export const postSubscriptionsBulk = async (
   params: { customerIds: string[]; productId: string; period: { from: Date; to: Date }; cancelAtPeriodEnd: boolean },
   orgId?: string,
-  env?: Network
+  env?: Network,
+  options?: { subscriptionCount?: number }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  if (options?.subscriptionCount) {
+    await validateLimits(organizationId, environment, [
+      { domain: "subscriptions", table: subscriptions, limit: options.subscriptionCount, type: "capacity" },
+    ]);
+  }
 
   return withEvent(
     async () => {

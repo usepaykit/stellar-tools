@@ -29,7 +29,6 @@ export const POST = async (req: NextRequest) => {
        * Creates a testnet account for the organization
        * Mainnet account is created later when the organization is activated
        */
-
       return await postOrganizationAndSecret(
         {
           name: data.name,
