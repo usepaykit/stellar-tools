@@ -1,5 +1,6 @@
 "use server";
 
+import { retrieveAssets } from "@/actions/asset";
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import {
@@ -26,7 +27,10 @@ export const postCheckout = async (
 
   const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 
-  // Should have no more than 25 chars so that it fits in the memo field of the SEP-7 Pay or Tx request
+  /**
+   * Should have no more than 25 chars
+   * So that it fits in the memo field of the SEP-7 Pay or Tx request
+   */
   const checkoutId = generateResourceId("cz", organizationId, 20);
 
   const stellar = new StellarCoreApi(environment);
@@ -36,6 +40,20 @@ export const postCheckout = async (
   if ($pagingTokenResult.isErr()) throw new Error($pagingTokenResult.error.message);
 
   const initialPagingToken = $pagingTokenResult.value;
+
+  if (params.asset) {
+    const assetsList = await retrieveAssets(environment);
+
+    const asset = assetsList.find((asset) => asset.code === params.asset);
+
+    if (!asset) {
+      throw new Error(
+        `Invalid asset code, Only ${assetsList.map((a) => a.code).join(", ")} are supported. Got ${params.asset}`
+      );
+    }
+
+    params.asset = asset.id;
+  }
 
   return withEvent(
     async () => {

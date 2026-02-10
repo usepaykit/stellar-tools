@@ -2,7 +2,12 @@
 
 import * as React from "react";
 
-import { postOrganizationAndSecret, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
+import {
+  getCurrentOrganization,
+  postOrganizationAndSecret,
+  retrieveOrganizations,
+  setCurrentOrganization,
+} from "@/actions/organization";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
@@ -15,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Building2, ChevronRight, Plus, Users } from "lucide-react";
 import Image from "next/image";
@@ -190,34 +196,30 @@ const CreateOrganizationModal = ({
 
   const createOrgMutation = useMutation({
     mutationFn: async (data: CreateOrganizationFormData) => {
+      const organization = await getCurrentOrganization();
+
       const formData = new FormData();
 
       const defaultEnvironment = "testnet" as const;
 
       if (data.logo?.[0]) formData.append("logo", data.logo[0]);
 
-      /**
-       * Creates a testnet account for the organization
-       * Mainnet account is created later when the organization is activated
-       */
-      const org = await postOrganizationAndSecret(
-        {
+      const response = await new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-session-token": organization?.token! },
+      }).post<{ id: string }>("/api/organization", {
+        body: JSON.stringify({
           name: data.name,
-          phoneNumber: phoneNumberToString(data.phoneNumber),
-          description: data.description || null,
-          logoUrl: null, // will be set after upload
-          settings: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          metadata: null,
-          address: null,
-          socialLinks: null,
-        },
+          phoneNumber: data.phoneNumber.number,
+          description: data.description,
+          environment: defaultEnvironment,
+        }),
         formData,
-        defaultEnvironment
-      );
+      });
 
-      return org;
+      if (response.isErr()) throw new Error(response.error.message);
+
+      return response.value;
     },
     onSuccess: async (org) => {
       toast.success("Organization created successfully");

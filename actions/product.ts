@@ -1,17 +1,18 @@
 "use server";
 
+import { resolveOrgContext } from "@/actions/organization";
+import { validateLimit } from "@/actions/plan";
 import { Network, Product, assets, db, products } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 
-import { resolveOrgContext } from "./organization";
-
 export const postProduct = async (
   params: Omit<Product, "id" | "organizationId" | "environment">,
   formDataWithFiles?: FormData,
   orgId?: string,
-  env?: Network
+  env?: Network,
+  options?: { productCount?: number }
 ) => {
   const imageFiles = formDataWithFiles?.getAll("images");
 
@@ -22,6 +23,8 @@ export const postProduct = async (
   }
 
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  await validateLimit(products, options?.productCount ?? 0, organizationId, environment, "products");
 
   const [product] = await db
     .insert(products)

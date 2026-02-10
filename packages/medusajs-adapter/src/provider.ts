@@ -19,7 +19,7 @@ import {
   WebhookActionResult,
 } from "@medusajs/framework/types";
 import { AbstractPaymentProvider, MedusaError, PaymentActions, PaymentSessionStatus } from "@medusajs/framework/utils";
-import { Result, z as Schema, StellarTools, validateSchema } from "@stellartools/core";
+import { Result, z as Schema, StellarTools, WebhookEvent, validateSchema } from "@stellartools/core";
 
 import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
 
@@ -45,6 +45,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     if (!result.isOk()) {
       throw new MedusaError(errorCode, result.error?.message ?? "Stellar operation failed");
     }
+
     return result.value;
   }
 
@@ -62,10 +63,6 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   }: InitiatePaymentInput): Promise<InitiatePaymentOutput> => {
     this.log("Initiating payment", { amount, currency_code, data });
 
-    if (currency_code !== "XLM") {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Only XLM is supported");
-    }
-
     return this.unwrap(
       (
         await Result.andThenAsync(
@@ -74,7 +71,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
             currency_code,
           }),
           (valid) =>
-            this.stellar.checkouts.create({
+            this.stellar.checkouts.createDirect({
               amount: Number(valid.amount),
               assetCode: valid.currency_code,
               metadata: data?.metadata as any,
@@ -86,7 +83,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       ).map((checkout) => ({
         id: checkout.id,
         status: PaymentSessionStatus.REQUIRES_MORE,
-        data: { payment_url: checkout.paymentUrl },
+        data: { id: checkout.id, payment_url: checkout.paymentUrl },
       }))
     );
   };
@@ -173,15 +170,14 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
 
   getWebhookActionAndData = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
     const body = JSON.parse(payload.rawData.toString());
-    const actionMap: Record<string, PaymentActions> = {
+    const actionMap: Partial<Record<WebhookEvent, PaymentActions>> = {
       "payment.pending": PaymentActions.PENDING,
       "payment.confirmed": PaymentActions.SUCCESSFUL,
       "payment.failed": PaymentActions.FAILED,
-      "checkout.expired": PaymentActions.CANCELED,
     };
 
     return {
-      action: actionMap[body.event] || PaymentActions.NOT_SUPPORTED,
+      action: actionMap[body.event as WebhookEvent] ?? PaymentActions.NOT_SUPPORTED,
       data: { session_id: body.data?.metadata?.session_id, amount: body.data?.amount },
     };
   };

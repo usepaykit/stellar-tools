@@ -111,6 +111,14 @@ export interface Checkout {
   subscriptionData?: SubscriptionData;
 }
 
+export const subscriptionDataSchema = schemaFor<SubscriptionData>()(
+  z.object({
+    periodStart: z.coerce.date(),
+    periodEnd: z.coerce.date(),
+    cancelAtPeriodEnd: z.boolean().default(false).optional(),
+  })
+);
+
 export const checkoutSchema = schemaFor<Checkout>()(
   z.object({
     id: z.string(),
@@ -128,62 +136,38 @@ export const checkoutSchema = schemaFor<Checkout>()(
     environment: environmentSchema,
     successUrl: z.string().optional(),
     successMessage: z.string().optional(),
-    subscriptionData: z
-      .object({
-        periodStart: z.coerce.date(),
-        periodEnd: z.coerce.date(),
-        cancelAtPeriodEnd: z.boolean().default(false).optional(),
-      })
-      .optional(),
+    subscriptionData: subscriptionDataSchema.optional(),
   })
 );
 
-export const createCheckoutSchema = checkoutSchema
-  .pick({
-    customerId: true,
-    productId: true,
-    amount: true,
-    description: true,
-    metadata: true,
-    successUrl: true,
-    successMessage: true,
-    subscriptionData: true,
-  })
-  .refine((data) => data.productId !== undefined || data.amount !== undefined, {
-    message: "Either productId or amount must be specified",
-    path: ["productId"],
-  })
-  .refine((data) => data.successUrl !== undefined || data.successMessage !== undefined, {
-    message: "Either successUrl or successMessage must be provided",
-    path: ["successUrl", "successMessage"],
-  })
-  .and(
-    z.object({
-      /**
-       * Guest checkouts, e.g e-commerce checkout
-       */
-      customerEmail: z.email().optional(),
+const baseCreateSchema = z.object({
+  customerId: z.string().optional(),
+  customerEmail: z.email().optional(),
+  customerPhone: z.string().optional(),
+  description: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).default({}),
+  successUrl: z.string().optional(),
+  successMessage: z.string().optional(),
+  subscriptionData: z
+    .object({
+      periodStart: z.coerce.date(),
+      periodEnd: z.coerce.date(),
+      cancelAtPeriodEnd: z.boolean().default(false).optional(),
     })
-  );
+    .optional(),
+});
 
-export type CreateCheckout = Pick<
-  Checkout,
-  | "customerId"
-  | "productId"
-  | "amount"
-  | "description"
-  | "metadata"
-  | "description"
-  | "assetCode"
-  | "successUrl"
-  | "successMessage"
-  | "subscriptionData"
-> & {
-  /**
-   * The email of the guest customer
-   */
-  customerEmail?: string;
-};
+export const createCheckoutSchema = baseCreateSchema.extend({
+  productId: z.string().min(1, "Product ID is required"),
+});
+
+export const createDirectCheckoutSchema = baseCreateSchema.extend({
+  amount: z.number().positive("Amount must be greater than 0"),
+  assetCode: z.string().min(1, "Asset code is required"), // e.g. "XLM", "USDC"
+});
+
+export type CreateCheckout = z.infer<typeof createCheckoutSchema>;
+export type CreateDirectCheckout = z.infer<typeof createDirectCheckoutSchema>;
 
 export const updateCheckoutSchema = checkoutSchema.pick({
   status: true,

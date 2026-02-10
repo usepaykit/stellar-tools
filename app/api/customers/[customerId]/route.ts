@@ -15,13 +15,9 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ custome
     validateSchema(Schema.object({ customerId: Schema.string() }), context.params),
     async ({ customerId }) => {
       const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
-      const [customer] = await retrieveCustomers(
-        { id: customerId },
-        { withWallets: true },
-        organizationId,
-        environment
+      return await retrieveCustomers({ id: customerId }, { withWallets: true }, organizationId, environment).then(
+        ([customer]) => Result.ok(customer)
       );
-      return Result.ok(customer);
     }
   );
 

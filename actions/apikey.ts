@@ -1,10 +1,10 @@
 "use server";
 
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
-import { ApiKey, Network, apiKeys, db } from "@/db";
-import { JWT } from "@/integrations/jwt";
+import { ApiKey, Network, accounts, apiKeys, db, organizations, plan } from "@/db";
+import { JWTApi } from "@/integrations/jwt";
 import { generateResourceId } from "@/lib/utils";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 export const postApiKey = async (
   params: Omit<ApiKey, "id" | "organizationId" | "environment" | "token">,
@@ -67,9 +67,9 @@ export const deleteApiKey = async (id: string, orgId?: string, env?: Network) =>
     .then(() => null);
 };
 
-export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?: string) => {
+export const resolveApiKeyOrSessionToken$1 = async (apiKey: string, sessionToken?: string) => {
   if (sessionToken) {
-    const { orgId, environment } = (await new JWT().verify(sessionToken)) as {
+    const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
       orgId: string;
       environment: Network;
     };
@@ -90,4 +90,58 @@ export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?:
     environment: record.environment,
     apiKeyId: record.id,
   };
+};
+
+export const resolveApiKeyOrSessionToken = async (apiKey: string, sessionToken?: string) => {
+  const context = await (async () => {
+    if (sessionToken) {
+      const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as { orgId: string; environment: Network };
+
+      return await db
+        .select({
+          organizationId: organizations.id,
+          environment: sql<Network>`${environment}`,
+          plan: plan,
+        })
+        .from(organizations)
+        .innerJoin(accounts, eq(organizations.accountId, accounts.id))
+        .leftJoin(
+          plan,
+          eq(
+            accounts.planId,
+            // Fallback to the cheapest aka "FREE" plan ID  directly in the JOIN condition
+            sql`COALESCE(${accounts.planId}, (SELECT ${plan.id} FROM ${plan} ORDER BY ${plan.customers} ASC LIMIT 1))`
+          )
+        )
+        .where(eq(organizations.id, orgId))
+        .limit(1)
+        .then(([r]) => r);
+    }
+
+    return await db
+      .select({
+        organizationId: organizations.id,
+        environment: apiKeys.environment,
+        apiKeyId: apiKeys.id,
+        plan: plan,
+      })
+      .from(apiKeys)
+      .innerJoin(organizations, eq(apiKeys.organizationId, organizations.id))
+      .innerJoin(accounts, eq(organizations.accountId, accounts.id))
+      .leftJoin(
+        plan,
+        eq(
+          accounts.planId,
+          // Fallback to the cheapest aka "FREE" plan ID  directly in the JOIN condition
+          sql`COALESCE(${accounts.planId}, (SELECT ${plan.id} FROM ${plan} ORDER BY ${plan.customers} ASC LIMIT 1))`
+        )
+      )
+      .where(eq(apiKeys.token, apiKey))
+      .limit(1)
+      .then(([res]) => res);
+  })();
+
+  if (!context) throw new Error("Invalid Auth");
+
+  return { ...context, entitlements: context.plan! };
 };

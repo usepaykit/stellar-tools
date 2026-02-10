@@ -2,11 +2,11 @@ import {
   AssetCode,
   AssetIssuer,
   AuthProvider,
+  accountBillingCycleEnum as accountBillingCycleEnum$1,
   authProviderEnum as authProviderEnum$1,
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
-  recurringPeriodEnum as recurringPeriodEnum$1,
   roles,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
@@ -18,6 +18,7 @@ import {
   checkoutStatusEnum as checkoutStatusEnum$1,
   productStatusEnum as productStatusEnum$1,
   productTypeEnum as productTypeEnum$1,
+  recurringPeriodEnum as recurringPeriodEnum$1,
 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
@@ -37,6 +38,8 @@ export type AccountProfile = {
   avatarUrl?: string;
 };
 
+export const accountBillingCycleEnum = pgEnum("account_billing_cycle", accountBillingCycleEnum$1);
+
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -45,6 +48,21 @@ export const accounts = pgTable("account", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object | null>(),
+  billingCycle: accountBillingCycleEnum("billing_cycle"),
+  planId: text("plan_id").references(() => plan.id),
+});
+
+export const plan = pgTable("plan", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  billingEvents: integer("billing_events").notNull(),
+  customers: integer("customers").notNull(),
+  subscriptions: integer("subscriptions").notNull(),
+  usageRecords: integer("usage_records").notNull(),
+  payments: integer("payments").notNull(),
+  organizations: integer("organizations").notNull().default(1),
+  products: integer("products").notNull().default(0),
+  isCustom: boolean("custom").default(false).notNull(), // for enterprise accounts
 });
 
 export const auth = pgTable("auth", {
@@ -210,6 +228,7 @@ export const customers = pgTable(
   (table) => ({
     uniqueOrgEmail: unique().on(table.organizationId, table.email),
     uniqueOrgPhone: unique().on(table.organizationId, table.phone),
+    idxOrgEnv: index("idx_org_env").on(table.organizationId, table.environment),
   })
 );
 
@@ -234,7 +253,7 @@ export const customerWallets = pgTable(
 
 export const productStatusEnum = pgEnum("product_status", productStatusEnum$1.enum);
 
-export const recurringPeriodEnum = pgEnum("recurring_period", recurringPeriodEnum$1);
+export const recurringPeriodEnum = pgEnum("recurring_period", recurringPeriodEnum$1.enum);
 
 export const productTypeEnum = pgEnum("product_type", productTypeEnum$1.enum);
 
@@ -294,6 +313,7 @@ export const checkouts = pgTable(
     customerPhone: text("customer_phone"),
     subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
     initialPagingToken: text("initial_paging_token"),
+    asset: text("asset").references(() => assets.id),
   },
   (table) => ({
     amountOrProductCheck: check(
@@ -550,6 +570,7 @@ export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
+
 export type { ProductStatus, ProductType };
 
 export type ResolvedCustomer = Customer & { wallets?: Array<CustomerWallet> };

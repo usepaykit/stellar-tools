@@ -1,7 +1,8 @@
 "use server";
 
+import { AssetCode } from "@/constant/schema.client";
 import { Asset, Network, assets, db } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postAsset = async (asset: Partial<Asset>) => {
@@ -23,8 +24,13 @@ export const retrieveAsset = async (id: string) => {
   return asset as Asset;
 };
 
-export const retrieveAssets = async (env: Network) => {
-  return await db.select().from(assets).where(eq(assets.environment, env));
+export const retrieveAssets = async (env: Network, filters?: { assetCodes?: AssetCode[] }) => {
+  return await db
+    .select()
+    .from(assets)
+    .where(
+      and(eq(assets.environment, env), ...(filters?.assetCodes ? [inArray(assets.code, filters.assetCodes)] : []))
+    );
 };
 
 export const putAsset = async (id: string, asset: Partial<Asset>) => {

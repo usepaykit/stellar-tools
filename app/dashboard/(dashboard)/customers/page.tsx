@@ -4,6 +4,7 @@ import * as React from "react";
 import { useState } from "react";
 
 import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
+import { getCurrentOrganization } from "@/actions/organization";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -31,6 +32,7 @@ import { Customer, ResolvedCustomer } from "@/db";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiClient } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, CloudUpload, Plus, Trash2 } from "lucide-react";
@@ -290,6 +292,13 @@ export function CustomerModal({
 
   const putCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
+      const organization = await getCurrentOrganization();
+
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-session-token": organization?.token! },
+      });
+
       const phoneString = data.phoneNumber.number ? phoneNumberToString(data.phoneNumber) : "";
 
       const metadataRecord = (data.metadata || []).reduce(
@@ -313,16 +322,18 @@ export function CustomerModal({
         });
       }
 
-      const [result] = await postCustomers([
-        {
+      const response = await api.post<Customer>("/api/customers", {
+        body: JSON.stringify({
           name: data.name,
           email: data.email,
           phone: phoneString,
           metadata: metadataRecord,
-        },
-      ]);
+        }),
+      });
 
-      return result;
+      if (response.isErr()) throw new Error(response.error.message);
+
+      return response.value;
     },
     onSuccess: (customer) => {
       invalidate(isEditMode ? ["customers", customer?.id] : ["customers"]);

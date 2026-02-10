@@ -454,6 +454,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
         amount: null,
         customerEmail: null,
         customerPhone: null,
+        asset: null,
       });
     },
     onSuccess: async (data) => {

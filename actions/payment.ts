@@ -5,7 +5,7 @@ import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
-import { JWT } from "@/integrations/jwt";
+import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { ApiClient, Result } from "@stellartools/core";
@@ -205,7 +205,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
   const createSubscriptionHandler = async () => {
     if (!checkout.productId) return Result.err(new Error("Product ID is required for subscription"));
 
-    const accessToken = await new JWT().sign(
+    const accessToken = await new JWTApi().sign(
       { orgId: checkout.organizationId, environment: checkout.environment },
       1 * 60 // 1 minute
     );

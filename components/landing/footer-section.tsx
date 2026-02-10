@@ -4,7 +4,7 @@ import { Github, Heart, Twitter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function FooterSection() {
+export const FooterSection = () => {
   const currentYear = new Date().getFullYear();
 
   const footerLinks = {
@@ -166,4 +166,4 @@ export default function FooterSection() {
       </div>
     </footer>
   );
-}
+};

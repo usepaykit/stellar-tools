@@ -112,7 +112,6 @@ export const consumeCredits = (options: BillingConfig) =>
       body: z.object({
         productId: z.string(),
         rawAmount: z.number(),
-        reason: z.enum(["deduct", "refund", "grant"]).optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
       }),
       use: [sessionMiddleware],
@@ -125,7 +124,7 @@ export const consumeCredits = (options: BillingConfig) =>
       const result = unwrap(
         await stellar.credits.consume(customerId, {
           ...ctx.body,
-          reason: ctx.body.reason ?? "deduct",
+          reason: "deduct",
           metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
         })
       );

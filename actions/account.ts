@@ -16,9 +16,9 @@ export const postAccount = async (params: Partial<Account>) => {
   return account;
 };
 
-export const retrieveAccount = async (
-  payload: { id: string } | { email: string } | { sso: { provider: AuthProvider; sub: string } }
-): Promise<Account | null> => {
+export type AccountLookup = { id: string } | { email: string } | { sso: { provider: AuthProvider; sub: string } };
+
+export const retrieveAccount = async (payload: AccountLookup): Promise<Account | null> => {
   let whereClause;
 
   if ("sso" in payload) {

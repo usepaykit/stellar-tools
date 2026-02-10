@@ -5,13 +5,20 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
+  const sessionToken = req.headers.get("x-session-token");
 
-  if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !sessionToken) {
+    return NextResponse.json({ error: "API key or session token is required" }, { status: 400 });
+  }
 
   const result = await Result.andThenAsync(validateSchema(createCustomerSchema, await req.json()), async (data) => {
-    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+    const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(
+      apiKey!,
+      sessionToken ?? undefined
+    );
     const [customer] = await postCustomers([{ ...data, phone: data?.phone ?? null }], organizationId, environment, {
       source: "API",
+      customerCount: entitlements.customers,
     });
     return Result.ok(customer);
   });

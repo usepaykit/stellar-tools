@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 
-export class JWT {
+export class JWTApi {
   constructor() {}
 
   async sign(

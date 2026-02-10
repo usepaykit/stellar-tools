@@ -79,10 +79,7 @@ export async function GET(req: NextRequest) {
       { ...stateData }
     );
 
-  const dashboardHost = process.env.NEXT_PUBLIC_DASHBOARD_HOST;
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-
-  return NextResponse.redirect(new URL(`/select-organization`, `${protocol}://${dashboardHost}`));
+    return NextResponse.redirect(new URL(`/select-organization`, process.env.NEXT_PUBLIC_DASHBOARD_URL!));
   } catch (error) {
     console.error("OAuth callback error:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
