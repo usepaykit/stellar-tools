@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { getCurrentUser, signOut } from "@/actions/auth";
-import { retrieveOrganizations, setCurrentOrganization, switchEnvironment } from "@/actions/organization";
+import { retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,7 @@ import {
   SidebarProvider,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
-import { Network } from "@/db";
 import { useOrgContext } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -88,7 +86,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isSwitching, setIsSwitching] = React.useState(false);
-  const [isSwitchingEnv, setIsSwitchingEnv] = React.useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
@@ -98,7 +95,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     queryKey: ["sidebar-organizations"],
     queryFn: async () => await retrieveOrganizations(),
   });
-  const [LiveMode, setLiveMode] = React.useState(orgContext?.environment === "mainnet");
   const currentOrg = organizations?.find((org) => org.id === orgContext?.id) || null;
 
   const userName = user?.profile.firstName
@@ -121,22 +117,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
       toast.error("Failed to switch organization");
     } finally {
       setIsSwitching(false);
-    }
-  };
-
-  const handleSwitchEnvironment = async (checked: boolean) => {
-    setLiveMode(checked);
-    setIsSwitchingEnv(true);
-    const newEnv: Network = checked ? "mainnet" : "testnet";
-    try {
-      await switchEnvironment(newEnv);
-      await queryClient.invalidateQueries({ queryKey: ["org-context"] });
-      toast.success(`Switched to ${checked ? "Live" : "Test"} mode`);
-      router.refresh();
-    } catch {
-      toast.error("Failed to switch environment");
-    } finally {
-      setIsSwitchingEnv(false);
     }
   };
 
@@ -163,8 +143,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg" disabled={isSwitching}>
-                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg">
+                  <SidebarMenuButton size="lg" disabled={isSwitching} tooltip={currentOrg?.name ?? "Organization"}>
+                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
                       {currentOrg?.logoUrl ? (
                         <Image
                           src={currentOrg.logoUrl}
@@ -177,11 +157,11 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                         <Building2 className="size-4" />
                       )}
                     </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                       <span className="truncate font-semibold">{currentOrg?.name || "Loading..."}</span>
                       <span className="truncate text-xs capitalize">{currentOrg?.role || "Member"}</span>
                     </div>
-                    <ChevronsUpDown className="ml-auto" />
+                    <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -217,19 +197,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       </DropdownMenuItem>
                     ))
                   )}
-
-                  <div className="mt-2 flex items-center justify-between gap-4 border-t px-4 py-2">
-                    <div className="flex flex-col">
-                      <span className="text-muted-foreground text-[10px] font-medium uppercase">Mode</span>
-                      <span className="text-xs">{LiveMode ? "Live" : "Test"}</span>
-                    </div>
-                    <Switch
-                      checked={LiveMode}
-                      onCheckedChange={handleSwitchEnvironment}
-                      disabled={isSwitchingEnv || isLoadingOrgs}
-                      className="h-4 w-7 [&>span]:size-3 [&>span]:data-[state=checked]:translate-x-[calc(100%-0.125rem)]"
-                    />
-                  </div>
 
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>

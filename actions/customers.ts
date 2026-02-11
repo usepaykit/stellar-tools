@@ -2,7 +2,8 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { Customer, Network, ResolvedCustomer, customerWallets, customers, db } from "@/db";
+import { validateLimits } from "@/actions/plan";
+import { Customer, CustomerMetadata, Network, ResolvedCustomer, customerWallets, customers, db } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
 import { SQL, and, eq, inArray, or } from "drizzle-orm";
@@ -11,9 +12,15 @@ export const postCustomers = async (
   params: Omit<Customer, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">[],
   orgId?: string,
   env?: Network,
-  options?: { source?: string }
+  options?: { source?: string; customerCount?: number }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  if (options?.customerCount) {
+    await validateLimits(organizationId, environment, [
+      { domain: "customers", table: customers, limit: options.customerCount, type: "capacity" },
+    ]);
+  }
 
   return withEvent(
     async () => {
@@ -49,7 +56,7 @@ export const postCustomers = async (
   );
 };
 
-type CustomerLookup = { id: string } | { email: string } | { phone: string };
+type CustomerLookup = { id?: string } | { email?: string } | { phone?: string };
 
 export const retrieveCustomers = async (
   params?: MaybeArray<CustomerLookup>,
@@ -113,7 +120,13 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
     async () => {
       const [customer] = await db
         .update(customers)
-        .set({ ...retUpdate, updatedAt: new Date() })
+        .set({
+          ...retUpdate,
+          updatedAt: new Date(),
+          ...(retUpdate.metadata
+            ? { metadata: { ...(oldCustomer?.metadata ?? {}), ...(retUpdate.metadata ?? {}) } }
+            : {}),
+        })
         .where(
           and(
             eq(customers.id, id),
@@ -152,6 +165,40 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
       },
     }
   );
+};
+
+export const upsertCustomer = async (
+  params: MaybeArray<CustomerLookup & { name: string; metadata: CustomerMetadata }>,
+  orgId: string,
+  env: Network
+) => {
+  const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
+
+  const existing = await retrieveCustomers(
+    lookupArray.map((p) => ({
+      id: "id" in p ? p.id : undefined,
+      email: "email" in p ? p.email : undefined,
+      phone: "phone" in p ? p.phone : undefined,
+    })),
+    undefined,
+    orgId,
+    env
+  ).then(([c]) => c);
+
+  if (existing) return existing;
+
+  return await postCustomers(
+    [
+      {
+        email: lookupArray.filter((p) => "email" in p).map((p) => ("email" in p ? p.email : undefined))[0] ?? null,
+        name: lookupArray.filter((p) => "name" in p).map((p) => p.name)[0] ?? null,
+        phone: null,
+        metadata: lookupArray.filter((p) => "metadata" in p).map((p) => p.metadata)[0] ?? null,
+      },
+    ],
+    orgId,
+    env
+  ).then(([c]) => c);
 };
 
 export const deleteCustomer = async (id: string, orgId?: string, env?: Network) => {

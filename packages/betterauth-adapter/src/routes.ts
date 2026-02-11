@@ -18,7 +18,11 @@ export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Pro
     await stellar.customers.create({
       email: user.email,
       name: user.name,
-      metadata: { source: "betterauth-adapter" },
+      metadata: {
+        source: "betterauth-adapter",
+        ...(user.image ? { image: user.image } : {}),
+        ...(ctx.context.session?.session?.id ? { sessionId: ctx.context.session?.session?.id } : {}),
+      },
     })
   );
 
@@ -58,7 +62,7 @@ export const updateCustomer = (options: BillingConfig) =>
         email: z.email().optional(),
         name: z.string().optional(),
         phone: z.string().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
+        metadata: z.record(z.string(), z.string()).nullable().optional(),
       }),
       use: [sessionMiddleware],
     },
@@ -112,7 +116,6 @@ export const consumeCredits = (options: BillingConfig) =>
       body: z.object({
         productId: z.string(),
         rawAmount: z.number(),
-        reason: z.enum(["deduct", "refund", "grant"]).optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
       }),
       use: [sessionMiddleware],
@@ -125,7 +128,7 @@ export const consumeCredits = (options: BillingConfig) =>
       const result = unwrap(
         await stellar.credits.consume(customerId, {
           ...ctx.body,
-          reason: ctx.body.reason ?? "deduct",
+          reason: "deduct",
           metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
         })
       );

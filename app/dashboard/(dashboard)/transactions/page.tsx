@@ -229,8 +229,8 @@ export function RefundModal({
       const payment = await retrievePayment(data.paymentId);
 
       const api = new ApiClient({
-        baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
-        headers: { "x-session-token": organization?.token ?? undefined! },
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-session-token": organization?.token! },
       });
 
       const result = await api.post<{ id: string; success: boolean }>("/api/refunds", {

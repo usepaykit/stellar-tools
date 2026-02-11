@@ -2,35 +2,51 @@
 
 import * as React from "react";
 
+import { switchEnvironment } from "@/actions/organization";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/toast";
 import { Network } from "@/db";
-import { Info } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 interface EnvironmentToggleProps {
   currentEnvironment: Network;
 }
 
 export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLiveMode, setIsLiveMode] = React.useState(currentEnvironment === "mainnet");
+  const [isSwitching, setIsSwitching] = React.useState(false);
 
   React.useEffect(() => {
     setIsLiveMode(currentEnvironment === "mainnet");
   }, [currentEnvironment]);
 
-  if (isLiveMode) return null;
+  const handleToggle = async (checked: boolean) => {
+    setIsSwitching(true);
+    const newEnv: Network = checked ? "mainnet" : "testnet";
+    try {
+      await switchEnvironment(newEnv);
+      await queryClient.invalidateQueries({ queryKey: ["org-context"] });
+      toast.success(`Switched to ${checked ? "Live" : "Test"} mode`);
+      router.refresh();
+    } catch {
+      toast.error("Failed to switch environment");
+    } finally {
+      setIsSwitching(false);
+    }
+  };
 
   return (
-    <div className="bg-primary border-border border-b px-6 py-2.5">
-      <div className="container flex items-center justify-between">
-        <div />
-        <div className="flex items-center gap-2">
-          <Info className="text-muted h-4 w-4" />
-          <span className="text-accent text-sm">
-            You are in <span className="font-medium">Test mode</span>
-          </span>
-        </div>
-
-        <div />
-      </div>
+    <div className="flex items-center gap-3">
+      <Switch
+        checked={isLiveMode}
+        onCheckedChange={handleToggle}
+        disabled={isSwitching}
+        className="h-5 w-9 [&>span]:size-4"
+      />
+      <span className="text-muted-foreground text-xs">{isLiveMode ? "Live" : "Sandbox data"}</span>
     </div>
   );
 }

@@ -3,7 +3,8 @@
 import * as React from "react";
 
 import { retrieveAssets } from "@/actions/asset";
-import { postProduct, retrieveProductsWithAsset } from "@/actions/product";
+import { getCurrentOrganization } from "@/actions/organization";
+import { retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -20,11 +21,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
-import { RecurringPeriod } from "@/constant/schema.client";
 import { Product as ProductSchema } from "@/db";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { urlToFile } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiClient, RecurringPeriod } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { Column, ColumnDef } from "@tanstack/react-table";
 import {
@@ -385,42 +386,34 @@ function ProductsModal({
 
   const createProductMutation = useMutation({
     mutationFn: async (data: ProductFormData) => {
-      const metadata: Record<string, any> = {
-        priceAmount: data.price.amount,
-      };
+      const organization = await getCurrentOrganization();
 
-      if (data.recurringPeriod) {
-        metadata.recurringPeriod = data.recurringPeriod;
-      }
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-session-token": organization?.token! },
+      });
 
-      const formData = new FormData();
+      const result = await api.post<Product>("/api/products", {
+        body: JSON.stringify({
+          name: data.name,
+          description: data.description ?? null,
+          images: [],
+          type: data.type,
+          priceAmount: parseFloat(data.price.amount),
+          assetId: data.price.asset.split(":")[1],
+          recurringPeriod: data.recurringPeriod ?? null,
+          unit: data.unit ?? null,
+          unitDivisor: data.unitDivisor ?? null,
+          unitsPerCredit: data.unitsPerCredit ?? null,
+          creditsGranted: data.creditsGranted ?? null,
+          creditExpiryDays: null,
+        }),
+        formData: new FormData(),
+      });
 
-      if (data.images?.[0]) {
-        data.images.forEach((file) => {
-          formData.append("images", file);
-        });
-      }
+      if (result.isErr()) throw new Error(result.error.message);
 
-      const productData: Parameters<typeof postProduct>[0] = {
-        name: data.name,
-        description: data.description ?? null,
-        images: [],
-        type: data.type,
-        assetId: data.price.asset.split(":")[1],
-        status: "active" as const,
-        metadata,
-        priceAmount: parseFloat(data.price.amount),
-        recurringPeriod: data.recurringPeriod ?? null,
-        unit: data.unit ?? null,
-        unitDivisor: data.unitDivisor ?? null,
-        unitsPerCredit: data.unitsPerCredit ?? null,
-        creditsGranted: data.creditsGranted ?? null,
-        creditExpiryDays: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      return await postProduct(productData, formData);
+      return result.value;
     },
     onSuccess: () => {
       invalidateOrgQuery(["products"]);

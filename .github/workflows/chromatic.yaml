@@ -3,17 +3,20 @@ name: "Chromatic Publish"
 on: push
 
 jobs:
-  test:
+  publish-chromatic:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
-      - run: npm install
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile
       - uses: chromaui/action@latest
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}

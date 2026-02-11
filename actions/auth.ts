@@ -3,7 +3,7 @@
 import { Account, Auth, PasswordReset, auth, db, passwordReset } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
 import { EmailApi } from "@/integrations/email";
-import { JWT } from "@/integrations/jwt";
+import { JWTApi } from "@/integrations/jwt";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import moment from "moment";
@@ -109,8 +109,8 @@ export const deletePasswordReset = async (id: string) => {
 const generateAndSetSession = async (account: { id: string; email: string }) => {
   const payload = { accountId: account.id, email: account.email };
 
-  const accessToken = await new JWT().sign(payload, "30m");
-  const refreshToken = await new JWT().sign(payload, "30d");
+  const accessToken = await new JWTApi().sign(payload, "30m");
+  const refreshToken = await new JWTApi().sign(payload, "30d");
 
   await new CookieManager().set([
     { key: "accessToken", value: accessToken, maxAge: 30 * 60 },
@@ -128,22 +128,22 @@ export const accountValidator = async (
   sessionMetadata?: Record<string, unknown>
 ) => {
   const { provider, sub: rawSub } = sso;
-let account = await retrieveAccount({ email });
-const isNewUser = !account;
+  let account = await retrieveAccount({ email });
+  const isNewUser = !account;
 
-if (!account) {
-  if (intent === "SIGN_IN") {
-    throw new Error("Account not found. Please sign up first.");
-  }
+  if (!account) {
+    if (intent === "SIGN_IN") {
+      throw new Error("Account not found. Please sign up first.");
+    }
 
-  const sub = provider === "local" ? await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS) : rawSub;
+    const sub = provider === "local" ? await bcrypt.hash(rawSub, BCRYPT_SALT_ROUNDS) : rawSub;
 
-  account = await postAccount({
-    email,
-    sso: { values: [{ provider, sub }] },
-    profile: profile ?? null,
-  });
-} else {
+    account = await postAccount({
+      email,
+      sso: { values: [{ provider, sub }] },
+      profile: profile ?? null,
+    });
+  } else {
     const existingSso = account.sso?.values?.find((s) => s.provider === provider);
 
     if (provider === "local") {
@@ -229,7 +229,7 @@ export const getCurrentUser = async () => {
 
   if (!accessToken) return null;
 
-  const payload = (await new JWT().verify(accessToken)) as {
+  const payload = (await new JWTApi().verify(accessToken)) as {
     accountId: string;
     email: string;
     iat: number;
@@ -266,7 +266,7 @@ export const signOut = async () => {
   const accessToken = await new CookieManager().get("accessToken");
   if (accessToken) {
     try {
-      const payload = (await new JWT().verify(accessToken)) as {
+      const payload = (await new JWTApi().verify(accessToken)) as {
         accountId: string;
         email: string;
         iat: number;

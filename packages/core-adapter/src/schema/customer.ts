@@ -68,7 +68,7 @@ export interface Customer {
   /**
    * The application metadata for the customer.
    */
-  metadata: Record<string, unknown>;
+  metadata?: Record<string, string> | null;
 
   /**
    * The created at timestamp for the customer.
@@ -92,7 +92,7 @@ export const customerWalletSchema = schemaFor<CustomerWallet>()(
     address: z.string(),
     name: z.string().optional(),
     isDefault: z.boolean(),
-    metadata: z.record(z.string(), z.any()).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
     createdAt: z.string(),
     lastUsedAt: z.string().optional(),
   })
@@ -105,7 +105,7 @@ export const customerSchema = schemaFor<Customer>()(
     email: z.email(),
     name: z.string(),
     phone: z.string().optional(),
-    metadata: z.record(z.string(), z.any()).default({}),
+    metadata: z.record(z.string(), z.string()).nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
     environment: environmentSchema,

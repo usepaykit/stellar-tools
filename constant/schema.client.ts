@@ -8,9 +8,7 @@ export const authProviderEnum = ["google", "local"] as const;
 
 export const payoutStatusEnum = ["pending", "succeeded", "failed"] as const;
 
-export const subscriptionStatusEnum = ["active", "past_due", "canceled", "paused"] as const;
-
-export const recurringPeriodEnum = ["day", "week", "month", "year"] as const;
+export const subscriptionStatusEnum = ["active", "past_due", "canceled", "paused", "trialing"] as const;
 
 export const eventTypeEnum = [
   "customer::created",
@@ -27,6 +25,10 @@ export const eventTypeEnum = [
   "subscription::deleted",
 ] as const;
 
+export const accountBillingCycleEnum = ["monthly", "yearly"] as const;
+
+export type AccountBillingCycle = (typeof accountBillingCycleEnum)[number];
+
 export type Role = (typeof roles)[number];
 
 export type Network = (typeof networkEnum)[number];
@@ -38,8 +40,6 @@ export type PayoutStatus = (typeof payoutStatusEnum)[number];
 export type EventType = (typeof eventTypeEnum)[number];
 
 export type SubscriptionStatus = (typeof subscriptionStatusEnum)[number];
-
-export type RecurringPeriod = (typeof recurringPeriodEnum)[number];
 
 export type AssetCode = SuggestedString<"XLM" | "USDC">;
 

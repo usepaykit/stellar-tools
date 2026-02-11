@@ -17,7 +17,7 @@ async function syncUserWithStellar(user: any, ctx: any, options: BillingConfig) 
     const created = await client.customers.create({
       email: user.email,
       name: user.name,
-      metadata: { source: "betterauth-plugin" },
+      metadata: { source: "betterauth-adapter" },
     });
 
     if (created.isErr()) {

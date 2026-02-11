@@ -1,45 +1,53 @@
 "use server";
 
+import { resolveAccountContext } from "@/actions/account";
+import { validateLimits } from "@/actions/plan";
+import { postTeamMember } from "@/actions/team-member";
 import {
   Network,
   Organization,
   OrganizationSecret,
   SecretAccessLog,
+  customers,
   db,
   organizationSecrets,
   organizations,
+  payments,
+  products,
   secretAccessLog,
+  subscriptions,
   teamMembers,
 } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
 import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
-import { JWT } from "@/integrations/jwt";
+import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
-import { and, eq, lt, or, sql } from "drizzle-orm";
-
-import { resolveAccountContext } from "./account";
-import { postTeamMember } from "./team-member";
+import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 
 export const postOrganizationAndSecret = async (
   params: Omit<Organization, "id" | "accountId">,
-  formDataWithFiles?: FormData,
-  defaultEnvironment: Network = "testnet"
+  defaultEnvironment: Network,
+  options?: { organizationCount?: number; formDataWithFiles?: FormData }
 ) => {
-  const logoFile = formDataWithFiles?.get("logo");
+  const logoFile = options?.formDataWithFiles?.get("logo");
 
   if (logoFile) {
     const logoUploadResult = await new FileUploadApi().upload([logoFile as File]);
-
-    const [logoUrl] = logoUploadResult || [];
-
-    params.logoUrl = logoUrl;
+    params.logoUrl = logoUploadResult?.[0] ?? null;
   }
 
   const { accountId } = await resolveAccountContext();
 
   const organizationId = generateResourceId("org", accountId, 25);
+
+  if (options?.organizationCount) {
+    const organizationTable = { ...organizations, organizationId: organizations.id, environment: null };
+    await validateLimits(organizationId, defaultEnvironment, [
+      { domain: "organizations", table: organizationTable, limit: options.organizationCount, type: "capacity" },
+    ]);
+  }
 
   const [organization] = await db
     .insert(organizations)
@@ -106,11 +114,7 @@ export const retrieveOrganizationIdAndSecret = async (id: string, environment: N
   const [result] = await db
     .select({
       organizationId: organizations.id,
-      secret: sql<{
-        encrypted: string;
-        version: number;
-        publicKey: string;
-      } | null>`
+      secret: sql<{ encrypted: string; version: number; publicKey: string } | null>`
         CASE WHEN ${sql.raw(`"organization_secret"."${prefix}_secret_encrypted"`)} IS NOT NULL THEN
             jsonb_build_object(
               'encrypted', ${sql.raw(`"organization_secret"."${prefix}_secret_encrypted"`)},
@@ -152,7 +156,7 @@ export const deleteOrganization = async (id: string) => {
 
 export const setCurrentOrganization = async (orgId: string, environment: Network = "testnet") => {
   const payload = { orgId, environment };
-  const token = await new JWT().sign(payload, "1y");
+  const token = await new JWTApi().sign(payload, "1y");
 
   await new CookieManager().set([
     { key: "selectedOrg", value: token, maxAge: 365 * 24 * 60 * 60 }, // 1 year
@@ -164,7 +168,7 @@ export const getCurrentOrganization = async () => {
 
   if (!token) return null;
 
-  const { orgId, environment } = (await new JWT().verify(token)) as {
+  const { orgId, environment } = (await new JWTApi().verify(token)) as {
     orgId: string;
     environment: Network;
   };
@@ -378,4 +382,117 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
   }
 
   return stats;
+};
+
+// -- Dashboard Internals --
+
+export type OverviewStats = {
+  activeTrials: number;
+  activeSubscriptions: number;
+  mrr: number;
+  revenue: number;
+  newCustomers: number;
+  totalCustomers: number;
+  charts: {
+    revenue: { date: string; amount: number }[];
+    subscriptions: { date: string; count: number }[];
+    customers: { date: string; count: number }[];
+  };
+};
+
+export const retrieveOverviewStats = async (
+  options: { orgId?: string; env?: Network; since?: Date } = {}
+): Promise<OverviewStats> => {
+  const { organizationId, environment } = await resolveOrgContext(options.orgId, options.env);
+
+  const DEFAULT_PERIOD_MS = 28 * 24 * 60 * 60 * 1000;
+
+  const since = options.since ?? new Date(Date.now() - DEFAULT_PERIOD_MS);
+
+  const metricsPromise = db
+    .select({
+      activeSubscriptions: sql<number>`count(*) FILTER (WHERE ${subscriptions.status} = 'active')`,
+      activeTrials: sql<number>`count(*) FILTER (WHERE ${subscriptions.status} = 'trialing')`,
+      mrr: sql<number>`coalesce(sum(${products.priceAmount}) FILTER (WHERE ${subscriptions.status} = 'active'), 0)`,
+      totalCustomers: sql<number>`(SELECT count(*) FROM ${customers} WHERE ${customers.organizationId} = ${organizationId} AND ${customers.environment} = ${environment})`,
+    })
+    .from(subscriptions)
+    .innerJoin(products, eq(subscriptions.productId, products.id))
+    .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptions.environment, environment)))
+    .then((r) => r[0]);
+
+  const revenueChartQuery = db
+    .select({
+      date: sql<string>`date_trunc('day', ${payments.createdAt})::text`,
+      amount: sql<number>`sum(${payments.amount})::int`,
+    })
+    .from(payments)
+    .where(
+      and(eq(payments.organizationId, organizationId), eq(payments.status, "confirmed"), gte(payments.createdAt, since))
+    )
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
+
+  const customersChartQuery = db
+    .select({
+      date: sql<string>`date_trunc('day', ${customers.createdAt})::text`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(customers)
+    .where(and(eq(customers.organizationId, organizationId), gte(customers.createdAt, since)))
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
+
+  const subscriptionsChartQuery = db
+    .select({
+      date: sql<string>`date_trunc('day', ${subscriptions.createdAt})::text`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.organizationId, organizationId), gte(subscriptions.createdAt, since)))
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
+
+  const [metrics, revenueChart, customersChart, subscriptionsChart, periodRevenue] = await Promise.all([
+    metricsPromise,
+    revenueChartQuery,
+    customersChartQuery,
+    subscriptionsChartQuery,
+    db
+      .select({ sum: sql<number>`coalesce(sum(${payments.amount}), 0)` })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.organizationId, organizationId),
+          eq(payments.status, "confirmed"),
+          gte(payments.createdAt, since)
+        )
+      )
+      .then((r) => r[0].sum),
+  ]);
+
+  const result = {
+    metrics,
+    revenueChart,
+    customersChart,
+    periodRevenue,
+    subscriptionsChart,
+  };
+
+  return {
+    activeTrials: Number(result.metrics.activeTrials),
+    activeSubscriptions: Number(result.metrics.activeSubscriptions),
+    mrr: Number(result.metrics.mrr),
+    revenue: Number(result.periodRevenue),
+    totalCustomers: Number(result.metrics.totalCustomers),
+    newCustomers: result.customersChart.reduce((acc, curr) => acc + curr.count, 0),
+    charts: {
+      revenue: result.revenueChart.map((r) => ({ date: r.date.split(" ")[0], amount: r.amount })),
+      subscriptions: result.subscriptionsChart.map((s) => ({
+        date: s.date.split(" ")[0],
+        count: s.count,
+      })),
+      customers: result.customersChart.map((c) => ({ date: c.date.split(" ")[0], count: c.count })),
+    },
+  };
 };

@@ -11,6 +11,10 @@ export const productStatusEnum = z.enum(["active", "archived"]);
 
 export type ProductStatus = z.infer<typeof productStatusEnum>;
 
+export const recurringPeriodEnum = z.enum(["day", "week", "month", "year"]);
+
+export type RecurringPeriod = z.infer<typeof recurringPeriodEnum>;
+
 export interface Product {
   /**
    * The unique identifier for the product.
@@ -36,11 +40,6 @@ export interface Product {
    * The images of the product.
    */
   images: string[];
-
-  /**
-   * Whether the product requires a phone number.
-   */
-  phoneNumberRequired: boolean;
 
   /**
    * The status of the product.
@@ -100,7 +99,6 @@ export const productSchema = schemaFor<Product>()(
     name: z.string(),
     description: z.string().optional(),
     images: z.array(z.string()),
-    phoneNumberRequired: z.boolean(),
     status: productStatusEnum,
     assetId: z.string(),
     type: productTypeEnum,
@@ -113,3 +111,25 @@ export const productSchema = schemaFor<Product>()(
     unitsPerCredit: z.number().optional(),
   })
 );
+
+export const createProductSchema = productSchema
+  .pick({
+    name: true,
+    description: true,
+    images: true,
+    type: true,
+    assetId: true,
+    status: true,
+    metadata: true,
+    unit: true,
+    unitDivisor: true,
+    unitsPerCredit: true,
+  })
+  .extend({
+    priceAmount: z.number(),
+    recurringPeriod: recurringPeriodEnum.optional(),
+    creditsGranted: z.number().optional(),
+    creditExpiryDays: z.number().optional(),
+  });
+
+export type CreateProduct = z.infer<typeof createProductSchema>;

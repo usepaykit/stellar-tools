@@ -53,7 +53,8 @@ export default function CheckoutPage() {
   const [paymentURI, setPaymentURI] = React.useState<{
     status: "pending" | "loading" | "success" | "error";
     uri: string | null;
-  }>({ status: "pending", uri: null });
+    message?: string | null;
+  }>({ status: "pending", uri: null, message: null });
 
   const { data: checkout, isLoading } = useQuery({
     queryKey: ["checkout", checkoutId],
@@ -106,7 +107,7 @@ export default function CheckoutPage() {
     const fetchURI = async () => {
       setPaymentURI({ status: "loading", uri: null });
 
-      const response = await api.get<{ uri: string }>(
+      const response = await api.get<{ uri: string } | { error: string }>(
         `checkout/${checkoutId}/uri?environment=${checkout?.environment}`
       );
 
@@ -115,7 +116,11 @@ export default function CheckoutPage() {
         return;
       }
 
-      setPaymentURI({ status: "success", uri: response.value.uri });
+      setPaymentURI({
+        status: "uri" in response.value ? "success" : "error",
+        uri: "uri" in response.value ? response.value.uri : null,
+        message: "error" in response.value ? response.value.error : null,
+      });
     };
 
     fetchURI();
@@ -158,6 +163,9 @@ export default function CheckoutPage() {
       setIsProcessing(false);
     }
   };
+
+  const showPaymentError = paymentURI.status === "error" && !!paymentURI.message;
+  const showQR = paymentURI.status !== "loading" && !showPaymentError;
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
@@ -281,13 +289,20 @@ export default function CheckoutPage() {
                   >
                     <div className="flex justify-center py-4">
                       <div className="rounded-2xl border-2 border-dashed bg-white p-3 shadow-sm">
-                        {paymentURI.status === "loading" ? (
+                        {paymentURI.status === "loading" && (
                           <div className="flex size-6 items-center justify-center">
                             <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                           </div>
-                        ) : (
+                        )}
+                        {showPaymentError && (
+                          <div className="bg-destructive/10 flex max-w-[200px] flex-col items-center gap-2 rounded-lg p-4 text-center">
+                            <AlertCircle className="text-destructive size-5 shrink-0" />
+                            <p className="text-destructive text-xs font-medium">{paymentURI.message}</p>
+                          </div>
+                        )}
+                        {showQR && (
                           <BeautifulQRCode
-                            data={paymentURI.uri || "pending"}
+                            data={paymentURI.uri as string}
                             foregroundColor="#000000"
                             backgroundColor="#ffffff"
                             radius={1}

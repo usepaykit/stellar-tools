@@ -4,7 +4,6 @@ import { z } from "zod";
 export const meterConfigSchema = schemaFor<MeterConfig>()(
   z.object({
     apiKey: z.string(),
-    customerId: z.string(),
     productId: z.string(),
   })
 );

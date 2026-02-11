@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+
 import { deleteWebhook, getWebhooksWithAnalytics, postWebhook, putWebhook } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -7,9 +8,11 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Curl, TypeScript } from "@/components/icon";
+import { LineChart } from "@/components/line-chart";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ChartConfig } from "@/components/ui/chart";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,10 +21,9 @@ import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, generateResourceId } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Webhook, type WebhookEvent as WebhookEventType, webhookEvent, z as Schema } from "@stellartools/core";
+import { z as Schema, Webhook, type WebhookEvent as WebhookEventType, webhookEvent } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import  z from "zod";
 import {
   ArrowDown,
   ArrowLeft,
@@ -37,8 +39,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
-import { ChartConfig } from "@/components/ui/chart";
-import { LineChart } from "@/components/line-chart";
+import z from "zod";
 
 const formatEventLabel = (event: string) =>
   event
@@ -47,7 +48,6 @@ const formatEventLabel = (event: string) =>
     .join(" ");
 
 const WEBHOOK_EVENTS = webhookEvent.map((id) => ({ id, label: formatEventLabel(id) }));
-
 
 const getTsExample = (secret: string) => /* ts */ `import { NextRequest, NextResponse } from 'next/server';
 import { StellarTools } from '@stellartools/core';
@@ -75,22 +75,19 @@ const getCurlExample = (event: string) => /* sh */ `curl -X POST https://your-ap
     "data": { "id": "res_123" }
   }'`;
 
+const activityChartConfig: ChartConfig = {
+  value: {
+    label: "Activity",
+    color: "hsl(var(--chart-1))",
+  },
+};
 
-  const activityChartConfig: ChartConfig = {
-    value: {
-      label: "Activity",
-      color: "hsl(var(--chart-1))",
-    },
-  };
-  
-  const responseTimeChartConfig: ChartConfig = {
-    value: {
-      label: "Response Time",
-      color: "hsl(var(--chart-1))",
-    },
-  };
-
-
+const responseTimeChartConfig: ChartConfig = {
+  value: {
+    label: "Response Time",
+    color: "hsl(var(--chart-1))",
+  },
+};
 
 const ResponseTimeChart = ({ data }: { data?: number[] }) => {
   const chartData = data?.map((value, index) => ({
@@ -265,12 +262,11 @@ const columns: ColumnDef<WebhookDestination>[] = [
   },
 ];
 
-
- function WebhooksPageContent() {
+function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-    const [editingWebhook, setEditingWebhook] = React.useState<WebhookDestination | null>(null);
-    const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
+  const [editingWebhook, setEditingWebhook] = React.useState<WebhookDestination | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics());
@@ -282,76 +278,71 @@ const columns: ColumnDef<WebhookDestination>[] = [
     }
   }, [searchParams]);
 
+  const disableWebhookMutation = useMutation({
+    mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => putWebhook(id, { isDisabled }),
+    onSuccess: (_, { isDisabled }) => {
+      invalidateOrgQuery(["webhooks"]);
+      toast.success(isDisabled ? "Webhook disabled" : "Webhook enabled");
+    },
+    onError: () => {
+      toast.error("Failed to update webhook");
+    },
+  });
 
-    const disableWebhookMutation = useMutation({
-      mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => putWebhook(id, { isDisabled }),
-      onSuccess: (_, { isDisabled }) => {
-        invalidateOrgQuery(["webhooks"]);
-        toast.success(isDisabled ? "Webhook disabled" : "Webhook enabled");
-      },
-      onError: () => {
-        toast.error("Failed to update webhook");
-      },
-    });
-  
-    const deleteWebhookMutation = useMutation({
-      mutationFn: (id: string) => deleteWebhook(id),
-      onSuccess: () => {
-        invalidateOrgQuery(["webhooks"]);
-        toast.success("Webhook deleted");
-        setDeleteConfirmId(null);
-      },
-      onError: () => {
-        toast.error("Failed to delete webhook");
-      },
-    });
-  
+  const deleteWebhookMutation = useMutation({
+    mutationFn: (id: string) => deleteWebhook(id),
+    onSuccess: () => {
+      invalidateOrgQuery(["webhooks"]);
+      toast.success("Webhook deleted");
+      setDeleteConfirmId(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete webhook");
+    },
+  });
 
-      const handleModalChange = (open: boolean) => {
-        if (!open) setEditingWebhook(null);
-        setIsModalOpen(open);
-        const params = new URLSearchParams(searchParams?.toString());
-        if (open) {
-          params.set("create", "true");
-        } else {
-          params.delete("create");
-        }
-        router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
-      };
-    
-      const handleEditWebhook = (webhook: WebhookDestination) => {
-        setEditingWebhook(webhook);
-        setIsModalOpen(true);
-        const params = new URLSearchParams(searchParams?.toString());
-        params.delete("create");
-        const query = params.toString();
-        router.replace(`${window.location.pathname}${query ? `?${query}` : ""}`);
-      };
-    
-      const tableActions: TableAction<WebhookDestination>[] = [
-        {
-          label: "Edit",
-          onClick: handleEditWebhook,
-        },
-        {
-          label: "Disable",
-          onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: true }),
-          when: (webhook) => !webhook.isDisabled,
-        },
-        {
-          label: "Enable",
-          onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: false }),
-          when: (webhook) => webhook.isDisabled,
-        },
-        {
-          label: "Delete",
-          onClick: (webhook) => setDeleteConfirmId(webhook.id),
-          variant: "destructive",
-        },
-      ];
+  const handleModalChange = (open: boolean) => {
+    if (!open) setEditingWebhook(null);
+    setIsModalOpen(open);
+    const params = new URLSearchParams(searchParams?.toString());
+    if (open) {
+      params.set("create", "true");
+    } else {
+      params.delete("create");
+    }
+    router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
+  };
 
+  const handleEditWebhook = (webhook: WebhookDestination) => {
+    setEditingWebhook(webhook);
+    setIsModalOpen(true);
+    const params = new URLSearchParams(searchParams?.toString());
+    params.delete("create");
+    const query = params.toString();
+    router.replace(`${window.location.pathname}${query ? `?${query}` : ""}`);
+  };
 
-
+  const tableActions: TableAction<WebhookDestination>[] = [
+    {
+      label: "Edit",
+      onClick: handleEditWebhook,
+    },
+    {
+      label: "Disable",
+      onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: true }),
+      when: (webhook) => !webhook.isDisabled,
+    },
+    {
+      label: "Enable",
+      onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: false }),
+      when: (webhook) => webhook.isDisabled,
+    },
+    {
+      label: "Delete",
+      onClick: (webhook) => setDeleteConfirmId(webhook.id),
+      variant: "destructive",
+    },
+  ];
 
   return (
     <DashboardSidebar>
@@ -396,40 +387,40 @@ const columns: ColumnDef<WebhookDestination>[] = [
           </Tabs>
         </div>
       </DashboardSidebarInset>
-         <WebhooksModal
-           open={isModalOpen}
-           onOpenChange={handleModalChange}
-           editingWebhook={editingWebhook}
-           onEditingWebhookChange={setEditingWebhook}
-         />
-   
-         <FullScreenModal
-           open={!!deleteConfirmId}
-           onOpenChange={(open) => !open && setDeleteConfirmId(null)}
-           title="Delete webhook?"
-           size="small"
-           description="This will permanently remove this webhook destination. Events will no longer be sent to this endpoint."
-           footer={
-             <div className="flex w-full justify-end gap-2">
-               <Button type="button" variant="outline" onClick={() => setDeleteConfirmId(null)}>
-                 Cancel
-               </Button>
-               <Button
-                 type="button"
-                 variant="destructive"
-                 onClick={() => deleteConfirmId && deleteWebhookMutation.mutate(deleteConfirmId)}
-                 disabled={deleteWebhookMutation.isPending}
-                 isLoading={deleteWebhookMutation.isPending}
-               >
-                 {deleteWebhookMutation.isPending ? "Deleting…" : "Delete"}
-               </Button>
-             </div>
-           }
-         >
-           <p className="text-muted-foreground text-sm">
-             This action cannot be undone. The webhook endpoint will stop receiving events immediately.
-           </p>
-         </FullScreenModal>
+      <WebhooksModal
+        open={isModalOpen}
+        onOpenChange={handleModalChange}
+        editingWebhook={editingWebhook}
+        onEditingWebhookChange={setEditingWebhook}
+      />
+
+      <FullScreenModal
+        open={!!deleteConfirmId}
+        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
+        title="Delete webhook?"
+        size="small"
+        description="This will permanently remove this webhook destination. Events will no longer be sent to this endpoint."
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setDeleteConfirmId(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => deleteConfirmId && deleteWebhookMutation.mutate(deleteConfirmId)}
+              disabled={deleteWebhookMutation.isPending}
+              isLoading={deleteWebhookMutation.isPending}
+            >
+              {deleteWebhookMutation.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-muted-foreground text-sm">
+          This action cannot be undone. The webhook endpoint will stop receiving events immediately.
+        </p>
+      </FullScreenModal>
     </DashboardSidebar>
   );
 }
@@ -441,7 +432,6 @@ export default function WebhooksPage() {
     </React.Suspense>
   );
 }
-
 
 const schema = z.object({
   destinationName: z.string().min(1, "Destination name is required"),
@@ -464,7 +454,7 @@ const schema = z.object({
     .min(1, "Please select at least one event"),
 });
 
-  interface WebhookDestination extends Pick<Webhook, "id" | "name" | "url" | "isDisabled"> {
+interface WebhookDestination extends Pick<Webhook, "id" | "name" | "url" | "isDisabled"> {
   eventCount: number;
   eventsFrom: "account" | "test";
   activity?: number[];
@@ -473,33 +463,29 @@ const schema = z.object({
   description?: string | null;
   events?: string[];
 }
-  interface WebhooksModalProps {
+interface WebhooksModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   editingWebhook?: WebhookDestination | null;
   onEditingWebhookChange?: (webhook: WebhookDestination | null) => void;
 }
 
-
 function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWebhookChange }: WebhooksModalProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
   const invalidateOrgQuery = useInvalidateOrgQuery();
-    const { data: organization, isLoading } = useOrgContext();
-    const [secret, setSecret] = React.useState<string>("");
+  const { data: organization, isLoading } = useOrgContext();
+  const [secret, setSecret] = React.useState<string>("");
 
-    React.useEffect(()=>{
-      console.log("Organization ID:", organization?.id);
-      if (!open || isLoading) return;
-      const webhookSecret = generateResourceId("whsec", organization?.id!, 32, 'sha256');
-      console.log("Generated webhook secret:", webhookSecret);
-      setSecret(webhookSecret);
-    },[open, organization?.id, isLoading])
-
+  React.useEffect(() => {
+    console.log("Organization ID:", organization?.id);
+    if (!open || isLoading) return;
+    const webhookSecret = generateResourceId("whsec", organization?.id!, 32, "sha256");
+    console.log("Generated webhook secret:", webhookSecret);
+    setSecret(webhookSecret);
+  }, [open, organization?.id, isLoading]);
 
   const { copied, handleCopy } = useCopy();
   const isEditMode = !!editingWebhook;
-
-
 
   const handleCopySecret = async () => {
     if (secret) {
@@ -566,7 +552,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
       onOpenChange(false);
     },
     onError: (error) => {
-      console.log('error creating webhook', error.message)
+      console.log("error creating webhook", error.message);
       toast.error("Failed to create webhook destination");
     },
   });
@@ -609,7 +595,6 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
     if (isEditMode) {
       updateWebhookMutation.mutate(data);
     } else {
-
       createWebhookMutation.mutate(data);
     }
   };
@@ -775,29 +760,29 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
             )}
           </div>
 
-         <div className="space-y-4">
-                   <h4 className="text-sm font-bold tracking-tight">Implementation Guide</h4>
-                   <Tabs defaultValue="ts">
-                     <TabsList className="bg-muted/50 border-none p-1">
-                       <TabsTrigger value="ts" className="gap-2 px-4 py-1.5">
-                         <TypeScript className="size-3" /> TypeScript
-                       </TabsTrigger>
-                       <TabsTrigger value="curl" className="gap-2 px-4 py-1.5">
-                         <Curl className="size-3" /> cURL
-                       </TabsTrigger>
-                     </TabsList>
-                     <TabsContent value="ts" className="pt-2">
-                       <CodeBlock language="typescript" filename="api/webhook/route.ts" maxHeight="400px">
-                         {getTsExample(secret)}
-                       </CodeBlock>
-                     </TabsContent>
-                     <TabsContent value="curl" className="pt-2">
-                       <CodeBlock language="bash" maxHeight="400px">
-                         {getCurlExample(events[0] || "payment.confirmed")}
-                       </CodeBlock>
-                     </TabsContent>
-                   </Tabs>
-                 </div>
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold tracking-tight">Implementation Guide</h4>
+            <Tabs defaultValue="ts">
+              <TabsList className="bg-muted/50 border-none p-1">
+                <TabsTrigger value="ts" className="gap-2 px-4 py-1.5">
+                  <TypeScript className="size-3" /> TypeScript
+                </TabsTrigger>
+                <TabsTrigger value="curl" className="gap-2 px-4 py-1.5">
+                  <Curl className="size-3" /> cURL
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="ts" className="pt-2">
+                <CodeBlock language="typescript" filename="api/webhook/route.ts" maxHeight="400px">
+                  {getTsExample(secret)}
+                </CodeBlock>
+              </TabsContent>
+              <TabsContent value="curl" className="pt-2">
+                <CodeBlock language="bash" maxHeight="400px">
+                  {getCurlExample(events[0] || "payment.confirmed")}
+                </CodeBlock>
+              </TabsContent>
+            </Tabs>
+          </div>
         </aside>
       </div>
     </FullScreenModal>

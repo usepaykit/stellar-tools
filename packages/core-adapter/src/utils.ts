@@ -4,15 +4,21 @@ import { z } from "zod";
 export const chunk = <T>(arr: T[], size: number): T[][] =>
   Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, i * size + size));
 
-export function validateSchema<T>(schema: z.ZodType<T>, data: unknown): Result<T, Error> {
+export const validateSchema = <T>(schema: z.ZodType<T>, data: unknown): Result<T, Error> => {
   const result = schema.safeParse(data);
 
   if (!result.success) {
-    return Result.err(new Error(`Validation failed: ${result.error.message}`));
+    const message = result.error.issues
+      .map((issue) => {
+        const path = issue.path.length ? `${issue.path.join(".")}: ` : "";
+        return `${path}${issue.message}`;
+      })
+      .join("; ");
+    return Result.err(new Error(message));
   }
 
   return Result.ok(result.data);
-}
+};
 
 export const executeWithRetryWithHandler = async <T>(
   apiCall: () => Promise<T>,

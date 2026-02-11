@@ -3,7 +3,7 @@
 import { AuroraBackground } from "@/components/aurora-background";
 import { AppConnectionWidget } from "@/components/landing/app-connection-wdget";
 import FeaturesSection from "@/components/landing/features-section";
-import FooterSection from "@/components/landing/footer-section";
+import { FooterSection } from "@/components/landing/footer-section";
 import HeroSection from "@/components/landing/hero-section";
 import WidgetSection from "@/components/landing/widget";
 import { Header } from "@/components/ui/navbar";

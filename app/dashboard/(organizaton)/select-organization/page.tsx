@@ -2,7 +2,9 @@
 
 import * as React from "react";
 
+import { retrieveAccount } from "@/actions/account";
 import { postOrganizationAndSecret, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
+import { retrieveOwnerPlan } from "@/actions/plan";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
@@ -190,22 +192,23 @@ const CreateOrganizationModal = ({
 
   const createOrgMutation = useMutation({
     mutationFn: async (data: CreateOrganizationFormData) => {
-      const formData = new FormData();
+      const account = await retrieveAccount({ accessToken: true });
+
+      if (!account) throw new Error("Account not found");
 
       const defaultEnvironment = "testnet" as const;
+      const formData = new FormData();
 
       if (data.logo?.[0]) formData.append("logo", data.logo[0]);
 
-      /**
-       * Creates a testnet account for the organization
-       * Mainnet account is created later when the organization is activated
-       */
-      const org = await postOrganizationAndSecret(
+      const { plan } = await retrieveOwnerPlan({ accId: account.id });
+
+      return await postOrganizationAndSecret(
         {
           name: data.name,
           phoneNumber: phoneNumberToString(data.phoneNumber),
-          description: data.description || null,
-          logoUrl: null, // will be set after upload
+          description: data.description ?? null,
+          logoUrl: null,
           settings: null,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -213,11 +216,9 @@ const CreateOrganizationModal = ({
           address: null,
           socialLinks: null,
         },
-        formData,
-        defaultEnvironment
+        defaultEnvironment,
+        { organizationCount: plan.organizations, formDataWithFiles: formData }
       );
-
-      return org;
     },
     onSuccess: async (org) => {
       toast.success("Organization created successfully");
