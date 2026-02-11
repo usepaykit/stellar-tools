@@ -28,18 +28,14 @@ import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 
 export const postOrganizationAndSecret = async (
   params: Omit<Organization, "id" | "accountId">,
-  formDataWithFiles?: FormData,
-  defaultEnvironment: Network = "testnet",
-  options?: { organizationCount?: number }
+  defaultEnvironment: Network,
+  options?: { organizationCount?: number; formDataWithFiles?: FormData }
 ) => {
-  const logoFile = formDataWithFiles?.get("logo");
+  const logoFile = options?.formDataWithFiles?.get("logo");
 
   if (logoFile) {
     const logoUploadResult = await new FileUploadApi().upload([logoFile as File]);
-
-    const [logoUrl] = logoUploadResult || [];
-
-    params.logoUrl = logoUrl;
+    params.logoUrl = logoUploadResult?.[0] ?? null;
   }
 
   const { accountId } = await resolveAccountContext();

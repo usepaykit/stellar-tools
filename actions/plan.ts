@@ -2,8 +2,8 @@
 
 import { getCurrentUser } from "@/actions/auth";
 import { Network, accounts, db, organizations, plan } from "@/db";
-import { and, desc, eq, sql } from "drizzle-orm";
-import { AnyPgColumn, AnyPgTable } from "drizzle-orm/pg-core";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { AnyPgColumn, AnyPgTable, getTableConfig } from "drizzle-orm/pg-core";
 import moment from "moment";
 
 export const retrievePlans = async () => {
@@ -62,10 +62,14 @@ export const retrieveOwnerPlan = async (filter: { accId?: string; orgId?: string
 *    `products`: You can have 100 total products.
  */
 
+/**
+ * Senior Tip: Use a more flexible type for GatedTable
+ * to handle different column names across different tables.
+ */
 type GatedTable = AnyPgTable & {
   organizationId: AnyPgColumn;
-  environment: AnyPgColumn | null;
   createdAt: AnyPgColumn;
+  environment?: AnyPgColumn | null;
 };
 
 export interface GatingCheck {
@@ -81,28 +85,30 @@ export const validateLimits = async (
   checks: GatingCheck[],
   options: { throwOnError?: boolean } = { throwOnError: true }
 ) => {
-  if (checks.length === 0) throw new Error("No checks provided");
+  if (checks.length === 0) return {};
 
-  const startOfCycle = moment().startOf("month").toISOString();
+  const startOfCycle = new Date();
+  startOfCycle.setUTCDate(1);
+  startOfCycle.setUTCHours(0, 0, 0, 0);
 
-  // 1. Construct an object of subqueries
-  // We use the index of the check as the key to prevent naming collisions
   const selectShape = checks.reduce(
     (acc, check, index) => {
+      const table = check.table;
+      const { name: tableName } = getTableConfig(table);
+
       const filters = [
-        eq(check.table.organizationId, orgId),
-        check.table.environment ? eq(check.table.environment, env) : undefined,
-      ];
+        eq(table.organizationId, orgId),
+        table.environment ? eq(table.environment, env) : undefined,
+      ].filter(Boolean);
 
       if (check.type === "throughput") {
-        filters.push(sql`${check.table.createdAt} >= ${startOfCycle}`);
+        filters.push(gte(table.createdAt, startOfCycle));
       }
 
-      // Build the specific subquery for this table
       acc[`check_${index}`] = sql<number>`(
       SELECT count(*)::int 
-      FROM ${check.table} 
-      WHERE ${and(...filters.filter(Boolean))}
+      FROM ${sql.identifier(tableName)} 
+      WHERE ${and(...filters)}
     )`;
 
       return acc;
@@ -112,19 +118,21 @@ export const validateLimits = async (
 
   const [results] = await db.select(selectShape).from(sql`(SELECT 1) as dummy`);
 
-  const violations = checks
-    .map((check, index) => {
-      const currentUsage = results[`check_${index}`] ?? 0;
-      if (currentUsage >= check.limit) {
-        return `${check.domain} (${currentUsage}/${check.limit})`;
-      }
-      return null;
-    })
-    .filter(Boolean);
+  const violations: string[] = [];
+  const usageStats: Record<string, number> = {};
 
-  if (options?.throwOnError && violations.length > 0) {
-    throw new Error(`Plan limits reached: ${violations.join(", ")}`);
+  checks.forEach((check, index) => {
+    const currentUsage = Number(results[`check_${index}`]) || 0;
+    usageStats[check.domain] = currentUsage;
+
+    if (currentUsage >= check.limit) {
+      violations.push(`${check.domain} (${currentUsage}/${check.limit})`);
+    }
+  });
+
+  if (options.throwOnError && violations.length > 0) {
+    throw new Error(`Plan limits reached: ${violations.join(", ")}. Please upgrade.`);
   }
 
-  return results as Record<string, number>;
+  return usageStats;
 };
