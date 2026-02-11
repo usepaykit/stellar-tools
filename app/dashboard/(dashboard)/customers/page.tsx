@@ -270,7 +270,7 @@ export function CustomerModal({
       const metadataArray = customer.metadata
         ? Object.entries(customer.metadata).map(([key, value]) => ({
             key,
-            value: value || "",
+            value: String(value),
           }))
         : [];
 
@@ -312,22 +312,27 @@ export function CustomerModal({
       );
 
       if (isEditMode) {
-        return await putCustomer(customer!.id!, {
-          name: data.name,
-          email: data.email,
-          phone: phoneString,
-          metadata: metadataRecord,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+        const response = await api.put<Customer>(`customers/${customer?.id}`, {
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            phone: phoneString,
+            metadata: metadataRecord,
+          }),
         });
+
+        if (response.isErr()) throw new Error(response.error.message);
+
+        return response.value;
       }
 
-      const response = await api.post<Customer>("/api/customers", {
+      const response = await api.post<Customer>("customers", {
         body: JSON.stringify({
           name: data.name,
           email: data.email,
           phone: phoneString,
           metadata: metadataRecord,
+          wallets: [],
         }),
       });
 
