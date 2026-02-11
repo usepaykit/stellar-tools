@@ -313,12 +313,10 @@ export function CustomerModal({
 
       if (isEditMode) {
         const response = await api.put<Customer>(`customers/${customer?.id}`, {
-          body: JSON.stringify({
-            name: data.name,
-            email: data.email,
-            phone: phoneString,
-            metadata: metadataRecord,
-          }),
+          name: data.name,
+          email: data.email,
+          phone: phoneString,
+          metadata: metadataRecord,
         });
 
         if (response.isErr()) throw new Error(response.error.message);
@@ -327,13 +325,11 @@ export function CustomerModal({
       }
 
       const response = await api.post<Customer>("customers", {
-        body: JSON.stringify({
-          name: data.name,
-          email: data.email,
-          phone: phoneString,
-          metadata: metadataRecord,
-          wallets: [],
-        }),
+        name: data.name,
+        email: data.email,
+        phone: phoneString,
+        metadata: metadataRecord,
+        wallets: [],
       });
 
       if (response.isErr()) throw new Error(response.error.message);

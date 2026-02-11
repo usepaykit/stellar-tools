@@ -59,7 +59,11 @@ export async function withEvent<T>(
           return (Array.isArray(mapped) ? mapped : [mapped]).map((data) => ({ ...data, type: cfg.type }));
         });
 
-        if (internalEvents.length > 0) await emitEvents(internalEvents);
+        if (internalEvents.length > 0) {
+          const orgId = webhookConfig?.organizationId;
+          const env = webhookConfig?.environment;
+          await emitEvents(internalEvents, orgId, env);
+        }
       }
 
       if (webhookConfig?.triggers) {

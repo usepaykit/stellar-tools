@@ -42,9 +42,7 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ custome
 
   const { customerId } = await context.params;
 
-  const body = (await req.json())?.body;
-
-  const result = await Result.andThenAsync(validateSchema(updateCustomerSchema, JSON.parse(body)), async (data) => {
+  const result = await Result.andThenAsync(validateSchema(updateCustomerSchema, await req.json()), async (data) => {
     const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
     const customer = await putCustomer(customerId, data, organizationId, environment);
     return Result.ok(customer);
