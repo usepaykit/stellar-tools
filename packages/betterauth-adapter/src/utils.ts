@@ -1,5 +1,5 @@
 import { Result, StellarTools } from "@stellartools/core";
-import { APIError, GenericEndpointContext } from "better-auth";
+import { APIError, GenericEndpointContext, MiddlewareInputContext, MiddlewareOptions } from "better-auth";
 
 import { BillingConfig } from "./types";
 
@@ -21,3 +21,10 @@ export const getContext = (ctx: GenericEndpointContext, options: BillingConfig) 
     adapter: ctx.context.adapter,
   };
 };
+
+export function configMiddleware(config: MiddlewareInputContext<MiddlewareOptions>) {
+  return async (ctx: any, next: any) => {
+    ctx.context = { ...(ctx?.context || {}), ...config };
+    return next();
+  };
+}

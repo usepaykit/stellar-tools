@@ -33,6 +33,10 @@ export class ApiClient {
     });
   }
 
+   private formatPath(url: string): string {
+    return url.startsWith("/") ? url.slice(1) : url;
+  }
+
   private request = async <T>(call: () => Promise<T>): Promise<Result<T, Error>> => {
     return Result.tryPromise({
       try: call,
@@ -40,19 +44,19 @@ export class ApiClient {
     });
   };
 
-  get = <T>(url: string, searchParams?: any) => this.request(() => this.api.get(url, { searchParams }).json<T>());
+  get = <T>(url: string, searchParams?: any) => this.request(() => this.api.get(this.formatPath(url), { searchParams }).json<T>());
 
   post = <T>(url: string, body?: any) =>
-    this.request(() => this.api.post(url, { json: body, headers: { "Content-Type": "application/json" } }).json<T>());
+    this.request(() => this.api.post(this.formatPath(url), { json: body, headers: { "Content-Type": "application/json" } }).json<T>());
 
   // POST with FormData (e.g. file uploads). No Content-Type is set so the browser sends multipart/form-data with boundary.
   postFormData = <T>(url: string, formData: FormData) =>
-    this.request(() => this.api.post(url, { body: formData }).json<T>());
+    this.request(() => this.api.post(this.formatPath(url), { body: formData }).json<T>());
 
   put = <T>(url: string, body?: any) =>
-    this.request(() => this.api.put(url, { json: body, headers: { "Content-Type": "application/json" } }).json<T>());
+    this.request(() => this.api.put(this.formatPath(url), { json: body, headers: { "Content-Type": "application/json" } }).json<T>());
 
-  delete = <T>(url: string) => this.request(() => this.api.delete(url).json<T>());
+  delete = <T>(url: string) => this.request(() => this.api.delete(this.formatPath(url)).json<T>());
 
   // For External Calls (like Webhooks).
   requestDetailed = async <T>(call: () => Promise<Response>): Promise<Result<DetailedResponse<T>, Error>> => {
@@ -83,5 +87,6 @@ export class ApiClient {
     });
   };
 
-  postDetailed = <T>(url: string, body?: any) => this.requestDetailed<T>(() => this.api.post(url, { body }));
+  postDetailed = <T>(url: string, body?: any) => this.requestDetailed<T>(() => this.api.post(this.formatPath(url), { body }));
 }
+

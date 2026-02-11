@@ -1,11 +1,14 @@
-import { GenericEndpointContext, z } from "better-auth";
+import { z as Schema } from "@stellartools/core";
+import { GenericEndpointContext } from "better-auth";
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 
 import { BillingConfig } from "./types";
-import { getContext, unwrap } from "./utils";
+import { configMiddleware, getContext, unwrap } from "./utils";
 
-export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<string> => {
-  const { user, stellar, adapter } = getContext(ctx, { apiKey: ctx.context.config.apiKey });
+const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<string> => {
+  console.dir({ ctx }, { depth: 100 });
+  const context = ctx?.context;
+  const { user, stellar, adapter } = getContext(ctx, { apiKey: context?.apiKey });
 
   const dbUser = await adapter.findOne<{ stellarCustomerId: string }>({
     model: "user",
@@ -18,10 +21,11 @@ export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Pro
     await stellar.customers.create({
       email: user.email,
       name: user.name,
+      wallets: [],
       metadata: {
         source: "betterauth-adapter",
         ...(user.image ? { image: user.image } : {}),
-        ...(ctx.context.session?.session?.id ? { sessionId: ctx.context.session?.session?.id } : {}),
+        ...(ctx.context.session?.session?.id ? { sessionId: ctx.context?.session?.session?.id } : {}),
       },
     })
   );
@@ -38,7 +42,8 @@ export const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Pro
 // -- CUSTOMERS --
 
 export const createCustomer = (options: BillingConfig) =>
-  createAuthEndpoint("/stellar/customer/create", { method: "POST", use: [sessionMiddleware] }, async (ctx) => {
+  createAuthEndpoint("/stellar/customer/create", { method: "POST", use: [configMiddleware] }, async (ctx) => {
+    console.log({ ctx });
     const customerId = await retrieveOrCreateCustomer(ctx);
     const { stellar } = getContext(ctx, options);
     const result = unwrap(await stellar.customers.retrieve(customerId));
@@ -58,11 +63,11 @@ export const updateCustomer = (options: BillingConfig) =>
     "/stellar/customer/update",
     {
       method: "POST",
-      body: z.object({
-        email: z.email().optional(),
-        name: z.string().optional(),
-        phone: z.string().optional(),
-        metadata: z.record(z.string(), z.string()).nullable().optional(),
+      body: Schema.object({
+        email: Schema.email().optional(),
+        name: Schema.string().optional(),
+        phone: Schema.string().optional(),
+        metadata: Schema.record(Schema.string(), Schema.string()).nullable().optional(),
       }),
       use: [sessionMiddleware],
     },
@@ -79,11 +84,11 @@ export const createSubscription = (options: BillingConfig) =>
     "/stellar/subscription/create",
     {
       method: "POST",
-      body: z.object({
-        productId: z.string(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-        cancelAtPeriodEnd: z.boolean(),
-        period: z.object({ from: z.coerce.date(), to: z.coerce.date() }),
+      body: Schema.object({
+        productId: Schema.string(),
+        metadata: Schema.record(Schema.string(), Schema.unknown()).optional(),
+        cancelAtPeriodEnd: Schema.boolean(),
+        period: Schema.object({ from: Schema.coerce.date(), to: Schema.coerce.date() }),
       }),
       use: [sessionMiddleware],
     },
@@ -113,10 +118,10 @@ export const consumeCredits = (options: BillingConfig) =>
     "/stellar/credits/consume",
     {
       method: "POST",
-      body: z.object({
-        productId: z.string(),
-        rawAmount: z.number(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
+      body: Schema.object({
+        productId: Schema.string(),
+        rawAmount: Schema.number(),
+        metadata: Schema.record(Schema.string(), Schema.unknown()).optional(),
       }),
       use: [sessionMiddleware],
     },
@@ -146,10 +151,10 @@ export const getTransactions = (options: BillingConfig) =>
     "/stellar/credits/transactions",
     {
       method: "GET",
-      query: z.object({
-        productId: z.string(),
-        limit: z.coerce.number().optional(),
-        offset: z.coerce.number().optional(),
+      query: Schema.object({
+        productId: Schema.string(),
+        limit: Schema.coerce.number().optional(),
+        offset: Schema.coerce.number().optional(),
       }),
       use: [sessionMiddleware],
     },
@@ -170,12 +175,12 @@ export const createRefund = (options: BillingConfig) =>
     "/stellar/refund/create",
     {
       method: "POST",
-      body: z.object({
-        paymentId: z.string(),
-        amount: z.number(),
-        reason: z.string(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-        receiverPublicKey: z.string(),
+      body: Schema.object({
+        paymentId: Schema.string(),
+        amount: Schema.number(),
+        reason: Schema.string(),
+        metadata: Schema.record(Schema.string(), Schema.unknown()).optional(),
+        receiverPublicKey: Schema.string(),
       }),
       use: [sessionMiddleware],
     },
