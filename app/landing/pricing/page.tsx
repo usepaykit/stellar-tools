@@ -38,11 +38,11 @@ const PricingContent = async () => {
 
   return (
     <>
-      <div className="mb-16 text-center">
-        <h1 className="from-foreground to-foreground/70 mb-4 bg-linear-to-b bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl lg:text-6xl">
+      <div className="mb-14 text-center">
+        <h1 className="text-foreground text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
           Simple, transparent pricing
         </h1>
-        <p className="text-muted-foreground mx-auto max-w-2xl text-lg">
+        <p className="text-muted-foreground mx-auto mt-4 max-w-2xl text-lg leading-relaxed">
           Accept Stellar payments with ease. Start free, pay only for what you use. No hidden fees, no surprises.
         </p>
       </div>
@@ -61,6 +61,11 @@ export default async function PricingPage() {
         <main className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
           <React.Suspense fallback={<PricingLoadingFallback />}>
             <PricingContent />
+            {/* <Pricing
+              title="Simple, transparent pricing"
+              description="Accept Stellar payments with ease. Start free, pay only for what you use. No hidden fees, no surprises."
+              plans={MOCK_PRICING_PLANS}
+            /> */}
           </React.Suspense>
         </main>
         <FooterSection />
@@ -72,17 +77,20 @@ export default async function PricingPage() {
 function PricingLoadingFallback() {
   return (
     <>
-      <div className="mb-16 text-center">
-        <div className="bg-muted/50 mx-auto mb-4 h-12 w-96 max-w-full animate-pulse rounded-md" />
-        <div className="bg-muted/50 mx-auto h-5 w-md max-w-full animate-pulse rounded-md" />
+      <div className="mb-14 text-center">
+        <div className="bg-muted/50 mx-auto h-11 w-80 max-w-full animate-pulse rounded-lg sm:w-96" />
+        <div className="bg-muted/40 mx-auto mt-4 h-5 w-72 max-w-full animate-pulse rounded-md" />
       </div>
       <div className="mb-10 flex justify-center">
-        <div className="bg-muted/50 h-10 w-64 animate-pulse rounded-lg" />
+        <div className="bg-muted/40 h-11 w-56 animate-pulse rounded-full" />
       </div>
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-muted/30 h-[380px] animate-pulse rounded-xl" />
+          <div key={i} className="bg-muted/20 h-[420px] animate-pulse rounded-2xl" />
         ))}
+      </div>
+      <div className="mt-10 flex justify-start">
+        <div className="bg-muted/20 h-[320px] w-full max-w-md animate-pulse rounded-2xl" />
       </div>
     </>
   );

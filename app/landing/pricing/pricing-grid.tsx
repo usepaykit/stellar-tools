@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,141 +76,202 @@ export function PricingGrid({ plans }: PricingGridProps) {
     if (url) window.location.href = url;
   };
 
+  const standardPlans = plans.filter((p) => !p.isCustom);
+  const enterprisePlans = plans.filter((p) => p.isCustom);
+  const displaySavings = maxSavings > 0 ? maxSavings : 40;
+
   return (
-    <>
-      <div className="mb-10 flex justify-center">
-        <Tabs value={cycle} onValueChange={(v) => setCycle(v as AccountBillingCycle)} className="w-full max-w-sm">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="yearly" className="inline-flex items-center justify-center gap-2">
+    <div className="space-y-10">
+      <Tabs value={cycle} onValueChange={(v) => setCycle(v as AccountBillingCycle)} className="w-full">
+        <div className="flex justify-center">
+          <TabsList
+            aria-label="Billing period"
+            className="bg-muted/60 h-auto w-auto rounded-full p-1 shadow-inner [&>span]:rounded-full"
+          >
+            <TabsTrigger
+              value="monthly"
+              className="rounded-full px-5 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+            >
+              Monthly
+            </TabsTrigger>
+            <TabsTrigger
+              value="yearly"
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-primary data-[state=inactive]:hover:text-primary/90"
+            >
               Yearly
-              {maxSavings > 0 && (
-                <Badge variant="secondary" className="bg-primary/20 text-primary text-[10px] font-semibold">
-                  Save {maxSavings}%
-                </Badge>
-              )}
+              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                Save {displaySavings}%
+              </span>
             </TabsTrigger>
           </TabsList>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
 
-      <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-5">
-        {plans.map((plan) => {
-          const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
-          const benefits = buildBenefits(plan);
-          const isCustom = plan.isCustom;
-          const isPopular = /starter/i.test(plan.name);
+      {/* Standard plans: 4-column grid */}
+      {standardPlans.length > 0 && (
+        <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {standardPlans.map((plan) => {
+            const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
+            const benefits = buildBenefits(plan);
+            const isPopular = /starter/i.test(plan.name);
 
-          return (
-            <Card
-              key={plan.id}
-              className={cn(
-                "relative flex flex-col rounded-2xl transition-all hover:shadow-xl",
-                isPopular ? "bg-primary border-primary text-primary-foreground shadow-lg" : "bg-card border-border"
-              )}
-            >
-              {isPopular && (
-                <div className="bg-primary-foreground text-primary absolute -top-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-md">
-                  <Star className="fill-primary size-3" />
-                  Popular
-                </div>
-              )}
+            return (
+              <Card
+                key={plan.id}
+                className={cn(
+                  "relative flex flex-col rounded-2xl border-2 transition-all duration-200 hover:shadow-lg",
+                  !isPopular && "overflow-hidden",
+                  isPopular
+                    ? "border-primary bg-primary text-primary-foreground shadow-primary/10 shadow-lg"
+                    : "border-border bg-card"
+                )}
+              >
+                {isPopular && (
+                  <div className="border-primary bg-background text-primary ring-background absolute top-0 left-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-bold shadow-lg ring-2">
+                    <Star className="fill-primary size-4" />
+                    Popular
+                  </div>
+                )}
 
-              <CardHeader className="pb-6">
-                <CardTitle
-                  className={cn("text-2xl font-bold", isPopular ? "text-primary-foreground" : "text-foreground")}
-                >
-                  {plan.name}
-                </CardTitle>
-                <CardDescription
-                  className={cn("text-base", isPopular ? "text-primary-foreground/80" : "text-muted-foreground")}
-                >
-                  {plan.description}
-                </CardDescription>
-              </CardHeader>
+                <CardHeader className="pt-8 pb-4">
+                  <CardTitle
+                    className={cn(
+                      "text-2xl font-bold tracking-tight",
+                      isPopular ? "text-primary-foreground" : "text-foreground"
+                    )}
+                  >
+                    {plan.name}
+                  </CardTitle>
+                  <CardDescription
+                    className={cn(
+                      "text-sm leading-relaxed",
+                      isPopular ? "text-primary-foreground/85" : "text-muted-foreground"
+                    )}
+                  >
+                    {plan.description}
+                  </CardDescription>
+                </CardHeader>
 
-              <CardContent className="flex-1 space-y-6 pb-6">
-                <div>
-                  {isCustom ? (
-                    <div className="text-3xl font-bold">Custom</div>
-                  ) : amount === 0 ? (
-                    <div className="text-4xl font-bold">Free</div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <NumberFlow
-                        value={Math.round(perMonth)}
-                        format={{ style: "currency", currency: "USD", maximumFractionDigits: 0 }}
-                        transformTiming={{ duration: 400, easing: "ease-out" }}
-                        className="text-4xl font-bold"
-                      />
-                      <span
-                        className={cn("text-base", isPopular ? "text-primary-foreground/70" : "text-muted-foreground")}
+                <CardContent className="flex-1 space-y-5 pb-6">
+                  <div>
+                    {amount === 0 ? (
+                      <div className="text-3xl font-bold">Free</div>
+                    ) : (
+                      <div className="flex items-baseline gap-0.5">
+                        <span className="text-2xl font-bold">$</span>
+                        <NumberFlow
+                          value={Math.round(perMonth)}
+                          format={{ minimumFractionDigits: 0, maximumFractionDigits: 0 }}
+                          transformTiming={{ duration: 400, easing: "ease-out" }}
+                          className="text-3xl font-bold"
+                        />
+                        <span
+                          className={cn(
+                            "ml-1 text-base",
+                            isPopular ? "text-primary-foreground/80" : "text-muted-foreground"
+                          )}
+                        >
+                          /month
+                        </span>
+                      </div>
+                    )}
+                    {cycle === "yearly" && savingsPercent > 0 && amount > 0 && (
+                      <p
+                        className={cn(
+                          "mt-1.5 text-xs font-medium",
+                          isPopular ? "text-primary-foreground/90" : "text-primary"
+                        )}
                       >
-                        /month
-                      </span>
-                    </div>
-                  )}
-                  {cycle === "yearly" && savingsPercent > 0 && !isCustom && amount > 0 && (
-                    <div
+                        Discounted for yearly billing
+                      </p>
+                    )}
+                  </div>
+
+                  <ul className="space-y-2.5">
+                    {benefits.map((b) => (
+                      <li key={b} className="flex items-start gap-2 text-sm">
+                        <Check
+                          className={cn(
+                            "mt-0.5 size-4 shrink-0",
+                            isPopular ? "text-primary-foreground" : "text-primary"
+                          )}
+                        />
+                        <span className={isPopular ? "text-primary-foreground/95" : "text-foreground"}>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+
+                <CardFooter className="pt-0">
+                  {amount === 0 ? (
+                    <Button
+                      variant={isPopular ? "secondary" : "outline"}
                       className={cn(
-                        "mt-2 text-sm font-medium",
-                        isPopular ? "text-primary-foreground/90" : "text-primary"
+                        "w-full rounded-xl font-medium",
+                        isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                       )}
+                      size="lg"
+                      asChild
                     >
-                      Discounted for yearly billing
-                    </div>
+                      <Link href="/dashboard">Get started</Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant={isPopular ? "secondary" : "default"}
+                      className={cn(
+                        "w-full rounded-xl font-medium",
+                        isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                      )}
+                      size="lg"
+                      disabled={isLoading}
+                      onClick={() => handleSelect(plan)}
+                    >
+                      {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Go to Dashboard"}
+                    </Button>
                   )}
-                </div>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-                <ul className="space-y-3">
-                  {benefits.map((b) => (
-                    <li key={b} className="flex items-start gap-2.5 text-sm">
-                      <Check
-                        className={cn("mt-0.5 size-5 shrink-0", isPopular ? "text-primary-foreground" : "text-primary")}
-                      />
-                      <span className={isPopular ? "text-primary-foreground" : "text-foreground"}>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-
-              <CardFooter className="pt-0">
-                {isCustom ? (
-                  <Button variant={isPopular ? "secondary" : "outline"} className="w-full" size="lg" asChild>
+      {/* Enterprise: full-width row below */}
+      {enterprisePlans.length > 0 && (
+        <div className="flex justify-start">
+          {enterprisePlans.map((plan) => {
+            const benefits = buildBenefits(plan);
+            return (
+              <Card
+                key={plan.id}
+                className="border-border bg-card relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl border-2 shadow-sm transition-all duration-200 hover:shadow-md"
+              >
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-foreground text-2xl font-bold tracking-tight">{plan.name}</CardTitle>
+                  <CardDescription className="text-muted-foreground">{plan.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 space-y-5 pb-6">
+                  <div className="text-foreground text-3xl font-bold">Custom</div>
+                  <ul className="space-y-2.5">
+                    {benefits.map((b) => (
+                      <li key={b} className="flex items-start gap-2 text-sm">
+                        <Check className="text-primary mt-0.5 size-4 shrink-0" />
+                        <span className="text-foreground">{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter className="pt-0">
+                  <Button variant="outline" className="w-full rounded-xl font-medium" size="lg" asChild>
                     <Link href="/contact">Book a meeting</Link>
                   </Button>
-                ) : amount === 0 ? (
-                  <Button
-                    variant={isPopular ? "secondary" : "outline"}
-                    className={cn(
-                      "w-full",
-                      isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                    )}
-                    size="lg"
-                    asChild
-                  >
-                    <Link href="/dashboard">Get started</Link>
-                  </Button>
-                ) : (
-                  <Button
-                    variant={isPopular ? "secondary" : "default"}
-                    className={cn(
-                      "w-full",
-                      isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                    )}
-                    size="lg"
-                    disabled={isLoading}
-                    onClick={() => handleSelect(plan)}
-                  >
-                    {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Go to Dashboard"}
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          );
-        })}
-      </div>
-    </>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
