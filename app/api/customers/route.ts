@@ -14,9 +14,7 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: "API key or session token is required" }, { status: 400, headers: CORS_HEADERS });
   }
 
-  const body = (await req.json())?.body;
-
-  const result = await Result.andThenAsync(validateSchema(createCustomerSchema, JSON.parse(body)), async (data) => {
+  const result = await Result.andThenAsync(validateSchema(createCustomerSchema, await req.json()), async (data) => {
     const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
     const [customer] = await postCustomers(
       [{ name: data.name, email: data.email, phone: data.phone ?? null, metadata: data.metadata ?? null }],
