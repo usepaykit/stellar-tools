@@ -121,7 +121,7 @@ export const createCustomerSchema = customerSchema.pick({
   wallets: true,
 });
 
-export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata"> {}
+export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata" | "wallets"> {}
 
 export const updateCustomerSchema = customerSchema.partial().pick({
   email: true,

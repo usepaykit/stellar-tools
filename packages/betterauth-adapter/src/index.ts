@@ -18,6 +18,7 @@ async function syncUserWithStellar(user: any, ctx: any, options: BillingConfig) 
       email: user.email,
       name: user.name,
       metadata: { source: "betterauth-adapter" },
+      wallets: [],
     });
 
     if (created.isErr()) {
@@ -34,13 +35,19 @@ async function syncUserWithStellar(user: any, ctx: any, options: BillingConfig) 
   logger.info(`Stellar: Linked customer ${customerId} to user ${user.id}`);
 }
 
+type RouteFactories = typeof routes;
+type EndpointsFromRoutes<T> = {
+  [K in keyof T]: T[K] extends (options: BillingConfig) => infer R ? R : never;
+};
+
 export const createBilling = (options: BillingConfig) => {
+  const endpoints = Object.fromEntries(
+    Object.entries(routes).map(([key, factory]) => [key, (factory)(options)])
+  ) as EndpointsFromRoutes<RouteFactories>;
+
   return {
     id: "stellar-tools",
-    endpoints: Object.fromEntries(Object.entries(routes).map(([key, value]) => [key, value(options as any)])) as Record<
-      string,
-      Endpoint
-    >,
+    endpoints,
     schema: pluginSchema,
     init: async () => ({
       options: {
