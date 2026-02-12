@@ -1,68 +1,71 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { deleteWebhook, putWebhook, retrieveWebhook } from "@/actions/webhook";
-import { Webhook } from "@/db";
-import { WebhookEvent, schemaFor, webhookEvent } from "@stellartools/core";
+import { Result, z as Schema, updateWebhookSchema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 
 export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
+  const sessionToken = req.headers.get("x-session-token");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !sessionToken) {
+    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+  const result = await Result.andThenAsync(validateSchema(Schema.string(), id), async (id) => {
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+    return await retrieveWebhook(id, organizationId, environment).then(Result.ok);
+  });
 
-  const webhook = await retrieveWebhook(id, organizationId, environment);
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  return NextResponse.json({ data: webhook });
+  return NextResponse.json({ data: result.value });
 };
 
-const putWebhookSchema = schemaFor<Partial<Webhook>>()(
-  z.object({
-    url: z.string().optional(),
-    events: z.array(z.custom<WebhookEvent>((v) => webhookEvent.includes(v as WebhookEvent))).optional(),
-    isDisabled: z.boolean().default(false).optional(),
-    name: z.string().optional(),
-    description: z.string().optional(),
-  })
-);
-
 export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const { id } = await context.params;
-
   const apiKey = req.headers.get("x-api-key");
+  const sessionToken = req.headers.get("x-session-token");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !sessionToken) {
+    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400 });
   }
 
-  const { error, data } = putWebhookSchema.safeParse(await req.json());
+  const { id } = await context.params;
 
-  if (error) return NextResponse.json({ error }, { status: 400 });
+  const result = await Result.andThenAsync(validateSchema(updateWebhookSchema, await req.json()), async (data) => {
+    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+    return await putWebhook(id, data, organizationId, environment).then(Result.ok);
+  });
 
-  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  const webhook = await putWebhook(id, data, organizationId, environment);
-
-  return NextResponse.json({ data: webhook });
+  return NextResponse.json({ data: result.value });
 };
 
 export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const { id } = await context.params;
-
   const apiKey = req.headers.get("x-api-key");
+  const sessionToken = req.headers.get("x-session-token");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !sessionToken) {
+    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+  const result = await Result.andThenAsync(
+    validateSchema(Schema.object({ id: Schema.string() }), await context.params),
+    async ({ id }) => {
+      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+      return await deleteWebhook(id, organizationId, environment).then(Result.ok);
+    }
+  );
 
-  await deleteWebhook(id, organizationId, environment);
+  if (result.isErr()) {
+    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  }
 
-  return NextResponse.json({ data: null });
+  return NextResponse.json({ data: { success: true } });
 };

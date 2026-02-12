@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 
-import { deleteWebhook, getWebhooksWithAnalytics, postWebhook, putWebhook } from "@/actions/webhook";
+import { getCurrentOrganization } from "@/actions/organization";
+import { getWebhooksWithAnalytics } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -21,7 +22,7 @@ import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, generateResourceId } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z as Schema, Webhook, type WebhookEvent as WebhookEventType, webhookEvent } from "@stellartools/core";
+import { ApiClient, Webhook, type WebhookEvent as WebhookEventType, webhookEvent } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -262,6 +263,11 @@ const columns: ColumnDef<WebhookDestination>[] = [
   },
 ];
 
+const api = new ApiClient({
+  baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+  headers: {},
+});
+
 function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -279,7 +285,16 @@ function WebhooksPageContent() {
   }, [searchParams]);
 
   const disableWebhookMutation = useMutation({
-    mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => putWebhook(id, { isDisabled }),
+    mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => {
+      const organization = await getCurrentOrganization();
+      const result = await api.put(
+        `/webhooks/${id}`,
+        { isDisabled: true },
+        { "x-session-token": organization?.token! }
+      );
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
     onSuccess: (_, { isDisabled }) => {
       invalidateOrgQuery(["webhooks"]);
       toast.success(isDisabled ? "Webhook disabled" : "Webhook enabled");
@@ -290,7 +305,12 @@ function WebhooksPageContent() {
   });
 
   const deleteWebhookMutation = useMutation({
-    mutationFn: (id: string) => deleteWebhook(id),
+    mutationFn: async (id: string) => {
+      const organization = await getCurrentOrganization();
+      return await api.delete<Webhook>(`/webhooks/${id}`, {
+        "x-session-token": organization?.token!,
+      });
+    },
     onSuccess: () => {
       invalidateOrgQuery(["webhooks"]);
       toast.success("Webhook deleted");
@@ -534,16 +554,15 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
 
   const createWebhookMutation = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
-      return await postWebhook(undefined, undefined, {
-        name: data.destinationName,
-        url: data.endpointUrl,
-        description: data.description ?? null,
-        events: data.events,
-        isDisabled: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        secret: secret,
-      });
+      const { destinationName: name, endpointUrl: url, description, events } = data;
+      const organization = await getCurrentOrganization();
+      const result = await api.post(
+        "/webhooks",
+        { name, url, description, events, secret },
+        { "x-session-token": organization?.token! }
+      );
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
     },
     onSuccess: () => {
       invalidateOrgQuery(["webhooks"]);
@@ -557,16 +576,17 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
     },
   });
 
-  // Update webhook mutation
   const updateWebhookMutation = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
       if (!editingWebhook) return;
-      return await putWebhook(editingWebhook.id, {
-        name: data.destinationName,
-        url: data.endpointUrl,
-        description: data.description ?? null,
-        events: data.events,
-      });
+      const organization = await getCurrentOrganization();
+      const result = await api.put<Webhook>(
+        `/webhooks/${editingWebhook.id}`,
+        { url: data.endpointUrl, description: data.description ?? null, events: data.events },
+        { "x-session-token": organization?.token! }
+      );
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
     },
     onSuccess: () => {
       invalidateOrgQuery(["webhooks"]);
