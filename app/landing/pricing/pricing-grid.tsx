@@ -79,9 +79,9 @@ export function PricingGrid({ plans }: PricingGridProps) {
 
 
   return (
-    <div className="space-y-10">
+    <div>
       <Tabs value={cycle} onValueChange={(v) => setCycle(v as AccountBillingCycle)} className="w-full">
-        <div className="flex justify-center">
+        <div className="mb-10 flex justify-center">
           <TabsList
             aria-label="Billing period"
             className="bg-muted/60 h-auto w-auto rounded-full p-1 shadow-inner [&>span]:rounded-full"
@@ -105,136 +105,96 @@ export function PricingGrid({ plans }: PricingGridProps) {
         </div>
       </Tabs>
 
-      <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {plans.map((plan) => {
+          const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
           const benefits = buildBenefits(plan);
           const isCustom = plan.isCustom;
-          const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
-          const isPopular = !isCustom && /starter/i.test(plan.name);
-
-          if (isCustom) {
-            return (
-              <Card
-                key={plan.id}
-                className="relative flex min-h-[540px] flex-col self-start overflow-hidden rounded-2xl border-2 border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md"
-              >
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-2xl font-bold tracking-tight text-foreground">{plan.name}</CardTitle>
-                  <CardDescription className="text-muted-foreground">{plan.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="min-h-0 flex-1 space-y-5 pb-6">
-                  <div className="text-3xl font-bold text-foreground">Custom</div>
-                  <ul className="space-y-2.5">
-                    {benefits.map((b) => (
-                      <li key={b} className="flex items-start gap-2 text-sm">
-                        <Check className="mt-0.5 size-4 shrink-0 text-primary" />
-                        <span className="text-foreground">{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <Button variant="outline" className="w-full rounded-xl font-medium" size="lg" asChild>
-                    <Link href="/contact">Book a meeting</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          }
+          const isPopular = /starter/i.test(plan.name);
 
           return (
             <Card
               key={plan.id}
               className={cn(
-                "relative flex h-auto min-h-0 flex-col self-start rounded-2xl border-2 transition-all duration-200 hover:shadow-lg",
-                !isPopular && "overflow-hidden",
-                isPopular
-                  ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/10"
-                  : "border-border bg-card"
+                "relative flex flex-col rounded-2xl transition-all hover:shadow-xl",
+                isPopular ? "bg-primary border-primary text-primary-foreground shadow-lg" : "bg-card border-border"
               )}
             >
               {isPopular && (
-                <div className="border-primary bg-background text-primary ring-background absolute top-0 left-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-bold shadow-lg ring-2">
-                  <Star className="size-4 fill-primary" />
+                <div className="bg-primary-foreground text-primary absolute -top-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shadow-md">
+                  <Star className="fill-primary size-3" />
                   Popular
                 </div>
               )}
 
-              <CardHeader className="pb-4 pt-8">
+              <CardHeader className="pb-6">
                 <CardTitle
-                  className={cn(
-                    "text-2xl font-bold tracking-tight",
-                    isPopular ? "text-primary-foreground" : "text-foreground"
-                  )}
+                  className={cn("text-2xl font-bold", isPopular ? "text-primary-foreground" : "text-foreground")}
                 >
                   {plan.name}
                 </CardTitle>
                 <CardDescription
-                  className={cn(
-                    "text-sm leading-relaxed",
-                    isPopular ? "text-primary-foreground/85" : "text-muted-foreground"
-                  )}
+                  className={cn("text-base", isPopular ? "text-primary-foreground/80" : "text-muted-foreground")}
                 >
                   {plan.description}
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="min-h-0 flex-1 space-y-5 pb-6">
+              <CardContent className="flex-1 space-y-6 pb-6">
                 <div>
-                  {amount === 0 ? (
-                    <div className="text-3xl font-bold">Free</div>
+                  {isCustom ? (
+                    <div className="text-3xl font-bold">Custom</div>
+                  ) : amount === 0 ? (
+                    <div className="text-4xl font-bold">Free</div>
                   ) : (
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="text-2xl font-bold">$</span>
+                    <div className="flex items-baseline gap-1">
                       <NumberFlow
                         value={Math.round(perMonth)}
-                        format={{ minimumFractionDigits: 0, maximumFractionDigits: 0 }}
+                        format={{ style: "currency", currency: "USD", maximumFractionDigits: 0 }}
                         transformTiming={{ duration: 400, easing: "ease-out" }}
-                        className="text-3xl font-bold"
+                        className="text-4xl font-bold"
                       />
                       <span
-                        className={cn(
-                          "ml-1 text-base",
-                          isPopular ? "text-primary-foreground/80" : "text-muted-foreground"
-                        )}
+                        className={cn("text-base", isPopular ? "text-primary-foreground/70" : "text-muted-foreground")}
                       >
                         /month
                       </span>
                     </div>
                   )}
-                  {cycle === "yearly" && savingsPercent > 0 && amount > 0 && (
-                    <p
+                  {cycle === "yearly" && savingsPercent > 0 && !isCustom && amount > 0 && (
+                    <div
                       className={cn(
-                        "mt-1.5 text-xs font-medium",
+                        "mt-2 text-sm font-medium",
                         isPopular ? "text-primary-foreground/90" : "text-primary"
                       )}
                     >
                       Discounted for yearly billing
-                    </p>
+                    </div>
                   )}
                 </div>
 
-                <ul className="space-y-2.5">
+                <ul className="space-y-3">
                   {benefits.map((b) => (
-                    <li key={b} className="flex items-start gap-2 text-sm">
+                    <li key={b} className="flex items-start gap-2.5 text-sm">
                       <Check
-                        className={cn(
-                          "mt-0.5 size-4 shrink-0",
-                          isPopular ? "text-primary-foreground" : "text-primary"
-                        )}
+                        className={cn("mt-0.5 size-5 shrink-0", isPopular ? "text-primary-foreground" : "text-primary")}
                       />
-                      <span className={isPopular ? "text-primary-foreground/95" : "text-foreground"}>{b}</span>
+                      <span className={isPopular ? "text-primary-foreground" : "text-foreground"}>{b}</span>
                     </li>
                   ))}
                 </ul>
               </CardContent>
 
               <CardFooter className="pt-0">
-                {amount === 0 ? (
+                {isCustom ? (
+                  <Button variant={isPopular ? "secondary" : "outline"} className="w-full" size="lg" asChild>
+                    <Link href="/contact">Book a meeting</Link>
+                  </Button>
+                ) : amount === 0 ? (
                   <Button
                     variant={isPopular ? "secondary" : "outline"}
                     className={cn(
-                      "w-full rounded-xl font-medium",
+                      "w-full",
                       isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                     )}
                     size="lg"
@@ -246,7 +206,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
                   <Button
                     variant={isPopular ? "secondary" : "default"}
                     className={cn(
-                      "w-full rounded-xl font-medium",
+                      "w-full",
                       isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
                     )}
                     size="lg"
