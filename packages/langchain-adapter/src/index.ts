@@ -1,8 +1,8 @@
 import { BaseLanguageModel } from "@langchain/core/language_models/base";
+import { MeteredPluginConfig } from "@stellartools/plugin-sdk";
 
 import { MeteredLangChain } from "./provider";
-import { MeterConfig } from "./schema";
 
-export const createMeteredModel = (config: MeterConfig, baseModel: BaseLanguageModel) => {
+export const createMeteredModel = (config: MeteredPluginConfig, baseModel: BaseLanguageModel) => {
   return new MeteredLangChain(config, baseModel);
 };

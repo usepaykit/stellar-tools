@@ -1,74 +1,87 @@
-import { StellarTools } from "@stellartools/core";
+import {
+  InsufficientCreditsError,
+  type MeteredPlugin,
+  type MeteredPluginConfig,
+  createMeteredPlugin,
+} from "@stellartools/plugin-sdk";
 import { InvalidArgumentError, generateObject, generateText, streamObject, streamText } from "ai";
 
-import { MeterConfig, meterConfigSchema } from "./schema";
-
 export class MeteredAISDK {
-  private stellar: StellarTools;
+  private plugin: MeteredPlugin;
 
-  constructor(private config: MeterConfig) {
-    meterConfigSchema.parse(config);
-    this.stellar = new StellarTools({ apiKey: config.apiKey });
+  constructor(config: MeteredPluginConfig) {
+    this.plugin = createMeteredPlugin(config);
   }
 
-  private async preflightCheck(customerId: string) {
-    const res = await this.stellar.credits.check(customerId, {
-      productId: this.config.productId,
-      rawAmount: 1,
-    });
-
-    if (res.isErr()) {
+  private wrapError(err: unknown): never {
+    if (err instanceof InsufficientCreditsError) {
       throw new InvalidArgumentError({
-        message: res.error.message,
+        message: err.message,
         parameter: "credits",
-        value: 1,
+        value: err.required,
       });
     }
-  }
-
-  private async charge(customerId: string, tokens: number, operation: string) {
-    if (tokens <= 0) return;
-
-    await this.stellar.credits.consume(customerId, {
-      productId: this.config.productId,
-      rawAmount: tokens,
-      reason: "deduct",
-      metadata: { adapter: "metered-aisdk", reason: `aisdk_${operation}` },
-    });
+    throw err;
   }
 
   async generateText(customerId: string, ...args: Parameters<typeof generateText>) {
-    await this.preflightCheck(customerId);
-    const result = await generateText(...args);
-    await this.charge(customerId, result.usage.totalTokens ?? 0, "generateText");
-    return result;
+    try {
+      return await this.plugin.meter(
+        customerId,
+        () => generateText(...args),
+        (result) => result.usage.totalTokens ?? 0,
+        { operation: "generateText" }
+      );
+    } catch (err) {
+      this.wrapError(err);
+    }
   }
 
   async generateObject(customerId: string, ...args: Parameters<typeof generateObject>) {
-    await this.preflightCheck(customerId);
-    const result = await generateObject(...args);
-    await this.charge(customerId, result.usage.totalTokens ?? 0, "generateObject");
-    return result;
+    try {
+      return await this.plugin.meter(
+        customerId,
+        () => generateObject(...args),
+        (result) => result.usage.totalTokens ?? 0,
+        { operation: "generateObject" }
+      );
+    } catch (err) {
+      this.wrapError(err);
+    }
   }
 
   async streamText(customerId: string, ...args: Parameters<typeof streamText>) {
-    await this.preflightCheck(customerId);
+    try {
+      await this.plugin.preflight(customerId);
+    } catch (err) {
+      this.wrapError(err);
+    }
+
+    const originalOnFinish = args[0]?.onFinish;
+
     return streamText({
       ...args[0],
       onFinish: async (event) => {
-        await this.charge(customerId, event.usage.totalTokens ?? 0, "streamText");
-        if (args[0]?.onFinish) await args[0]?.onFinish(event);
+        await this.plugin.charge(customerId, event.usage.totalTokens ?? 0, { operation: "streamText" });
+        await originalOnFinish?.(event);
       },
     });
   }
 
   async streamObject(customerId: string, ...args: Parameters<typeof streamObject>) {
-    await this.preflightCheck(customerId);
+    try {
+      await this.plugin.preflight(customerId);
+    } catch (err) {
+      this.wrapError(err);
+    }
+
+    const originalOnFinish = args[0]?.onFinish;
+
     return streamObject({
       ...args[0],
       onFinish: async (event) => {
-        await this.charge(customerId, event.usage.totalTokens ?? 0, "streamObject");
-        if (args[0]?.onFinish) await args[0]?.onFinish(event);
+        await this.plugin.charge(customerId, event.usage.totalTokens ?? 0, { operation: "streamObject" });
+        await originalOnFinish?.(event);
       },
     });
   }

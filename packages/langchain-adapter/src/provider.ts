@@ -1,28 +1,27 @@
 import { BaseLanguageModel } from "@langchain/core/language_models/base";
 import { BaseMessageChunk } from "@langchain/core/messages";
-import { StellarTools } from "@stellartools/core";
-
-import { MeterConfig, meterConfigSchema } from "./schema";
+import { type MeteredPlugin, MeteredPluginConfig, createMeteredPlugin } from "@stellartools/plugin-sdk";
 
 export class MeteredLangChain<TModel extends BaseLanguageModel = BaseLanguageModel> {
-  private stellar: StellarTools;
+  private plugin: MeteredPlugin;
 
   constructor(
-    private config: MeterConfig,
+    private config: MeteredPluginConfig,
     private model: TModel
   ) {
-    meterConfigSchema.parse(config);
-    this.stellar = new StellarTools({ apiKey: config.apiKey });
+    this.plugin = createMeteredPlugin(config);
   }
 
-  private extractTokens(output: any): number {
-    // 1. Standardized metadata (Standard for all modern LC integrations, 0.2+, 0.3+)
-    if (output?.usage_metadata?.total_tokens) {
-      return output.usage_metadata.total_tokens;
+  private extractTokens(output: unknown): number {
+    const o = output as Record<string, any>;
+
+    // 1. Standardized metadata (LangChain 0.2+, 0.3+)
+    if (o?.usage_metadata?.total_tokens) {
+      return o.usage_metadata.total_tokens;
     }
 
-    // 2. Fallback to raw response metadata (Provider specific)
-    const usage = output?.response_metadata?.usage || output?.response_metadata?.tokenUsage;
+    // 2. Fallback to provider-specific metadata
+    const usage = o?.response_metadata?.usage || o?.response_metadata?.tokenUsage;
     if (usage) {
       return (
         usage.totalTokens ??
@@ -34,44 +33,17 @@ export class MeteredLangChain<TModel extends BaseLanguageModel = BaseLanguageMod
     return 0;
   }
 
-  private async preflight(customerId: string) {
-    const res = await this.stellar.credits.check(customerId, {
-      productId: this.config.productId,
-      rawAmount: 1,
-    });
-
-    if (res.isErr()) {
-      throw new Error(`[Stellar] Billing Block: ${res.error.message}`);
-    }
-  }
-
-  private async charge(customerId: string, tokens: number, op: string) {
-    if (tokens <= 0) return;
-
-    this.stellar.credits.consume(customerId, {
-      productId: this.config.productId,
-      rawAmount: tokens,
-      reason: "deduct",
-      metadata: {
-        model: this.model.constructor.name,
-        adapter: "langchain-meter",
-        reason: `langchain_${op}`,
-      },
-    });
-  }
-
-  // --- Metered Call Methods ---
-
   async invoke(customerId: string, ...args: Parameters<TModel["invoke"]>): Promise<ReturnType<TModel["invoke"]>> {
-    await this.preflight(customerId);
-    const result = await this.model.invoke(args[0], args[1]);
-
-    this.charge(customerId, this.extractTokens(result), "invoke");
-    return result as any;
+    return this.plugin.meter(
+      customerId,
+      () => this.model.invoke(args[0], args[1]) as Promise<ReturnType<TModel["invoke"]>>,
+      (result) => this.extractTokens(result),
+      { operation: "invoke", model: this.model.constructor.name }
+    );
   }
 
   async *stream(customerId: string, ...args: Parameters<TModel["stream"]>): AsyncGenerator<BaseMessageChunk> {
-    await this.preflight(customerId);
+    await this.plugin.preflight(customerId);
     const stream = await this.model.stream(args[0], args[1]);
 
     let usageFound = 0;
@@ -81,21 +53,25 @@ export class MeteredLangChain<TModel extends BaseLanguageModel = BaseLanguageMod
       if (tokens > 0) usageFound = tokens;
     }
 
-    if (usageFound > 0) this.charge(customerId, usageFound, "stream");
+    if (usageFound > 0) {
+      await this.plugin.charge(customerId, usageFound, { operation: "stream", model: this.model.constructor.name });
+    }
   }
 
   async batch(customerId: string, ...args: Parameters<TModel["batch"]>): Promise<ReturnType<TModel["batch"]>> {
-    await this.preflight(customerId);
+    await this.plugin.preflight(customerId);
     const results = await this.model.batch(args[0], args[1]);
 
     const total = results.reduce((acc, r) => acc + this.extractTokens(r), 0);
-    this.charge(customerId, total, "batch");
+    if (total > 0) {
+      await this.plugin.charge(customerId, total, { operation: "batch", model: this.model.constructor.name });
+    }
 
-    return results as any;
+    return results as ReturnType<TModel["batch"]>;
   }
 
   async *streamEvents(customerId: string, ...args: Parameters<TModel["streamEvents"]>): AsyncGenerator<any> {
-    await this.preflight(customerId);
+    await this.plugin.preflight(customerId);
     const events = this.model.streamEvents(args[0], args[1]);
 
     let total = 0;
@@ -107,6 +83,8 @@ export class MeteredLangChain<TModel extends BaseLanguageModel = BaseLanguageMod
       }
     }
 
-    if (total > 0) this.charge(customerId, total, "streamEvents");
+    if (total > 0) {
+      await this.plugin.charge(customerId, total, { operation: "streamEvents", model: this.model.constructor.name });
+    }
   }
 }

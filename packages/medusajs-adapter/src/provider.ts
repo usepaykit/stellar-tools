@@ -70,15 +70,18 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
             amount,
             currency_code,
           }),
-          (valid) =>
-            this.stellar.checkouts.createDirect({
+          async (valid) => {
+            const checkoutPayload = {
               amount: Number(valid.amount),
               assetCode: valid.currency_code,
               metadata: data?.metadata as any,
               description: (data?.description as string) ?? "Order Payment",
               customerId: context?.customer?.id as string,
               successUrl: data?.successUrl as string,
-            })
+            };
+            const checkout = await this.stellar.checkouts.createDirect(checkoutPayload);
+            return Result.ok(checkout);
+          }
         )
       ).map((checkout) => ({
         id: checkout.id,
@@ -89,9 +92,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   };
 
   getPaymentStatus = async (input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> => {
-    const payment = this.unwrap(
-      await this.stellar.payments.retrieve(this.getCustomerId(input), { verifyOnChain: true })
-    );
+    const payment = await this.stellar.payments.retrieve(this.getCustomerId(input), { verifyOnChain: true });
 
     const statusMap: Record<string, PaymentSessionStatus> = {
       pending: PaymentSessionStatus.REQUIRES_MORE,
@@ -121,15 +122,13 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       throw new MedusaError(MedusaError.Types.INVALID_DATA, result.error?.message ?? "Invalid refund data");
     }
 
-    const refund = this.unwrap(
-      await this.stellar.refunds.create({
-        paymentId: this.getCustomerId(input),
-        amount: Number(input.amount),
-        reason: result.value.reason ?? "Refund",
-        metadata: { source: "medusajs-adapter" },
-        receiverPublicKey: result.value.receiverPublicKey,
-      })
-    );
+    const refund = await this.stellar.refunds.create({
+      paymentId: this.getCustomerId(input),
+      amount: Number(input.amount),
+      reason: result.value.reason ?? "Refund",
+      metadata: { source: "medusajs-adapter" },
+      receiverPublicKey: result.value.receiverPublicKey,
+    });
 
     return { data: refund as any };
   };
@@ -137,34 +136,32 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   createAccountHolder = async ({ context }: CreateAccountHolderInput): Promise<CreateAccountHolderOutput> => {
     const { customer } = context;
 
-    const res = this.unwrap(
-      await this.stellar.customers.create({
-        email: customer?.email,
-        name: `${customer?.first_name} ${customer?.last_name}`.trim(),
-        phone: customer?.phone ?? undefined,
-        metadata: { source: "medusajs-adapter" },
-      })
-    );
+    const res = await this.stellar.customers.create({
+      email: customer?.email,
+      name: `${customer?.first_name} ${customer?.last_name}`.trim(),
+      phone: customer?.phone ?? undefined,
+      metadata: { source: "medusajs-adapter", ...(context?.account_holder?.data as Record<string, unknown>) },
+      wallets: [],
+    });
 
     return { id: res.id, data: res as any };
   };
 
   updateAccountHolder = async ({ context, data }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
     const { customer } = context;
-    const res = this.unwrap(
-      await this.stellar.customers.update(this.getCustomerId(context.account_holder), {
-        email: customer?.email,
-        name: `${customer?.first_name} ${customer?.last_name}`.trim(),
-        phone: customer?.phone ?? undefined,
-        metadata: data?.metadata as any,
-      })
-    );
+
+    const res = await this.stellar.customers.update(this.getCustomerId(context.account_holder), {
+      email: customer?.email,
+      name: `${customer?.first_name} ${customer?.last_name}`.trim(),
+      phone: customer?.phone ?? undefined,
+      metadata: data?.metadata as any,
+    });
 
     return { data: res as any };
   };
 
   deleteAccountHolder = async ({ context }: DeleteAccountHolderInput): Promise<DeleteAccountHolderOutput> => {
-    const res = this.unwrap(await this.stellar.customers.delete(this.getCustomerId(context.account_holder)));
+    const res = await this.stellar.customers.delete(this.getCustomerId(context.account_holder));
     return { data: res as any };
   };
 

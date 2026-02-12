@@ -13,7 +13,7 @@ export const validateSchema = <T>(schema: z.ZodType<T>, data: unknown): Result<T
         const path = issue.path.length ? `${issue.path.join(".")}: ` : "";
         return `${path}${issue.message}`;
       })
-      .join("; ");
+      .join("\n");
     return Result.err(new Error(message));
   }
 
@@ -46,43 +46,14 @@ export const executeWithRetryWithHandler = async <T>(
   }
 };
 
-class UnTraceableError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = this.constructor.name;
-    this.stack = undefined;
-  }
-}
-
-export const validateRequiredKeys = <K extends string>(
-  requiredKeys: readonly K[],
-  source: Record<K, string>,
-  errorMessage: string | ((missingKeys: K[]) => string),
-  errorInstance?: (message: string) => Error
-): Record<K, string> => {
-  const missingKeys: K[] = [];
-  const result: Partial<Record<K, string>> = {};
-
-  for (const key of requiredKeys) {
-    const value = source[key];
-    if (!value) {
-      missingKeys.push(key);
-    } else {
-      result[key] = value;
-    }
-  }
-
-  if (missingKeys.length > 0) {
-    const missingKeysList = missingKeys.join(", ");
-    const error =
-      typeof errorMessage === "function" ? errorMessage(missingKeys) : errorMessage.replace("{keys}", missingKeysList);
-
-    throw errorInstance?.(error) ?? new UnTraceableError(error);
-  }
-
-  return result as Record<K, string>;
-};
-
 export const schemaFor = <TInterface>() => {
   return <TSchema extends z.ZodType<TInterface>>(schema: TSchema): TSchema => schema;
+};
+
+export const unwrap = <T>(result: Result<T, Error>): T => {
+  if (result.isErr()) {
+    throw new Error(result.error?.message ?? "Operation failed");
+  }
+
+  return result.value!;
 };

@@ -1,0 +1,40 @@
+{
+  "name": "@stellartools/plugin-sdk",
+  "version": "0.0.1",
+  "description": "Build metered integrations with StellarTools",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch"
+  },
+  "keywords": [
+    "stellar",
+    "tools",
+    "plugin",
+    "sdk",
+    "metering",
+    "billing"
+  ],
+  "author": "Emmanuel Odii",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usepaykit/stellartools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/usepaykit/stellartools/issues"
+  },
+  "dependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "@stellartools/core": "workspace:*"
+  }
+}

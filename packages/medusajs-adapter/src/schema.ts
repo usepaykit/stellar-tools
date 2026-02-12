@@ -1,5 +1,4 @@
-import { schemaFor } from "@stellartools/core";
-import { z } from "zod";
+import { z as Schema, schemaFor } from "@stellartools/core";
 
 export interface StellarToolsMedusaAdapterOptions {
   /**
@@ -14,8 +13,8 @@ export interface StellarToolsMedusaAdapterOptions {
 }
 
 export const stellarToolsMedusaAdapterOptionsSchema = schemaFor<StellarToolsMedusaAdapterOptions>()(
-  z.object({
-    apiKey: z.string(),
-    debug: z.boolean().optional(),
+  Schema.object({
+    apiKey: Schema.string(),
+    debug: Schema.boolean().optional(),
   })
 );

@@ -56,7 +56,7 @@ export * from "./types";
 export { WebhookSigner } from "./resources/webhooks";
 export { ApiClient };
 export { Result };
-export { schemaFor, validateRequiredKeys, validateSchema, chunk } from "./utils";
+export { schemaFor, validateSchema, chunk } from "./utils";
 export { raceAsyncIterator, batchProcess } from "./promisify";
 export { z };
 export * from "./schema/customer";

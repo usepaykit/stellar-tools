@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { ApiClient } from "../api-client";
 import { CreateWebhook, UpdateWebhook, Webhook, createWebhookSchema, updateWebhookSchema } from "../schema/webhooks";
-import { validateSchema } from "../utils";
+import { unwrap, validateSchema } from "../utils";
 
 export class WebhookSigner {
   constructor() {}
@@ -45,26 +45,34 @@ export class WebhookApi extends WebhookSigner {
   }
 
   async create(params: CreateWebhook) {
-    return Result.andThenAsync(validateSchema(createWebhookSchema, params), async (data) => {
-      return await this.apiClient.post<Webhook>("/webhooks", data);
-    });
+    return unwrap(
+      await Result.andThenAsync(validateSchema(createWebhookSchema, params), async (data) => {
+        return await this.apiClient.post<Webhook>("/webhooks", data);
+      })
+    );
   }
 
   async retrieve(id: string) {
-    return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
-      return await this.apiClient.get<Webhook>(`/webhooks/${id}`);
-    });
+    return unwrap(
+      await Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
+        return await this.apiClient.get<Webhook>(`/webhooks/${id}`);
+      })
+    );
   }
 
   async update(id: string, params: UpdateWebhook) {
-    return Result.andThenAsync(validateSchema(updateWebhookSchema, params), async (data) => {
-      return await this.apiClient.put<Webhook>(`/webhooks/${id}`, data);
-    });
+    return unwrap(
+      await Result.andThenAsync(validateSchema(updateWebhookSchema, params), async (data) => {
+        return await this.apiClient.put<Webhook>(`/webhooks/${id}`, data);
+      })
+    );
   }
 
-  async delete(id: string): Promise<Result<Webhook, Error>> {
-    return Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
-      return await this.apiClient.delete<Webhook>(`/webhooks/${id}`);
-    });
+  async delete(id: string) {
+    return unwrap(
+      await Result.andThenAsync(validateSchema(z.string(), id), async (id) => {
+        return await this.apiClient.delete<Webhook>(`/webhooks/${id}`);
+      })
+    );
   }
 }

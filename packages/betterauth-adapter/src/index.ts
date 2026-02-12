@@ -1,32 +1,32 @@
 import { StellarTools } from "@stellartools/core";
-import type { BetterAuthPlugin, Endpoint } from "better-auth";
+import type { BetterAuthOptions, BetterAuthPlugin, GenericEndpointContext, User } from "better-auth";
 
 import * as routes from "./routes";
 import { pluginSchema } from "./schema";
 import type { BillingConfig } from "./types";
 
-async function syncUserWithStellar(user: any, ctx: any, options: BillingConfig) {
+async function syncUserWithStellar(user: User, ctx: GenericEndpointContext<BetterAuthOptions>, options: BillingConfig) {
   const logger = ctx.context.logger;
   const client = new StellarTools({ apiKey: options.apiKey });
 
   const existing = await client.customers.list({ email: user.email });
-  let customerId = existing.isOk() && existing.value[0]?.id;
-  let customerData = existing.isOk() ? existing.value[0] : null;
+  let customerId = existing.length > 0 && existing[0]?.id;
+  let customerData = existing.length > 0 ? existing[0] : null;
 
   if (!customerId) {
     const created = await client.customers.create({
       email: user.email,
       name: user.name,
-      metadata: { source: "betterauth-adapter" },
+      metadata: {
+        source: "betterauth-adapter",
+        ...(user.image ? { image: user.image } : {}),
+        ...(ctx.context.session?.session?.id ? { initialSessionId: ctx.context?.session?.session?.id } : {}),
+      },
       wallets: [],
     });
 
-    if (created.isErr()) {
-      return logger.error(`Stellar Sync Failed: ${created.error.message}`);
-    }
-
-    customerId = created.value.id;
-    customerData = created.value;
+    customerId = created.id;
+    customerData = created;
   }
 
   await ctx.context.internalAdapter.updateUser(user.id, { stellarCustomerId: customerId });
@@ -42,7 +42,7 @@ type EndpointsFromRoutes<T> = {
 
 export const createBilling = (options: BillingConfig) => {
   const endpoints = Object.fromEntries(
-    Object.entries(routes).map(([key, factory]) => [key, (factory)(options)])
+    Object.entries(routes).map(([key, factory]) => [key, factory(options)])
   ) as EndpointsFromRoutes<RouteFactories>;
 
   return {

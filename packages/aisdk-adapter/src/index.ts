@@ -1,6 +1,7 @@
-import { MeteredAISDK } from "./provider";
-import { MeterConfig } from "./schema";
+import { MeteredPluginConfig } from "@stellartools/plugin-sdk";
 
-export const createMeteredAISDK = (config: MeterConfig) => {
+import { MeteredAISDK } from "./provider";
+
+export const createMeteredAISDK = (config: MeteredPluginConfig) => {
   return new MeteredAISDK(config);
 };

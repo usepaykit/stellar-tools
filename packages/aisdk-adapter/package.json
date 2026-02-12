@@ -27,14 +27,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/usepaykit/stellar-tools.git"
+    "url": "https://github.com/usepaykit/stellartools.git"
   },
   "bugs": {
     "url": "https://github.com/usepaykit/stellar-tools/issues"
   },
   "dependencies": {
     "ai": "^5.0.116",
-    "@stellartools/core": "workspace:*"
+    "@stellartools/core": "workspace:*",
+    "@stellartools/plugin-sdk": "workspace:*"
   },
   "devDependencies": {
     "@ai-sdk/openai": "^2.0.88"

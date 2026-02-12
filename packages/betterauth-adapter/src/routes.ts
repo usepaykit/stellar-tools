@@ -3,10 +3,9 @@ import { GenericEndpointContext } from "better-auth";
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 
 import { BillingConfig } from "./types";
-import { configMiddleware, getContext, unwrap } from "./utils";
+import { getContext } from "./utils";
 
 const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<string> => {
-  console.dir({ ctx }, { depth: 100 });
   const context = ctx?.context;
   const { user, stellar, adapter } = getContext(ctx, { apiKey: context?.apiKey });
 
@@ -17,18 +16,16 @@ const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<st
 
   if (dbUser?.stellarCustomerId) return dbUser.stellarCustomerId;
 
-  const customer = unwrap(
-    await stellar.customers.create({
-      email: user.email,
-      name: user.name,
-      wallets: [],
-      metadata: {
-        source: "betterauth-adapter",
-        ...(user.image ? { image: user.image } : {}),
-        ...(ctx.context.session?.session?.id ? { sessionId: ctx.context?.session?.session?.id } : {}),
-      },
-    })
-  );
+  const customer = await stellar.customers.create({
+    email: user.email,
+    name: user.name,
+    wallets: [],
+    metadata: {
+      source: "betterauth-adapter",
+      ...(user.image ? { image: user.image } : {}),
+      ...(ctx.context.session?.session?.id ? { initialSessionId: ctx.context?.session?.session?.id } : {}),
+    },
+  });
 
   await adapter.update({
     model: "user",
@@ -42,11 +39,10 @@ const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<st
 // -- CUSTOMERS --
 
 export const createCustomer = (options: BillingConfig) =>
-  createAuthEndpoint("/stellar/customer/create", { method: "POST", use: [configMiddleware] }, async (ctx) => {
-    console.log({ ctx });
+  createAuthEndpoint("/stellar/customer/create", { method: "POST", use: [sessionMiddleware] }, async (ctx) => {
     const customerId = await retrieveOrCreateCustomer(ctx);
     const { stellar } = getContext(ctx, options);
-    const result = unwrap(await stellar.customers.retrieve(customerId));
+    const result = await stellar.customers.retrieve(customerId);
 
     options?.onCustomerCreated?.(result);
     return ctx.json(result);
@@ -55,7 +51,7 @@ export const createCustomer = (options: BillingConfig) =>
 export const retrieveCustomer = (options: BillingConfig) =>
   createAuthEndpoint("/stellar/customer/retrieve", { method: "GET", use: [sessionMiddleware] }, async (ctx) => {
     const { user, stellar } = getContext(ctx, options);
-    return ctx.json(unwrap(await stellar.customers.retrieve(user.stellarCustomerId as string)));
+    return ctx.json(await stellar.customers.retrieve(user.stellarCustomerId as string));
   });
 
 export const updateCustomer = (options: BillingConfig) =>
@@ -73,7 +69,7 @@ export const updateCustomer = (options: BillingConfig) =>
     },
     async (ctx) => {
       const { user, stellar } = getContext(ctx, options);
-      return ctx.json(unwrap(await stellar.customers.update(user.stellarCustomerId, ctx.body)));
+      return ctx.json(await stellar.customers.update(user.stellarCustomerId, ctx.body));
     }
   );
 
@@ -95,7 +91,7 @@ export const createSubscription = (options: BillingConfig) =>
     async (ctx) => {
       const customerId = await retrieveOrCreateCustomer(ctx);
       const { stellar } = getContext(ctx, options);
-      const sub = unwrap(await stellar.subscriptions.create({ customerIds: [customerId], ...ctx.body }));
+      const sub = await stellar.subscriptions.create({ customerIds: [customerId], ...ctx.body });
 
       options?.onSubscriptionCreated?.(sub);
 
@@ -106,7 +102,7 @@ export const createSubscription = (options: BillingConfig) =>
 export const listSubscriptions = (options: BillingConfig) =>
   createAuthEndpoint("/stellar/subscription/list", { method: "GET", use: [sessionMiddleware] }, async (ctx) => {
     const { user, stellar } = getContext(ctx, options);
-    return ctx.json(unwrap(await stellar.subscriptions.list(user.stellarCustomerId)));
+    return ctx.json(await stellar.subscriptions.list(user.stellarCustomerId));
   });
 
 // -- REFUNDS --
@@ -130,13 +126,11 @@ export const consumeCredits = (options: BillingConfig) =>
       const { stellar } = getContext(ctx, options);
 
       // Use "BAD_REQUEST" for consumption failures (e.g., insufficient balance)
-      const result = unwrap(
-        await stellar.credits.consume(customerId, {
-          ...ctx.body,
-          reason: "deduct",
-          metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
-        })
-      );
+      const result = await stellar.credits.consume(customerId, {
+        ...ctx.body,
+        reason: "deduct",
+        metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
+      });
 
       if (options.onCreditsLow && result.balance <= (options.creditLowThreshold ?? DEFAULT_CREDITS_LOW_THRESHOLD)) {
         await options.onCreditsLow({ ...result, customerId });
@@ -163,7 +157,7 @@ export const getTransactions = (options: BillingConfig) =>
       const { stellar } = getContext(ctx, options);
 
       // ctx.query already contains productId, limit, and offset
-      const result = unwrap(await stellar.credits.getTransactions(customerId, ctx.query));
+      const result = await stellar.credits.getTransactions(customerId, ctx.query);
 
       return ctx.json(result);
     }
@@ -187,12 +181,10 @@ export const createRefund = (options: BillingConfig) =>
     async (ctx) => {
       const { stellar } = getContext(ctx, options);
       return ctx.json(
-        unwrap(
-          await stellar.refunds.create({
-            ...ctx.body,
-            metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
-          })
-        )
+        await stellar.refunds.create({
+          ...ctx.body,
+          metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
+        })
       );
     }
   );
