@@ -31,6 +31,7 @@ interface LineChartProps<T extends BaseChartData>
   className?: string;
   showTooltip?: boolean;
   showXAxis?: boolean;
+  showGrid?: boolean;
 }
 
 export function LineChart<T extends BaseChartData>({
@@ -44,6 +45,7 @@ export function LineChart<T extends BaseChartData>({
   className,
   showTooltip = true,
   showXAxis = true,
+  showGrid = true,
   ...mixinProps
 }: LineChartProps<T>) {
   const defaultFormatter = (value: string | number) => {
@@ -62,7 +64,7 @@ export function LineChart<T extends BaseChartData>({
   return (
     <ChartContainer {...rest} config={config} className={cn("aspect-auto h-[250px] w-full", className)}>
       <RechartsLineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
-        <CartesianGrid vertical={false} {...grid} />
+        {showGrid && <CartesianGrid vertical={false} {...grid} />}
 
         {showXAxis && (
           <XAxis
