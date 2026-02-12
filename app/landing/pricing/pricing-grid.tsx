@@ -78,7 +78,6 @@ export function PricingGrid({ plans }: PricingGridProps) {
 
   const standardPlans = plans.filter((p) => !p.isCustom);
   const enterprisePlans = plans.filter((p) => p.isCustom);
-  const displaySavings = maxSavings > 0 ? maxSavings : 40;
 
   return (
     <div className="space-y-10">
@@ -100,7 +99,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
             >
               Yearly
               <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                Save {displaySavings}%
+                Save {maxSavings}%
               </span>
             </TabsTrigger>
           </TabsList>
