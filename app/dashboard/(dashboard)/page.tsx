@@ -156,17 +156,21 @@ export default function DashboardPage() {
   const selectedCountry =
     COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
 
+  const chartDays = displayStats.charts.revenue?.length ?? CHART_DAYS;
   const revenueSparkData = fillSparklineDays(
     (displayStats.charts.revenue ?? []).map((r) => ({
       i: r.date,
       value: r.amount / STROOPS_PER_XLM,
-    }))
+    })),
+    chartDays
   );
   const subsSparkData = fillSparklineDays(
-    (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count }))
+    (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count })),
+    chartDays
   );
   const custSparkData = fillSparklineDays(
-    (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count }))
+    (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count })),
+    chartDays
   );
 
   const subsLimit =
