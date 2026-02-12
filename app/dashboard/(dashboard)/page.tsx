@@ -182,7 +182,6 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Overview</h1>
-                <p className="text-muted-foreground mt-1 text-sm">Key metrics for your organization</p>
               </div>
               <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                 <PopoverTrigger asChild>
