@@ -108,7 +108,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
 
       {/* Standard plans: 4-column grid */}
       {standardPlans.length > 0 && (
-        <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {standardPlans.map((plan) => {
             const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
             const benefits = buildBenefits(plan);
@@ -118,7 +118,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
               <Card
                 key={plan.id}
                 className={cn(
-                  "relative flex flex-col rounded-2xl border-2 transition-all duration-200 hover:shadow-lg",
+                  "relative flex h-auto min-h-0 flex-col self-start rounded-2xl border-2 transition-all duration-200 hover:shadow-lg",
                   !isPopular && "overflow-hidden",
                   isPopular
                     ? "border-primary bg-primary text-primary-foreground shadow-primary/10 shadow-lg"
@@ -151,7 +151,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent className="flex-1 space-y-5 pb-6">
+                <CardContent className="min-h-0 flex-1 space-y-5 pb-6">
                   <div>
                     {amount === 0 ? (
                       <div className="text-3xl font-bold">Free</div>
