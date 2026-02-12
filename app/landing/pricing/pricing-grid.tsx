@@ -76,8 +76,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
     if (url) window.location.href = url;
   };
 
-  const standardPlans = plans.filter((p) => !p.isCustom);
-  const enterprisePlans = plans.filter((p) => p.isCustom);
+
 
   return (
     <div className="space-y-10">
@@ -106,155 +105,29 @@ export function PricingGrid({ plans }: PricingGridProps) {
         </div>
       </Tabs>
 
-      {/* Standard plans: 4-column grid */}
-      {standardPlans.length > 0 && (
-        <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {standardPlans.map((plan) => {
-            const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
-            const benefits = buildBenefits(plan);
-            const isPopular = /starter/i.test(plan.name);
+      <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+        {plans.map((plan) => {
+          const benefits = buildBenefits(plan);
+          const isCustom = plan.isCustom;
+          const { amount, savingsPercent, perMonth } = getPriceConfig(plan, cycle);
+          const isPopular = !isCustom && /starter/i.test(plan.name);
 
+          if (isCustom) {
             return (
               <Card
                 key={plan.id}
-                className={cn(
-                  "relative flex h-auto min-h-0 flex-col self-start rounded-2xl border-2 transition-all duration-200 hover:shadow-lg",
-                  !isPopular && "overflow-hidden",
-                  isPopular
-                    ? "border-primary bg-primary text-primary-foreground shadow-primary/10 shadow-lg"
-                    : "border-border bg-card"
-                )}
-              >
-                {isPopular && (
-                  <div className="border-primary bg-background text-primary ring-background absolute top-0 left-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-bold shadow-lg ring-2">
-                    <Star className="fill-primary size-4" />
-                    Popular
-                  </div>
-                )}
-
-                <CardHeader className="pt-8 pb-4">
-                  <CardTitle
-                    className={cn(
-                      "text-2xl font-bold tracking-tight",
-                      isPopular ? "text-primary-foreground" : "text-foreground"
-                    )}
-                  >
-                    {plan.name}
-                  </CardTitle>
-                  <CardDescription
-                    className={cn(
-                      "text-sm leading-relaxed",
-                      isPopular ? "text-primary-foreground/85" : "text-muted-foreground"
-                    )}
-                  >
-                    {plan.description}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="min-h-0 flex-1 space-y-5 pb-6">
-                  <div>
-                    {amount === 0 ? (
-                      <div className="text-3xl font-bold">Free</div>
-                    ) : (
-                      <div className="flex items-baseline gap-0.5">
-                        <span className="text-2xl font-bold">$</span>
-                        <NumberFlow
-                          value={Math.round(perMonth)}
-                          format={{ minimumFractionDigits: 0, maximumFractionDigits: 0 }}
-                          transformTiming={{ duration: 400, easing: "ease-out" }}
-                          className="text-3xl font-bold"
-                        />
-                        <span
-                          className={cn(
-                            "ml-1 text-base",
-                            isPopular ? "text-primary-foreground/80" : "text-muted-foreground"
-                          )}
-                        >
-                          /month
-                        </span>
-                      </div>
-                    )}
-                    {cycle === "yearly" && savingsPercent > 0 && amount > 0 && (
-                      <p
-                        className={cn(
-                          "mt-1.5 text-xs font-medium",
-                          isPopular ? "text-primary-foreground/90" : "text-primary"
-                        )}
-                      >
-                        Discounted for yearly billing
-                      </p>
-                    )}
-                  </div>
-
-                  <ul className="space-y-2.5">
-                    {benefits.map((b) => (
-                      <li key={b} className="flex items-start gap-2 text-sm">
-                        <Check
-                          className={cn(
-                            "mt-0.5 size-4 shrink-0",
-                            isPopular ? "text-primary-foreground" : "text-primary"
-                          )}
-                        />
-                        <span className={isPopular ? "text-primary-foreground/95" : "text-foreground"}>{b}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-
-                <CardFooter className="pt-0">
-                  {amount === 0 ? (
-                    <Button
-                      variant={isPopular ? "secondary" : "outline"}
-                      className={cn(
-                        "w-full rounded-xl font-medium",
-                        isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                      )}
-                      size="lg"
-                      asChild
-                    >
-                      <Link href="/dashboard">Get started</Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      variant={isPopular ? "secondary" : "default"}
-                      className={cn(
-                        "w-full rounded-xl font-medium",
-                        isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                      )}
-                      size="lg"
-                      disabled={isLoading}
-                      onClick={() => handleSelect(plan)}
-                    >
-                      {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Go to Dashboard"}
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Enterprise: full-width row below */}
-      {enterprisePlans.length > 0 && (
-        <div className="flex justify-start">
-          {enterprisePlans.map((plan) => {
-            const benefits = buildBenefits(plan);
-            return (
-              <Card
-                key={plan.id}
-                className="border-border bg-card relative flex w-full max-w-md flex-col overflow-hidden rounded-2xl border-2 shadow-sm transition-all duration-200 hover:shadow-md"
+                className="relative flex min-h-[540px] flex-col self-start overflow-hidden rounded-2xl border-2 border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md"
               >
                 <CardHeader className="pb-4">
-                  <CardTitle className="text-foreground text-2xl font-bold tracking-tight">{plan.name}</CardTitle>
+                  <CardTitle className="text-2xl font-bold tracking-tight text-foreground">{plan.name}</CardTitle>
                   <CardDescription className="text-muted-foreground">{plan.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 space-y-5 pb-6">
-                  <div className="text-foreground text-3xl font-bold">Custom</div>
+                <CardContent className="min-h-0 flex-1 space-y-5 pb-6">
+                  <div className="text-3xl font-bold text-foreground">Custom</div>
                   <ul className="space-y-2.5">
                     {benefits.map((b) => (
                       <li key={b} className="flex items-start gap-2 text-sm">
-                        <Check className="text-primary mt-0.5 size-4 shrink-0" />
+                        <Check className="mt-0.5 size-4 shrink-0 text-primary" />
                         <span className="text-foreground">{b}</span>
                       </li>
                     ))}
@@ -267,9 +140,127 @@ export function PricingGrid({ plans }: PricingGridProps) {
                 </CardFooter>
               </Card>
             );
-          })}
-        </div>
-      )}
+          }
+
+          return (
+            <Card
+              key={plan.id}
+              className={cn(
+                "relative flex h-auto min-h-0 flex-col self-start rounded-2xl border-2 transition-all duration-200 hover:shadow-lg",
+                !isPopular && "overflow-hidden",
+                isPopular
+                  ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/10"
+                  : "border-border bg-card"
+              )}
+            >
+              {isPopular && (
+                <div className="border-primary bg-background text-primary ring-background absolute top-0 left-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border-2 px-4 py-2 text-sm font-bold shadow-lg ring-2">
+                  <Star className="size-4 fill-primary" />
+                  Popular
+                </div>
+              )}
+
+              <CardHeader className="pb-4 pt-8">
+                <CardTitle
+                  className={cn(
+                    "text-2xl font-bold tracking-tight",
+                    isPopular ? "text-primary-foreground" : "text-foreground"
+                  )}
+                >
+                  {plan.name}
+                </CardTitle>
+                <CardDescription
+                  className={cn(
+                    "text-sm leading-relaxed",
+                    isPopular ? "text-primary-foreground/85" : "text-muted-foreground"
+                  )}
+                >
+                  {plan.description}
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="min-h-0 flex-1 space-y-5 pb-6">
+                <div>
+                  {amount === 0 ? (
+                    <div className="text-3xl font-bold">Free</div>
+                  ) : (
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-2xl font-bold">$</span>
+                      <NumberFlow
+                        value={Math.round(perMonth)}
+                        format={{ minimumFractionDigits: 0, maximumFractionDigits: 0 }}
+                        transformTiming={{ duration: 400, easing: "ease-out" }}
+                        className="text-3xl font-bold"
+                      />
+                      <span
+                        className={cn(
+                          "ml-1 text-base",
+                          isPopular ? "text-primary-foreground/80" : "text-muted-foreground"
+                        )}
+                      >
+                        /month
+                      </span>
+                    </div>
+                  )}
+                  {cycle === "yearly" && savingsPercent > 0 && amount > 0 && (
+                    <p
+                      className={cn(
+                        "mt-1.5 text-xs font-medium",
+                        isPopular ? "text-primary-foreground/90" : "text-primary"
+                      )}
+                    >
+                      Discounted for yearly billing
+                    </p>
+                  )}
+                </div>
+
+                <ul className="space-y-2.5">
+                  {benefits.map((b) => (
+                    <li key={b} className="flex items-start gap-2 text-sm">
+                      <Check
+                        className={cn(
+                          "mt-0.5 size-4 shrink-0",
+                          isPopular ? "text-primary-foreground" : "text-primary"
+                        )}
+                      />
+                      <span className={isPopular ? "text-primary-foreground/95" : "text-foreground"}>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+
+              <CardFooter className="pt-0">
+                {amount === 0 ? (
+                  <Button
+                    variant={isPopular ? "secondary" : "outline"}
+                    className={cn(
+                      "w-full rounded-xl font-medium",
+                      isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                    )}
+                    size="lg"
+                    asChild
+                  >
+                    <Link href="/dashboard">Get started</Link>
+                  </Button>
+                ) : (
+                  <Button
+                    variant={isPopular ? "secondary" : "default"}
+                    className={cn(
+                      "w-full rounded-xl font-medium",
+                      isPopular && "bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                    )}
+                    size="lg"
+                    disabled={isLoading}
+                    onClick={() => handleSelect(plan)}
+                  >
+                    {isLoading ? <Loader2 className="size-4 animate-spin" /> : "Go to Dashboard"}
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
