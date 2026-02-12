@@ -98,6 +98,25 @@ const SPARKLINE_CONFIG = {
   value: { label: "", color: "hsl(var(--chart-1))" },
 };
 
+const CHART_DAYS = 28;
+
+/** Fill in missing days so the sparkline has a point for every day (0 where no data). */
+function fillSparklineDays<T extends { i: string; value: number }>(
+  points: T[],
+  days: number = CHART_DAYS
+): { i: string; value: number }[] {
+  const byDate = new Map(points.map((p) => [p.i, p.value]));
+  const result: { i: string; value: number }[] = [];
+  const d = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const day = new Date(d);
+    day.setDate(day.getDate() - i);
+    const dateStr = day.toISOString().slice(0, 10);
+    result.push({ i: dateStr, value: byDate.get(dateStr) ?? 0 });
+  }
+  return result;
+}
+
 // Custom SVG Icons
 function ActivityIcon({ className }: { className?: string }) {
   return (
@@ -172,7 +191,10 @@ export default function DashboardPage() {
     staleTime: 60 * 1000,
   });
 
-  if (isLoading || !stats) {
+  const displayStats = stats;
+  const plan = accountPlan?.plan;
+
+  if (isLoading || !displayStats) {
     return (
       <div className="w-full">
         <DashboardSidebar>
@@ -190,39 +212,46 @@ export default function DashboardPage() {
     );
   }
 
-  const revenue28 = stroopsToDisplay(stats.revenue, countryCode);
-  const mrrDisplay = stroopsToDisplay(stats.mrr, countryCode);
+  const revenue28 = stroopsToDisplay(displayStats.revenue, countryCode);
+  const mrrDisplay = stroopsToDisplay(displayStats.mrr, countryCode);
   const selectedCountry =
     COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
 
-  const revenueSparkData = (stats.charts.revenue ?? []).map((r) => ({
-    i: r.date,
-    value: r.amount / STROOPS_PER_XLM,
-  }));
-  const subsSparkData = (stats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count }));
-  const custSparkData = (stats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count }));
+  const revenueSparkData = fillSparklineDays(
+    (displayStats.charts.revenue ?? []).map((r) => ({
+      i: r.date,
+      value: r.amount / STROOPS_PER_XLM,
+    }))
+  );
+  const subsSparkData = fillSparklineDays(
+    (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count }))
+  );
+  const custSparkData = fillSparklineDays(
+    (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count }))
+  );
 
-  const plan = accountPlan?.plan;
-
-  if (!plan) return null;
-
-  const subsLimit = typeof plan.subscriptions === "number" && plan.subscriptions !== Infinity ? plan.subscriptions : 1;
-  const customersLimit = typeof plan.customers === "number" && plan.customers !== Infinity ? plan.customers : 1;
+  const subsLimit =
+    plan && typeof plan.subscriptions === "number" && plan.subscriptions !== Infinity ? plan.subscriptions : 1;
+  const customersLimit =
+    plan && typeof plan.customers === "number" && plan.customers !== Infinity ? plan.customers : 1;
 
   return (
     <div className="w-full">
       <DashboardSidebar>
         <DashboardSidebarInset>
-          <div className="flex flex-col gap-8 p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold tracking-tight">Overview</h2>
+          <div className="flex flex-col gap-8 p-6 md:p-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">Overview</h1>
+                <p className="text-muted-foreground mt-1 text-sm">Key metrics for your organization</p>
+              </div>
               <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={countryOpen}
-                    className="h-9 w-[180px] justify-between font-normal"
+                    className="h-9 w-[200px] justify-between rounded-lg border-border/80 font-normal shadow-xs"
                   >
                     <span className="truncate">{selectedCountry.label}</span>
                     <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
@@ -255,25 +284,25 @@ export default function DashboardPage() {
               </Popover>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               <StatCard
                 title="Active Trials"
-                value={stats.activeTrials}
+                value={displayStats.activeTrials}
                 subtitle="In total"
                 icon={<ActivityIcon className="text-muted-foreground size-5" />}
                 sparkData={revenueSparkData}
                 color="var(--chart-1)"
-                usage={stats.activeTrials}
+                usage={displayStats.activeTrials}
                 max={subsLimit}
               />
               <StatCard
                 title="Active Subscriptions"
-                value={stats.activeSubscriptions}
+                value={displayStats.activeSubscriptions}
                 subtitle="In total"
                 icon={<SubscriptionIcon className="text-muted-foreground size-5" />}
                 sparkData={subsSparkData}
                 color="var(--chart-2)"
-                usage={stats.activeSubscriptions}
+                usage={displayStats.activeSubscriptions}
                 max={subsLimit}
               />
               <StatCard
@@ -294,30 +323,31 @@ export default function DashboardPage() {
               />
               <StatCard
                 title="New Customers"
-                value={stats.newCustomers}
+                value={displayStats.newCustomers}
                 subtitle="Last 28 days"
                 icon={<CustomerAddIcon className="text-muted-foreground size-5" />}
                 sparkData={custSparkData}
                 color="var(--chart-3)"
+                href="/customers"
               />
               <StatCard
                 title="Active Customers"
-                value={stats.totalCustomers}
+                value={displayStats.totalCustomers}
                 subtitle="In total"
                 icon={<CustomerIcon className="text-muted-foreground size-5" />}
                 sparkData={custSparkData}
                 color="var(--chart-3)"
-                usage={stats.totalCustomers}
+                usage={displayStats.totalCustomers}
                 max={customersLimit}
               />
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-2">
               <Link
                 href="https://docs.stellartools.dev"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary text-sm font-medium hover:underline"
+                className="text-muted-foreground hover:text-primary inline-flex items-center gap-2 rounded-lg border border-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/50"
               >
                 Explore our integrations
               </Link>
@@ -338,6 +368,7 @@ function StatCard({
   color,
   usage,
   max,
+  href,
 }: {
   title: string;
   value: string | number;
@@ -347,32 +378,43 @@ function StatCard({
   color: string;
   usage?: number;
   max?: number;
+  href?: string;
 }) {
   const hasSpark = sparkData.length > 0;
   const chartData = hasSpark ? sparkData : Array.from({ length: 7 }, (_, i) => ({ i: `d${i}`, value: 0 }));
   const showProgress = typeof max === "number" && max > 0 && typeof usage === "number";
 
-  return (
-    <Card className="relative overflow-hidden shadow-none">
-      <CardContent className="flex flex-col gap-6 p-6">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 space-y-1">
-            <p className="text-muted-foreground text-sm font-medium">{title}</p>
+  const card = (
+    <Card
+      className={cn(
+        "relative overflow-hidden rounded-2xl border-border/60 bg-card shadow-xs transition-shadow",
+        href && "cursor-pointer hover:shadow-sm"
+      )}
+    >
+      <CardContent className="flex flex-col gap-5 p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-2">
+            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">{title}</p>
             <div className="flex items-center gap-3">
-              <p className="text-3xl font-bold tracking-tight">
+              <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-3xl">
                 {typeof value === "number" ? value.toLocaleString() : value}
               </p>
               {showProgress && <CircularProgress value={Math.min(usage!, max)} max={max} size={20} />}
             </div>
             <div className="flex items-center gap-1.5">
+              <Info className="text-muted-foreground/50 size-3 shrink-0" aria-hidden />
               <p className="text-muted-foreground text-xs">{subtitle}</p>
-              <Info className="text-muted-foreground/60 size-3" aria-hidden />
             </div>
           </div>
-          <div className="shrink-0">{icon}</div>
+          <div
+            className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted/80 [&>svg]:size-5"
+            style={{ color }}
+          >
+            {icon}
+          </div>
         </div>
 
-        <div className="relative -mx-6 h-20">
+        <div className="relative -mx-6 mt-1 h-16 overflow-hidden rounded-b-2xl">
           <LineChart
             data={chartData}
             config={SPARKLINE_CONFIG}
@@ -382,9 +424,19 @@ function StatCard({
             className="h-full w-full"
             showXAxis={false}
             showTooltip={false}
+            showGrid={false}
           />
         </div>
       </CardContent>
     </Card>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl">
+        {card}
+      </Link>
+    );
+  }
+  return card;
 }
