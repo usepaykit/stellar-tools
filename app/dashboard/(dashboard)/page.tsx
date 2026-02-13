@@ -21,7 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useOrgQuery } from "@/hooks/use-org-query";
-import { cn, normalizeTimeSeries } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { TCountryCode, countries } from "countries-list";
 import { ChevronsUpDown, Info } from "lucide-react";
@@ -159,26 +159,20 @@ export default function DashboardPage() {
     COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
 
   const chartDays = displayStats.charts.revenue?.length ?? CHART_DAYS;
-
-  const revenueSparkData = normalizeTimeSeries(
+  const revenueSparkData = fillSparklineDays(
     (displayStats.charts.revenue ?? []).map((r) => ({
       i: r.date,
       value: r.amount / STROOPS_PER_XLM,
     })),
-    chartDays,
-    "day"
+    chartDays
   );
-
-  const subsSparkData = normalizeTimeSeries(
+  const subsSparkData = fillSparklineDays(
     (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count })),
-    chartDays,
-    "day"
+    chartDays
   );
-
-  const custSparkData = normalizeTimeSeries(
+  const custSparkData = fillSparklineDays(
     (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count })),
-    chartDays,
-    "day"
+    chartDays
   );
 
   const subsLimit =
