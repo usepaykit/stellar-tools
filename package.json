@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently -n next,mint,inngest \"next dev\" \"cd app/landing/docs && pnpm dlx mintlify dev --port 3333\" \"pnpm dlx inngest-cli@latest dev\"",
     "build": "pnpm -C packages/stellartools build:dev && next build",
     "start": "next start",
     "lint": "eslint",
@@ -60,6 +60,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "cobe": "^0.6.5",
+    "concurrently": "^9.2.1",
     "countries-list": "^3.2.2",
     "country-flag-icons": "^1.6.4",
     "date-fns": "^4.1.0",

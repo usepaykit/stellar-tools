@@ -4,9 +4,9 @@
   "name": "Stellar Tools",
   "description": "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes.",
   "colors": {
-    "primary": "oklch(0.5321 0.2317 282.7647)",
-    "light": "oklch(0.5321 0.2317 282.7647)",
-    "dark": "oklch(0.5321 0.2317 282.7647)"
+    "primary": "#6347eb",
+    "light": "#6347eb",
+    "dark": "#6347eb"
   },
   "favicon": "/favicon.ico",
   "navigation": {
@@ -88,21 +88,13 @@
     }
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
   },
   "footer": {
     "socials": {
       "x": "https://x.com/usepaykit",
-      "github": "https://github.com/usepaykit/stellar-tools"
+      "github": "https://github.com/usepaykit/stellartools",
+      "linkedin": "https://www.linkedin.com/company/stellar-tools"
     }
   }
 }
