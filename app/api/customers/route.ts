@@ -17,19 +17,30 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
   }
 
-  const result = await Result.andThenAsync(validateSchema(createCustomerSchema, await req.json()), async (data) => {
-    const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
-    const [customer] = await postCustomers(
-      [{ name: data.name, email: data.email, phone: data.phone ?? null, metadata: data.metadata ?? null }],
-      organizationId,
-      environment,
-      {
-        source: data.source ?? "API",
-        customerCount: entitlements.customers,
-      }
-    );
-    return Result.ok(customer);
-  });
+  const body = await req.json();
+  const customers = Array.isArray(body) ? body : [body];
+
+  const result = await Result.andThenAsync(
+    validateSchema(Schema.array(createCustomerSchema), customers),
+    async (data) => {
+      const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+      const source = data[0].source ?? "API";
+
+      const [customer] = await postCustomers(
+        data.map((customer) => ({
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone ?? null,
+          metadata: customer.metadata ?? null,
+          wallets: customer.wallets ?? [],
+        })),
+        organizationId,
+        environment,
+        { source, customerCount: entitlements.customers }
+      );
+      return Result.ok(customer);
+    }
+  );
 
   if (result.isErr()) {
     return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });

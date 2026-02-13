@@ -18,7 +18,7 @@ export const postCustomers = async (
 
   if (options?.customerCount) {
     await validateLimits(organizationId, environment, [
-      { domain: "customers", table: customers, limit: options.customerCount, type: "capacity" },
+      { domain: "customers", table: customers, limit: options.customerCount, type: "capacity", count: params.length },
     ]);
   }
 

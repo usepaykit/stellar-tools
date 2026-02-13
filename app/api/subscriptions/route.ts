@@ -21,7 +21,13 @@ export const POST = async (req: NextRequest) => {
     const { environment, organizationId, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
 
     await validateLimits(organizationId, environment, [
-      { domain: "subscriptions", table: subscriptionsSchema, limit: entitlements.subscriptions, type: "capacity" },
+      {
+        domain: "subscriptions",
+        table: subscriptionsSchema,
+        limit: entitlements.subscriptions,
+        type: "capacity",
+        count: data.customerIds.length,
+      },
     ]);
 
     const [customers, product] = await Promise.all([
@@ -76,8 +82,7 @@ export const POST = async (req: NextRequest) => {
         cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? false,
       },
       organizationId,
-      environment,
-      { subscriptionCount: entitlements.subscriptions }
+      environment
     );
 
     return Result.ok({

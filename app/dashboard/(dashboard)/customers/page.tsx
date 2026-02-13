@@ -312,7 +312,7 @@ export function CustomerModal({
       );
 
       if (isEditMode) {
-        const response = await api.put<Customer>(`customers/${customer?.id}`, {
+        const response = await api.put<Customer>(`/customers/${customer?.id}`, {
           name: data.name,
           email: data.email,
           phone: phoneString,
@@ -325,7 +325,7 @@ export function CustomerModal({
         return response.value;
       }
 
-      const response = await api.post<Customer>("customers", {
+      const response = await api.post<Customer>("/customers", {
         name: data.name,
         email: data.email,
         phone: phoneString,
@@ -648,21 +648,29 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
   };
 
   const importCustomersMutation = useMutation({
-    mutationFn: async () =>
-      postCustomers(
+    mutationFn: async () => {
+      const organization = await getCurrentOrganization();
+
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-session-token": organization?.token! },
+      });
+      const result = await api.post<Array<Customer>>(
+        "/customers",
         previewData.map((row) => ({
           name: row.name,
           email: row.email,
           phone: row.phone,
           metadata: row.metadata,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          walletAddresses: null,
-        })),
-        undefined,
-        undefined,
-        { source: "CSV Import" }
-      ),
+          wallets: [],
+          source: "CSV Import",
+        }))
+      );
+
+      if (result.isErr()) throw new Error(result.error.message);
+
+      return result.value;
+    },
     onSuccess: () => {
       toast.success(`${previewData.length} customers imported successfully`);
       onOpenChange(false);

@@ -61,10 +61,6 @@ export const retrieveOwnerPlan = async (filter: { accId?: string; orgId?: string
 *    `products`: You can have 100 total products.
  */
 
-/**
- * Senior Tip: Use a more flexible type for GatedTable
- * to handle different column names across different tables.
- */
 type GatedTable = AnyPgTable & {
   organizationId: AnyPgColumn;
   createdAt: AnyPgColumn;
@@ -76,6 +72,7 @@ export interface GatingCheck {
   table: GatedTable;
   limit: number;
   type: "capacity" | "throughput";
+  count?: number; // The number of records being added, defaults to 1.
 }
 
 export const validateLimits = async (
@@ -122,15 +119,22 @@ export const validateLimits = async (
 
   checks.forEach((check, index) => {
     const currentUsage = Number(results[`check_${index}`]) || 0;
+    const incoming = check.count ?? 1;
+    const totalAfterAction = currentUsage + incoming;
+
     usageStats[check.domain] = currentUsage;
 
-    if (currentUsage >= check.limit) {
-      violations.push(`${check.domain} (${currentUsage}/${check.limit})`);
+    // If current + incoming exceeds limit, it's a violation
+    if (totalAfterAction > check.limit) {
+      const remaining = Math.max(0, check.limit - currentUsage);
+      violations.push(
+        `${check.domain}: adding ${incoming} would exceed limit (${currentUsage}/${check.limit}). Remaining quota: ${remaining}`
+      );
     }
   });
 
   if (options.throwOnError && violations.length > 0) {
-    throw new Error(`Plan limits reached: ${violations.join(", ")}. Please upgrade.`);
+    throw new Error(`Plan limits exceeded. ${violations.join(". ")}`);
   }
 
   return usageStats;
