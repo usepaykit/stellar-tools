@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/actions/auth";
 import { Network, accounts, db, organizations, plan } from "@/db";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { AnyPgColumn, AnyPgTable, getTableConfig } from "drizzle-orm/pg-core";
-import moment from "moment";
 
 export const retrievePlans = async () => {
   return await db.select().from(plan).orderBy(desc(plan.customers));

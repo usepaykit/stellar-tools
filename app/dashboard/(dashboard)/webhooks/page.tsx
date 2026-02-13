@@ -127,6 +127,8 @@ const ActivityChart = ({ data }: { data?: number[] }) => {
     value,
   }));
 
+  console.log({ chartData });
+
   if (!chartData?.length) {
     return (
       <div className="text-muted-foreground flex items-center gap-2">
@@ -275,7 +277,18 @@ function WebhooksPageContent() {
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const invalidateOrgQuery = useInvalidateOrgQuery();
-  const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics());
+  const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics(), {
+    select: (data) => {
+      return data.map((webhook) => ({
+        ...webhook,
+        eventCount: webhook.events.length,
+        eventsFrom: "account" as const,
+        activity: webhook.activityHistory,
+        responseTime: webhook.responseTimeHistory,
+        errorRate: webhook.errorRate,
+      }));
+    },
+  });
 
   React.useEffect(() => {
     if (searchParams?.get("create") === "true") {
@@ -284,14 +297,10 @@ function WebhooksPageContent() {
     }
   }, [searchParams]);
 
-  const disableWebhookMutation = useMutation({
+  const toggleWebhookDisabledMutation = useMutation({
     mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => {
       const organization = await getCurrentOrganization();
-      const result = await api.put(
-        `/webhooks/${id}`,
-        { isDisabled: true },
-        { "x-session-token": organization?.token! }
-      );
+      const result = await api.put(`/webhooks/${id}`, { isDisabled }, { "x-session-token": organization?.token! });
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
     },
@@ -299,9 +308,7 @@ function WebhooksPageContent() {
       invalidateOrgQuery(["webhooks"]);
       toast.success(isDisabled ? "Webhook disabled" : "Webhook enabled");
     },
-    onError: () => {
-      toast.error("Failed to update webhook");
-    },
+    onError: () => toast.error("Failed to update webhook"),
   });
 
   const deleteWebhookMutation = useMutation({
@@ -348,14 +355,8 @@ function WebhooksPageContent() {
       onClick: handleEditWebhook,
     },
     {
-      label: "Disable",
-      onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: true }),
-      when: (webhook) => !webhook.isDisabled,
-    },
-    {
-      label: "Enable",
-      onClick: (webhook) => disableWebhookMutation.mutate({ id: webhook.id, isDisabled: false }),
-      when: (webhook) => webhook.isDisabled,
+      label: (webhook) => (webhook.isDisabled ? "Enable" : "Disable"),
+      onClick: (webhook) => toggleWebhookDisabledMutation.mutate({ id: webhook.id, isDisabled: !webhook.isDisabled }),
     },
     {
       label: "Delete",
@@ -719,6 +720,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
               <Button
                 variant="link"
                 size="sm"
+                type="button"
                 onClick={handleSelectAll}
                 className="h-auto p-0 text-[10px] font-bold uppercase"
               >

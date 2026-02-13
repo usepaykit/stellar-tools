@@ -13,7 +13,7 @@ export const validateSchema = <T>(schema: z.ZodType<T>, data: unknown): Result<T
         const path = issue.path.length ? `${issue.path.join(".")}: ` : "";
         return `${path}${issue.message}`;
       })
-      .join("\n");
+      .join("; ");
     return Result.err(new Error(message));
   }
 

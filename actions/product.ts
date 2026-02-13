@@ -7,21 +7,23 @@ import { FileUploadApi } from "@/integrations/file-upload";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 
+export const createProductImage = async (formData: FormData) => {
+  const imageFiles = formData.getAll("images");
+
+  if (imageFiles) {
+    const imageUploadResult = await new FileUploadApi().upload(imageFiles as File[]);
+    return imageUploadResult || [];
+  }
+
+  return [];
+};
+
 export const postProduct = async (
   params: Omit<Product, "id" | "organizationId" | "environment">,
-  formDataWithFiles?: FormData,
   orgId?: string,
   env?: Network,
   options?: { productCount?: number }
 ) => {
-  const imageFiles = formDataWithFiles?.getAll("images");
-
-  if (imageFiles) {
-    const imageUploadResult = await new FileUploadApi().upload(imageFiles as File[]);
-
-    params.images = imageUploadResult || [];
-  }
-
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   if (options?.productCount) {

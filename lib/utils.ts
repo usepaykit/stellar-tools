@@ -126,3 +126,23 @@ export function generateResourceId(
 
   return `${prefix}_${signature}${entropy}`;
 }
+
+export function normalizeTimeSeries(points: { i: string; value: number }[], count: number, unit: "hour" | "day") {
+  const byTime = new Map(points.map((p) => [p.i, p.value]));
+  const result: { i: string; value: number }[] = [];
+  const now = new Date();
+
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(now);
+    if (unit === "hour") d.setHours(d.getHours() - i);
+    else d.setDate(d.getDate() - i);
+
+    const timeKey =
+      unit === "hour"
+        ? d.toISOString().slice(0, 13) // YYYY-MM-DDTHH
+        : d.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    result.push({ i: timeKey, value: byTime.get(timeKey) ?? 0 });
+  }
+  return result;
+}

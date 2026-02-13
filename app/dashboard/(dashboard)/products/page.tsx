@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { retrieveAssets } from "@/actions/asset";
 import { getCurrentOrganization } from "@/actions/organization";
-import { retrieveProductsWithAsset } from "@/actions/product";
+import { createProductImage, retrieveProductsWithAsset } from "@/actions/product";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -393,25 +393,29 @@ function ProductsModal({
         headers: { "x-session-token": organization?.token! },
       });
 
-      const result = await api.post<Product>("/api/products", {
-        body: JSON.stringify({
-          name: data.name,
-          description: data.description ?? null,
-          images: [],
-          type: data.type,
-          priceAmount: parseFloat(data.price.amount),
-          assetId: data.price.asset.split(":")[1],
-          recurringPeriod: data.recurringPeriod ?? null,
-          unit: data.unit ?? null,
-          unitDivisor: data.unitDivisor ?? null,
-          unitsPerCredit: data.unitsPerCredit ?? null,
-          creditsGranted: data.creditsGranted ?? null,
-          creditExpiryDays: null,
-        }),
-        formData: new FormData(),
+      const formData = new FormData();
+      formData.append("images", data.images[0]);
+
+      const imageResults = await createProductImage(formData);
+
+      const result = await api.post<Product | { error: string }>("/product", {
+        name: data.name,
+        description: data.description,
+        images: imageResults,
+        type: data.type,
+        priceAmount: parseFloat(data.price.amount),
+        assetId: data.price.asset.split(":")[1],
+        recurringPeriod: data.recurringPeriod,
+        unit: data.unit,
+        unitDivisor: data.unitDivisor,
+        unitsPerCredit: data.unitsPerCredit,
+        creditsGranted: data.creditsGranted,
+        creditExpiryDays: undefined,
       });
 
       if (result.isErr()) throw new Error(result.error.message);
+
+      if ("error" in result.value) throw new Error(result.value.error);
 
       return result.value;
     },

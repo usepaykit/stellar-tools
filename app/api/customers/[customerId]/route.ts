@@ -1,18 +1,21 @@
 import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { deleteCustomer, putCustomer, retrieveCustomers } from "@/actions/customers";
-import { CORS_HEADERS } from "@/constant";
+import { getCorsHeaders } from "@/constant";
 import { updateCustomerSchema } from "@stellartools/core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
-export const OPTIONS = () => new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export const OPTIONS = (req: NextRequest) =>
+  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
 
 export const GET = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   const apiKey = req.headers.get("x-api-key");
   const sessionToken = req.headers.get("x-session-token");
 
   if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: CORS_HEADERS });
+    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(
@@ -26,18 +29,20 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ custome
   );
 
   if (result.isErr()) {
-    return NextResponse.json({ error: result.error.message }, { status: 400, headers: CORS_HEADERS });
+    return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
   }
 
-  return NextResponse.json({ data: result.value }, { headers: CORS_HEADERS });
+  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
 };
 
 export const PUT = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
   const sessionToken = req.headers.get("x-session-token");
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
 
   if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: CORS_HEADERS });
+    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const { customerId } = await context.params;
@@ -49,17 +54,19 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ custome
   });
 
   if (result.isErr()) {
-    return NextResponse.json({ error: result.error.message }, { status: 400, headers: CORS_HEADERS });
+    return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
   }
 
-  return NextResponse.json({ data: result.value }, { headers: CORS_HEADERS });
+  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
 };
 
 export const DELETE = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
 
   if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400, headers: CORS_HEADERS });
+    return NextResponse.json({ error: "API key is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(
@@ -72,8 +79,8 @@ export const DELETE = async (req: NextRequest, context: { params: Promise<{ cust
   );
 
   if (result.isErr()) {
-    return NextResponse.json({ error: result.error.message }, { status: 400, headers: CORS_HEADERS });
+    return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
   }
 
-  return NextResponse.json({ data: result.value }, { headers: CORS_HEADERS });
+  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
 };

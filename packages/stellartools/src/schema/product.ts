@@ -119,7 +119,6 @@ export const createProductSchema = productSchema
     images: true,
     type: true,
     assetId: true,
-    status: true,
     metadata: true,
     unit: true,
     unitDivisor: true,

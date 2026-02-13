@@ -4,7 +4,7 @@ import { resolveOrgContext } from "@/actions/organization";
 import { retrieveOwnerPlan, validateLimits } from "@/actions/plan";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
-import { toSnakeCase } from "@/lib/utils";
+import { normalizeTimeSeries, toSnakeCase } from "@/lib/utils";
 import { generateResourceId } from "@/lib/utils";
 import { WebhookEvent } from "@stellartools/core";
 import { and, eq, sql } from "drizzle-orm";
@@ -62,31 +62,40 @@ export const getWebhooksWithAnalytics = async (orgId?: string, env?: Network) =>
       updatedAt: webhooks.updatedAt,
       environment: webhooks.environment,
       logsCount: sql<number>`cast(count(${webhookLogs.id}) as integer)`.as("logs_count"),
-      errorCount:
-        sql<number>`cast(count(${webhookLogs.id}) filter (where ${webhookLogs.statusCode} >= 400 or ${webhookLogs.errorMessage} is not null) as integer)`.as(
-          "error_count"
-        ),
+      errorCount: sql<number>`cast(count(${webhookLogs.id}) filter (where ${webhookLogs.statusCode} >= 400) as integer)`,
+      hourlyActivity: sql<Array<{ h: string; c: number }>>`
+        (SELECT coalesce(jsonb_agg(item), '[]'::jsonb) FROM (
+          SELECT 
+            to_char(date_trunc('hour', ${webhookLogs.createdAt}), 'YYYY-MM-DD"T"HH24') as h, 
+            count(*)::int as c
+          FROM ${webhookLogs}
+          WHERE ${webhookLogs.webhookId} = ${webhooks.id} 
+            AND ${webhookLogs.createdAt} >= NOW() - INTERVAL '24 hours'
+          GROUP BY 1 ORDER BY 1
+        ) item)
+      `,
       responseTime: sql<number[]>`
         array_agg(${webhookLogs.responseTime} order by ${webhookLogs.createdAt} desc) 
         filter (where ${webhookLogs.responseTime} is not null)
-      `.as("response_time"),
+      `,
     })
     .from(webhooks)
     .leftJoin(webhookLogs, eq(webhookLogs.webhookId, webhooks.id))
     .where(and(eq(webhooks.organizationId, organizationId), eq(webhooks.environment, environment)))
     .groupBy(webhooks.id);
 
-  return result.map((webhook) => {
-    const rawLogs = webhook.responseTime ?? [];
-
-    const sparklineData = rawLogs.slice(0, 50).reverse();
-
-    return {
-      ...webhook,
-      errorRate: webhook.logsCount > 0 ? Math.round((webhook.errorCount / webhook.logsCount) * 100) : 0,
-      responseTime: sparklineData,
-    };
-  });
+  return result.map((webhook) => ({
+    ...webhook,
+    errorRate: webhook.logsCount > 0 ? Math.round((webhook.errorCount / webhook.logsCount) * 100) : 0,
+    // Fill gaps for the last 24 hours of activity
+    activityHistory: normalizeTimeSeries(
+      (webhook.hourlyActivity ?? []).map((a) => ({ i: a.h, value: a.c })),
+      24,
+      "hour"
+    ).map((p) => p.value),
+    // Standard sparkline for last 50 response times
+    responseTimeHistory: (webhook.responseTime ?? []).slice(0, 50).reverse(),
+  }));
 };
 
 export const retrieveWebhook = async (id: string, orgId?: string, env?: Network) => {
@@ -179,8 +188,6 @@ export const retrieveWebhookLog = async (id: string, orgId?: string, env?: Netwo
         eq(webhookLogs.environment, environment)
       )
     );
-
-  if (!webhookLog) throw new Error("Failed to retrieve webhook log");
 
   return webhookLog;
 };

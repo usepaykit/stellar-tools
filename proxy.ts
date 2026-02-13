@@ -9,6 +9,11 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
 
   let prefix = "/landing";
 
+  if (host == process.env.NGROK_HOST!) {
+    console.log("resolving to ngrok");
+    prefix = "/api";
+  }
+
   if (host == new URL(process.env.NEXT_PUBLIC_API_URL!).host) {
     prefix = "/api";
   } else if (host == new URL(process.env.NEXT_PUBLIC_DASHBOARD_URL!).host) {

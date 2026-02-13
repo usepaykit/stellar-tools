@@ -1,14 +1,18 @@
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { GatingCheck, retrievePlan, validateLimits } from "@/actions/plan";
-import { CORS_HEADERS, subscriptionIntervals } from "@/constant";
+import { getCorsHeaders, subscriptionIntervals } from "@/constant";
 import { Network } from "@/constant/schema.client";
 import { payments as paymentsSchema, subscriptions as subscriptionsSchema } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { NextRequest, NextResponse } from "next/server";
 
-export const OPTIONS = () => new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export const OPTIONS = (req: NextRequest) =>
+  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
 
 export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+
   try {
     const { id } = await context.params;
     const environment = req.nextUrl.searchParams.get("environment") as Network;
@@ -50,7 +54,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
       limitError = error as Error;
     }
 
-    if (limitError) return NextResponse.json({ error: limitError.message }, { headers: CORS_HEADERS });
+    if (limitError) return NextResponse.json({ error: limitError.message }, { headers: corsHeaders });
 
     const expiry = recurringPeriod ? new Date(Date.now() + subscriptionIntervals[recurringPeriod] * 864e5) : null;
     const periodEnd = expiry ? new Date(Date.now() + subscriptionIntervals[recurringPeriod] * 864e5) : null;
@@ -89,9 +93,9 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
 
     console.log({ baseUri });
 
-    return NextResponse.json({ uri: finalUri }, { headers: CORS_HEADERS });
+    return NextResponse.json({ uri: finalUri }, { headers: corsHeaders });
   } catch (err: any) {
     console.error(err);
-    return NextResponse.json({ error: err.message }, { status: 500, headers: CORS_HEADERS });
+    return NextResponse.json({ error: err.message }, { status: 500, headers: corsHeaders });
   }
 };

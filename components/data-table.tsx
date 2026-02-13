@@ -23,7 +23,7 @@ import { Button } from "./ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 export interface TableAction<TData> {
-  label: string;
+  label: string | ((row: TData) => string);
   onClick: (row: TData) => void;
   variant?: "default" | "destructive";
   when?: (row: TData) => boolean;
@@ -134,7 +134,7 @@ export const DataTable = <TData, TValue>({
                         action.variant === "destructive" ? "text-destructive focus:text-destructive" : undefined
                       )}
                     >
-                      {action.label}
+                      {typeof action.label === "function" ? action.label(row.original) : action.label}
                     </DropdownMenuItem>
                   ))}
               </DropdownMenuContent>
