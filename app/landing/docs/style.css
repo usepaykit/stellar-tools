@@ -1,0 +1,387 @@
+/* ============================================
+   Stellar Tools: Force app purple everywhere
+   Override all Mintlify theme accents
+   ============================================ */
+
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --stellar-primary: #7c3aed;
+  --stellar-primary-light: #a78bfa;
+  --stellar-primary-dark: #6d28d9;
+  /* Override any theme variable Mintlify might use */
+  --primary: #7c3aed !important;
+  --color-primary: #7c3aed !important;
+  --accent: #7c3aed !important;
+  --color-accent: #7c3aed !important;
+  --brand: #7c3aed !important;
+  --theme-primary: #7c3aed !important;
+}
+
+/* ---- Navbar ---- */
+#navbar,
+[data-id="navbar"],
+.navbar,
+header {
+  --primary: #7c3aed !important;
+  --color-primary: #7c3aed !important;
+}
+
+/* Primary CTA button in navbar (Dashboard / Sign Up Free) – force purple
+   High specificity to override theme/Tailwind green */
+html body header a[href*="signup"],
+html body header a[href*="dashboard"],
+html body header a[href*="mintlify.com"],
+body header [data-id="topbar-cta-button"],
+body header .TopbarCtaButton,
+[data-id="topbar-cta-button"],
+#topbar-cta-button,
+.topbar-cta-button,
+.TopbarCtaButton,
+header a[href="/signup"],
+header a[href*="dashboard"],
+header button[class*="primary"],
+header a[class*="button"]:not([class*="link"]),
+header [class*="cta"],
+/* Topbar right: the main CTA is usually the last or second-to-last link/button */
+[data-id="topbar-right-container"] > a:last-child,
+[data-id="topbar-right-container"] > a[class*="rounded"],
+[data-id="topbar-right-container"] a[class*="bg-"],
+header [class*="topbar"] a[class*="rounded"],
+header nav a[class*="rounded"],
+/* Any link/button in header that has background (the green CTA) */
+header a[style*="background"],
+header a[style*="Background"],
+header button[style*="background"],
+header button[style*="Background"],
+/* Fallback: last anchor in header that looks like a button */
+header > div a.rounded,
+header a.rounded-xl,
+header a.rounded-lg {
+  background-color: #7c3aed !important;
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #fff !important;
+  fill: #fff !important;
+}
+/* Override Tailwind green classes on CTA (e.g. bg-[#16A34A]) */
+header a[class*="16A34A"],
+header a[class*="16a34a"],
+header a[class*="07C983"],
+header button[class*="16A34A"],
+header button[class*="16a34a"] {
+  background-color: #7c3aed !important;
+  background: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #fff !important;
+}
+[data-id="topbar-cta-button"]:hover,
+.topbar-cta-button:hover,
+header a[href="/signup"]:hover,
+header a[href*="dashboard"]:hover,
+header button[class*="primary"]:hover,
+[data-id="topbar-right-container"] > a:last-child:hover,
+header a[style*="background"]:hover,
+header a.rounded-xl:hover,
+header a.rounded-lg:hover {
+  background-color: #6d28d9 !important;
+  background: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+}
+/* Arrow icon inside CTA button – keep white */
+[data-id="topbar-cta-button"] svg,
+[data-id="topbar-right-container"] > a:last-child svg,
+header a.rounded-xl svg,
+header a.rounded-lg svg {
+  fill: #fff !important;
+  color: #fff !important;
+}
+
+/* Navbar links hover */
+.NavBarLink,
+.navbar-link,
+[data-id="navbar-link"] a,
+header nav a:hover {
+  color: #7c3aed !important;
+}
+
+/* ---- Tabs (Guides / API reference) ---- */
+[data-id="nav-tabs"],
+.nav-tabs,
+.NavTabs,
+[data-id="tabs"],
+.tabs {
+  --primary: #7c3aed !important;
+}
+[data-id="nav-tabs"] [aria-selected="true"],
+[data-id="nav-tabs-item"][aria-selected="true"],
+.nav-tabs-item[aria-selected="true"],
+.NavTabsItem[aria-selected="true"],
+[role="tab"][aria-selected="true"],
+.tabs [aria-selected="true"] {
+  border-bottom-color: #7c3aed !important;
+  color: #7c3aed !important;
+  box-shadow: inset 0 -2px 0 0 #7c3aed !important;
+}
+[data-id="nav-tabs"] a:hover,
+.nav-tabs-item:hover,
+[role="tab"]:hover {
+  color: #7c3aed !important;
+}
+
+/* ---- Sidebar ---- */
+[data-id="sidebar"],
+.sidebar,
+.Sidebar,
+[data-id="sidebar-content"],
+.sidebar-content {
+  --primary: #7c3aed !important;
+}
+
+/* Sidebar nav links - active page */
+[data-id="navigation-items"] a[aria-current="page"],
+[data-id="sidebar-content"] a[aria-current="page"],
+.sidebar-content a[aria-current="page"],
+.SidebarContent a[aria-current="page"],
+nav a[aria-current="page"],
+[data-id="navigation-items"] a[data-active="true"],
+aside nav a[aria-current="page"] {
+  background-color: rgba(124, 58, 237, 0.14) !important;
+  color: #7c3aed !important;
+  border-left-color: #7c3aed !important;
+}
+[data-id="navigation-items"] a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:hover,
+aside nav a[aria-current="page"]:hover {
+  background-color: rgba(124, 58, 237, 0.2) !important;
+  color: #6d28d9 !important;
+}
+
+/* Sidebar links hover */
+[data-id="sidebar-content"] a:hover,
+.sidebar-content a:hover,
+aside nav a:hover {
+  color: #7c3aed !important;
+}
+
+/* Sidebar anchors (Documentation, Home icons) */
+[data-id="nav-anchors"],
+.nav-anchors,
+[data-id="anchor"],
+.nav-anchor,
+.Anchor {
+  --primary: #7c3aed !important;
+}
+[data-id="nav-anchors"] a,
+.nav-anchors a,
+.nav-anchor a {
+  color: #7c3aed !important;
+}
+[data-id="nav-anchors"] [data-id="icon"] path,
+[data-id="nav-anchors"] .icon path,
+.nav-anchors .icon path,
+.nav-anchor svg path {
+  fill: #7c3aed !important;
+}
+
+/* ---- Page content ---- */
+/* Eyebrow (e.g. "Getting started") */
+[data-id="eyebrow"],
+.eyebrow,
+.Eyebrow,
+[class*="eyebrow"] {
+  color: #7c3aed !important;
+}
+
+/* Headings that use primary color */
+.mdx-content h1,
+.mdx-content h2,
+.mdx-content h3,
+[data-id="page-title"],
+.page-title,
+.PageTitle {
+  color: inherit;
+}
+/* Only override if theme set them to green - use variable override above */
+
+/* ---- Table of contents (On this page) ---- */
+[data-id="table-of-contents"],
+.table-of-contents,
+.TableOfContents,
+[data-id="toc"],
+.toc {
+  --primary: #7c3aed !important;
+}
+[data-id="table-of-contents-content"] a,
+[data-id="toc-item"] a,
+.toc-item a,
+.table-of-contents-content a,
+.TableOfContentsContent a {
+  color: inherit;
+}
+[data-id="table-of-contents-content"] a[aria-current],
+[data-id="toc-item"][aria-current="true"] a,
+.toc-item[aria-current="true"] a,
+.table-of-contents-content a[aria-current],
+.toc a[aria-current] {
+  color: #7c3aed !important;
+}
+.toc a:hover,
+[data-id="toc-item"] a:hover {
+  color: #7c3aed !important;
+}
+
+/* ---- Cards (Write Content, Customize style, etc.) ---- */
+[data-id="card"],
+.card,
+.Card,
+[data-id="card-group"] .card,
+.card-group .card {
+  --primary: #7c3aed !important;
+}
+[data-id="card"] a,
+.card a,
+.Card a,
+[data-id="card"] [data-id="icon"],
+[data-id="card"] .icon,
+.card .icon,
+.Card .icon {
+  color: #7c3aed !important;
+}
+[data-id="card"] svg,
+[data-id="card"] svg path,
+.card svg path,
+.Card svg path,
+[data-id="card"] [data-id="icon"] path,
+.card .icon path {
+  fill: #7c3aed !important;
+  color: #7c3aed !important;
+}
+[data-id="card"]:hover a,
+.card:hover a {
+  color: #6d28d9 !important;
+}
+
+/* ---- Steps (Step 1, Step 2, etc.) ---- */
+[data-id="steps"],
+.steps,
+.Steps,
+[data-id="step"],
+.step,
+.Step {
+  --primary: #7c3aed !important;
+}
+[data-id="step"] [data-id="icon"],
+.step .icon,
+.Step .icon,
+.steps svg,
+.step svg path {
+  fill: #7c3aed !important;
+  color: #7c3aed !important;
+}
+
+/* ---- Expandables / Accordions ---- */
+[data-id="expandable"],
+.expandable,
+.Expandable,
+[data-id="accordion"],
+.accordion {
+  --primary: #7c3aed !important;
+}
+.expandable summary:hover,
+.Expandable summary:hover,
+[data-id="expandable"] summary:hover {
+  color: #7c3aed !important;
+}
+
+/* ---- Links in body ---- */
+.mdx-content a,
+[data-id="content"] a,
+.content a,
+.body-content a {
+  color: #7c3aed !important;
+}
+.mdx-content a:hover,
+[data-id="content"] a:hover {
+  color: #6d28d9 !important;
+}
+
+/* ---- Buttons (Copy page, Try it, etc.) ---- */
+button[class*="primary"],
+[role="button"][class*="primary"],
+.TryitButton,
+.tryit-button,
+[data-id="tryit-button"] {
+  background-color: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #fff !important;
+}
+button[class*="primary"]:hover,
+.TryitButton:hover,
+.tryit-button:hover {
+  background-color: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+}
+
+/* ---- Pagination ---- */
+[data-id="pagination"] a,
+.pagination a,
+.PaginationNext,
+.PaginationPrev {
+  color: #7c3aed !important;
+}
+[data-id="pagination"] a:hover,
+.pagination a:hover {
+  color: #6d28d9 !important;
+}
+
+/* ---- Search ---- */
+.SearchBarEntry,
+.search-bar-entry,
+[data-id="search-bar-entry"] {
+  --primary: #7c3aed !important;
+}
+[data-id="search-input"]:focus,
+.search-input:focus {
+  border-color: #7c3aed !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2) !important;
+}
+
+/* ---- Footer ---- */
+footer a {
+  color: #7c3aed !important;
+}
+footer a:hover {
+  color: #6d28d9 !important;
+}
+
+/* ---- Catch-all: any element with green color (inline or common classes) ---- */
+[style*="rgb(22, 163, 74)"],
+[style*="#16A34A"],
+[style*="#16a34a"],
+[style*="rgb(7, 201, 131)"],
+[style*="#07C983"],
+[style*="#15803D"],
+[style*="#0D9373"],
+[style*="#4ADE80"],
+[style*="#18E299"] {
+  background-color: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #fff !important;
+  fill: #7c3aed !important;
+}
+
+/* SVG fills that might be green */
+svg path[fill="#16A34A"],
+svg path[fill="#07C983"],
+svg path[fill="#15803D"],
+svg[fill="#16A34A"] path,
+svg[fill="#07C983"] path {
+  fill: #7c3aed !important;
+}
+
+/* Focus ring to match purple */
+:focus-visible {
+  outline-color: #7c3aed !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.3) !important;
+}
