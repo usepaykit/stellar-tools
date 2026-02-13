@@ -1,0 +1,38 @@
+---
+title: 'Products'
+description: 'Create products for one-time or subscription payments'
+---
+
+Products define what you sell: a one-time payment or a subscription with a price and asset.
+
+## Create product
+
+```http POST /api/product
+POST /api/product
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "name": "Pro Plan",
+  "description": "Monthly access",
+  "type": "subscription",
+  "assetId": "asset_xxx",
+  "priceAmount": 10,
+  "recurringPeriod": "monthly",
+  "unit": "credits",
+  "unitDivisor": 1,
+  "unitsPerCredit": 1,
+  "creditsGranted": 100,
+  "metadata": {}
+}
+```
+
+- `type`: `"one_time"` or `"subscription"`.
+- `assetId`: ID of the asset (e.g. XLM, USDC) for pricing.
+- `priceAmount`: Price in the asset’s smallest unit (e.g. stroops for XLM).
+- `recurringPeriod`: For subscriptions, e.g. `"monthly"`, `"yearly"`.
+- Optional: `unit`, `unitDivisor`, `unitsPerCredit`, `creditsGranted` for credit-based products.
+
+You can also send `multipart/form-data` with image files; the API accepts form data for product creation.
+
+**Response** `200`: `{ "data": { "id", "name", "type", "priceAmount", "status", "assetId", "recurringPeriod", ... } }`

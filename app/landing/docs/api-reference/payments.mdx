@@ -1,0 +1,19 @@
+---
+title: 'Payments'
+description: 'Retrieve payment status'
+---
+
+Payments are created when a checkout is paid. Use this API to fetch payment details and optionally refresh status from the chain.
+
+## Get payment
+
+```http GET /api/payment/:id
+GET /api/payment/pay_xxx
+x-api-key: your_api_key
+```
+
+Your server may refresh status from the Stellar network for `pending` payments depending on implementation.
+
+**Response** `200`: `{ "data": { "id", "checkoutId", "status", "amount", "transactionHash", "customerId", "environment", ... } }`
+
+Status can be `pending`, `completed`, or `failed`.

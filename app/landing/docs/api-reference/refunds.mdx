@@ -1,0 +1,33 @@
+---
+title: 'Refunds'
+description: 'Create refunds for payments'
+---
+
+Refunds send assets back to a receiver address (e.g. customer wallet) for a given payment.
+
+## Create refund
+
+```http POST /api/refunds
+POST /api/refunds
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "paymentId": "pay_xxx",
+  "assetId": "asset_xxx",
+  "amount": 10000000,
+  "receiverPublicKey": "G...",
+  "customerId": "cust_xxx",
+  "reason": "Customer request",
+  "metadata": {}
+}
+```
+
+- `amount` is in stroops (1 XLM = 10,000,000 stroops). For other assets, use the asset’s smallest unit.
+- `receiverPublicKey` is the Stellar account that receives the refund.
+
+**Response** `200`: `{ "data": { refund object } }` or error with validation/state message.
+
+<Note>
+  Refunds trigger `refund.succeeded` or `refund.failed` webhook events.
+</Note>

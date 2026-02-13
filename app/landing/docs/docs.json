@@ -1,29 +1,12 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "maple",
+  "theme": "mint",
   "name": "Stellar Tools",
+  "description": "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes.",
   "colors": {
     "primary": "#7c3aed",
     "light": "#a78bfa",
-    "dark": "#6d28d9",
-    "background": {
-      "light": "#fafafa",
-      "dark": "#1e1e2e"
-    }
-  },
-  "fonts": {
-    "family": "Inter",
-    "heading": {
-      "family": "Inter",
-      "weight": 600
-    },
-    "body": {
-      "family": "Inter",
-      "weight": 400
-    }
-  },
-  "modeToggle": {
-    "default": "light"
+    "dark": "#6d28d9"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -55,6 +38,17 @@
               "ai-tools/claude-code",
               "ai-tools/windsurf"
             ]
+          },
+          {
+            "group": "Adapters",
+            "pages": [
+              "adapters/overview",
+              "adapters/medusajs",
+              "adapters/betterauth",
+              "adapters/uploadthing",
+              "adapters/langchain",
+              "adapters/aisdk"
+            ]
           }
         ]
       },
@@ -62,16 +56,20 @@
         "tab": "API reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
             "pages": ["api-reference/introduction"]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Resources",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/checkout",
+              "api-reference/customers",
+              "api-reference/webhooks",
+              "api-reference/subscriptions",
+              "api-reference/payments",
+              "api-reference/refunds",
+              "api-reference/products",
+              "api-reference/payout"
             ]
           }
         ]
@@ -82,20 +80,12 @@
         {
           "anchor": "Documentation",
           "href": "/docs",
-          "icon": "book-open-cover",
-          "color": {
-            "light": "#7c3aed",
-            "dark": "#a78bfa"
-          }
+          "icon": "book-open-cover"
         },
         {
           "anchor": "Home",
           "href": "/",
-          "icon": "house",
-          "color": {
-            "light": "#7c3aed",
-            "dark": "#a78bfa"
-          }
+          "icon": "house"
         }
       ]
     }
