@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postWebhook } from "@/actions/webhook";
 import { getCorsHeaders } from "@/constant";
 import { generateResourceId } from "@/lib/utils";
@@ -10,18 +10,18 @@ export const OPTIONS = (req: NextRequest) =>
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const authToken = req.headers.get("x-auth-token");
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(
     validateSchema(createWebhookSchema.extend({ secret: Schema.string().optional() }), await req.json()),
     async (data) => {
-      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
       const webhookPayload = {
         name: data.name,
         url: data.url,
@@ -30,7 +30,7 @@ export const POST = async (req: NextRequest) => {
         description: data.description ?? null,
         createdAt: new Date(),
         updatedAt: new Date(),
-        secret: sessionToken && data.secret ? data.secret : generateResourceId("whsec", organizationId, 32),
+        secret: authToken && data.secret ? data.secret : generateResourceId("whsec", organizationId, 32),
       };
 
       return await postWebhook(organizationId, environment, webhookPayload).then(Result.ok);

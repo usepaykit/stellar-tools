@@ -415,7 +415,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
       const organization = await getCurrentOrganization();
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-session-token": organization?.token! },
+        headers: { "x-auth-token": organization?.token! },
       });
 
       const expiresAt = new Date();

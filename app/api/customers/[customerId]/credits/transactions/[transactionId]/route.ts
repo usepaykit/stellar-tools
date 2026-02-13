@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveCreditTransaction } from "@/actions/credit";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,7 +14,7 @@ export const GET = async (
   const result = await Result.andThenAsync(
     validateSchema(Schema.object({ transactionId: Schema.string() }), context.params),
     async ({ transactionId }) => {
-      const { organizationId } = await resolveApiKeyOrSessionToken(apiKey);
+      const { organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
       const transaction = await retrieveCreditTransaction(transactionId, organizationId);
 

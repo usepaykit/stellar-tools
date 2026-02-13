@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postProduct } from "@/actions/product";
 import { getCorsHeaders } from "@/constant";
 import { Result, createProductSchema, validateSchema } from "@stellartools/core";
@@ -9,20 +9,18 @@ export const OPTIONS = (req: NextRequest) =>
 
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const authToken = req.headers.get("x-auth-token");
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or session token is required" }, { status: 400, headers: corsHeaders });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const body = await req.json();
 
-  console.log({ body });
-
   const result = await Result.andThenAsync(validateSchema(createProductSchema, body), async (data) => {
-    const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+    const { organizationId, environment, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
 
     const productData: Parameters<typeof postProduct>[0] = {
       name: data.name,

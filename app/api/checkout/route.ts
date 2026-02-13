@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { upsertCustomer } from "@/actions/customers";
 import { retrieveOwnerPlan } from "@/actions/plan";
@@ -21,6 +21,13 @@ export const POST = async (req: NextRequest) => {
       return send({ error: "Valid type (product|direct) is required" }, 400);
     }
 
+    const apiKey = req.headers.get("x-api-key");
+    const authToken = req.headers.get("x-auth-token");
+
+    if (!apiKey && !authToken) {
+      return send({ error: "API key or Auth Token is required" }, 400);
+    }
+
     const body = await req.json();
 
     const result =
@@ -33,7 +40,7 @@ export const POST = async (req: NextRequest) => {
     return result.isOk() ? send({ data: result.value }) : send({ error: result.error.message }, 400);
 
     async function processCheckout(data: any, checkoutType: "product" | "direct") {
-      const auth = await resolveApiKeyOrSessionToken(req.headers.get("x-api-key"), req.headers.get("x-session-token"));
+      const auth = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
 
       const [customer, { plan }] = await Promise.all([
         upsertCustomer(

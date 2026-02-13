@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { getCheckoutPaymentDetails } from "@/actions/checkout";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { generateResourceId } from "@/lib/utils";
@@ -19,7 +19,7 @@ export const GET = async (req: NextRequest, { params }: { params: Promise<{ id: 
   const result = await Result.andThenAsync(
     validateSchema(Schema.object({ id: Schema.string() }), id),
     async ({ id }) => {
-      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
       const { paymentUri, ...details } = await getCheckoutPaymentDetails(id, organizationId, environment);
 
       const buffer = await QRCode.toBuffer(paymentUri);

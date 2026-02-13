@@ -93,6 +93,7 @@ export default function CheckoutPage() {
   }, [stellarWalletsKit]);
 
   React.useEffect(() => {
+    if (isPaid || isFailed) return;
     if (!hasDetails || !checkout?.merchantPublicKey) return;
 
     const fetchURI = async () => {
@@ -115,7 +116,7 @@ export default function CheckoutPage() {
     };
 
     fetchURI();
-  }, [hasDetails, checkout, checkoutId]);
+  }, [hasDetails, checkout, checkoutId, isPaid, isFailed]);
 
   if (isLoading) return <Checkout.Skeleton />;
   if (!checkout) return notFound();
@@ -374,7 +375,7 @@ const Checkout = {
           <AlertCircle className="text-destructive size-10" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-black tracking-tight uppercase sm:text-3xl">Payment Failed</h1>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Payment Failed</h1>
           <p className="text-muted-foreground">We couldn&apos;t verify your transaction on the ledger.</p>
         </div>
         <div className="rounded-2xl border border-red-100 bg-red-50/50 p-6 text-left sm:p-8">

@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { creditTransactions, db } from "@/db";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { and, desc, eq } from "drizzle-orm";
@@ -28,7 +28,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ custome
       }
     ),
     async ({ productId, limit, offset }) => {
-      const { organizationId } = await resolveApiKeyOrSessionToken(apiKey);
+      const { organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey);
       const conditions = [
         eq(creditTransactions.customerId, customerId),
         eq(creditTransactions.organizationId, organizationId),

@@ -220,7 +220,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
     const api = new ApiClient({
       baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
-      headers: { "x-session-token": accessToken },
+      headers: { "x-auth-token": accessToken },
     });
 
     const period =

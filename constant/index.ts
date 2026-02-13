@@ -14,7 +14,7 @@ export function getCorsHeaders(requestOrigin?: string | null): Record<string, st
   return {
     "Access-Control-Allow-Origin": isAllowed ? requestOrigin : "https://stellartools.dev",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-session-token, x-api-key",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, x-auth-token, x-api-key",
     "Access-Control-Allow-Credentials": "true",
   };
 }

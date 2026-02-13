@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { triggerWebhooks } from "@/actions/webhook";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
@@ -57,7 +57,7 @@ export const POST = async (req: NextRequest, context: { params: Promise<{ id: st
     async ({ customerAddress, productId }) => {
       const [subscription, { organizationId, environment }] = await Promise.all([
         retrieveSubscription(id),
-        resolveApiKeyOrSessionToken(apiKey),
+        resolveApiKeyOrAuthorizationToken(apiKey),
       ]);
 
       const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);

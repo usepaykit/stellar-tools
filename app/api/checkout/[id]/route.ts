@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { deleteCheckout, putCheckout, retrieveCheckout } from "@/actions/checkout";
 import { updateCheckoutSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -12,7 +12,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+  const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
   const checkout = await retrieveCheckout(id, organizationId, environment);
 
@@ -28,7 +28,7 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+  const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
   const { error, data } = updateCheckoutSchema.safeParse(await req.json());
 
@@ -48,7 +48,7 @@ export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: 
     return NextResponse.json({ error: "API key is required" }, { status: 400 });
   }
 
-  const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+  const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
   await deleteCheckout(id, organizationId, environment);
 

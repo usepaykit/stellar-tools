@@ -1,6 +1,6 @@
 ---
-title: 'Payout'
-description: 'Send payouts to a Stellar address'
+title: "Payout"
+description: "Send payouts to a Stellar address"
 ---
 
 Payouts send assets from your organization’s Stellar account to another address. **Requires session token** (dashboard user), not API key.
@@ -9,7 +9,7 @@ Payouts send assets from your organization’s Stellar account to another addres
 
 ```http POST /api/payout
 POST /api/payout
-x-session-token: your_session_token
+x-auth-token: your_session_token
 Content-Type: application/json
 
 {
@@ -30,5 +30,6 @@ Content-Type: application/json
 Payout is processed asynchronously. Status is initially `pending`; when the transaction is submitted on-chain it becomes `succeeded` and `transactionHash` and `completedAt` are set.
 
 <Warning>
-  This endpoint uses your organization’s Stellar secret. Only use with a trusted session (dashboard). Do not expose session tokens to client-side or third parties.
+  This endpoint uses your organization’s Stellar secret. Only use with a trusted session (dashboard). Do not expose
+  session tokens to client-side or third parties.
 </Warning>

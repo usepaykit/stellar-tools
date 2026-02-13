@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCustomers, retrieveCustomers } from "@/actions/customers";
 import { getCorsHeaders } from "@/constant";
 import { Result, z as Schema, createCustomerSchema, validateSchema } from "@stellartools/core";
@@ -11,10 +11,10 @@ export const POST = async (req: NextRequest) => {
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
   const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const authToken = req.headers.get("x-auth-token");
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const body = await req.json();
@@ -23,7 +23,7 @@ export const POST = async (req: NextRequest) => {
   const result = await Result.andThenAsync(
     validateSchema(Schema.array(createCustomerSchema), customers),
     async (data) => {
-      const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+      const { organizationId, environment, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
       const source = data[0].source ?? "API";
 
       const [customer] = await postCustomers(
@@ -53,7 +53,7 @@ export const GET = async (req: NextRequest) => {
   const result = await Result.andThenAsync(
     validateSchema(Schema.object({ apiKey: Schema.string() }), { apiKey: req.headers.get("x-api-key") }),
     async ({ apiKey }) => {
-      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey);
+      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
       const customers = await retrieveCustomers(undefined, { withWallets: true }, organizationId, environment);
       return Result.ok(customers);
     }

@@ -1,25 +1,31 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
+import { getCorsHeaders } from "@/constant";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { createRefundSchema, validateSchema } from "@stellartools/core";
 import { Result } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
+export const OPTIONS = (req: NextRequest) =>
+  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
+
 export const POST = async (req: NextRequest) => {
   const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const authToken = req.headers.get("x-auth-token");
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or session token is required" }, { status: 400 });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(validateSchema(createRefundSchema, await req.json()), async (data) => {
-    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+    const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
     const [payment, asset] = await Promise.all([
       retrievePayment(data.paymentId, organizationId, environment),
       retrieveAsset(data.assetId),

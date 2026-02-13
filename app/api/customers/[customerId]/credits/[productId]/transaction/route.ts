@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCreditTransaction, putCreditBalance, retrieveCreditBalance } from "@/actions/credit";
 import { retrieveProduct } from "@/actions/product";
 import { calculateCredits } from "@/lib/credit-calculator";
@@ -27,7 +27,7 @@ export const POST = async (
       await req.json()
     ),
     async ({ amount, type, reason, metadata, dryRun }): Promise<Result<{ isSufficient: boolean }, Error>> => {
-      const { organizationId, environment, entitlements } = await resolveApiKeyOrSessionToken(apiKey);
+      const { organizationId, environment, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
       const [product, creditBalance] = await Promise.all([
         retrieveProduct(productId, organizationId),

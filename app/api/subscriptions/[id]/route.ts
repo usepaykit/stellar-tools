@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { Result, z as Schema, updateSubscriptionSchema, validateSchema } from "@stellartools/core";
@@ -14,7 +14,7 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
   }
 
   const result = await Result.andThenAsync(validateSchema(Schema.string(), id), async (id) => {
-    const { environment } = await resolveApiKeyOrSessionToken(apiKey);
+    const { environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
     const subscription = await retrieveSubscription(id);
@@ -49,7 +49,7 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
   const result = await Result.andThenAsync(
     validateSchema(updateSubscriptionSchema, await req.json()),
     async ({ metadata, cancelAtPeriodEnd }) => {
-      const { environment, organizationId } = await resolveApiKeyOrSessionToken(apiKey);
+      const { environment, organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey);
       const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
       const subscription = await retrieveSubscription(id);

@@ -390,7 +390,7 @@ function ProductsModal({
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-session-token": organization?.token! },
+        headers: { "x-auth-token": organization?.token! },
       });
 
       const formData = new FormData();

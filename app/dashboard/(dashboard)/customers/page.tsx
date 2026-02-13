@@ -296,7 +296,7 @@ export function CustomerModal({
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-session-token": organization?.token! },
+        headers: { "x-auth-token": organization?.token! },
       });
 
       const phoneString = data.phoneNumber.number ? phoneNumberToString(data.phoneNumber) : "";
@@ -653,7 +653,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-session-token": organization?.token! },
+        headers: { "x-auth-token": organization?.token! },
       });
       const result = await api.post<Array<Customer>>(
         "/customers",

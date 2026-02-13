@@ -1,24 +1,30 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveCustomers } from "@/actions/customers";
 import { validateLimits } from "@/actions/plan";
 import { retrieveProduct } from "@/actions/product";
 import { listSubscriptions, postSubscriptionsBulk } from "@/actions/subscription";
+import { getCorsHeaders } from "@/constant";
 import { subscriptions as subscriptionsSchema } from "@/db";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { createSubscriptionSchema } from "@stellartools/core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
-export const POST = async (req: NextRequest) => {
-  const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+export const OPTIONS = (req: NextRequest) =>
+  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "Auth required" }, { status: 401 });
+export const POST = async (req: NextRequest) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  const apiKey = req.headers.get("x-api-key");
+  const authToken = req.headers.get("x-auth-token");
+
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(validateSchema(createSubscriptionSchema, await req.json()), async (data) => {
-    const { environment, organizationId, entitlements } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+    const { environment, organizationId, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
 
     await validateLimits(organizationId, environment, [
       {
@@ -91,27 +97,32 @@ export const POST = async (req: NextRequest) => {
     });
   });
 
-  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400 });
-  return NextResponse.json({ data: result.value });
+  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
+  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
 };
 
 export const GET = async (req: NextRequest) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
   const apiKey = req.headers.get("x-api-key");
+  const authToken = req.headers.get("x-auth-token");
 
-  if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
+  }
 
   const { searchParams } = new URL(req.url);
 
   const result = await Result.andThenAsync(
     validateSchema(Schema.object({ customerId: Schema.string() }), { customerId: searchParams.get("customerId") }),
     async (data) => {
-      const { environment } = await resolveApiKeyOrSessionToken(apiKey);
+      const { environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
       const subscriptions = await listSubscriptions(data.customerId, environment);
       return Result.ok(subscriptions);
     }
   );
 
-  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400 });
+  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
 
-  return NextResponse.json({ data: result.value });
+  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
 };

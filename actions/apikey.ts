@@ -67,7 +67,7 @@ export const deleteApiKey = async (id: string, orgId?: string, env?: Network) =>
     .then(() => null);
 };
 
-export const resolveApiKeyOrSessionToken$1 = async (apiKey: string, sessionToken?: string) => {
+export const resolveApiKeyOrAuthorizationToken$1 = async (apiKey: string, sessionToken?: string) => {
   if (sessionToken) {
     const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
       orgId: string;
@@ -92,7 +92,7 @@ export const resolveApiKeyOrSessionToken$1 = async (apiKey: string, sessionToken
   };
 };
 
-export const resolveApiKeyOrSessionToken = async (apiKey?: string | null, sessionToken?: string | null) => {
+export const resolveApiKeyOrAuthorizationToken = async (apiKey?: string | null, sessionToken?: string | null) => {
   const context = await (async () => {
     if (sessionToken) {
       const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {

@@ -1,4 +1,4 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { deleteWebhook, putWebhook, retrieveWebhook } from "@/actions/webhook";
 import { getCorsHeaders } from "@/constant";
 import { Result, z as Schema, updateWebhookSchema, validateSchema } from "@stellartools/core";
@@ -12,14 +12,14 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
   const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const authToken = req.headers.get("x-auth-token");
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(validateSchema(Schema.string(), id), async (id) => {
-    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+    const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
     return await retrieveWebhook(id, organizationId, environment).then(Result.ok);
   });
 
@@ -32,18 +32,18 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
 
 export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const authToken = req.headers.get("x-auth-token");
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const { id } = await context.params;
 
   const result = await Result.andThenAsync(validateSchema(updateWebhookSchema, await req.json()), async (data) => {
-    const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+    const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
     return await putWebhook(id, data, organizationId, environment).then(Result.ok);
   });
 
@@ -56,18 +56,18 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
 
 export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const authToken = req.headers.get("x-auth-token");
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(
     validateSchema(Schema.object({ id: Schema.string() }), await context.params),
     async ({ id }) => {
-      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
       return await deleteWebhook(id, organizationId, environment).then(Result.ok);
     }
   );

@@ -1,7 +1,8 @@
-import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
+import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { postPayout, putPayout } from "@/actions/payout";
+import { getCorsHeaders } from "@/constant";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
@@ -9,10 +10,20 @@ import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { NextRequest, NextResponse } from "next/server";
 
-export const POST = async (req: NextRequest) => {
-  const sessionToken = req.headers.get("x-session-token");
+export const OPTIONS = (req: NextRequest) =>
+  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
 
-  if (!sessionToken) return NextResponse.json({ error: "Session Token is required" }, { status: 400 });
+export const POST = async (req: NextRequest) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  const authToken = req.headers.get("x-auth-token");
+  const apiKey = req.headers.get("x-api-key");
+
+  if (!apiKey && !authToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
+  }
+
+  if (!authToken) return NextResponse.json({ error: "Auth Token is required" }, { status: 400, headers: corsHeaders });
 
   const result = await Result.andThenAsync(
     validateSchema(
@@ -25,7 +36,7 @@ export const POST = async (req: NextRequest) => {
       await req.json()
     ),
     async (data) => {
-      const { organizationId, environment } = await resolveApiKeyOrSessionToken("dummy-api-key", sessionToken); // resolves org from session token
+      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken("dummy-api-key", authToken); // resolves org from session token
       const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 
       if (!secret) return Result.err("Invalid stellar secret");
@@ -81,7 +92,7 @@ export const POST = async (req: NextRequest) => {
     }
   );
 
-  if (result.isErr()) return NextResponse.json({ error: result.error }, { status: 400 });
+  if (result.isErr()) return NextResponse.json({ error: result.error }, { status: 400, headers: corsHeaders });
 
-  return NextResponse.json({ data: result.value });
+  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
 };

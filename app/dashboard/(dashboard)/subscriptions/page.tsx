@@ -125,7 +125,7 @@ export function CreateSubscriptionModal({
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
-        headers: { "x-session-token": organization?.token ?? undefined! },
+        headers: { "x-auth-token": organization?.token ?? undefined! },
       });
 
       const result = await api.post<{ id: string; success: boolean }>("/api/subscriptions", {

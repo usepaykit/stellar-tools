@@ -300,7 +300,7 @@ function WebhooksPageContent() {
   const toggleWebhookDisabledMutation = useMutation({
     mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => {
       const organization = await getCurrentOrganization();
-      const result = await api.put(`/webhooks/${id}`, { isDisabled }, { "x-session-token": organization?.token! });
+      const result = await api.put(`/webhooks/${id}`, { isDisabled }, { "x-auth-token": organization?.token! });
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
     },
@@ -315,7 +315,7 @@ function WebhooksPageContent() {
     mutationFn: async (id: string) => {
       const organization = await getCurrentOrganization();
       return await api.delete<Webhook>(`/webhooks/${id}`, {
-        "x-session-token": organization?.token!,
+        "x-auth-token": organization?.token!,
       });
     },
     onSuccess: () => {
@@ -560,7 +560,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
       const result = await api.post(
         "/webhooks",
         { name, url, description, events, secret },
-        { "x-session-token": organization?.token! }
+        { "x-auth-token": organization?.token! }
       );
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
@@ -584,7 +584,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
       const result = await api.put<Webhook>(
         `/webhooks/${editingWebhook.id}`,
         { url: data.endpointUrl, description: data.description ?? null, events: data.events },
-        { "x-session-token": organization?.token! }
+        { "x-auth-token": organization?.token! }
       );
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
