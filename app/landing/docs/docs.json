@@ -4,9 +4,9 @@
   "name": "Stellar Tools",
   "description": "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes.",
   "colors": {
-    "primary": "#7c3aed",
-    "light": "#a78bfa",
-    "dark": "#6d28d9"
+    "primary": "oklch(0.5321 0.2317 282.7647)",
+    "light": "oklch(0.5321 0.2317 282.7647)",
+    "dark": "oklch(0.5321 0.2317 282.7647)"
   },
   "favicon": "/favicon.ico",
   "navigation": {
