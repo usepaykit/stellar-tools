@@ -1,0 +1,85 @@
+---
+title: 'Webhooks'
+description: 'Create and manage webhook endpoints'
+---
+
+Webhooks send HTTP POST requests to your URL when events occur (e.g. `payment.confirmed`, `subscription.canceled`).
+
+## Events
+
+| Event | Description |
+|-------|-------------|
+| `customer.created` | New customer created |
+| `customer.updated` | Customer updated |
+| `customer.deleted` | Customer deleted |
+| `checkout.created` | Checkout created |
+| `payment.pending` | Payment submitted, awaiting confirmation |
+| `payment.confirmed` | Payment confirmed on-chain |
+| `payment.failed` | Payment failed |
+| `refund.succeeded` | Refund completed |
+| `refund.failed` | Refund failed |
+| `subscription.created` | Subscription created |
+| `subscription.updated` | Subscription updated |
+| `subscription.canceled` | Subscription canceled |
+
+## Create webhook
+
+```http POST /api/webhooks
+POST /api/webhooks
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "name": "Production webhooks",
+  "url": "https://yoursite.com/webhooks/stellar",
+  "events": ["payment.confirmed", "subscription.canceled"],
+  "description": "Optional description",
+  "secret": "optional_custom_secret"
+}
+```
+
+If `secret` is omitted and you use session token, a secret is auto-generated. Use the returned `secret` to verify signatures.
+
+**Response** `200`: `{ "data": { "id", "url", "events", "secret", "name", "description", "isDisabled", ... } }`
+
+---
+
+## Get webhook
+
+```http GET /api/webhooks/:id
+GET /api/webhooks/whsec_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": { webhook object } }`
+
+---
+
+## Update webhook
+
+```http PUT /api/webhooks/:id
+PUT /api/webhooks/whsec_xxx
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "name": "Updated name",
+  "url": "https://yoursite.com/webhooks/new",
+  "events": ["payment.confirmed", "refund.succeeded"],
+  "description": "Optional",
+  "isDisabled": false
+}
+```
+
+**Response** `200`: `{ "data": { updated webhook } }`
+
+---
+
+## Delete webhook
+
+```http DELETE /api/webhooks/:id
+DELETE /api/webhooks/whsec_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": { "success": true } }`

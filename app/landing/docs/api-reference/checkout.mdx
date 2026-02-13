@@ -1,0 +1,145 @@
+---
+title: 'Checkout'
+description: 'Create and manage payment checkouts'
+---
+
+Checkouts represent a single payment or subscription flow. Create a checkout to get a `paymentUrl` or payment URI for your customer.
+
+## Create checkout
+
+<CodeGroup>
+
+```http POST /api/checkout
+POST /api/checkout
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "productId": "prod_xxx",
+  "customerId": "cust_optional",
+  "customerEmail": "buyer@example.com",
+  "customerPhone": "+1234567890",
+  "description": "Order #1234",
+  "successUrl": "https://yoursite.com/success",
+  "successMessage": "Payment received!",
+  "metadata": {},
+  "subscriptionData": {
+    "periodStart": "2025-01-01T00:00:00.000Z",
+    "periodEnd": "2025-02-01T00:00:00.000Z",
+    "cancelAtPeriodEnd": false
+  }
+}
+```
+
+```http POST /api/checkout (direct amount)
+POST /api/checkout
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "amount": 10.5,
+  "assetCode": "XLM",
+  "customerEmail": "buyer@example.com",
+  "description": "Donation",
+  "successUrl": "https://yoursite.com/thanks"
+}
+```
+
+</CodeGroup>
+
+**Product checkout** requires `productId`. **Direct checkout** requires `amount` and `assetCode` (e.g. `XLM`, `USDC`).
+
+**Response** `200`: `{ "data": { "id", "paymentUrl", "status", "expiresAt", "customerId", ... } }`
+
+---
+
+## Get checkout
+
+```http GET /api/checkout/:id
+GET /api/checkout/checkout_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": { checkout object } }`
+
+---
+
+## Update checkout
+
+```http PUT /api/checkout/:id
+PUT /api/checkout/checkout_xxx
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "status": "open",
+  "metadata": { "orderId": "ord_123" }
+}
+```
+
+**Response** `200`: `{ "data": { updated checkout } }`
+
+---
+
+## Delete checkout
+
+```http DELETE /api/checkout/:id
+DELETE /api/checkout/checkout_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": null }`
+
+---
+
+## Get checkout status (public)
+
+Used by the payment page or client to poll payment status. No API key required (CORS enabled).
+
+```http GET /api/checkout/:id/status
+GET /api/checkout/checkout_xxx/status
+```
+
+**Response** `200`: `{ "status": "pending" | "completed" | "expired" | "failed" }`
+
+---
+
+## Get payment URI
+
+Returns a Stellar `web+stellar:tx` URI for wallet redirect or QR. Requires `environment` query param (`testnet` or `mainnet`).
+
+```http GET /api/checkout/:id/uri
+GET /api/checkout/checkout_xxx/uri?environment=testnet
+```
+
+**Response** `200`: `{ "uri": "web+stellar:tx?..." }`
+
+---
+
+## Get checkout embed details
+
+Returns payment details plus a QR code URL for embedding checkout UI.
+
+```http GET /api/checkout/:id/embed
+GET /api/checkout/checkout_xxx/embed
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": { "id", "merchantAddress", "amount", "amountFormatted", "assetCode", "qrCodeUrl", "expiresAt" } }`
+
+---
+
+## Initiate payment (SEP-7)
+
+Used by wallets to build the transaction. Body: `{ "account": "<customer_stellar_address>" }`.
+
+```http POST /api/checkout/:id/initiate
+POST /api/checkout/checkout_xxx/initiate
+Content-Type: application/json
+
+{
+  "account": "G..."
+}
+```
+
+**Response** `200`: `{ "xdr", "network_passphrase", "callback": "url:..." }`

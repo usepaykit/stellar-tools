@@ -1,0 +1,126 @@
+---
+title: 'Subscriptions'
+description: 'Create and manage subscriptions'
+---
+
+Subscriptions are recurring payments tied to a product of type `subscription` and customer wallets.
+
+## Create subscriptions (bulk)
+
+Creates subscriptions for multiple customers on a subscription product. Each customer must have a Stellar wallet.
+
+```http POST /api/subscriptions
+POST /api/subscriptions
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "productId": "prod_sub_xxx",
+  "customerIds": ["cust_1", "cust_2"],
+  "period": {
+    "from": "2025-01-01T00:00:00.000Z",
+    "to": "2025-02-01T00:00:00.000Z"
+  },
+  "cancelAtPeriodEnd": false
+}
+```
+
+**Response** `200`: `{ "data": { "count": 2, "failed": [] } }` — `failed` lists any customers that could not be subscribed (e.g. missing wallet).
+
+---
+
+## List subscriptions
+
+```http GET /api/subscriptions
+GET /api/subscriptions?customerId=cust_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": [ { subscription objects } ] }`
+
+---
+
+## Get subscription
+
+```http GET /api/subscriptions/:id
+GET /api/subscriptions/sub_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": { subscription object } }`
+
+---
+
+## Update subscription
+
+Update metadata or set `cancelAtPeriodEnd`.
+
+```http PUT /api/subscriptions/:id
+PUT /api/subscriptions/sub_xxx
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "metadata": { "plan": "pro" },
+  "cancelAtPeriodEnd": true
+}
+```
+
+**Response** `200`: `{ "data": { updated subscription } }`
+
+---
+
+## Pause subscription
+
+Pauses the subscription on-chain. Requires `customerAddress` (Stellar public key) and `productId`.
+
+```http POST /api/subscriptions/:id/pause
+POST /api/subscriptions/sub_xxx/pause
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "customerAddress": "G...",
+  "productId": "prod_xxx"
+}
+```
+
+**Response** `200`: `{ "data": { subscription } }`
+
+---
+
+## Resume subscription
+
+Resumes a paused subscription. Body must include `customerAddress` and `productId`.
+
+```http POST /api/subscriptions/:id/resume
+POST /api/subscriptions/sub_xxx/resume
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "customerAddress": "G...",
+  "productId": "prod_xxx"
+}
+```
+
+**Response** `200`: `{ "data": { updated subscription } }`
+
+---
+
+## Cancel subscription
+
+Cancels the subscription on-chain and updates status. Body must include `customerAddress` and `productId`.
+
+```http POST /api/subscriptions/:id/cancel
+POST /api/subscriptions/sub_xxx/cancel
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "customerAddress": "G...",
+  "productId": "prod_xxx"
+}
+```
+
+**Response** `200`: `{ "data": { subscription } }`

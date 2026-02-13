@@ -1,0 +1,58 @@
+---
+title: 'Uploadthing Adapter'
+description: 'Metered file uploads with Stellar Tools credits'
+---
+
+The Uploadthing adapter charges by **total upload size** (bytes) using Stellar Tools credits. It runs a preflight check, charges after a successful upload, and refunds credits if the upload fails.
+
+## Install
+
+```bash
+pnpm add @stellartools/uploadthing-adapter uploadthing
+```
+
+## Usage
+
+Call `createMeteredUploadthing(config)` to get a router factory that behaves like Uploadthing’s `createUploadthing()`. Each request must send **`x-customer-id`** so the adapter can charge the correct Stellar customer. The adapter uses [@stellartools/plugin-sdk](https://github.com/usepaykit/stellar-tools) to preflight, charge by total upload size (bytes), and refund on upload failure.
+
+```ts
+import { createMeteredUploadthing } from "@stellartools/uploadthing-adapter";
+
+const f = createMeteredUploadthing({
+  apiKey: process.env.STELLAR_TOOLS_API_KEY!,
+  productId: "prod_uploads", // credit product for uploads
+});
+
+export const uploadRouter = f({
+  image: f.imageUploader().maxSize("4MB"),
+}).middleware(async (opts) => {
+  // Adapter already ran preflight + charge using x-customer-id and total file size.
+  // Return any extra metadata for onUploadComplete.
+  return { userId: opts.req.headers.get("x-user-id") ?? "" };
+});
+```
+
+In each request the adapter:
+
+1. Reads **`x-customer-id`** from the request (required).
+2. Sums the size of all files being uploaded.
+3. Runs **preflight** (e.g. credit balance check).
+4. **Charges** the customer for that total (in bytes).
+5. If the upload fails, **refunds** the charged amount via `onUploadError`.
+
+You can still use `onUploadComplete` and `onUploadError` as with standard Uploadthing.
+
+## Config
+
+`createMeteredUploadthing(config)` expects a **MeteredPluginConfig** from `@stellartools/plugin-sdk`:
+
+- `apiKey`: Stellar Tools API key.
+- `productId`: Product ID for the credit product used for upload billing.
+
+## Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-customer-id` | Yes | Stellar Tools customer ID to charge. |
+
+If the customer has insufficient credits, the adapter throws so the upload is rejected before files are stored.

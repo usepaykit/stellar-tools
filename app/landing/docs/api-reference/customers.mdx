@@ -1,0 +1,81 @@
+---
+title: 'Customers'
+description: 'Create and list customers'
+---
+
+Customers represent payers. Create a customer to associate checkouts and subscriptions, and optionally attach Stellar wallets.
+
+## Create customer
+
+```http POST /api/customers
+POST /api/customers
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "phone": "+1234567890",
+  "metadata": { "source": "web" }
+}
+```
+
+- `name` and `email` are required; `phone` and `metadata` are optional.
+
+**Response** `200`: `{ "data": { "id", "name", "email", "phone", "metadata", "createdAt", "wallets": [] } }`
+
+---
+
+## List customers
+
+Returns all customers for the organization. Optionally includes wallet addresses.
+
+```http GET /api/customers
+GET /api/customers
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": [ { "id", "name", "email", "wallets", ... }, ... ] }`
+
+---
+
+## Get customer
+
+```http GET /api/customers/:customerId
+GET /api/customers/cust_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": { customer object } }`
+
+---
+
+## Update customer
+
+```http PUT /api/customers/:customerId
+PUT /api/customers/cust_xxx
+x-api-key: your_api_key
+Content-Type: application/json
+
+{
+  "name": "Jane Smith",
+  "email": "jane.smith@example.com",
+  "phone": "+1234567890",
+  "metadata": {}
+}
+```
+
+All fields are optional; only include the ones you want to update.
+
+**Response** `200`: `{ "data": { updated customer } }`
+
+---
+
+## Delete customer
+
+```http DELETE /api/customers/:customerId
+DELETE /api/customers/cust_xxx
+x-api-key: your_api_key
+```
+
+**Response** `200`: `{ "data": null }`

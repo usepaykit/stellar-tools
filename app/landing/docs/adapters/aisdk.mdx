@@ -1,0 +1,50 @@
+---
+title: 'AI SDK Adapter'
+description: 'Meter Vercel AI SDK usage with Stellar Tools'
+---
+
+The AI SDK adapter meters [Vercel AI SDK](https://sdk.vercel.ai) usage (e.g. `streamText`, `streamObject`) and charges Stellar Tools customers by token usage. It uses [@stellartools/plugin-sdk](https://github.com/usepaykit/stellar-tools) for preflight, charge, and refund.
+
+## Install
+
+```bash
+pnpm add @stellartools/aisdk-adapter ai
+```
+
+## Usage
+
+Create a metered AI SDK instance with `createMeteredAISDK(config)`. Then wrap your model or use the metered provider so that each request is tied to a `customerId` and charged accordingly.
+
+```ts
+import { createMeteredAISDK } from "@stellartools/aisdk-adapter";
+import { openai } from "@ai-sdk/openai";
+
+const metered = createMeteredAISDK({
+  apiKey: process.env.STELLAR_TOOLS_API_KEY!,
+  productId: "prod_ai",
+});
+
+// Use with streamText, streamObject, etc. — pass customerId in options
+const result = await metered.streamText({
+  model: openai("gpt-4o"),
+  messages: [{ role: "user", content: "Hello" }],
+  customerId: "cust_xxx", // required for billing
+});
+```
+
+The adapter:
+
+- Runs a **preflight** (e.g. credit balance check) before the stream/call.
+- **Charges** the customer based on usage (e.g. `event.usage.totalTokens`) after the operation.
+- Can **refund** on failure so the customer is not charged for failed requests.
+
+Supported operations include **streamText** and **streamObject**; each is metered and associated with the same `customerId`.
+
+## Config
+
+`createMeteredAISDK(config)` expects a **MeteredPluginConfig** from `@stellartools/plugin-sdk`:
+
+- `apiKey`: Stellar Tools API key.
+- `productId`: Credit product ID used for AI usage billing.
+
+Ensure the Stellar Tools product is a **credit product** and that customers have sufficient balance; otherwise preflight will fail and the AI call will not run.

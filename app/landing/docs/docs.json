@@ -1,0 +1,108 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Stellar Tools",
+  "description": "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes.",
+  "colors": {
+    "primary": "oklch(0.5321 0.2317 282.7647)",
+    "light": "oklch(0.5321 0.2317 282.7647)",
+    "dark": "oklch(0.5321 0.2317 282.7647)"
+  },
+  "favicon": "/favicon.ico",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": ["docs", "index", "quickstart", "metered-billing", "development"]
+          },
+          {
+            "group": "Adapters",
+            "pages": [
+              "adapters/overview",
+              "adapters/medusajs",
+              "adapters/betterauth",
+              "adapters/uploadthing",
+              "adapters/langchain",
+              "adapters/aisdk"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": ["api-reference/introduction"]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "api-reference/checkout",
+              "api-reference/customers",
+              "api-reference/webhooks",
+              "api-reference/subscriptions",
+              "api-reference/payments",
+              "api-reference/refunds",
+              "api-reference/products",
+              "api-reference/credits",
+              "api-reference/payout"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Documentation",
+          "href": "/docs",
+          "icon": "book-open-cover"
+        },
+        {
+          "anchor": "Home",
+          "href": "/",
+          "icon": "house"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/logo-light.png",
+    "dark": "/logo/logo-dark.png"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:hi@usepaykit.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Sign Up Free",
+      "href": "/signup"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/usepaykit",
+      "github": "https://github.com/usepaykit/stellar-tools"
+    }
+  }
+}
