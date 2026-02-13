@@ -24,7 +24,7 @@ export class CheckoutApi {
   async create(params: CreateCheckout) {
     return unwrap(
       await Result.andThenAsync(validateSchema(createCheckoutSchema, params), (data) =>
-        this.apiClient.post<Checkout>("checkout", data)
+        this.apiClient.post<Checkout>("checkout?type=product", data)
       )
     );
   }
@@ -36,7 +36,7 @@ export class CheckoutApi {
   async createDirect(params: CreateDirectCheckout) {
     return unwrap(
       await Result.andThenAsync(validateSchema(createDirectCheckoutSchema, params), (data) =>
-        this.apiClient.post<Checkout>("checkout/direct", data)
+        this.apiClient.post<Checkout>("checkout?type=direct", data)
       )
     );
   }

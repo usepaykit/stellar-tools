@@ -16,6 +16,7 @@ import {
 } from "@/db";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { computeDiff, generateResourceId } from "@/lib/utils";
+import { CheckoutStatus } from "@/packages/stellartools/dist/schema/checkout";
 import { and, eq, sql } from "drizzle-orm";
 
 export const postCheckout = async (
@@ -94,13 +95,31 @@ export const postCheckout = async (
   );
 };
 
-export const retrieveCheckouts = async (orgId?: string, env?: Network) => {
+export const retrieveCheckouts = async (
+  orgId?: string,
+  env?: Network,
+  parameters?: { status?: CheckoutStatus },
+  overrideOrganizationContext?: boolean
+) => {
+  if (overrideOrganizationContext) {
+    return await db
+      .select()
+      .from(checkouts)
+      .where(and(...(parameters?.status ? [eq(checkouts.status, parameters.status)] : [])));
+  }
+
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   return await db
     .select()
     .from(checkouts)
-    .where(and(eq(checkouts.organizationId, organizationId), eq(checkouts.environment, environment)));
+    .where(
+      and(
+        eq(checkouts.organizationId, organizationId),
+        eq(checkouts.environment, environment),
+        ...(parameters?.status ? [eq(checkouts.status, parameters.status)] : [])
+      )
+    );
 };
 
 export const retrieveCheckout = async (id: string, orgId?: string, env?: Network) => {
@@ -206,6 +225,7 @@ export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?:
           }),
         },
       ],
+      webhooks: { organizationId, environment, triggers: [] },
     }
   );
 };

@@ -2,68 +2,79 @@ import { resolveApiKeyOrSessionToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { upsertCustomer } from "@/actions/customers";
 import { retrieveOwnerPlan } from "@/actions/plan";
-import {
-  Result,
-  z as Schema,
-  createCheckoutSchema,
-  createDirectCheckoutSchema,
-  validateSchema,
-} from "@stellartools/core";
+import { getCorsHeaders } from "@/constant";
+import { Result, createCheckoutSchema, createDirectCheckoutSchema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
+export const OPTIONS = (req: NextRequest) =>
+  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
+
 export const POST = async (req: NextRequest) => {
-  const apiKey = req.headers.get("x-api-key");
-  const sessionToken = req.headers.get("x-session-token");
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  const type = req.nextUrl.searchParams.get("type");
 
-  if (!apiKey && !sessionToken)
-    return NextResponse.json({ error: "API key or session token is required" }, { status: 400 });
+  const send = (data: any, status = 200) => NextResponse.json(data, { status, headers: corsHeaders });
 
-  const result = await Result.andThenAsync(
-    validateSchema(Schema.union([createCheckoutSchema, createDirectCheckoutSchema]), await req.json()),
-    async (data) => {
-      const { organizationId, environment } = await resolveApiKeyOrSessionToken(apiKey, sessionToken);
+  try {
+    if (type !== "product" && type !== "direct") {
+      return send({ error: "Valid type (product|direct) is required" }, 400);
+    }
 
-      const customer = await upsertCustomer(
-        {
-          id: data.customerId,
-          email: data.customerEmail,
-          phone: data.customerPhone,
-          name: data.customerEmail?.split("@")[0] ?? "Guest",
-          metadata: data.metadata,
-        },
-        organizationId,
-        environment
-      );
+    const body = await req.json();
 
-      const planResult = await retrieveOwnerPlan({ orgId: organizationId });
+    const result =
+      type === "product"
+        ? await Result.andThenAsync(validateSchema(createCheckoutSchema, body), (d) => processCheckout(d, "product"))
+        : await Result.andThenAsync(validateSchema(createDirectCheckoutSchema, body), (d) =>
+            processCheckout(d, "direct")
+          );
 
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+    return result.isOk() ? send({ data: result.value }) : send({ error: result.error.message }, 400);
 
-      const checkoutPayload = {
+    async function processCheckout(data: any, checkoutType: "product" | "direct") {
+      const auth = await resolveApiKeyOrSessionToken(req.headers.get("x-api-key"), req.headers.get("x-session-token"));
+
+      const [customer, { plan }] = await Promise.all([
+        upsertCustomer(
+          {
+            id: data.customerId,
+            email: data.customerEmail,
+            phone: data.customerPhone,
+            name: data.customerEmail?.split("@")[0] ?? "Guest",
+            metadata: data.metadata,
+          },
+          auth.organizationId,
+          auth.environment
+        ),
+        retrieveOwnerPlan({ orgId: auth.organizationId }),
+      ]);
+
+      const payload = {
+        organizationId: auth.organizationId,
+        environment: auth.environment,
         customerId: customer.id,
         customerEmail: customer.email,
         customerPhone: customer.phone,
         status: "open" as const,
-        expiresAt,
-        description: data.description ?? null,
+        expiresAt: new Date(Date.now() + 864e5),
         metadata: data.metadata ?? {},
+        description: data.description ?? null,
         successUrl: data.successUrl ?? null,
         successMessage: data.successMessage ?? null,
         subscriptionData: data.subscriptionData ?? null,
-        internalPlanId: planResult.plan.id,
-        ...("productId" in data ? { productId: data.productId } : {}),
-        ...("amount" in data ? { amount: data.amount, assetCode: data.assetCode } : {}),
-        ...("assetCode" in data ? { asset: data.assetCode } : {}),
+        internalPlanId: plan.id,
+        productId: checkoutType === "product" ? data.productId : null,
+        amount: checkoutType === "direct" ? data.amount : null,
+        assetCode: checkoutType === "direct" ? data.assetCode : null,
+        asset: checkoutType === "direct" ? data.assetCode : null,
       } as Parameters<typeof postCheckout>[0];
 
-      const checkout = await postCheckout(checkoutPayload, organizationId, environment);
+      const checkout = await postCheckout(payload as any, auth.organizationId, auth.environment);
       return Result.ok(checkout);
     }
-  );
-
-  if (result.isErr()) {
-    return NextResponse.json({ error: result.error.message }, { status: 400 });
+  } catch (error) {
+    console.error(error);
+    return send({ error: "Failed to create checkout" }, 500);
   }
-
-  return NextResponse.json({ data: result.value });
 };

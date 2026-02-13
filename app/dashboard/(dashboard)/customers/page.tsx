@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 
-import { postCustomers, putCustomer, retrieveCustomers } from "@/actions/customers";
+import { postCustomers, retrieveCustomers } from "@/actions/customers";
 import { getCurrentOrganization } from "@/actions/organization";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -317,6 +317,7 @@ export function CustomerModal({
           email: data.email,
           phone: phoneString,
           metadata: metadataRecord,
+          source: "Dashboard",
         });
 
         if (response.isErr()) throw new Error(response.error.message);

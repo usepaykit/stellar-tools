@@ -75,8 +75,8 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
 
     if (xdrResult.isErr()) throw xdrResult.error;
 
-    const domain = new URL(process.env.NEXT_PUBLIC_API_URL!).hostname;
-    const callbackUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/checkout/verify-callback?checkoutId=${id}`;
+    const domain = new URL(process.env.NGROK_URL!).hostname;
+    const callbackUrl = `${process.env.NGROK_URL}/api/checkout/verify-callback?checkoutId=${id}`;
 
     // Use the PAY operation instead of TX
     const baseUri =

@@ -67,9 +67,9 @@ export const retrieveCustomers = async (
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
-  const ids = lookupArray.filter((p): p is { id: string } => "id" in p).map((p) => p.id);
-  const emails = lookupArray.filter((p): p is { email: string } => "email" in p).map((p) => p.email);
-  const phones = lookupArray.filter((p): p is { phone: string } => "phone" in p).map((p) => p.phone);
+  const ids = lookupArray.filter((p): p is { id: string } => "id" in p && p.id != null).map((p) => p.id);
+  const emails = lookupArray.filter((p): p is { email: string } => "email" in p && p.email != null).map((p) => p.email);
+  const phones = lookupArray.filter((p): p is { phone: string } => "phone" in p && p.phone != null).map((p) => p.phone);
 
   const orFilters: (SQL | undefined)[] = [];
   if (ids.length) orFilters.push(inArray(customers.id, ids));

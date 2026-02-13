@@ -421,7 +421,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 1);
 
-      let subscriptionData = null;
+      let subscriptionData = undefined;
 
       if (selectedProduct?.type === "subscription") {
         const periodStart = new Date();
@@ -449,25 +449,23 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
         };
       }
 
-      const response = await api.post<Checkout>("/api/checkout", {
-        body: JSON.stringify({
-          customerId,
-          customerEmail: null,
-          customerPhone: null,
-          productId: data.productId,
-          description: data.description || null,
-          successUrl: data.successUrl || null,
-          successMessage: data.successMessage || null,
-          subscriptionData,
-          metadata: null,
-        }),
+      const response = await api.post<Checkout>("/checkout?type=product", {
+        customerId,
+        customerEmail: undefined,
+        customerPhone: undefined,
+        productId: data.productId,
+        description: data.description,
+        successUrl: data.successUrl,
+        successMessage: data.successMessage,
+        subscriptionData,
+        metadata: null,
       });
 
       if (response.isErr()) {
         throw new Error(response.error.message);
       }
 
-      return response.value;
+      return response.value as Checkout;
     },
     onSuccess: async (data) => {
       invalidate(["payments", customerId]);

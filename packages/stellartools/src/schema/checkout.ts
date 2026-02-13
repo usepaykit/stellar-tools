@@ -145,7 +145,7 @@ const baseCreateSchema = z.object({
   customerEmail: z.email().optional(),
   customerPhone: z.string().optional(),
   description: z.string().optional(),
-  metadata: z.record(z.string(), z.any()).default({}),
+  metadata: z.record(z.string(), z.any()).nullable().optional(),
   successUrl: z.string().optional(),
   successMessage: z.string().optional(),
   subscriptionData: z

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { putCheckout, retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { AnimatedCheckmark } from "@/components/icon";
 import {
   PhoneNumber,
@@ -24,7 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, RefreshCw, X } from "lucide-react";
+import { AlertCircle, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
@@ -59,16 +59,7 @@ export default function CheckoutPage() {
   const { data: checkout, isLoading } = useQuery({
     queryKey: ["checkout", checkoutId],
     queryFn: () => retrieveCheckoutAndCustomer(checkoutId),
-  });
-
-  const { refetch: refreshStatus } = useQuery({
-    queryKey: ["checkout-status", checkoutId],
-    queryFn: async () => {
-      const res = await retrieveCheckout(checkoutId, checkout!.organizationId, checkout!.environment);
-      return res.status;
-    },
-    refetchInterval: 5000,
-    enabled: !!checkout && checkout.status === "open",
+    refetchInterval: 10000,
   });
 
   const form = RHF.useForm({
@@ -329,13 +320,6 @@ export default function CheckoutPage() {
                         ? `Pay as ${truncate(connectedAddress, { start: 4, end: 4 })}`
                         : "Connect Wallet"}
                     </Button>
-
-                    <button
-                      onClick={() => refreshStatus()}
-                      className="text-muted-foreground hover:text-primary flex w-full items-center justify-center gap-2 text-[10px] font-bold tracking-widest uppercase transition-colors"
-                    >
-                      <RefreshCw className="size-3" /> Manual Refresh
-                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>

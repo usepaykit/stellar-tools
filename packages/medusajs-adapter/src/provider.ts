@@ -140,8 +140,9 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       email: customer?.email,
       name: `${customer?.first_name} ${customer?.last_name}`.trim(),
       phone: customer?.phone ?? undefined,
-      metadata: { source: "medusajs-adapter", ...(context?.account_holder?.data as Record<string, unknown>) },
+      metadata: (context?.account_holder?.data as Record<string, any>) ?? null,
       wallets: [],
+      source: "MedusaJS Adapter",
     });
 
     return { id: res.id, data: res as any };

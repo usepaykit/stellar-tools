@@ -14,7 +14,7 @@ export const POST = async (req: NextRequest) => {
   const sessionToken = req.headers.get("x-session-token");
 
   if (!apiKey && !sessionToken) {
-    return NextResponse.json({ error: "API key or session token is required" }, { status: 400, headers: corsHeaders });
+    return NextResponse.json({ error: "API key or Session Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const result = await Result.andThenAsync(validateSchema(createCustomerSchema, await req.json()), async (data) => {
@@ -24,7 +24,7 @@ export const POST = async (req: NextRequest) => {
       organizationId,
       environment,
       {
-        source: "API",
+        source: data.source ?? "API",
         customerCount: entitlements.customers,
       }
     );

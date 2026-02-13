@@ -109,7 +109,7 @@ export const deletePasswordReset = async (id: string) => {
 const generateAndSetSession = async (account: { id: string; email: string }) => {
   const payload = { accountId: account.id, email: account.email };
 
-  const accessToken = await new JWTApi().sign(payload, "30m");
+  const accessToken = await new JWTApi().sign(payload, "6h");
   const refreshToken = await new JWTApi().sign(payload, "30d");
 
   await new CookieManager().set([

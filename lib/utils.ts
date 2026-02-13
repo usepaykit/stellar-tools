@@ -44,8 +44,7 @@ export function computeDiff<T extends Record<string, any>>(
   oldData: T,
   newData: Partial<T>,
   ignoreKeys: string[] = ["updatedAt", "createdAt", "id"],
-  delimiter?: string, // e.g., "." to enable deep diff
-  _path = ""
+  delimiter?: string // e.g., "." to enable deep diff
 ) {
   const diff: Record<string, { from: unknown; to: unknown }> = {};
 
@@ -54,7 +53,7 @@ export function computeDiff<T extends Record<string, any>>(
 
     const oldVal = oldData?.[key];
     const newVal = newData[key];
-    const currentPath = _path ? `${_path}${delimiter}${key}` : key;
+    const currentPath = key;
 
     const isObject = (v: unknown) => v && typeof v === "object" && !Array.isArray(v);
 
@@ -63,8 +62,7 @@ export function computeDiff<T extends Record<string, any>>(
         oldVal as Partial<T[keyof T]>,
         newVal as Partial<T[keyof T]>,
         ignoreKeys,
-        delimiter,
-        currentPath
+        delimiter
       );
       if (nestedDiff) Object.assign(diff, nestedDiff);
     } else if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
