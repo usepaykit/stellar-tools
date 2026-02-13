@@ -21,8 +21,9 @@ Content-Type: application/json
 ```
 
 - `amount`: Amount to send (in the asset’s base unit, e.g. XLM count or USDC units).
-- `walletAddress`: Destination Stellar public key.
-- `assetId`: ID of the asset to send.
+- `walletAddress`: Destination Stellar public key (required).
+- `assetId`: ID of the asset to send (required).
+- `memo`: Optional memo for the transaction.
 
 **Response** `200`: `{ "data": { "id", "status", "amount", "walletAddress", "transactionHash", "completedAt", ... } }`
 

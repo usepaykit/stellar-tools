@@ -72,7 +72,7 @@ Content-Type: application/json
 
 ## Pause subscription
 
-Pauses the subscription on-chain. Requires customer Stellar address and product ID.
+Pauses the subscription on-chain. Requires `customerAddress` (Stellar public key) and `productId`.
 
 ```http POST /api/subscriptions/:id/pause
 POST /api/subscriptions/sub_xxx/pause
@@ -91,7 +91,7 @@ Content-Type: application/json
 
 ## Resume subscription
 
-Resumes a paused subscription.
+Resumes a paused subscription. Body must include `customerAddress` and `productId`.
 
 ```http POST /api/subscriptions/:id/resume
 POST /api/subscriptions/sub_xxx/resume
@@ -110,7 +110,7 @@ Content-Type: application/json
 
 ## Cancel subscription
 
-Cancels the subscription on-chain and updates status.
+Cancels the subscription on-chain and updates status. Body must include `customerAddress` and `productId`.
 
 ```http POST /api/subscriptions/:id/cancel
 POST /api/subscriptions/sub_xxx/cancel

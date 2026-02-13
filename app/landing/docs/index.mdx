@@ -1,97 +1,59 @@
 ---
 title: "Introduction"
-description: "Welcome to the new home for your documentation"
+description: "Welcome to Stellar Tools — drop-in payment adapters for your stack"
 ---
 
-## Setting up
+**Stellar Tools** lets you accept fast, low-cost crypto payments (Stellar/XLM and Stellar assets) with minimal setup. Use our REST API and adapters to add checkouts, subscriptions, and payouts to your app.
 
-Get your documentation site up and running in minutes.
+## What you can do
+
+- **Checkouts** — Create one-time or subscription checkouts; get payment URLs or Stellar `web+stellar:tx` URIs for wallets.
+- **Customers** — Create and manage customers; attach Stellar wallets for recurring payments.
+- **Products** — Define one-time, subscription, or metered products (with price/asset or credits for usage-based billing).
+- **Subscriptions** — Create and manage subscriptions on-chain (pause, resume, cancel).
+- **Payments & refunds** — Retrieve payment status; issue refunds to a Stellar address.
+- **Webhooks** — Receive events such as `payment.confirmed`, `subscription.canceled`, `refund.succeeded`.
+- **Payouts** — Send assets from your organization wallet to any Stellar address (dashboard/session only).
+
+## Get started
 
 <Card
-  title="Start here"
+  title="Quickstart"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Set up Stellar Tools and make your first request.
 </Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
 
 <Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
+  title="Adapters"
+  icon="puzzle-piece"
+  href="/adapters/overview"
+  horizontal
 >
-  Browse our showcase of exceptional documentation sites.
+  Integrate with MedusaJS, Better Auth, Uploadthing, LangChain, or AI SDK.
 </Card>
+
+<Card
+  title="Metered billing"
+  icon="coins"
+  href="/metered-billing"
+  horizontal
+>
+  Charge by usage with credits: tokens, storage, API calls. Products, Credits API, and adapters.
+</Card>
+
+<Card
+  title="API reference"
+  icon="terminal"
+  href="/api-reference/introduction"
+  horizontal
+>
+  REST API for checkouts, customers, webhooks, subscriptions, payments, refunds, products, credits, and payout.
+</Card>
+
+## Need help?
+
+- [Support](mailto:hi@usepaykit.com)
+- [GitHub](https://github.com/usepaykit/stellar-tools)

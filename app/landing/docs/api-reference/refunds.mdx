@@ -23,6 +23,7 @@ Content-Type: application/json
 }
 ```
 
+- Required: `paymentId`, `assetId`, `amount`, `receiverPublicKey`, `customerId`. Optional: `reason`, `metadata`.
 - `amount` is in stroops (1 XLM = 10,000,000 stroops). For other assets, use the asset’s smallest unit.
 - `receiverPublicKey` is the Stellar account that receives the refund.
 

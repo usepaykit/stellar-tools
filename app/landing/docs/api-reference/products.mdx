@@ -1,9 +1,9 @@
 ---
 title: 'Products'
-description: 'Create products for one-time or subscription payments'
+description: 'Create products for one-time, subscription, or metered billing'
 ---
 
-Products define what you sell: a one-time payment or a subscription with a price and asset.
+Products define what you sell: a one-time payment, a subscription with a price and asset, or a **metered** product where customers pay by usage (credits).
 
 ## Create product
 
@@ -27,12 +27,26 @@ Content-Type: application/json
 }
 ```
 
-- `type`: `"one_time"` or `"subscription"`.
+- `type`: `"one_time"`, `"subscription"`, or `"metered"`.
 - `assetId`: ID of the asset (e.g. XLM, USDC) for pricing.
 - `priceAmount`: Price in the asset’s smallest unit (e.g. stroops for XLM).
-- `recurringPeriod`: For subscriptions, e.g. `"monthly"`, `"yearly"`.
-- Optional: `unit`, `unitDivisor`, `unitsPerCredit`, `creditsGranted` for credit-based products.
+- `recurringPeriod`: For subscriptions: `"day"`, `"week"`, `"month"`, or `"year"`.
+- Optional: `unit`, `unitDivisor`, `unitsPerCredit`, `creditsGranted`, `creditExpiryDays`, `metadata`.
 
 You can also send `multipart/form-data` with image files; the API accepts form data for product creation.
 
 **Response** `200`: `{ "data": { "id", "name", "type", "priceAmount", "status", "assetId", "recurringPeriod", ... } }`
+
+---
+
+## Metered products
+
+For `type: "metered"`, customers are charged by **usage** via credits. Set:
+
+- **unit** — Name of the unit (e.g. `"tokens"`, `"MB"`, `"API calls"`).
+- **unitDivisor** — Divide raw usage by this before converting to credits (e.g. `1` or `1_000_000` for bytes).
+- **unitsPerCredit** — How many (post-divisor) units = 1 credit (e.g. `10` → 10 units = 1 credit).
+- **creditsGranted** — Initial credits when the customer gets the product.
+- **creditExpiryDays** — Optional; credits expire after this many days.
+
+Credits are then managed with the [Credits API](/api-reference/credits): get balance, list transactions, and post deduct/refund/grant. See [Metered billing](/metered-billing) for the full flow and examples.

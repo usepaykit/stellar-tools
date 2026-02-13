@@ -20,6 +20,8 @@ Content-Type: application/json
 }
 ```
 
+- `name` and `email` are required; `phone` and `metadata` are optional.
+
 **Response** `200`: `{ "data": { "id", "name", "email", "phone", "metadata", "createdAt", "wallets": [] } }`
 
 ---
@@ -58,10 +60,12 @@ Content-Type: application/json
 {
   "name": "Jane Smith",
   "email": "jane.smith@example.com",
-  "phone": null,
+  "phone": "+1234567890",
   "metadata": {}
 }
 ```
+
+All fields are optional; only include the ones you want to update.
 
 **Response** `200`: `{ "data": { updated customer } }`
 

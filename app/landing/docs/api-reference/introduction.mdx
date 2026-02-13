@@ -23,21 +23,30 @@ Authenticate using one of the following headers:
 All endpoints that require auth return `400` with `{ "error": "API key or session token is required" }` when missing.
 
 <Note>
-  Get your API key from the [Dashboard](https://docs.stellartools.dev) → Settings → API Keys.
+  Get your API key from your Stellar Tools dashboard (Settings → API Keys).
 </Note>
 
 ## API resources
 
 | Resource | Description |
 |----------|-------------|
-| [Checkout](/docs/api-reference/checkout) | Create and manage payment checkouts (one-time or subscription) |
-| [Customers](/docs/api-reference/customers) | Create and list customers |
-| [Webhooks](/docs/api-reference/webhooks) | Create, update, and delete webhook endpoints |
-| [Subscriptions](/docs/api-reference/subscriptions) | Create and manage subscriptions |
-| [Payments](/docs/api-reference/payments) | Retrieve payment status |
-| [Refunds](/docs/api-reference/refunds) | Create refunds for payments |
-| [Products](/docs/api-reference/products) | Create products (one-time or subscription) |
-| [Payout](/docs/api-reference/payout) | Send payouts to a Stellar address (session only) |
+| [Checkout](/api-reference/checkout) | Create and manage payment checkouts (one-time or subscription) |
+| [Customers](/api-reference/customers) | Create, list, get, update, and delete customers |
+| [Webhooks](/api-reference/webhooks) | Create, update, and delete webhook endpoints |
+| [Subscriptions](/api-reference/subscriptions) | Create and manage subscriptions (pause, resume, cancel) |
+| [Payments](/api-reference/payments) | Retrieve payment status |
+| [Refunds](/api-reference/refunds) | Create refunds for payments |
+| [Products](/api-reference/products) | Create products (one-time, subscription, or metered) |
+| [Credits](/api-reference/credits) | Manage credit balances and usage for metered billing |
+| [Payout](/api-reference/payout) | Send payouts to a Stellar address (session only) |
+
+## Stellar discovery (SEP-1)
+
+For wallet and client discovery, the API exposes:
+
+- **Organization stellar.toml** — `GET https://{orgId}.stellartools.io/.well-known/stellar.toml` (or your org subdomain). Query `?mode=testnet` or `?mode=mainnet` for network. Returns TOML with `CURRENCIES`, `ACCOUNTS`, `WEB_AUTH_ENDPOINT`, and org info.
+- **Platform stellar.toml** — `GET /api/.well-known/stellar.toml?mode=mainnet|testnet` returns network passphrase and `URI_REQUEST_SIGNING_KEY` for SEP-7.
+- **SEP-1 org info** — `GET /api/sep1?mode=mainnet|testnet` (host-based org) returns TOML for the requesting organization.
 
 ## Response format
 

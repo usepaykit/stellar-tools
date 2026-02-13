@@ -16,4 +16,4 @@ Your server may refresh status from the Stellar network for `pending` payments d
 
 **Response** `200`: `{ "data": { "id", "checkoutId", "status", "amount", "transactionHash", "customerId", "environment", ... } }`
 
-Status can be `pending`, `completed`, or `failed`.
+Status can be `pending`, `completed`, or `failed`. Some implementations support an optional request body `{ "verifyOnChain": true }` to refresh status from the Stellar network for pending payments.
