@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,23 +76,34 @@ export function PricingGrid({ plans }: PricingGridProps) {
     if (url) window.location.href = url;
   };
 
+
+
   return (
-    <>
-      <div className="mb-10 flex justify-center">
-        <Tabs value={cycle} onValueChange={(v) => setCycle(v as AccountBillingCycle)} className="w-full max-w-sm">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            <TabsTrigger value="yearly" className="inline-flex items-center justify-center gap-2">
+    <div>
+      <Tabs value={cycle} onValueChange={(v) => setCycle(v as AccountBillingCycle)} className="w-full">
+        <div className="mb-10 flex justify-center">
+          <TabsList
+            aria-label="Billing period"
+            className="bg-muted/60 h-auto w-auto rounded-full p-1 shadow-inner [&>span]:rounded-full"
+          >
+            <TabsTrigger
+              value="monthly"
+              className="rounded-full px-5 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground"
+            >
+              Monthly
+            </TabsTrigger>
+            <TabsTrigger
+              value="yearly"
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-primary data-[state=inactive]:hover:text-primary/90"
+            >
               Yearly
-              {maxSavings > 0 && (
-                <Badge variant="secondary" className="bg-primary/20 text-primary text-[10px] font-semibold">
-                  Save {maxSavings}%
-                </Badge>
-              )}
+              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                Save {maxSavings}%
+              </span>
             </TabsTrigger>
           </TabsList>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
 
       <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {plans.map((plan) => {
@@ -211,7 +221,7 @@ export function PricingGrid({ plans }: PricingGridProps) {
           );
         })}
       </div>
-    </>
+    </div>
   );
 }
 
