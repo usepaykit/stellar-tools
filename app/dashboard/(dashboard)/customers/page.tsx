@@ -155,7 +155,7 @@ type CustomerFormData = z.infer<typeof customerSchema>;
 export default function CustomersPage() {
   const searchParams = useSearchParams();
   const [selectedFilter, setSelectedFilter] = useState<number>(0);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams.get("mode") === "create");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams?.get("mode") === "create");
   const [isImportCsvOpen, setIsImportCsvOpen] = useState(false);
   const router = useRouter();
 

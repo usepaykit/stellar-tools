@@ -132,3 +132,24 @@ export const createProductSchema = productSchema
   });
 
 export type CreateProduct = z.infer<typeof createProductSchema>;
+
+export const updateProductSchema = productSchema
+  .partial()
+  .pick({
+    name: true,
+    description: true,
+    images: true,
+    metadata: true,
+    unit: true,
+    unitDivisor: true,
+    unitsPerCredit: true,
+  })
+  .extend({
+    priceAmount: z.number().optional(),
+    recurringPeriod: recurringPeriodEnum.optional(),
+    creditsGranted: z.number().nullable().optional(),
+    description: z.string().nullable().optional(),
+    unit: z.string().nullable().optional(),
+  });
+
+export type UpdateProduct = z.infer<typeof updateProductSchema>;
