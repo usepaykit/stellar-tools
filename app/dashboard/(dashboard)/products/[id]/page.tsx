@@ -1,0 +1,555 @@
+"use client";
+
+import * as React from "react";
+
+import { retrieveProductsWithAsset } from "@/actions/product";
+import { ProductsModal, type Product } from "../page";
+import { CodeBlock } from "@/components/code-block";
+import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
+import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { LogDetailItem, LogDetailSection } from "@/components/log";
+import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useCopy } from "@/hooks/use-copy";
+import { useOrgQuery } from "@/hooks/use-org-query";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Copy,
+  Edit,
+  ExternalLink,
+  MoreHorizontal,
+  Package,
+  Pencil,
+  Plus,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+
+import type { Product as ProductDb } from "@/db";
+
+type ProductDetail = ProductDb & { assetCode?: string };
+
+const productTypeLabels: Record<string, string> = {
+  one_time: "One-off",
+  subscription: "Recurring",
+  metered: "Metered (Credits)",
+};
+
+const recurringPeriodLabels: Record<string, string> = {
+  day: "Daily",
+  week: "Weekly",
+  month: "Monthly",
+  year: "Yearly",
+};
+
+const CopyButton = ({ text, label }: { text: string; label?: string }) => {
+  const { copied, handleCopy } = useCopy();
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="h-8 w-8 shrink-0"
+      onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
+      title={label ?? "Copy"}
+    >
+      {copied ? (
+        <CheckCircle2 className="h-4 w-4 text-green-600" />
+      ) : (
+        <Copy className="text-muted-foreground h-4 w-4" />
+      )}
+    </Button>
+  );
+};
+
+function ProductDetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-6 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/products">Products</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator>
+            <ChevronRight className="h-4 w-4" />
+          </BreadcrumbSeparator>
+          <BreadcrumbItem>
+            <Skeleton className="h-5 w-32" />
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          <Skeleton className="h-14 w-14 shrink-0 rounded-lg" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-28" />
+          <Skeleton className="h-9 w-9" />
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="grid gap-8 lg:grid-cols-5">
+        <div className="space-y-8 lg:col-span-3">
+          <section>
+            <Skeleton className="h-4 w-16 mb-3" />
+            <div className="border-border rounded-lg border overflow-hidden">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-14 w-full" />
+            </div>
+          </section>
+          <section>
+            <Skeleton className="h-4 w-24 mb-2" />
+            <Skeleton className="h-4 w-full mb-3" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </section>
+          <section>
+            <Skeleton className="h-4 w-20 mb-3" />
+            <Skeleton className="h-[120px] w-full rounded-lg" />
+          </section>
+        </div>
+        <div className="space-y-8 lg:col-span-2">
+          <section>
+            <Skeleton className="h-4 w-16 mb-3" />
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          </section>
+          <section>
+            <Skeleton className="h-4 w-20 mb-3" />
+            <Skeleton className="h-8 w-full" />
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ProductDetailPage() {
+  const params = useParams();
+  const id = params?.id as string;
+
+  const [detailsExpanded, setDetailsExpanded] = React.useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+
+  const { data: productWithAsset, isLoading } = useOrgQuery(
+    ["products", id],
+    () => retrieveProductsWithAsset(undefined, undefined, id),
+    {
+      select: (data) => {
+        const first = data[0];
+        if (!first) return null;
+        return {
+          product: first.product,
+          asset: first.asset,
+        };
+      },
+    }
+  );
+
+  const product: ProductDetail | null = React.useMemo(() => {
+    if (!productWithAsset) return null;
+    return {
+      ...productWithAsset.product,
+      assetCode: productWithAsset.asset.code,
+    };
+  }, [productWithAsset]);
+
+  // Map ProductDetail to Product shape for the shared ProductsModal
+  const productForModal: Product | null = React.useMemo(() => {
+    if (!product) return null;
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description ?? null,
+      status: product.status,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      type: product.type,
+      images: product.images ?? [],
+      metadata: product.metadata ?? {},
+      pricing: {
+        amount: product.priceAmount,
+        asset: product.assetCode ? `${product.assetCode}:${product.assetId}` : product.assetId,
+        isRecurring: product.type === "subscription",
+        period: product.recurringPeriod ?? undefined,
+      },
+      unit: product.unit ?? null,
+      unitDivisor: product.unitDivisor ?? null,
+      unitsPerCredit: product.unitsPerCredit ?? null,
+      creditsGranted: product.creditsGranted ?? null,
+    };
+  }, [product]);
+
+  const isMetered = product?.type === "metered";
+  const isSubscription = product?.type === "subscription";
+
+  const createdAtLabel =
+    product && product.createdAt instanceof Date
+      ? product.createdAt.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : product
+        ? String(product.createdAt)
+        : "";
+
+  const updatedAtLabel =
+    product && product.updatedAt instanceof Date
+      ? product.updatedAt.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : product
+        ? String(product.updatedAt)
+        : "";
+
+  const mainPriceDisplay = product
+    ? product.type === "metered"
+      ? "Usage-based"
+      : `${Number(product.priceAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${product.assetCode ?? "XLM"}`
+    : "";
+
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <DashboardSidebar>
+          <DashboardSidebarInset>
+            <ProductDetailSkeleton />
+          </DashboardSidebarInset>
+        </DashboardSidebar>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="w-full">
+        <DashboardSidebar>
+          <DashboardSidebarInset>
+            <div className="flex flex-col gap-6 p-6">
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href="/products">Products</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator>
+                    <ChevronRight className="h-4 w-4" />
+                  </BreadcrumbSeparator>
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>Product not found</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+              <div className="flex flex-col items-center justify-center gap-4 py-16">
+                <Package className="text-muted-foreground h-12 w-12" />
+                <h2 className="text-xl font-semibold">Product not found</h2>
+                <p className="text-muted-foreground text-center text-sm">
+                  The product you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
+                </p>
+                <Button asChild variant="outline">
+                  <Link href="/products">Back to products</Link>
+                </Button>
+              </div>
+            </div>
+          </DashboardSidebarInset>
+        </DashboardSidebar>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <DashboardSidebar>
+        <DashboardSidebarInset>
+          <div className="flex flex-col gap-6 p-6">
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link href="/products">Products</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator>
+                  <ChevronRight className="h-4 w-4" />
+                </BreadcrumbSeparator>
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{product.name}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+
+            {/* Header: icon, name, status, main price, actions */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-4">
+                <div className="bg-muted/50 flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border">
+                  {product.images?.[0] ? (
+                    <Image
+                      src={product.images[0]}
+                      alt={product.name}
+                      width={56}
+                      height={56}
+                      className="rounded-lg object-cover"
+                    />
+                  ) : (
+                    <Package className="text-muted-foreground h-7 w-7" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-3xl font-bold tracking-tight">{product.name}</h1>
+                    <Badge
+                      variant="outline"
+                      className={
+                        product.status === "active"
+                          ? "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400"
+                          : "border-muted bg-muted/50 text-muted-foreground"
+                      }
+                    >
+                      {product.status}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {productTypeLabels[product.type] ?? product.type}
+                    {isSubscription && product.recurringPeriod && (
+                      <> · Billed {recurringPeriodLabels[product.recurringPeriod]?.toLowerCase() ?? product.recurringPeriod}</>
+                    )}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold tracking-tight">{mainPriceDisplay}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setIsEditModalOpen(true)}
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit product
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-9 w-9">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">More actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>Archive product</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Two columns: left (Pricing, Cross-sells, Features) | right (Details, Metadata) */}
+            <div className="grid gap-8 lg:grid-cols-5">
+              <div className="space-y-8 lg:col-span-3">
+                {/* Pricing */}
+                <section>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Pricing</h2>
+                  
+                  </div>
+                  <div className="border-border mt-3 overflow-hidden rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="font-medium">Price</TableHead>
+                          <TableHead className="font-medium">Description</TableHead>
+                          {isSubscription && <TableHead className="font-medium">Subscriptions</TableHead>}
+                          <TableHead className="font-medium">Created</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="font-medium">
+                            {product.type === "metered"
+                              ? "—"
+                              : `${Number(product.priceAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${product.assetCode ?? "XLM"}`}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground max-w-[200px] truncate text-sm">
+                            {product.description ?? "—"}
+                          </TableCell>
+                          {isSubscription && (
+                            <TableCell className="text-muted-foreground text-sm">
+                              {product.recurringPeriod ? recurringPeriodLabels[product.recurringPeriod] : "—"}
+                            </TableCell>
+                          )}
+                          <TableCell className="text-muted-foreground text-sm">{createdAtLabel}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </section>
+
+                {/* Cross-sells */}
+                <section>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Cross-sells</h2>
+                    <Badge variant="secondary" className="font-normal text-muted-foreground">
+                      Coming soon
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground mt-2 text-sm">
+                    Suggest a related product for customers to add to their order, right in Checkout.{" "}
+                    <Link
+                      href="/docs/metered-billing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary inline-flex items-center gap-0.5 font-medium hover:underline"
+                    >
+                      Learn more
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </p>
+                  <div className="mt-3">
+                    <Input
+                      placeholder="Find a product..."
+                      disabled
+                      className="h-10 rounded-lg border bg-muted/30"
+                    />
+                  </div>
+                </section>
+
+                {/* Features (empty state) */}
+                <section>
+                  <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Features</h2>
+                  <div className="border-border mt-3 flex min-h-[120px] items-center justify-center rounded-lg border border-dashed bg-muted/5">
+                    <p className="text-muted-foreground text-sm">No features</p>
+                  </div>
+                </section>
+              </div>
+
+              <div className="space-y-8 lg:col-span-2">
+                {/* Details */}
+                <section>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Details</h2>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setIsEditModalOpen(true)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      <span className="sr-only">Edit details</span>
+                    </Button>
+                  </div>
+                  <div className="mt-3 space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <LogDetailItem label="Product ID" value={product.id} />
+                      <CopyButton text={product.id} label="Copy product ID" />
+                    </div>
+                    {product.description && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground text-xs font-medium">Description</span>
+                        <p className="text-sm">{product.description}</p>
+                      </div>
+                    )}
+                    <div className="border-border border-t border-dashed pt-3">
+                      <span className="text-muted-foreground text-xs font-medium">Attributes</span>
+                      <p className="text-muted-foreground mt-1 text-sm">—</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-primary hover:underline text-xs font-medium"
+                      onClick={() => setDetailsExpanded((e) => !e)}
+                    >
+                      {detailsExpanded ? "View less" : "View more"}
+                    </button>
+                    {detailsExpanded && (
+                      <div className="space-y-2 pt-2">
+                        <LogDetailItem label="Type" value={productTypeLabels[product.type] ?? product.type} />
+                        <LogDetailItem label="Status" value={product.status} />
+                        <LogDetailItem label="Environment" value={product.environment} />
+                        <LogDetailItem label="Created" value={createdAtLabel} />
+                        <LogDetailItem label="Updated" value={updatedAtLabel} />
+                      </div>
+                    )}
+                  </div>
+                </section>
+
+                {/* Metadata */}
+                <section>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Metadata</h2>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setIsEditModalOpen(true)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      <span className="sr-only">Edit metadata</span>
+                    </Button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    <LogDetailItem
+                      label="Type"
+                      value={(product.metadata as Record<string, string>)?.["tier"] ?? product.type}
+                    />
+                    {product.metadata && Object.keys(product.metadata).length > 0 && (
+                      <CodeBlock language="json" showCopyButton maxHeight="160px">
+                        {JSON.stringify(product.metadata, null, 2)}
+                      </CodeBlock>
+                    )}
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <ProductsModal
+              open={isEditModalOpen}
+              onOpenChange={setIsEditModalOpen}
+              editingProduct={productForModal}
+            />
+          </div>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
+    </div>
+  );
+}

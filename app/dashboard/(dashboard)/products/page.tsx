@@ -39,24 +39,30 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Trash2,
   X,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
-import { useWatch } from "react-hook-form";
+import { useFieldArray, useWatch } from "react-hook-form";
 import { z } from "zod";
 
-interface Product extends Pick<
+export interface Product extends Pick<
   ProductSchema,
-  "id" | "name" | "status" | "createdAt" | "updatedAt" | "type" | "images"
+  "id" | "name" | "status" | "createdAt" | "updatedAt" | "type" | "images" | "metadata"
 > {
+  description?: string | null;
   pricing: {
     amount: number;
     asset: string;
     isRecurring?: boolean;
     period: RecurringPeriod | undefined;
   };
+  unit?: string | null;
+  unitDivisor?: number | null;
+  unitsPerCredit?: number | null;
+  creditsGranted?: number | null;
 }
 
 const productSchema = z.object({
@@ -77,6 +83,15 @@ const productSchema = z.object({
   unitsPerCredit: z.number().min(1).default(1).optional(),
   unitDivisor: z.number().min(1).optional(),
   creditsGranted: z.number().min(0).optional(),
+  metadata: z
+    .array(
+      z.object({
+        key: z.string().min(1, "Key is required"),
+        value: z.string(),
+      })
+    )
+    .default([])
+    .optional(),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -177,7 +192,7 @@ const columns: ColumnDef<Product>[] = [
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isModalOpen, setIsModalOpen] = React.useState(searchParams.get("mode") === "create");
+  const [isModalOpen, setIsModalOpen] = React.useState(searchParams?.get("mode") === "create");
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
 
   const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
@@ -188,9 +203,10 @@ function ProductsPageContent() {
         return {
           id: product.id,
           name: product.name,
+          description: product.description,
           pricing: {
             amount: product.priceAmount,
-            asset: asset.code,
+            asset: `${asset.code}:${asset.id}`,
             isRecurring: product.type === "subscription",
             period: product.recurringPeriod!,
           },
@@ -199,6 +215,11 @@ function ProductsPageContent() {
           updatedAt: product.updatedAt,
           type: product.type,
           images: product.images,
+          metadata: product.metadata ?? {},
+          unit: product.unit ?? null,
+          unitDivisor: product.unitDivisor ?? null,
+          unitsPerCredit: product.unitsPerCredit ?? null,
+          creditsGranted: product.creditsGranted ?? null,
         };
       });
     },
@@ -215,7 +236,7 @@ function ProductsPageContent() {
 
   const handleModalChange = React.useCallback(
     (value: boolean, syncUrlState: boolean) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString());
 
       if (!syncUrlState) return setIsModalOpen(value);
 
@@ -301,6 +322,7 @@ function ProductsPageContent() {
                 actions={tableActions}
                 enableBulkSelect
                 isLoading={isLoading}
+                onRowClick={(product) => router.push(`/products/${product.id}`)}
               />
             </div>
 
@@ -324,9 +346,9 @@ export default function ProductsPage() {
   );
 }
 
-// --- Modal Component ---
+// --- Modal Component (exported for use on product detail page) ---
 
-function ProductsModal({
+export function ProductsModal({
   open,
   onOpenChange,
   editingProduct,
@@ -346,7 +368,7 @@ function ProductsModal({
   );
 
   const form = RHF.useForm<ProductFormData>({
-    resolver: zodResolver(productSchema),
+    resolver: zodResolver(productSchema) as RHF.Resolver<ProductFormData>,
     defaultValues: {
       name: "",
       description: "",
@@ -357,21 +379,58 @@ function ProductsModal({
       unitDivisor: 1,
       unitsPerCredit: 1,
       creditsGranted: 0,
+      metadata: [],
     },
+  });
+
+  const { fields: metadataFields, append: metadataAppend, remove: metadataRemove } = useFieldArray({
+    control: form.control,
+    name: "metadata",
   });
 
   React.useEffect(() => {
     if (open && editingProduct) {
+      const metadataArray =
+          editingProduct.metadata && typeof editingProduct.metadata === "object" && Object.keys(editingProduct.metadata).length > 0
+            ? Object.entries(editingProduct.metadata).map(([key, value]) => ({
+                key,
+                value: String(value ?? ""),
+              }))
+            : [];
+
+      const displayAmount =
+        editingProduct.pricing.amount != null
+          ? Number(editingProduct.pricing.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          : "";
+
       form.reset({
         name: editingProduct.name,
-        ...(editingProduct.pricing.isRecurring && {
-          recurringPeriod: editingProduct.pricing.period,
-        }),
+        description: editingProduct?.description ?? "",
+        images: [],
+        type: editingProduct.type,
+        recurringPeriod: editingProduct.pricing.period ?? "month",
         price: {
-          amount: editingProduct.pricing.amount.toString(),
+          amount: displayAmount,
           asset: editingProduct.pricing.asset,
         },
+        unit: editingProduct.unit ?? "",
+        unitDivisor: editingProduct.unitDivisor ?? 1,
+        unitsPerCredit: editingProduct.unitsPerCredit ?? 1,
+        creditsGranted: editingProduct.creditsGranted ?? 0,
+        metadata: metadataArray,
       });
+
+      if (editingProduct.images?.length && editingProduct.images[0]) {
+        urlToFile(editingProduct.images[0], "existing-image.png").then((file) => {
+          form.setValue("images", [
+            {
+              ...file,
+              type: file.type || "image/png",
+              preview: URL.createObjectURL(file),
+            } as FileWithPreview,
+          ]);
+        });
+      }
     } else if (open && !editingProduct) {
       form.reset({
         name: "",
@@ -380,12 +439,19 @@ function ProductsModal({
         type: "one_time",
         recurringPeriod: "month",
         price: { amount: "", asset: "XLM" },
+        metadata: [],
       });
     }
   }, [open, editingProduct, form]);
 
-  const createProductMutation = useMutation({
-    mutationFn: async (data: ProductFormData) => {
+  const putProductMutation = useMutation({
+    mutationFn: async ({
+      data,
+      existingImageUrls,
+    }: {
+      data: ProductFormData;
+      existingImageUrls?: string[];
+    }) => {
       const organization = await getCurrentOrganization();
 
       const api = new ApiClient({
@@ -393,10 +459,47 @@ function ProductsModal({
         headers: { "x-session-token": organization?.token! },
       });
 
-      const formData = new FormData();
-      formData.append("images", data.images[0]);
+      const hasNewImage = data.images?.length && data.images[0] instanceof File;
+      let imageResults: string[];
 
-      const imageResults = await createProductImage(formData);
+      if (hasNewImage) {
+        const formData = new FormData();
+        formData.append("images", data.images[0] as File);
+        imageResults = (await createProductImage(formData)) ?? [];
+      } else if (existingImageUrls?.length) {
+        imageResults = existingImageUrls;
+      } else {
+        imageResults = [];
+      }
+
+      const metadataRecord = (data.metadata || []).reduce(
+        (acc, item) => {
+          if (item.key) {
+            acc[item.key] = String(item.value) || "";
+          }
+          return acc;
+        },
+        {} as Record<string, string>
+      );
+
+      if (isEditMode && editingProduct?.id) {
+        const response = await api.put<Product>(`/product/${editingProduct.id}`, {
+          name: data.name,
+          description: data?.description,
+          images: imageResults,
+          metadata: metadataRecord,
+          priceAmount: parseFloat(data.price.amount),
+          recurringPeriod: data.recurringPeriod,
+          unit: data.unit,
+          unitDivisor: data.unitDivisor,
+          unitsPerCredit: data.unitsPerCredit,
+          creditsGranted: data.creditsGranted,
+        });
+
+        if (response.isErr()) throw new Error(response.error.message);
+
+        return response.value;
+      }
 
       const result = await api.post<Product | { error: string }>("/product", {
         name: data.name,
@@ -410,7 +513,8 @@ function ProductsModal({
         unitDivisor: data.unitDivisor,
         unitsPerCredit: data.unitsPerCredit,
         creditsGranted: data.creditsGranted,
-        creditExpiryDays: undefined,
+        metadata: metadataRecord,
+        status: "active",
       });
 
       if (result.isErr()) throw new Error(result.error.message);
@@ -419,13 +523,14 @@ function ProductsModal({
 
       return result.value;
     },
-    onSuccess: () => {
-      invalidateOrgQuery(["products"]);
+    onSuccess: (product) => {
+      invalidateOrgQuery(isEditMode ? ["products", product?.id] : ["products"]);
       toast.success(isEditMode ? "Product updated successfully!" : "Product created!");
       form.reset();
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error: unknown) => {
+      console.error(error);
       toast.error(isEditMode ? "Failed to update product" : "Failed to create product");
     },
   });
@@ -434,17 +539,11 @@ function ProductsModal({
   const total = parseFloat(watched.price?.amount || "0") || 0;
 
   const onSubmit = async (data: ProductFormData) => {
-    createProductMutation.mutate(data);
+    putProductMutation.mutate({
+      data,
+      existingImageUrls: isEditMode && editingProduct?.images?.length ? editingProduct.images : undefined,
+    });
   };
-
-  React.useEffect(() => {
-    if (isEditMode && editingProduct?.images?.[0]) {
-      urlToFile(editingProduct.images[0], "existing-image.png").then((file) => {
-        console.log("updating images..");
-        form.setValue("images", [{ ...file, preview: URL.createObjectURL(file) }]);
-      });
-    }
-  }, [editingProduct, isEditMode]);
 
   return (
     <>
@@ -454,13 +553,13 @@ function ProductsModal({
         title={isEditMode ? "Edit product" : "Add a product"}
         footer={
           <div className="flex gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createProductMutation.isPending}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={putProductMutation.isPending}>
               Cancel
             </Button>
             <Button
               onClick={form.handleSubmit(onSubmit)}
-              disabled={createProductMutation.isPending}
-              isLoading={createProductMutation.isPending}
+              disabled={putProductMutation.isPending}
+              isLoading={putProductMutation.isPending}
             >
               {isEditMode ? "Update product" : "Add product"}
             </Button>
@@ -516,6 +615,81 @@ function ProductsModal({
                 />
               )}
             />
+
+            <div>
+              <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
+              <p className="text-muted-foreground text-sm">
+                Add custom key-value pairs to store additional information about this product.
+              </p>
+            </div>
+
+            <Card className="shadow-none">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  {metadataFields.length === 0 ? (
+                    <div className="text-muted-foreground py-8 text-center text-sm">
+                      No metadata entries. Click &quot;Add metadata&quot; to add one.
+                    </div>
+                  ) : (
+                    metadataFields.map((field, index) => (
+                      <div key={field.id} className="flex items-start gap-3 rounded-lg border p-4">
+                        <div className="grid flex-1 grid-cols-2 gap-3">
+                          <RHF.Controller
+                            control={form.control}
+                            name={`metadata.${index}.key`}
+                            render={({ field: fieldProps, fieldState: { error } }) => (
+                              <TextField
+                                id={`metadata-key-${index}`}
+                                value={fieldProps.value || ""}
+                                onChange={fieldProps.onChange}
+                                label="Key"
+                                error={error?.message || null}
+                                placeholder="e.g., tier"
+                                className="w-full shadow-none"
+                              />
+                            )}
+                          />
+                          <RHF.Controller
+                            control={form.control}
+                            name={`metadata.${index}.value`}
+                            render={({ field: fieldProps, fieldState: { error } }) => (
+                              <TextField
+                                id={`metadata-value-${index}`}
+                                value={fieldProps.value || ""}
+                                onChange={fieldProps.onChange}
+                                label="Value"
+                                error={error?.message || null}
+                                placeholder="e.g., premium"
+                                className="w-full shadow-none"
+                              />
+                            )}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => metadataRemove(index)}
+                          className="mt-5 shrink-0 shadow-none"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => metadataAppend({ key: "", value: "" })}
+                    className="w-full shadow-none"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add metadata
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="space-y-4 pt-4">
               <div className="flex items-center justify-between">
