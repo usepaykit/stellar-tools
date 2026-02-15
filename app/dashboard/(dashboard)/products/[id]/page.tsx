@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { retrieveProductsWithAsset } from "@/actions/product";
-import { ProductsModal, type Product } from "../page";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -28,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { Product as ProductDb } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useOrgQuery } from "@/hooks/use-org-query";
 import {
@@ -45,7 +45,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import type { Product as ProductDb } from "@/db";
+import { type Product, ProductsModal } from "../page";
 
 type ProductDetail = ProductDb & { assetCode?: string };
 
@@ -120,25 +120,25 @@ function ProductDetailSkeleton() {
       <div className="grid gap-8 lg:grid-cols-5">
         <div className="space-y-8 lg:col-span-3">
           <section>
-            <Skeleton className="h-4 w-16 mb-3" />
-            <div className="border-border rounded-lg border overflow-hidden">
+            <Skeleton className="mb-3 h-4 w-16" />
+            <div className="border-border overflow-hidden rounded-lg border">
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-14 w-full" />
             </div>
           </section>
           <section>
-            <Skeleton className="h-4 w-24 mb-2" />
-            <Skeleton className="h-4 w-full mb-3" />
+            <Skeleton className="mb-2 h-4 w-24" />
+            <Skeleton className="mb-3 h-4 w-full" />
             <Skeleton className="h-10 w-full rounded-lg" />
           </section>
           <section>
-            <Skeleton className="h-4 w-20 mb-3" />
+            <Skeleton className="mb-3 h-4 w-20" />
             <Skeleton className="h-[120px] w-full rounded-lg" />
           </section>
         </div>
         <div className="space-y-8 lg:col-span-2">
           <section>
-            <Skeleton className="h-4 w-16 mb-3" />
+            <Skeleton className="mb-3 h-4 w-16" />
             <div className="space-y-3">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-16 w-full" />
@@ -146,7 +146,7 @@ function ProductDetailSkeleton() {
             </div>
           </section>
           <section>
-            <Skeleton className="h-4 w-20 mb-3" />
+            <Skeleton className="mb-3 h-4 w-20" />
             <Skeleton className="h-8 w-full" />
           </section>
         </div>
@@ -352,19 +352,18 @@ export default function ProductDetailPage() {
                   <p className="text-muted-foreground mt-1 text-sm">
                     {productTypeLabels[product.type] ?? product.type}
                     {isSubscription && product.recurringPeriod && (
-                      <> · Billed {recurringPeriodLabels[product.recurringPeriod]?.toLowerCase() ?? product.recurringPeriod}</>
+                      <>
+                        {" "}
+                        · Billed{" "}
+                        {recurringPeriodLabels[product.recurringPeriod]?.toLowerCase() ?? product.recurringPeriod}
+                      </>
                     )}
                   </p>
                   <p className="mt-2 text-2xl font-semibold tracking-tight">{mainPriceDisplay}</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setIsEditModalOpen(true)}
-                >
+                <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsEditModalOpen(true)}>
                   <Edit className="h-4 w-4" />
                   Edit product
                 </Button>
@@ -391,8 +390,7 @@ export default function ProductDetailPage() {
                 {/* Pricing */}
                 <section>
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Pricing</h2>
-                  
+                    <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Pricing</h2>
                   </div>
                   <div className="border-border mt-3 overflow-hidden rounded-lg border">
                     <Table>
@@ -429,8 +427,8 @@ export default function ProductDetailPage() {
                 {/* Cross-sells */}
                 <section>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Cross-sells</h2>
-                    <Badge variant="secondary" className="font-normal text-muted-foreground">
+                    <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Cross-sells</h2>
+                    <Badge variant="secondary" className="text-muted-foreground font-normal">
                       Coming soon
                     </Badge>
                   </div>
@@ -447,18 +445,14 @@ export default function ProductDetailPage() {
                     </Link>
                   </p>
                   <div className="mt-3">
-                    <Input
-                      placeholder="Find a product..."
-                      disabled
-                      className="h-10 rounded-lg border bg-muted/30"
-                    />
+                    <Input placeholder="Find a product..." disabled className="bg-muted/30 h-10 rounded-lg border" />
                   </div>
                 </section>
 
                 {/* Features (empty state) */}
                 <section>
-                  <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Features</h2>
-                  <div className="border-border mt-3 flex min-h-[120px] items-center justify-center rounded-lg border border-dashed bg-muted/5">
+                  <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Features</h2>
+                  <div className="border-border bg-muted/5 mt-3 flex min-h-[120px] items-center justify-center rounded-lg border border-dashed">
                     <p className="text-muted-foreground text-sm">No features</p>
                   </div>
                 </section>
@@ -468,13 +462,8 @@ export default function ProductDetailPage() {
                 {/* Details */}
                 <section>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Details</h2>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setIsEditModalOpen(true)}
-                    >
+                    <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Details</h2>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsEditModalOpen(true)}>
                       <Pencil className="h-3.5 w-3.5" />
                       <span className="sr-only">Edit details</span>
                     </Button>
@@ -496,7 +485,7 @@ export default function ProductDetailPage() {
                     </div>
                     <button
                       type="button"
-                      className="text-primary hover:underline text-xs font-medium"
+                      className="text-primary text-xs font-medium hover:underline"
                       onClick={() => setDetailsExpanded((e) => !e)}
                     >
                       {detailsExpanded ? "View less" : "View more"}
@@ -516,13 +505,8 @@ export default function ProductDetailPage() {
                 {/* Metadata */}
                 <section>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-semibold tracking-wide uppercase text-foreground">Metadata</h2>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setIsEditModalOpen(true)}
-                    >
+                    <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Metadata</h2>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsEditModalOpen(true)}>
                       <Pencil className="h-3.5 w-3.5" />
                       <span className="sr-only">Edit metadata</span>
                     </Button>
@@ -542,11 +526,7 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <ProductsModal
-              open={isEditModalOpen}
-              onOpenChange={setIsEditModalOpen}
-              editingProduct={productForModal}
-            />
+            <ProductsModal open={isEditModalOpen} onOpenChange={setIsEditModalOpen} editingProduct={productForModal} />
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>

@@ -6,7 +6,7 @@ export const cronJobApi = new CronJobApi();
 export const inngestServe = serve({
   client: cronJobApi.getClient(),
   functions: cronJobApi.getFunctions(),
-//   signingKey: process.env.INNGEST_SIGNING_KEY,
+  //   signingKey: process.env.INNGEST_SIGNING_KEY,
 });
 
 export const { GET, POST, PUT } = inngestServe;

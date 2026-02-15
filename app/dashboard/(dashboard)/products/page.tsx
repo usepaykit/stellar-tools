@@ -383,7 +383,11 @@ export function ProductsModal({
     },
   });
 
-  const { fields: metadataFields, append: metadataAppend, remove: metadataRemove } = useFieldArray({
+  const {
+    fields: metadataFields,
+    append: metadataAppend,
+    remove: metadataRemove,
+  } = useFieldArray({
     control: form.control,
     name: "metadata",
   });
@@ -391,16 +395,21 @@ export function ProductsModal({
   React.useEffect(() => {
     if (open && editingProduct) {
       const metadataArray =
-          editingProduct.metadata && typeof editingProduct.metadata === "object" && Object.keys(editingProduct.metadata).length > 0
-            ? Object.entries(editingProduct.metadata).map(([key, value]) => ({
-                key,
-                value: String(value ?? ""),
-              }))
-            : [];
+        editingProduct.metadata &&
+        typeof editingProduct.metadata === "object" &&
+        Object.keys(editingProduct.metadata).length > 0
+          ? Object.entries(editingProduct.metadata).map(([key, value]) => ({
+              key,
+              value: String(value ?? ""),
+            }))
+          : [];
 
       const displayAmount =
         editingProduct.pricing.amount != null
-          ? Number(editingProduct.pricing.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          ? Number(editingProduct.pricing.amount).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })
           : "";
 
       form.reset({
@@ -445,13 +454,7 @@ export function ProductsModal({
   }, [open, editingProduct, form]);
 
   const putProductMutation = useMutation({
-    mutationFn: async ({
-      data,
-      existingImageUrls,
-    }: {
-      data: ProductFormData;
-      existingImageUrls?: string[];
-    }) => {
+    mutationFn: async ({ data, existingImageUrls }: { data: ProductFormData; existingImageUrls?: string[] }) => {
       const organization = await getCurrentOrganization();
 
       const api = new ApiClient({

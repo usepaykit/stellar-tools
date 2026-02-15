@@ -126,8 +126,7 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
     }, []);
 
     const currentFile = value[0];
-    const hasImage =
-      currentFile && typeof currentFile.type === "string" && currentFile.type.startsWith("image/");
+    const hasImage = currentFile && typeof currentFile.type === "string" && currentFile.type.startsWith("image/");
     const hasFile = !!currentFile;
 
     return (
