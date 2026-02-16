@@ -303,3 +303,16 @@ export const triggerWebhooks = async (
     skipped: isOverLimit,
   };
 };
+
+
+export const resendWebhookLog = async (
+  webhookId: string,
+  eventType: WebhookEvent,
+  payload: Record<string, unknown>,
+  orgId?: string,
+  env?: Network
+) => {
+  const webhook = await retrieveWebhook(webhookId, orgId, env);
+  const normalizedPayload = toSnakeCase(payload) as Record<string, unknown>;
+  return new WebhookDelivery().deliver(webhook, eventType, normalizedPayload);
+};

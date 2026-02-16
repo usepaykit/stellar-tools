@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveWebhookLogs } from "@/actions/webhook";
+import { resendWebhookLog, retrieveWebhookLogs } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -18,14 +18,17 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { UnderlineTabs, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/underline-tabs";
+import { toast } from "@/components/ui/toast";
 import { WebhookLog } from "@/db";
+import type { WebhookEvent } from "@stellartools/core";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useOrgQuery,  } from "@/hooks/use-org-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
 import moment from "moment";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
 
 const StatusBadge = ({ statusCode, nextRetry }: { statusCode?: number; nextRetry?: string }) => {
   if (statusCode === 200) {
@@ -137,6 +140,31 @@ export default function WebhookLogPage() {
     },
   });
 
+  const resendMutation = useMutation({
+    mutationFn: async ({
+      eventType,
+      payload,
+    }: {
+      eventType: WebhookEvent;
+      payload: Record<string, unknown>;
+    }) => resendWebhookLog(webhookId, eventType, payload),
+    onSuccess: () => {
+      refetchWebhookLogs();
+      toast.success("Webhook resent successfully");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to resend webhook");
+    },
+  });
+
+  const getResendPayload = (log: { request?: unknown }): Record<string, unknown> => {
+    const req = log.request;
+    if (req && typeof req === "object" && "data" in req && req.data && typeof req.data === "object") {
+      return req.data as Record<string, unknown>;
+    }
+    return (req as Record<string, unknown>) ?? {};
+  };
+
   const filteredLogs = React.useMemo(() => {
     let logs = webhookLogs;
 
@@ -163,7 +191,19 @@ export default function WebhookLogPage() {
             <h3 className="text-lg font-semibold">Delivery attempt</h3>
             <p className="text-muted-foreground text-sm">{log.eventType}</p>
           </div>
-          <Button size="sm">Resend</Button>
+          <Button
+            size="sm"
+            onClick={() =>
+              resendMutation.mutate({
+                eventType: log.eventType as WebhookEvent,
+                payload: getResendPayload(log),
+              })
+            }
+            disabled={resendMutation.isPending}
+            isLoading={resendMutation.isPending}
+          >
+            Resend
+          </Button>
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto pr-2">

@@ -374,7 +374,7 @@ function WebhooksPageContent() {
               <h1 className="text-3xl font-bold tracking-tight">Event destinations</h1>
               <p className="text-muted-foreground">Stream Stellar events to your webhooks and cloud services.</p>
             </div>
-            <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
+            <Button className="gap-2" onClick={() => handleModalChange(true)}>
               <Plus className="size-4" /> Add destination
             </Button>
           </header>
@@ -399,10 +399,7 @@ function WebhooksPageContent() {
                 data={webhooks as any}
                 isLoading={isLoading}
                 onRowClick={(row) => router.push(`/webhooks/${row.id}`)}
-                actions={[
-                  { label: "Edit", onClick: (w) => console.log(w) },
-                  { label: "Delete", variant: "destructive", onClick: (w) => console.log(w) },
-                ]}
+                actions={tableActions}
               />
             </TabsContent>
           </Tabs>
@@ -498,10 +495,8 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
   const [secret, setSecret] = React.useState<string>("");
 
   React.useEffect(() => {
-    console.log("Organization ID:", organization?.id);
     if (!open || isLoading) return;
     const webhookSecret = generateResourceId("whsec", organization?.id!, 32, "sha256");
-    console.log("Generated webhook secret:", webhookSecret);
     setSecret(webhookSecret);
   }, [open, organization?.id, isLoading]);
 
@@ -571,8 +566,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
       form.reset();
       onOpenChange(false);
     },
-    onError: (error) => {
-      console.log("error creating webhook", error.message);
+    onError: () => {
       toast.error("Failed to create webhook destination");
     },
   });
@@ -583,7 +577,12 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
       const organization = await getCurrentOrganization();
       const result = await api.put<Webhook>(
         `/webhooks/${editingWebhook.id}`,
-        { url: data.endpointUrl, description: data.description ?? null, events: data.events },
+        {
+          name: data.destinationName,
+          url: data.endpointUrl,
+          description: data.description ?? null,
+          events: data.events,
+        },
         { "x-auth-token": organization?.token! }
       );
       if (result.isErr()) throw new Error(result.error.message);
