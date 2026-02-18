@@ -103,7 +103,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
   const userInitials = (user?.profile.firstName?.[0] || user?.email?.[0] || "?").toUpperCase();
 
-  const isActive = (url: string) => (url === "/" ? pathname === "/" : pathname.startsWith(url));
+  const isActive = (url: string) => (url === "/" ? pathname === "/" : pathname?.startsWith(url));
 
   const handleSwitchOrganization = async (orgId: string) => {
     if (!currentOrg || orgId === currentOrg.id) return;
