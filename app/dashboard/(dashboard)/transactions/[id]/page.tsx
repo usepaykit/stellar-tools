@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { type Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
@@ -165,12 +165,11 @@ export default function TransactionDetailPage() {
   const router = useRouter();
   const params = useParams();
   const paymentId = params?.id as string;
-  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  const { data, isLoading } = useOrgQuery(
+  const { data, isLoading, refetch } = useOrgQuery(
     ["payment", paymentId],
     () => retrievePaymentWithDetails(paymentId),
     { enabled: !!paymentId }
@@ -185,7 +184,7 @@ export default function TransactionDetailPage() {
 
     setIsRefreshing(true);
     try {
-      await invalidateOrgQuery(["payment", paymentId]);
+      await refetch();
       toast.success("Transaction status refreshed");
     } catch (error) {
       console.error("Failed to refresh status:", error);
@@ -193,7 +192,7 @@ export default function TransactionDetailPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [paymentId, invalidateOrgQuery]);
+  }, [paymentId, refetch]);
 
   const getStellarExplorerUrl = (txHash: string, network: string) => {
     const baseUrl =
