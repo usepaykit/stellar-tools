@@ -162,11 +162,7 @@ export const retrievePaymentWithDetails = async (
     .select()
     .from(refunds)
     .where(
-      and(
-        eq(refunds.paymentId, id),
-        eq(refunds.organizationId, organizationId),
-        eq(refunds.environment, environment)
-      )
+      and(eq(refunds.paymentId, id), eq(refunds.organizationId, organizationId), eq(refunds.environment, environment))
     )
     .orderBy(desc(refunds.createdAt));
 

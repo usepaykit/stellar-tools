@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { type Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
@@ -165,6 +165,7 @@ export default function TransactionDetailPage() {
   const router = useRouter();
   const params = useParams();
   const paymentId = params?.id as string;
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
@@ -184,6 +185,7 @@ export default function TransactionDetailPage() {
 
     setIsRefreshing(true);
     try {
+      await invalidateOrgQuery(["payment", paymentId]);
       await refetch();
       toast.success("Transaction status refreshed");
     } catch (error) {
@@ -192,7 +194,7 @@ export default function TransactionDetailPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [paymentId, refetch]);
+  }, [paymentId, invalidateOrgQuery, refetch]);
 
   const getStellarExplorerUrl = (txHash: string, network: string) => {
     const baseUrl =
@@ -361,19 +363,19 @@ export default function TransactionDetailPage() {
 
                     {payment.updatedAt &&
                       new Date(payment.updatedAt).getTime() !== new Date(payment.createdAt).getTime() && (
-                      <>
-                        <Separator />
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
-                            <div className="text-sm">
-                              {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
+                        <>
+                          <Separator />
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
+                              <div className="text-sm">
+                                {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
+                              </div>
                             </div>
+                            <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                           </div>
-                          <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
                   </div>
                 </div>
 
@@ -506,9 +508,7 @@ export default function TransactionDetailPage() {
                           <div className="min-w-0 flex-1">
                             <div className="text-muted-foreground mb-1 text-xs">Customer</div>
                             <div className="text-sm font-medium">{customer.name ?? customer.email ?? "—"}</div>
-                            {customer.email && (
-                              <div className="text-muted-foreground text-xs">{customer.email}</div>
-                            )}
+                            {customer.email && <div className="text-muted-foreground text-xs">{customer.email}</div>}
                           </div>
                           <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
                             <Link href={`/customers/${customer.id}`}>

@@ -17,18 +17,18 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { UnderlineTabs, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/underline-tabs";
 import { toast } from "@/components/ui/toast";
+import { UnderlineTabs, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/underline-tabs";
 import { WebhookLog } from "@/db";
-import type { WebhookEvent } from "@stellartools/core";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery,  } from "@/hooks/use-org-query";
+import { useOrgQuery } from "@/hooks/use-org-query";
+import type { WebhookEvent } from "@stellartools/core";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
 import moment from "moment";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
 
 const StatusBadge = ({ statusCode, nextRetry }: { statusCode?: number; nextRetry?: string }) => {
   if (statusCode === 200) {
@@ -141,13 +141,8 @@ export default function WebhookLogPage() {
   });
 
   const resendMutation = useMutation({
-    mutationFn: async ({
-      eventType,
-      payload,
-    }: {
-      eventType: WebhookEvent;
-      payload: Record<string, unknown>;
-    }) => resendWebhookLog(webhookId, eventType, payload),
+    mutationFn: async ({ eventType, payload }: { eventType: WebhookEvent; payload: Record<string, unknown> }) =>
+      resendWebhookLog(webhookId, eventType, payload),
     onSuccess: () => {
       refetchWebhookLogs();
       toast.success("Webhook resent successfully");
