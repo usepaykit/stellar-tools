@@ -341,8 +341,8 @@ type TabType = "all" | TransactionStatus;
 
 function TransactionsPageContent() {
   const searchParams = useSearchParams();
-  const customerId = searchParams.get("customer");
-  const paymentId = searchParams.get("paymentId");
+  const customerId = searchParams?.get("customer");
+  const paymentId = searchParams?.get("paymentId");
 
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
 
