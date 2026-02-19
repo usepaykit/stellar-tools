@@ -304,7 +304,6 @@ export const triggerWebhooks = async (
   };
 };
 
-
 export const resendWebhookLog = async (
   webhookId: string,
   eventType: WebhookEvent,

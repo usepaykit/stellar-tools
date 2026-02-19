@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrievePaymentWithDetails } from "@/actions/payment";
 import { RefundModal } from "@/app/dashboard/(dashboard)/transactions/page";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -22,9 +23,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { Payment } from "@/db";
+import { type Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import {
   CheckCircle2,
@@ -89,89 +92,101 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   );
 };
 
-const mockPayment: Payment = {
-  id: "pay_abc123def456ghi789jkl012mno345",
-  organizationId: "org_mock123",
-  checkoutId: "chk_xyz789abc123def456",
-  customerId: "cust_mock456",
-  amount: 50000000,
-  transactionHash: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2",
-  status: "confirmed",
-  createdAt: new Date("2025-01-15T10:30:00Z"),
-  updatedAt: new Date("2025-01-15T10:30:15Z"),
-  environment: "testnet",
-};
-
-const mockCustomer = {
-  id: "cust_mock456",
-  name: "John Doe",
-  email: "john.doe@example.com",
-  phone: null,
-  createdAt: new Date("2024-12-01T08:00:00Z"),
-  updatedAt: new Date("2025-01-15T10:30:00Z"),
-  organizationId: "org_mock123",
-  appMetadata: {
-    company: "Acme Corp",
-    plan: "premium",
-  },
-  walletAddresses: [
-    {
-      address: "GABCDEF1234567890ABCDEF1234567890ABCDEF12",
-      memo: "Payment for subscription",
-    },
-  ],
-};
-
-const mockRefunds = [
-  {
-    id: "rf_refund123456789",
-    organizationId: "org_mock123",
-    paymentId: "pay_abc123def456ghi789jkl012mno345",
-    customerId: "cust_mock456",
-    amount: 25000000, // 25.00 XLM in stroops (partial refund)
-    reason: "Customer requested partial refund due to service issue",
-    status: "succeeded",
-    receiverPublicKey: "GXYZ9876543210ABCDEF9876543210ABCDEF9876",
-    createdAt: new Date("2025-01-16T14:20:00Z"),
-    updatedAt: new Date("2025-01-16T14:20:00Z"),
-    environment: "testnet",
-    metadata: {},
-  },
-];
+function TransactionDetailSkeleton() {
+  return (
+    <DashboardSidebar>
+      <DashboardSidebarInset>
+        <div className="flex flex-col gap-6 p-4 sm:p-6">
+          <Skeleton className="h-5 w-48" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-56" />
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-72" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-32" />
+              <Skeleton className="h-9 w-9" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-52" />
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="space-y-1">
+                    <Skeleton className="h-3 w-14" />
+                    <Skeleton className="h-8 w-32" />
+                  </div>
+                  <Separator />
+                  <div className="space-y-1">
+                    <Skeleton className="h-3 w-28" />
+                    <Skeleton className="h-4 w-full max-w-md" />
+                  </div>
+                  <Separator />
+                  <div className="space-y-1">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <Separator />
+                  <div className="space-y-1">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-4 w-44" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-20" />
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-4 w-full" />
+                  </div>
+                  <Separator />
+                  <div className="space-y-1">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardSidebarInset>
+    </DashboardSidebar>
+  );
+}
 
 export default function TransactionDetailPage() {
   const router = useRouter();
   const params = useParams();
   const paymentId = params?.id as string;
+  const invalidateOrgQuery = useInvalidateOrgQuery();
 
   const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  // Mock data - replace with actual API calls later
-  const payment = React.useMemo(() => {
-    // Use mock data, but you can also check if paymentId matches
-    return mockPayment;
-  }, []);
+  const { data, isLoading, refetch } = useOrgQuery(
+    ["payment", paymentId],
+    () => retrievePaymentWithDetails(paymentId),
+    { enabled: !!paymentId }
+  );
 
-  const customer = React.useMemo(() => {
-    return mockCustomer;
-  }, []);
-
-  const refunds = React.useMemo(() => {
-    // Filter refunds for this payment
-    return mockRefunds.filter((refund) => refund.paymentId === paymentId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const isLoadingPayment = false;
+  const payment = data?.payment ?? null;
+  const customer = data?.customer ?? null;
+  const refunds = data?.refunds ?? [];
 
   const handleRefreshStatus = React.useCallback(async () => {
-    if (!payment) return;
+    if (!paymentId) return;
 
     setIsRefreshing(true);
     try {
-      // Simulate API call to refresh transaction status
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await invalidateOrgQuery(["payment", paymentId]);
+      await refetch();
       toast.success("Transaction status refreshed");
     } catch (error) {
       console.error("Failed to refresh status:", error);
@@ -179,7 +194,7 @@ export default function TransactionDetailPage() {
     } finally {
       setIsRefreshing(false);
     }
-  }, [payment]);
+  }, [paymentId, invalidateOrgQuery, refetch]);
 
   const getStellarExplorerUrl = (txHash: string, network: string) => {
     const baseUrl =
@@ -189,18 +204,8 @@ export default function TransactionDetailPage() {
     return `${baseUrl}/${txHash}`;
   };
 
-  if (isLoadingPayment) {
-    return (
-      <DashboardSidebar>
-        <DashboardSidebarInset>
-          <div className="flex flex-col gap-6 p-6">
-            <div className="py-12 text-center">
-              <p className="text-muted-foreground">Loading transaction...</p>
-            </div>
-          </div>
-        </DashboardSidebarInset>
-      </DashboardSidebar>
-    );
+  if (isLoading) {
+    return <TransactionDetailSkeleton />;
   }
 
   if (!payment) {
@@ -356,20 +361,21 @@ export default function TransactionDetailPage() {
                       <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                     </div>
 
-                    {payment.updatedAt && payment.updatedAt.getTime() !== payment.createdAt.getTime() && (
-                      <>
-                        <Separator />
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
-                            <div className="text-sm">
-                              {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
+                    {payment.updatedAt &&
+                      new Date(payment.updatedAt).getTime() !== new Date(payment.createdAt).getTime() && (
+                        <>
+                          <Separator />
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-muted-foreground mb-1 text-xs">Last Updated</div>
+                              <div className="text-sm">
+                                {moment(payment.updatedAt).format("MMMM DD, YYYY [at] h:mm A")}
+                              </div>
                             </div>
+                            <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                           </div>
-                          <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
                   </div>
                 </div>
 
@@ -501,8 +507,8 @@ export default function TransactionDetailPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="text-muted-foreground mb-1 text-xs">Customer</div>
-                            <div className="text-sm font-medium">{customer.name || customer.email}</div>
-                            <div className="text-muted-foreground text-xs">{customer.email}</div>
+                            <div className="text-sm font-medium">{customer.name ?? customer.email ?? "—"}</div>
+                            {customer.email && <div className="text-muted-foreground text-xs">{customer.email}</div>}
                           </div>
                           <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
                             <Link href={`/customers/${customer.id}`}>

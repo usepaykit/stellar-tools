@@ -5,7 +5,19 @@ import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { validateLimits } from "@/actions/plan";
-import { Network, Payment, assets, checkouts, customers, db, payments, products, refunds } from "@/db";
+import {
+  Customer,
+  Network,
+  Payment,
+  Refund,
+  assets,
+  checkouts,
+  customers,
+  db,
+  payments,
+  products,
+  refunds,
+} from "@/db";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
@@ -113,6 +125,48 @@ export const retrievePayment = async (id: string, orgId?: string, env?: Network)
   if (!payment) throw new Error("Payment not found");
 
   return payment;
+};
+
+export const retrievePaymentWithDetails = async (
+  id: string,
+  orgId?: string,
+  env?: Network
+): Promise<{ payment: Payment; customer: Customer | null; refunds: Refund[] } | null> => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const [payment] = await db
+    .select()
+    .from(payments)
+    .where(
+      and(eq(payments.id, id), eq(payments.organizationId, organizationId), eq(payments.environment, environment))
+    );
+
+  if (!payment) return null;
+
+  let customer: Customer | null = null;
+  if (payment.customerId) {
+    const [c] = await db
+      .select()
+      .from(customers)
+      .where(
+        and(
+          eq(customers.id, payment.customerId),
+          eq(customers.organizationId, organizationId),
+          eq(customers.environment, environment)
+        )
+      );
+    customer = c ?? null;
+  }
+
+  const refundsList = await db
+    .select()
+    .from(refunds)
+    .where(
+      and(eq(refunds.paymentId, id), eq(refunds.organizationId, organizationId), eq(refunds.environment, environment))
+    )
+    .orderBy(desc(refunds.createdAt));
+
+  return { payment, customer, refunds: refundsList };
 };
 
 export const retrievePaymentsWithDetails = async (orgId?: string, env?: Network) => {
