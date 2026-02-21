@@ -107,22 +107,22 @@
   --color-shadow-color: var(--shadow-color);
   --color-destructive-foreground: var(--destructive-foreground);
 
-  --stellar-wallet-background: var(--background);
-  --stellar-wallet-background-secondary: var(--secondary);
-  --stellar-wallet-foreground-strong: var(--foreground);
-  --stellar-wallet-foreground: var(--foreground);
-  --stellar-wallet-foreground-secondary: var(--muted-foreground);
-  --stellar-wallet-primary: var(--primary);
-  --stellar-wallet-primary-foreground: var(--primary-foreground);
+  --stellar-wallet-background: #f9fafb;
+  --stellar-wallet-background-secondary: #f1f5f9;
+  --stellar-wallet-foreground-strong: #0f172a;
+  --stellar-wallet-foreground: #0f172a;
+  --stellar-wallet-foreground-secondary: #64748b;
+  --stellar-wallet-primary: #6347eb;
+  --stellar-wallet-primary-foreground: #ffffff;
   --stellar-wallet-transparent: transparent;
-  --stellar-wallet-lighter: var(--background);
-  --stellar-wallet-light: var(--secondary);
-  --stellar-wallet-light-gray: var(--muted-foreground);
-  --stellar-wallet-gray: var(--muted-foreground);
-  --stellar-wallet-danger: var(--destructive);
-  --stellar-wallet-border: var(--border);
-  --stellar-wallet-shadow: var(--shadow-lg);
-  --stellar-wallet-border-radius: var(--radius);
+  --stellar-wallet-lighter: #f9fafb;
+  --stellar-wallet-light: #f1f5f9;
+  --stellar-wallet-light-gray: #64748b;
+  --stellar-wallet-gray: #64748b;
+  --stellar-wallet-danger: #ef4444;
+  --stellar-wallet-border: #e2e8f0;
+  --stellar-wallet-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --stellar-wallet-border-radius: 0.5rem;
   --stellar-wallet-font-family: var(--font-sans);
 }
 

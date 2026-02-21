@@ -31,6 +31,7 @@ import { notFound, useParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { Networks } from "@stellar/stellar-sdk";
 
 const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: {} });
 
@@ -117,6 +118,13 @@ export default function CheckoutPage() {
 
     fetchURI();
   }, [hasDetails, checkout, checkoutId, isPaid, isFailed]);
+
+  React.useEffect(() => {
+    if (!checkout) return;
+
+    const network = checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
+    stellarWalletsKit.init({ network });
+  }, [checkout]);
 
   if (isLoading) return <Checkout.Skeleton />;
   if (!checkout) return notFound();
