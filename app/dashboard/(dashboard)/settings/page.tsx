@@ -4,13 +4,9 @@ import * as React from "react";
 
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable, TableAction } from "@/components/data-table";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { type PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
-import { TagInput } from "@/components/tag+input";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,8 +17,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
 import {
   UnderlineTabs,
@@ -30,14 +24,10 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
-import { roles } from "@/constant/schema.client";
-import { useCopy } from "@/hooks/use-copy";
-import { cn, getInitials } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ColumnDef } from "@tanstack/react-table";
-import { Calendar, Camera, ChevronRight, Copy, ExternalLink, Loader2, Mail, Plus, Save, User } from "lucide-react";
+import { Calendar, Camera, ChevronRight, ExternalLink, Loader2, Save } from "lucide-react";
 import moment from "moment";
-import { nanoid } from "nanoid";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -60,62 +50,6 @@ const mockOrganization = {
   logo: null,
   createdAt: new Date("2024-01-15"),
 };
-
-type TeamMember = {
-  id: string;
-  name: string;
-  email: string;
-  role: "owner" | "admin" | "developer" | "viewer";
-  avatar: string | null;
-  joinedAt: Date;
-  status: "active" | "pending";
-  expiresAt?: Date;
-  createdAt?: Date;
-};
-
-const mockTeamMembers: TeamMember[] = [
-  {
-    id: "tm_1",
-    name: "John Doe",
-    email: "john@example.com",
-    role: "owner",
-    avatar: null,
-    joinedAt: new Date("2024-01-15"),
-    status: "active",
-  },
-  {
-    id: "tm_2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    role: "admin",
-    avatar: null,
-    joinedAt: new Date("2024-01-20"),
-    status: "active",
-  },
-  {
-    id: "tm_3",
-    name: "Bob Johnson",
-    email: "bob@example.com",
-    role: "developer",
-    avatar: null,
-    joinedAt: new Date("2024-02-01"),
-    status: "active",
-  },
-];
-
-const mockPendingInvites: TeamMember[] = [
-  {
-    id: "inv_1",
-    name: "Alice",
-    email: "alice@example.com",
-    role: "viewer",
-    avatar: null,
-    joinedAt: new Date("2024-11-15"),
-    status: "pending",
-    expiresAt: new Date("2024-12-31"),
-    createdAt: new Date("2024-11-15"),
-  },
-];
 
 // Schemas
 const profileSchema = z.object({
@@ -156,31 +90,11 @@ const organizationSchema = z.object({
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
-const inviteMemberSchema = z.object({
-  emails: z.array(z.email()).min(1, "At least one email is required"),
-  role: z.enum(roles),
-});
-
-type InviteMemberFormData = z.infer<typeof inviteMemberSchema>;
-
-const updateRoleSchema = z.object({
-  role: z.enum(roles),
-});
-
-type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;
-
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = React.useState("profile");
-  const [teamTab, setTeamTab] = React.useState<"members" | "pending">("members");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
   const [organizationLogoPreview, setOrganizationLogoPreview] = React.useState<string | null>(null);
-  const [isInviteModalOpen, setIsInviteModalOpen] = React.useState(false);
-  const [isUpdateRoleModalOpen, setIsUpdateRoleModalOpen] = React.useState(false);
-  const [selectedMemberForRoleUpdate, setSelectedMemberForRoleUpdate] = React.useState<TeamMember | null>(null);
-  const [inviteLink, setInviteLink] = React.useState<string | null>(null);
-
-  const { handleCopy } = useCopy();
 
   const profileForm = RHF.useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -196,21 +110,6 @@ export default function SettingsPage() {
       name: mockOrganization.name,
       slug: mockOrganization.slug,
       description: mockOrganization.description || "",
-    },
-  });
-
-  const inviteMemberForm = RHF.useForm<InviteMemberFormData>({
-    resolver: zodResolver(inviteMemberSchema),
-    defaultValues: {
-      emails: [],
-      role: "viewer",
-    },
-  });
-
-  const updateRoleForm = RHF.useForm<UpdateRoleFormData>({
-    resolver: zodResolver(updateRoleSchema),
-    defaultValues: {
-      role: "viewer",
     },
   });
 
@@ -268,249 +167,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleRemoveMember = (memberId: string) => {
-    toast.success(`Remove member ${memberId} functionality coming soon`);
-  };
-
-  const handleResendInvite = (inviteId: string) => {
-    toast.success(`Resend invite ${inviteId} functionality coming soon`);
-  };
-
-  const handleCancelInvite = (inviteId: string) => {
-    toast.success(`Cancel invite ${inviteId} functionality coming soon`);
-  };
-
-  const handleUpdateRole = React.useCallback(
-    (member: TeamMember) => {
-      setSelectedMemberForRoleUpdate(member);
-      updateRoleForm.reset({
-        role: member.role,
-      });
-      setIsUpdateRoleModalOpen(true);
-    },
-    [updateRoleForm]
-  );
-
-  const onUpdateRoleSubmit = async (data: UpdateRoleFormData) => {
-    if (!selectedMemberForRoleUpdate) return;
-
-    setIsSubmitting(true);
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Updating role:", {
-        memberId: selectedMemberForRoleUpdate.id,
-        email: selectedMemberForRoleUpdate.email,
-        newRole: data.role,
-      });
-      toast.success("Role updated successfully");
-      updateRoleForm.reset();
-      setIsUpdateRoleModalOpen(false);
-      setSelectedMemberForRoleUpdate(null);
-    } catch (error) {
-      console.error("Failed to update role:", error);
-      toast.error("Failed to update role");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Reset form when update role modal closes
-  React.useEffect(() => {
-    if (!isUpdateRoleModalOpen) {
-      updateRoleForm.reset();
-      setSelectedMemberForRoleUpdate(null);
-      setIsSubmitting(false);
-    }
-  }, [isUpdateRoleModalOpen, updateRoleForm]);
-
-  const onInviteMemberSubmit = async (data: InviteMemberFormData) => {
-    setIsSubmitting(true);
-    try {
-      const link = `${window.location.origin}/join/${nanoid(25)}`;
-      setInviteLink(link);
-
-      const emailCount = data.emails.length;
-      toast.success(`Invitation created successfully for ${emailCount} ${emailCount === 1 ? "person" : "people"}`);
-
-      setTeamTab("pending");
-    } catch (error) {
-      console.error("Failed to send invitation:", error);
-      toast.error("Failed to create invitation");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Reset form when modal closes
-  React.useEffect(() => {
-    if (!isInviteModalOpen) {
-      inviteMemberForm.reset();
-      setIsSubmitting(false);
-      setInviteLink(null);
-    }
-  }, [isInviteModalOpen, inviteMemberForm]);
-
-  // Team table columns
-  const teamColumns: ColumnDef<TeamMember>[] = React.useMemo(
-    () => [
-      {
-        accessorKey: "member",
-        header: "Member",
-        cell: ({ row }) => {
-          const member = row.original;
-          return (
-            <div className="flex items-center gap-3">
-              {member.status === "pending" ? (
-                <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
-                  <Mail className="text-muted-foreground h-5 w-5" />
-                </div>
-              ) : (
-                <Avatar>
-                  <AvatarImage src={member.avatar || undefined} className="object-cover" />
-                  <AvatarFallback>
-                    {member.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              )}
-              <div>
-                <p className="font-medium">{member.name || member.email}</p>
-              </div>
-            </div>
-          );
-        },
-        size: 250,
-      },
-      {
-        accessorKey: "email",
-        header: "Email",
-        cell: ({ row }) => {
-          return <p className="text-muted-foreground text-sm">{row.original.email}</p>;
-        },
-        size: 200,
-      },
-      {
-        accessorKey: "role",
-        header: "Role",
-        cell: ({ row }) => {
-          const role = row.original.role;
-          return (
-            <Badge
-              variant={role === "owner" ? "default" : role === "admin" ? "secondary" : "outline"}
-              className={
-                role === "owner"
-                  ? "border-purple-200 bg-purple-100 text-purple-800 dark:border-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
-                  : ""
-              }
-            >
-              {role.charAt(0).toUpperCase() + role.slice(1)}
-            </Badge>
-          );
-        },
-        size: 120,
-      },
-      {
-        accessorKey: "status",
-        header: "Status",
-        cell: ({ row }) => {
-          const status = row.original.status;
-          return (
-            <Badge
-              variant="outline"
-              className="border-green-200 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400"
-            >
-              <User className="mr-1 h-3 w-3" />
-              {status === "active" ? "Active" : "Pending"}
-            </Badge>
-          );
-        },
-        size: 120,
-      },
-      {
-        accessorKey: "joinedAt",
-        header: teamTab === "pending" ? "Invited" : "Joined",
-        cell: ({ row }) => {
-          const member = row.original;
-          if (member.status === "pending" && member.createdAt) {
-            return <p className="text-muted-foreground text-sm">{moment(member.createdAt).format("MMM D, YYYY")}</p>;
-          }
-          if (member.status === "active") {
-            return <p className="text-muted-foreground text-sm">{moment(member.joinedAt).format("MMM D, YYYY")}</p>;
-          }
-          return <span className="text-muted-foreground text-sm">—</span>;
-        },
-        size: 150,
-      },
-      ...(teamTab === "pending"
-        ? [
-            {
-              accessorKey: "expiresAt",
-              header: "Expires",
-              cell: ({ row }) => {
-                const member = row.original;
-                if (member.status === "pending" && member.expiresAt) {
-                  return (
-                    <p className="text-muted-foreground text-sm">{moment(member.expiresAt).format("MMM D, YYYY")}</p>
-                  );
-                }
-                return <span className="text-muted-foreground text-sm">—</span>;
-              },
-              size: 150,
-            } as ColumnDef<TeamMember>,
-          ]
-        : []),
-    ],
-    [teamTab]
-  );
-
-  // Filter data based on active tab
-  const teamTableData = React.useMemo(() => {
-    if (teamTab === "members") {
-      return mockTeamMembers;
-    }
-    return mockPendingInvites;
-  }, [teamTab]);
-
-  // Table actions
-  const teamTableActions: TableAction<TeamMember>[] = React.useMemo(() => {
-    if (teamTab === "members") {
-      return [
-        {
-          label: "Update Role",
-          onClick: (member: TeamMember) => handleUpdateRole(member),
-        },
-        {
-          label: "Remove",
-          onClick: (member: TeamMember) => {
-            if (member.role !== "owner") {
-              handleRemoveMember(member.id);
-            }
-          },
-          variant: "destructive" as const,
-        },
-      ];
-    }
-    return [
-      {
-        label: "Update Role",
-        onClick: (invite: TeamMember) => handleUpdateRole(invite),
-      },
-      {
-        label: "Resend",
-        onClick: (invite: TeamMember) => handleResendInvite(invite.id),
-      },
-      {
-        label: "Cancel",
-        onClick: (invite: TeamMember) => handleCancelInvite(invite.id),
-        variant: "destructive" as const,
-      },
-    ];
-  }, [teamTab, handleUpdateRole]);
-
   return (
     <div className="w-full">
       <DashboardSidebar>
@@ -536,7 +192,6 @@ export default function SettingsPage() {
               <UnderlineTabsList>
                 <UnderlineTabsTrigger value="profile">Profile</UnderlineTabsTrigger>
                 <UnderlineTabsTrigger value="organization">Organization</UnderlineTabsTrigger>
-                <UnderlineTabsTrigger value="team">Team</UnderlineTabsTrigger>
                 <UnderlineTabsTrigger value="api">API Keys</UnderlineTabsTrigger>
               </UnderlineTabsList>
 
@@ -769,82 +424,6 @@ export default function SettingsPage() {
                 </Card>
               </UnderlineTabsContent>
 
-              <UnderlineTabsContent value="team" className="mt-6 space-y-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-2xl font-semibold">Team Members</h2>
-                    <p className="text-muted-foreground mt-1 text-sm">Manage your team members and their permissions</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="secondary" className="text-sm">
-                      {mockTeamMembers.length + mockPendingInvites.length} total members
-                    </Badge>
-                    <Button onClick={() => setIsInviteModalOpen(true)} className="gap-2 shadow-none">
-                      <Plus className="h-4 w-4" />
-                      Invite Member
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="border-border flex gap-1 border-b">
-                  <button
-                    type="button"
-                    onClick={() => setTeamTab("members")}
-                    className={cn(
-                      "text-muted-foreground hover:text-foreground flex items-center gap-2 border-b-2 px-4 pb-3 text-sm font-medium transition-colors",
-                      teamTab === "members" ? "border-primary text-foreground" : "border-transparent"
-                    )}
-                  >
-                    <User className="h-4 w-4" />
-                    Members ({mockTeamMembers.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTeamTab("pending")}
-                    className={cn(
-                      "text-muted-foreground hover:text-foreground flex items-center gap-2 border-b-2 px-4 pb-3 text-sm font-medium transition-colors",
-                      teamTab === "pending" ? "border-primary text-foreground" : "border-transparent"
-                    )}
-                  >
-                    <Mail className="h-4 w-4" />
-                    Pending ({mockPendingInvites.length})
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">
-                      {teamTab === "members" ? "Active Members" : "Pending Invitations"}
-                    </h3>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      {teamTab === "members"
-                        ? `${mockTeamMembers.length} team member${mockTeamMembers.length !== 1 ? "s" : ""}`
-                        : `${mockPendingInvites.length} pending invitation${mockPendingInvites.length !== 1 ? "s" : ""}`}
-                    </p>
-                  </div>
-                </div>
-
-                {teamTableData.length > 0 ? (
-                  <div className="[&_tr:hover]:bg-muted/50 [&_th]:text-muted-foreground [&_table]:bg-transparent [&_tbody]:bg-transparent [&_td]:py-4 [&_th]:pb-3 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_thead]:bg-transparent [&_tr]:border-b [&>div]:bg-transparent [&>div>div]:rounded-none [&>div>div]:border-0 [&>div>div]:shadow-none">
-                    <DataTable columns={teamColumns} data={teamTableData} actions={teamTableActions} />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
-                    <div className="bg-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
-                      <User className="text-muted-foreground h-8 w-8" />
-                    </div>
-                    <h3 className="mb-2 text-lg font-semibold">
-                      {teamTab === "members" ? "No active members" : "No pending invitations"}
-                    </h3>
-                    <p className="text-muted-foreground text-center text-sm">
-                      {teamTab === "members"
-                        ? "No team members have been added yet."
-                        : "All team members have accepted their invitations"}
-                    </p>
-                  </div>
-                )}
-              </UnderlineTabsContent>
-
               <UnderlineTabsContent value="api" className="mt-6 space-y-6">
                 <Card className="shadow-none">
                   <CardHeader>
@@ -890,188 +469,6 @@ export default function SettingsPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-
-      {/* Invite Member Modal */}
-      <FullScreenModal
-        open={isInviteModalOpen}
-        onOpenChange={setIsInviteModalOpen}
-        title="Invite Team Member"
-        description="Send an invitation to add a new member to your organization"
-        size="small"
-        footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsInviteModalOpen(false)}
-              disabled={isSubmitting}
-              className="shadow-none"
-            >
-              {inviteLink ? "Done" : "Cancel"}
-            </Button>
-            {!inviteLink && (
-              <Button
-                type="button"
-                onClick={() => inviteMemberForm.handleSubmit(onInviteMemberSubmit)()}
-                disabled={isSubmitting}
-                className="gap-2 shadow-none"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  "Create Invitation"
-                )}
-              </Button>
-            )}
-          </div>
-        }
-      >
-        {!inviteLink ? (
-          <form onSubmit={inviteMemberForm.handleSubmit(onInviteMemberSubmit)} className="space-y-6">
-            <RHF.Controller
-              control={inviteMemberForm.control}
-              name="emails"
-              render={({ field, fieldState: { error } }) => (
-                <TagInput
-                  {...field}
-                  id="invite-emails"
-                  label="Email Addresses"
-                  placeholder="colleague@example.com"
-                  helpText="Press Enter or comma to add multiple emails"
-                  error={error?.message}
-                  className="w-full"
-                />
-              )}
-            />
-
-            <RHF.Controller
-              control={inviteMemberForm.control}
-              name="role"
-              render={({ field, fieldState: { error } }) => (
-                <div className="space-y-2">
-                  <Label htmlFor="invite-role">Role</Label>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="invite-role" className="w-full">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                      <SelectItem value="developer">Developer</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="owner">Owner</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {error && (
-                    <p className="text-destructive text-sm" role="alert">
-                      {error.message}
-                    </p>
-                  )}
-                  <p className="text-muted-foreground text-xs">Choose the permission level for this team member</p>
-                </div>
-              )}
-            />
-          </form>
-        ) : (
-          <div className="flex w-full gap-2 space-y-2">
-            <TextField
-              id="invite-link"
-              label="Invitation Link"
-              value={inviteLink}
-              onChange={() => {}}
-              disabled
-              error={null}
-              className="w-full flex-1 shadow-none outline-2"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() =>
-                handleCopy({
-                  text: inviteLink,
-                  message: "Copied to clipboard",
-                })
-              }
-              className="hover:bg-muted-foreground/10 h-8 w-8 shrink-0 p-0"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </FullScreenModal>
-
-      {/* Update Role Modal */}
-      <FullScreenModal
-        open={isUpdateRoleModalOpen}
-        onOpenChange={setIsUpdateRoleModalOpen}
-        title="Update Role"
-        description={
-          selectedMemberForRoleUpdate
-            ? `Change the role for ${selectedMemberForRoleUpdate.email}`
-            : "Change the role for this team member"
-        }
-        size="small"
-        footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsUpdateRoleModalOpen(false)}
-              disabled={isSubmitting}
-              className="shadow-none"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => updateRoleForm.handleSubmit(onUpdateRoleSubmit)()}
-              disabled={isSubmitting}
-              className="gap-2 shadow-none"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Update Role"
-              )}
-            </Button>
-          </div>
-        }
-      >
-        <form onSubmit={updateRoleForm.handleSubmit(onUpdateRoleSubmit)} className="space-y-6">
-          <RHF.Controller
-            control={updateRoleForm.control}
-            name="role"
-            render={({ field, fieldState: { error } }) => (
-              <div className="space-y-2">
-                <Label htmlFor="update-role">Role</Label>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="update-role" className="w-full">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Viewer</SelectItem>
-                    <SelectItem value="developer">Developer</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                  </SelectContent>
-                </Select>
-                {error && (
-                  <p className="text-destructive text-sm" role="alert">
-                    {error.message}
-                  </p>
-                )}
-                <p className="text-muted-foreground text-xs">Choose the permission level for this team member</p>
-              </div>
-            )}
-          />
-        </form>
-      </FullScreenModal>
     </div>
   );
 }
