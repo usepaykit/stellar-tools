@@ -7,7 +7,6 @@ import {
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
-  roles,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
 import {
@@ -154,44 +153,6 @@ export const secretAccessLog = pgTable("secret_access_log", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   environment: networkEnum("network").notNull(),
-});
-
-export const roleEnum = pgEnum("role", roles);
-
-export const teamMembers = pgTable(
-  "team_member",
-  {
-    id: text("id").primaryKey(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organizations.id),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => accounts.id),
-    role: roleEnum("role").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-  },
-  (table) => ({
-    uniqueOrgAccount: unique().on(table.organizationId, table.accountId),
-  })
-);
-
-export const teamInviteStatusEnum = pgEnum("team_invite_status", ["pending", "accepted", "rejected"]);
-
-export const teamInvites = pgTable("team_invite", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id),
-  email: text("email").notNull(),
-  status: teamInviteStatusEnum("status").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-  role: roleEnum("role").notNull(),
 });
 
 export const apiKeys = pgTable("api_key", {
@@ -575,7 +536,6 @@ export const events = pgTable("event", {
 
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
-export type TeamMember = InferSelectModel<typeof teamMembers>;
 export type ApiKey = InferSelectModel<typeof apiKeys>;
 export type Asset = InferSelectModel<typeof assets>;
 export type Customer = InferSelectModel<typeof customers>;
@@ -586,7 +546,6 @@ export type Payment = InferSelectModel<typeof payments>;
 export type Webhook = InferSelectModel<typeof webhooks>;
 export type WebhookLog = InferSelectModel<typeof webhookLogs>;
 export type Network = (typeof networkEnum.enumValues)[number];
-export type TeamInvite = InferSelectModel<typeof teamInvites>;
 export type Refund = InferSelectModel<typeof refunds>;
 export type CreditBalance = InferSelectModel<typeof creditBalances>;
 export type CreditTransaction = InferSelectModel<typeof creditTransactions>;

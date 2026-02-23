@@ -1,7 +1,5 @@
 import { SuggestedString } from "@stellartools/core";
 
-export const roles = ["owner", "admin", "developer", "viewer"] as const;
-
 export const networkEnum = ["testnet", "mainnet"] as const;
 
 export const authProviderEnum = ["google", "local"] as const;
@@ -28,8 +26,6 @@ export const eventTypeEnum = [
 export const accountBillingCycleEnum = ["monthly", "yearly"] as const;
 
 export type AccountBillingCycle = (typeof accountBillingCycleEnum)[number];
-
-export type Role = (typeof roles)[number];
 
 export type Network = (typeof networkEnum)[number];
 

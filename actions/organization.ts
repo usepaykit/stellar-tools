@@ -2,7 +2,6 @@
 
 import { resolveAccountContext } from "@/actions/account";
 import { validateLimits } from "@/actions/plan";
-import { postTeamMember } from "@/actions/team-member";
 import {
   Network,
   Organization,
@@ -16,7 +15,6 @@ import {
   products,
   secretAccessLog,
   subscriptions,
-  teamMembers,
 } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
 import { EncryptionApi } from "@/integrations/encryption";
@@ -54,15 +52,12 @@ export const postOrganizationAndSecret = async (
     .values({ ...params, id: organizationId, accountId })
     .returning();
 
-  await postTeamMember({ accountId, role: "owner", metadata: null }, organization.id);
-
   const account = await new StellarCoreApi(defaultEnvironment).createAccount();
 
   if (account.isErr()) throw new Error(account.error?.message);
 
   await Promise.allSettled([
-    postTeamMember({ accountId, role: "owner", metadata: null }, organization.id),
-    await postOrganizationSecretWithEncryption(
+    postOrganizationSecretWithEncryption(
       {
         testnetSecret: account.value!.keypair.secret(),
         testnetSecretVersion: parseInt(process.env.NEXT_PUBLIC_CURRENT_ENCRYPTION_KEY_VERSION!) || 1,
@@ -82,22 +77,20 @@ export const postOrganizationAndSecret = async (
 export const retrieveOrganizations = async (accId?: string) => {
   const { accountId } = await resolveAccountContext(accId);
 
-  const orgs = await db
+  const rows = await db
     .select({
       id: organizations.id,
       name: organizations.name,
       logoUrl: organizations.logoUrl,
-      role: teamMembers.role,
-      memberCount:
-        sql<number>`(SELECT COUNT(*) FROM ${teamMembers} WHERE ${teamMembers.organizationId} = ${organizations.id})`.as(
-          "member_count"
-        ),
     })
-    .from(teamMembers)
-    .innerJoin(organizations, eq(teamMembers.organizationId, organizations.id))
-    .where(and(eq(teamMembers.accountId, accountId)));
+    .from(organizations)
+    .where(eq(organizations.accountId, accountId));
 
-  return orgs;
+  return rows.map((org) => ({
+    ...org,
+    role: "owner" as const,
+    memberCount: 1,
+  }));
 };
 
 export const retrieveOrganization = async (id: string) => {

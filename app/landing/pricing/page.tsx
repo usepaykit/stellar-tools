@@ -10,7 +10,7 @@ import { Plan as PlanSchema } from "@/db";
 const enterprise: PlanSchema = {
   id: "enterprise",
   name: "Enterprise",
-  description: "For large teams with custom needs",
+  description: "For organizations with custom needs",
   billingEvents: -1,
   customers: -1,
   subscriptions: -1,
