@@ -18,7 +18,7 @@ import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Building2, ChevronRight, Plus, Users } from "lucide-react";
+import { Building2, ChevronRight, Plus } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { FileRejection } from "react-dropzone";
@@ -29,7 +29,7 @@ import { z } from "zod";
 export default function SelectOrganizationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const showCreate = searchParams.get("create") === "true";
+  const showCreate = searchParams?.get("create") === "true";
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(showCreate ? true : false);
 
   const { data: organizations, isLoading } = useQuery({
@@ -80,12 +80,7 @@ export default function SelectOrganizationPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold">{org.name}</h3>
-                  <div className="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4" />
-                    <span>{org.memberCount} members</span>
-                    <span className="text-muted-foreground/50">•</span>
-                    <span className="capitalize">{org.role}</span>
-                  </div>
+                  <p className="text-muted-foreground mt-1 text-sm">Your organization</p>
                 </div>
                 <ChevronRight className="text-muted-foreground h-5 w-5" />
               </div>

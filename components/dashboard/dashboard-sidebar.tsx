@@ -159,7 +159,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                       <span className="truncate font-semibold">{currentOrg?.name || "Loading..."}</span>
-                      <span className="truncate text-xs capitalize">{currentOrg?.role || "Member"}</span>
+                      <span className="text-muted-foreground truncate text-xs">Your organization</span>
                     </div>
                     <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
                   </SidebarMenuButton>

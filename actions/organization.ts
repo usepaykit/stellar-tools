@@ -86,11 +86,7 @@ export const retrieveOrganizations = async (accId?: string) => {
     .from(organizations)
     .where(eq(organizations.accountId, accountId));
 
-  return rows.map((org) => ({
-    ...org,
-    role: "owner" as const,
-    memberCount: 1,
-  }));
+  return rows;
 };
 
 export const retrieveOrganization = async (id: string) => {
