@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
-import { cn, generateResourceId } from "@/lib/utils";
+import { cn, generateResourceId, normalizeTimeSeries } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Webhook, type WebhookEvent as WebhookEventType, webhookEvent } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
@@ -126,8 +126,6 @@ const ActivityChart = ({ data }: { data?: number[] }) => {
     index: index.toString(),
     value,
   }));
-
-  console.log({ chartData });
 
   if (!chartData?.length) {
     return (
@@ -283,7 +281,7 @@ function WebhooksPageContent() {
         ...webhook,
         eventCount: webhook.events.length,
         eventsFrom: "account" as const,
-        activity: webhook.activityHistory,
+        activity: normalizeTimeSeries(webhook.hourlyActivity ?? [], 24, "hour"),
         responseTime: webhook.responseTimeHistory,
         errorRate: webhook.errorRate,
       }));

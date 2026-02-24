@@ -21,7 +21,7 @@ import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
-import { generateResourceId } from "@/lib/utils";
+import { generateResourceId, normalizeTimeSeries, stroopsToXlm } from "@/lib/utils";
 import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 
 export const postOrganizationAndSecret = async (
@@ -375,23 +375,7 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
 
 // -- Dashboard Internals --
 
-export type OverviewStats = {
-  activeTrials: number;
-  activeSubscriptions: number;
-  mrr: number;
-  revenue: number;
-  newCustomers: number;
-  totalCustomers: number;
-  charts: {
-    revenue: { date: string; amount: number }[];
-    subscriptions: { date: string; count: number }[];
-    customers: { date: string; count: number }[];
-  };
-};
-
-export const retrieveOverviewStats = async (
-  options: { orgId?: string; env?: Network; since?: Date } = {}
-): Promise<OverviewStats> => {
+export const retrieveOverviewStats = async (options: { orgId?: string; env?: Network; since?: Date } = {}) => {
   const { organizationId, environment } = await resolveOrgContext(options.orgId, options.env);
 
   const DEFAULT_PERIOD_MS = 28 * 24 * 60 * 60 * 1000;
@@ -476,12 +460,21 @@ export const retrieveOverviewStats = async (
     totalCustomers: Number(result.metrics.totalCustomers),
     newCustomers: result.customersChart.reduce((acc, curr) => acc + curr.count, 0),
     charts: {
-      revenue: result.revenueChart.map((r) => ({ date: r.date.split(" ")[0], amount: r.amount })),
-      subscriptions: result.subscriptionsChart.map((s) => ({
-        date: s.date.split(" ")[0],
-        count: s.count,
-      })),
-      customers: result.customersChart.map((c) => ({ date: c.date.split(" ")[0], count: c.count })),
+      revenue: normalizeTimeSeries(
+        result.revenueChart.map((r) => ({ date: r.date.split(" ")[0], value: stroopsToXlm(r.amount) })),
+        28,
+        "day"
+      ),
+      subscriptions: normalizeTimeSeries(
+        result.subscriptionsChart.map((s) => ({ date: s.date.split(" ")[0], count: s.count })),
+        28,
+        "day"
+      ),
+      customers: normalizeTimeSeries(
+        result.customersChart.map((c) => ({ date: c.date.split(" ")[0], count: c.count })),
+        28,
+        "day"
+      ),
     },
   };
 };

@@ -106,25 +106,6 @@ const SPARKLINE_CONFIG = {
   value: { label: "", color: "hsl(var(--chart-1))" },
 };
 
-const CHART_DAYS = 28;
-
-/** Fill in missing days so the sparkline has a point for every day (0 where no data). */
-function fillSparklineDays<T extends { i: string; value: number }>(
-  points: T[],
-  days: number = CHART_DAYS
-): { i: string; value: number }[] {
-  const byDate = new Map(points.map((p) => [p.i, p.value]));
-  const result: { i: string; value: number }[] = [];
-  const d = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const day = new Date(d);
-    day.setDate(day.getDate() - i);
-    const dateStr = day.toISOString().slice(0, 10);
-    result.push({ i: dateStr, value: byDate.get(dateStr) ?? 0 });
-  }
-  return result;
-}
-
 export default function DashboardPage() {
   const [countryCode, setCountryCode] = React.useState<string>("US");
   const [countryOpen, setCountryOpen] = React.useState(false);
@@ -158,22 +139,22 @@ export default function DashboardPage() {
   const selectedCountry =
     COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
 
-  const chartDays = displayStats.charts.revenue?.length ?? CHART_DAYS;
-  const revenueSparkData = fillSparklineDays(
-    (displayStats.charts.revenue ?? []).map((r) => ({
-      i: r.date,
-      value: r.amount / STROOPS_PER_XLM,
-    })),
-    chartDays
-  );
-  const subsSparkData = fillSparklineDays(
-    (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count })),
-    chartDays
-  );
-  const custSparkData = fillSparklineDays(
-    (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count })),
-    chartDays
-  );
+  // const chartDays = displayStats.charts.revenue?.length ?? CHART_DAYS;
+  // const revenueSparkData = fillSparklineDays(
+  //   (displayStats.charts.revenue ?? []).map((r) => ({
+  //     i: r.date,
+  //     value: r.amount / STROOPS_PER_XLM,
+  //   })),
+  //   chartDays
+  // );
+  // const subsSparkData = fillSparklineDays(
+  //   (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count })),
+  //   chartDays
+  // );
+  // const custSparkData = fillSparklineDays(
+  //   (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count })),
+  //   chartDays
+  // );
 
   const subsLimit =
     plan && typeof plan.subscriptions === "number" && plan.subscriptions !== Infinity ? plan.subscriptions : 1;
@@ -233,7 +214,7 @@ export default function DashboardPage() {
                 value={displayStats.activeTrials}
                 subtitle="In total"
                 icon={<HourglassIcon className="text-muted-foreground size-5" />}
-                sparkData={revenueSparkData}
+                sparkData={stats.charts.revenue}
                 color="var(--chart-1)"
                 usage={displayStats.activeTrials}
                 max={subsLimit}
@@ -243,7 +224,7 @@ export default function DashboardPage() {
                 value={displayStats.activeSubscriptions}
                 subtitle="In total"
                 icon={<SubscriptionIcon className="text-muted-foreground size-5" />}
-                sparkData={subsSparkData}
+                sparkData={stats.charts.subscriptions}
                 color="var(--chart-2)"
                 usage={displayStats.activeSubscriptions}
                 max={subsLimit}
@@ -253,23 +234,23 @@ export default function DashboardPage() {
                 value={mrrDisplay.formatted}
                 subtitle="Monthly Recurring Revenue"
                 icon={<LoopIcon className="text-muted-foreground size-5" />}
-                sparkData={revenueSparkData}
+                sparkData={stats.charts.revenue}
                 color="var(--chart-2)"
               />
               <StatCard
                 title="Revenue"
                 value={revenue28.formatted}
-                subtitle="Last 28 days"
+                subtitle="Last 4 months"
                 icon={<DollarIcon className="text-muted-foreground size-5" />}
-                sparkData={revenueSparkData}
+                sparkData={stats.charts.revenue}
                 color="var(--chart-2)"
               />
               <StatCard
                 title="New Customers"
                 value={displayStats.newCustomers}
-                subtitle="Last 28 days"
+                subtitle="Last 4 months"
                 icon={<AddUserIcon className="text-muted-foreground size-5" />}
-                sparkData={custSparkData}
+                sparkData={stats.charts.customers}
                 color="var(--chart-3)"
                 href="/customers"
               />
@@ -278,7 +259,7 @@ export default function DashboardPage() {
                 value={displayStats.totalCustomers}
                 subtitle="In total"
                 icon={<GroupedUsersIcon className="text-muted-foreground size-5" />}
-                sparkData={custSparkData}
+                sparkData={stats.charts.customers}
                 color="var(--chart-3)"
                 usage={displayStats.totalCustomers}
                 max={customersLimit}
@@ -317,7 +298,7 @@ function StatCardSkeleton() {
           </div>
           <div className="bg-muted/60 size-10 shrink-0 animate-pulse rounded-xl" />
         </div>
-        <div className="bg-muted/30 relative -mx-6 mt-1 h-16 animate-pulse overflow-hidden rounded-b-2xl" />
+        <div className="bg-muted/30 relative -mx-6 mt-1 h-28 animate-pulse overflow-hidden rounded-b-2xl" />
       </CardContent>
     </Card>
   );
@@ -400,7 +381,7 @@ function StatCard({
           </div>
         </div>
 
-        <div className="relative -mx-6 mt-1 h-16 overflow-hidden rounded-b-2xl">
+        <div className="relative -mx-6 mt-1 h-28 overflow-hidden rounded-b-2xl">
           <LineChart
             data={chartData}
             config={SPARKLINE_CONFIG}
