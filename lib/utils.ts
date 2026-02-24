@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import crypto from "crypto";
 import _ from "lodash";
+import moment from "moment";
 import { twMerge } from "tailwind-merge";
 import { z } from "zod";
 
@@ -125,22 +126,40 @@ export function generateResourceId(
   return `${prefix}_${signature}${entropy}`;
 }
 
-export function normalizeTimeSeries(points: { i: string; value: number }[], count: number, unit: "hour" | "day") {
-  const byTime = new Map(points.map((p) => [p.i, p.value]));
-  const result: { i: string; value: number }[] = [];
-  const now = new Date();
+export type NormalizedChartPoint = {
+  i: string; // The X-Axis key (Date/Time string)
+  value: number; // The Y-Axis value
+};
+
+type RawDataPoint = Record<string, any>;
+
+export function normalizeTimeSeries<T extends RawDataPoint>(
+  data: T[] = [],
+  count: number = 28,
+  unit: moment.unitOfTime.DurationConstructor = "day"
+): NormalizedChartPoint[] {
+  const result: NormalizedChartPoint[] = [];
+  const now = moment();
+
+  // The formats match our SQL: date_trunc('day') -> YYYY-MM-DD, to_char(..., 'HH24') -> YYYY-MM-DDTHH
+  const formatStr = unit === "day" ? "YYYY-MM-DD" : "YYYY-MM-DDTHH";
 
   for (let i = count - 1; i >= 0; i--) {
-    const d = new Date(now);
-    if (unit === "hour") d.setHours(d.getHours() - i);
-    else d.setDate(d.getDate() - i);
+    const time = moment(now).subtract(i, unit);
+    const key = time.format(formatStr);
 
-    const timeKey =
-      unit === "hour"
-        ? d.toISOString().slice(0, 13) // YYYY-MM-DDTHH
-        : d.toISOString().slice(0, 10); // YYYY-MM-DD
+    const match = data.find((p) => p.date === key || p.h === key || p.i === key);
 
-    result.push({ i: timeKey, value: byTime.get(timeKey) ?? 0 });
+    const rawVal = match ? (match.value ?? match.amount ?? match.count ?? match.c ?? 0) : 0;
+
+    result.push({
+      i: key,
+      value: typeof rawVal === "string" ? parseFloat(rawVal) : rawVal,
+    });
   }
+
   return result;
 }
+
+export const STROOPS_PER_XLM = 10_000_000;
+export const stroopsToXlm = (stroops: number | string) => Number(stroops) / STROOPS_PER_XLM;

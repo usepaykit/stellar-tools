@@ -106,158 +106,6 @@ const SPARKLINE_CONFIG = {
   value: { label: "", color: "hsl(var(--chart-1))" },
 };
 
-const CHART_DAYS = 28;
-const MOCK_CHART_DAYS = 4 * 30;
-
-/** Mock overview stats: 4-month spiky revenue like reference (sharp spikes to ~$8K, frequent zeros, jagged small bumps). */
-const MOCK_OVERVIEW_STATS = (() => {
-  const days = MOCK_CHART_DAYS;
-  const revenuePoints: { date: string; amount: number }[] = [];
-  const subsPoints: { date: string; count: number }[] = [];
-  const custPoints: { date: string; count: number }[] = [];
-  const d = new Date();
-
-  const usdToStroops = (usd: number) =>
-    Math.round((usd / XLM_USD_RATE) * STROOPS_PER_XLM);
-  const PEAK_TINY = usdToStroops(1500);
-  const PEAK_SMALL = usdToStroops(3500);
-  const PEAK_MID = usdToStroops(6500);
-  const PEAK_HIGH = usdToStroops(7500);
-  const PEAK_7K = usdToStroops(8000);
-  const PEAK_TOP = usdToStroops(8500);
-
-  const spikeByDay = new Map<number, number>([
-    [2, PEAK_HIGH],
-    [5, PEAK_TINY],
-    [8, PEAK_SMALL],
-    [12, PEAK_TINY],
-    [28, PEAK_7K],
-    [32, PEAK_SMALL],
-    [35, PEAK_TINY],
-    [42, PEAK_TINY],
-    [45, PEAK_SMALL],
-    [50, PEAK_TINY],
-    [60, PEAK_7K],
-    [64, PEAK_SMALL],
-    [68, PEAK_TINY],
-    [75, PEAK_SMALL],
-    [82, PEAK_TINY],
-    [88, PEAK_SMALL],
-    [100, PEAK_TOP],
-    [103, PEAK_SMALL],
-    [106, PEAK_TINY],
-    [112, PEAK_SMALL],
-    [116, PEAK_TINY],
-  ]);
-
-  const SUB_BASELINE = 45;
-  const SUB_PEAK_TINY = 120;
-  const SUB_PEAK_SMALL = 200;
-  const SUB_PEAK_MID = 260;
-  const SUB_PEAK_HIGH = 300;
-  const SUB_PEAK_TOP = 340;
-  const subscriptionSpikeByDay = new Map<number, number>([
-    [2, SUB_PEAK_HIGH],
-    [5, SUB_PEAK_TINY],
-    [8, SUB_PEAK_SMALL],
-    [12, SUB_PEAK_TINY],
-    [28, SUB_PEAK_TOP],
-    [32, SUB_PEAK_SMALL],
-    [35, SUB_PEAK_TINY],
-    [42, SUB_PEAK_TINY],
-    [45, SUB_PEAK_SMALL],
-    [50, SUB_PEAK_TINY],
-    [60, SUB_PEAK_TOP],
-    [64, SUB_PEAK_SMALL],
-    [68, SUB_PEAK_TINY],
-    [75, SUB_PEAK_SMALL],
-    [82, SUB_PEAK_TINY],
-    [88, SUB_PEAK_SMALL],
-    [100, SUB_PEAK_TOP],
-    [103, SUB_PEAK_SMALL],
-    [106, SUB_PEAK_TINY],
-    [112, SUB_PEAK_SMALL],
-    [116, SUB_PEAK_TINY],
-  ]);
-
-  const CUST_BASELINE = 30;
-  const CUST_PEAK_TINY = 80;
-  const CUST_PEAK_SMALL = 140;
-  const CUST_PEAK_TOP = 220;
-  const customerSpikeByDay = new Map<number, number>([
-    [2, 180],
-    [5, CUST_PEAK_TINY],
-    [8, CUST_PEAK_SMALL],
-    [12, CUST_PEAK_TINY],
-    [28, CUST_PEAK_TOP],
-    [32, CUST_PEAK_SMALL],
-    [35, CUST_PEAK_TINY],
-    [42, CUST_PEAK_TINY],
-    [45, CUST_PEAK_SMALL],
-    [50, CUST_PEAK_TINY],
-    [60, CUST_PEAK_TOP],
-    [64, CUST_PEAK_SMALL],
-    [68, CUST_PEAK_TINY],
-    [75, CUST_PEAK_SMALL],
-    [82, CUST_PEAK_TINY],
-    [88, CUST_PEAK_SMALL],
-    [100, CUST_PEAK_TOP],
-    [103, CUST_PEAK_SMALL],
-    [106, CUST_PEAK_TINY],
-    [112, CUST_PEAK_SMALL],
-    [116, CUST_PEAK_TINY],
-  ]);
-
-  let totalRevenue = 0;
-  for (let i = days - 1; i >= 0; i--) {
-    const day = new Date(d);
-    day.setDate(day.getDate() - i);
-    const dateStr = day.toISOString().slice(0, 10);
-    const dayIdx = days - 1 - i;
-    const amount = spikeByDay.get(dayIdx) ?? 0;
-    totalRevenue += amount;
-    revenuePoints.push({ date: dateStr, amount });
-
-    const subs = subscriptionSpikeByDay.get(dayIdx) ?? SUB_BASELINE;
-    const cust = customerSpikeByDay.get(dayIdx) ?? CUST_BASELINE;
-    subsPoints.push({ date: dateStr, count: subs });
-    custPoints.push({ date: dateStr, count: cust });
-  }
-
-  const mrrStroops = usdToStroops(4200);
-
-  return {
-    activeTrials: 47,
-    activeSubscriptions: 312,
-    mrr: mrrStroops,
-    revenue: totalRevenue,
-    totalCustomers: 1847,
-    newCustomers: 428,
-    charts: {
-      revenue: revenuePoints,
-      subscriptions: subsPoints,
-      customers: custPoints,
-    },
-  };
-})();
-
-/** Fill in missing days so the sparkline has a point for every day (0 where no data). */
-function fillSparklineDays<T extends { i: string; value: number }>(
-  points: T[],
-  days: number = CHART_DAYS
-): { i: string; value: number }[] {
-  const byDate = new Map(points.map((p) => [p.i, p.value]));
-  const result: { i: string; value: number }[] = [];
-  const d = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const day = new Date(d);
-    day.setDate(day.getDate() - i);
-    const dateStr = day.toISOString().slice(0, 10);
-    result.push({ i: dateStr, value: byDate.get(dateStr) ?? 0 });
-  }
-  return result;
-}
-
 export default function DashboardPage() {
   const [countryCode, setCountryCode] = React.useState<string>("US");
   const [countryOpen, setCountryOpen] = React.useState(false);
@@ -271,7 +119,7 @@ export default function DashboardPage() {
     staleTime: 60 * 1000,
   });
 
-  const displayStats = MOCK_OVERVIEW_STATS;
+  const displayStats = stats;
   const plan = accountPlan?.plan;
 
   if (isLoading || !displayStats) {
@@ -291,22 +139,22 @@ export default function DashboardPage() {
   const selectedCountry =
     COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
 
-  const chartDays = displayStats.charts.revenue?.length ?? CHART_DAYS;
-  const revenueSparkData = fillSparklineDays(
-    (displayStats.charts.revenue ?? []).map((r) => ({
-      i: r.date,
-      value: r.amount / STROOPS_PER_XLM,
-    })),
-    chartDays
-  );
-  const subsSparkData = fillSparklineDays(
-    (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count })),
-    chartDays
-  );
-  const custSparkData = fillSparklineDays(
-    (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count })),
-    chartDays
-  );
+  // const chartDays = displayStats.charts.revenue?.length ?? CHART_DAYS;
+  // const revenueSparkData = fillSparklineDays(
+  //   (displayStats.charts.revenue ?? []).map((r) => ({
+  //     i: r.date,
+  //     value: r.amount / STROOPS_PER_XLM,
+  //   })),
+  //   chartDays
+  // );
+  // const subsSparkData = fillSparklineDays(
+  //   (displayStats.charts.subscriptions ?? []).map((r) => ({ i: r.date, value: r.count })),
+  //   chartDays
+  // );
+  // const custSparkData = fillSparklineDays(
+  //   (displayStats.charts.customers ?? []).map((r) => ({ i: r.date, value: r.count })),
+  //   chartDays
+  // );
 
   const subsLimit =
     plan && typeof plan.subscriptions === "number" && plan.subscriptions !== Infinity ? plan.subscriptions : 1;
@@ -366,7 +214,7 @@ export default function DashboardPage() {
                 value={displayStats.activeTrials}
                 subtitle="In total"
                 icon={<HourglassIcon className="text-muted-foreground size-5" />}
-                sparkData={revenueSparkData}
+                sparkData={stats.charts.revenue}
                 color="var(--chart-1)"
                 usage={displayStats.activeTrials}
                 max={subsLimit}
@@ -376,7 +224,7 @@ export default function DashboardPage() {
                 value={displayStats.activeSubscriptions}
                 subtitle="In total"
                 icon={<SubscriptionIcon className="text-muted-foreground size-5" />}
-                sparkData={subsSparkData}
+                sparkData={stats.charts.subscriptions}
                 color="var(--chart-2)"
                 usage={displayStats.activeSubscriptions}
                 max={subsLimit}
@@ -386,7 +234,7 @@ export default function DashboardPage() {
                 value={mrrDisplay.formatted}
                 subtitle="Monthly Recurring Revenue"
                 icon={<LoopIcon className="text-muted-foreground size-5" />}
-                sparkData={revenueSparkData}
+                sparkData={stats.charts.revenue}
                 color="var(--chart-2)"
               />
               <StatCard
@@ -394,7 +242,7 @@ export default function DashboardPage() {
                 value={revenue28.formatted}
                 subtitle="Last 4 months"
                 icon={<DollarIcon className="text-muted-foreground size-5" />}
-                sparkData={revenueSparkData}
+                sparkData={stats.charts.revenue}
                 color="var(--chart-2)"
               />
               <StatCard
@@ -402,7 +250,7 @@ export default function DashboardPage() {
                 value={displayStats.newCustomers}
                 subtitle="Last 4 months"
                 icon={<AddUserIcon className="text-muted-foreground size-5" />}
-                sparkData={custSparkData}
+                sparkData={stats.charts.customers}
                 color="var(--chart-3)"
                 href="/customers"
               />
@@ -411,7 +259,7 @@ export default function DashboardPage() {
                 value={displayStats.totalCustomers}
                 subtitle="In total"
                 icon={<GroupedUsersIcon className="text-muted-foreground size-5" />}
-                sparkData={custSparkData}
+                sparkData={stats.charts.customers}
                 color="var(--chart-3)"
                 usage={displayStats.totalCustomers}
                 max={customersLimit}

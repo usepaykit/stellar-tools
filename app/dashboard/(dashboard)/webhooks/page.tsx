@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
-import { cn, generateResourceId } from "@/lib/utils";
+import { cn, generateResourceId, normalizeTimeSeries } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Webhook, type WebhookEvent as WebhookEventType, webhookEvent } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
@@ -268,77 +268,6 @@ const api = new ApiClient({
   headers: {},
 });
 
-/** Spiky activity (24 points): mostly low with sharp peaks. */
-function mockSpikyActivity(): number[] {
-  const baseline = 0;
-  const spikeByHour = new Map<number, number>([
-    [2, 18],
-    [5, 6],
-    [8, 22],
-    [12, 8],
-    [14, 28],
-    [18, 12],
-    [21, 24],
-  ]);
-  return Array.from({ length: 24 }, (_, i) => spikeByHour.get(i) ?? baseline);
-}
-
-/** Spiky response time (50 points, ms): baseline with sharp peaks. */
-function mockSpikyResponseTime(): number[] {
-  const baseline = 48;
-  const spikeByIndex = new Map<number, number>([
-    [3, 180],
-    [8, 320],
-    [15, 140],
-    [22, 280],
-    [28, 380],
-    [35, 160],
-    [42, 260],
-    [47, 420],
-  ]);
-  return Array.from({ length: 50 }, (_, i) => spikeByIndex.get(i) ?? baseline);
-}
-
-/** Mock webhook destinations with spiky activity and response time charts. */
-const MOCK_WEBHOOKS: WebhookDestination[] = [
-  {
-    id: "wh_mock_prod_abc123",
-    name: "Production API",
-    url: "https://api.example.com/stellar/webhooks",
-    isDisabled: false,
-    eventCount: 4,
-    eventsFrom: "account",
-    activity: mockSpikyActivity(),
-    responseTime: mockSpikyResponseTime(),
-    errorRate: 2,
-    events: ["payment.confirmed", "payment.failed", "refund.succeeded", "checkout.completed"],
-  },
-  {
-    id: "wh_mock_analytics_def456",
-    name: "Analytics pipeline",
-    url: "https://hooks.analytics.io/stellar",
-    isDisabled: false,
-    eventCount: 2,
-    eventsFrom: "account",
-    activity: mockSpikyActivity().map((v, i) => (i % 5 === 2 ? v + 4 : v)),
-    responseTime: mockSpikyResponseTime().map((v, i) => (i % 7 === 3 ? v + 60 : v)),
-    errorRate: 0,
-    events: ["payment.confirmed", "refund.succeeded"],
-  },
-  {
-    id: "wh_mock_slack_ghi789",
-    name: "Slack notifications",
-    url: "https://hooks.slack.com/services/T00/B00/xxx",
-    isDisabled: true,
-    eventCount: 3,
-    eventsFrom: "account",
-    activity: mockSpikyActivity().map((v) => (v > 0 ? Math.max(0, v - 2) : 0)),
-    responseTime: mockSpikyResponseTime(),
-    errorRate: 5,
-    events: ["payment.confirmed", "payment.failed", "refund.succeeded"],
-  },
-];
-
 function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -346,20 +275,18 @@ function WebhooksPageContent() {
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const invalidateOrgQuery = useInvalidateOrgQuery();
-  const { data: webhooksRaw = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics(), {
+  const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics(), {
     select: (data) => {
       return data.map((webhook) => ({
         ...webhook,
         eventCount: webhook.events.length,
         eventsFrom: "account" as const,
-        activity: webhook.activityHistory,
+        activity: normalizeTimeSeries(webhook.hourlyActivity ?? [], 24, "hour"),
         responseTime: webhook.responseTimeHistory,
         errorRate: webhook.errorRate,
       }));
     },
   });
-
-  const webhooks =  MOCK_WEBHOOKS;
 
   React.useEffect(() => {
     if (searchParams?.get("create") === "true") {

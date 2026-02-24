@@ -87,13 +87,6 @@ export const getWebhooksWithAnalytics = async (orgId?: string, env?: Network) =>
   return result.map((webhook) => ({
     ...webhook,
     errorRate: webhook.logsCount > 0 ? Math.round((webhook.errorCount / webhook.logsCount) * 100) : 0,
-    // Fill gaps for the last 24 hours of activity
-    activityHistory: normalizeTimeSeries(
-      (webhook.hourlyActivity ?? []).map((a) => ({ i: a.h, value: a.c })),
-      24,
-      "hour"
-    ).map((p) => p.value),
-    // Standard sparkline for last 50 response times
     responseTimeHistory: (webhook.responseTime ?? []).slice(0, 50).reverse(),
   }));
 };
@@ -303,7 +296,6 @@ export const triggerWebhooks = async (
     skipped: isOverLimit,
   };
 };
-
 
 export const resendWebhookLog = async (
   webhookId: string,
