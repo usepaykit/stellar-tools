@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 
-import { postCustomers, retrieveCustomers } from "@/actions/customers";
+import { createCustomerAvatar, postCustomers, retrieveCustomers } from "@/actions/customers";
 import { getCurrentOrganization } from "@/actions/organization";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -139,6 +139,11 @@ const customerSchema = z.object({
     number: z.string(),
     countryCode: z.string().min(1, "Country code is required"),
   }),
+  avatar: z
+    .array(z.any())
+    .transform((val) => val as FileWithPreview[])
+    .default([])
+    .optional(),
   metadata: z
     .array(
       z.object({
@@ -254,6 +259,7 @@ export function CustomerModal({
       name: "",
       email: "",
       phoneNumber: { number: "", countryCode: "US" },
+      avatar: [],
       metadata: [],
     },
   });
@@ -267,17 +273,19 @@ export function CustomerModal({
     if (open && customer) {
       const phoneNumber = customer.phone ? phoneNumberFromString(customer.phone) : undefined;
 
-      const metadataArray = customer.metadata
-        ? Object.entries(customer.metadata).map(([key, value]) => ({
-            key,
-            value: String(value),
-          }))
-        : [];
+      const metadata = customer.metadata as Record<string, string> | null | undefined;
+      const { avatarUrl: _avatarUrl, ...metadataWithoutAvatar } = metadata ?? {};
+
+      const metadataArray = Object.entries(metadataWithoutAvatar).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
 
       form.reset({
         name: customer.name || "",
         email: customer.email || "",
         phoneNumber,
+        avatar: [],
         metadata: metadataArray,
       });
     } else if (open && !customer) {
@@ -285,6 +293,7 @@ export function CustomerModal({
         name: "",
         email: "",
         phoneNumber: { number: "", countryCode: "US" },
+        avatar: [],
         metadata: [],
       });
     }
@@ -310,6 +319,25 @@ export function CustomerModal({
         },
         {} as Record<string, string>
       );
+
+      const existingAvatarUrl = (customer?.metadata as Record<string, string> | null | undefined)?.avatarUrl;
+      const hasNewAvatar =
+        Array.isArray(data.avatar) && data.avatar.length > 0 && data.avatar[0] instanceof File;
+
+      let finalAvatarUrl: string | undefined = existingAvatarUrl;
+
+      if (hasNewAvatar && data.avatar) {
+        const formData = new FormData();
+        formData.append("avatar", data.avatar[0] as File);
+        const uploadedUrl = await createCustomerAvatar(formData);
+        if (uploadedUrl) {
+          finalAvatarUrl = uploadedUrl;
+        }
+      }
+
+      if (finalAvatarUrl) {
+        metadataRecord.avatarUrl = finalAvatarUrl;
+      }
 
       if (isEditMode) {
         const response = await api.put<Customer>(`/customers/${customer?.id}`, {
@@ -400,6 +428,29 @@ export function CustomerModal({
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
             </div>
+
+            <RHF.Controller
+              control={form.control}
+              name="avatar"
+              render={({ field }) => (
+                <FileUpload
+                  label="Customer image"
+                  id="customer-avatar"
+                  value={field.value ?? []}
+                  onFilesChange={field.onChange}
+                  placeholder="Upload customer image"
+                  description="PNG, JPG, WEBP up to 5MB"
+                  className="max-w-[220px]"
+                  dropzoneAccept={{
+                    "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+                  }}
+                  dropzoneMaxSize={5 * 1024 * 1024}
+                  dropzoneMultiple={false}
+                  enableTransformation
+                  targetFormat="image/png"
+                />
+              )}
+            />
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <RHF.Controller
@@ -544,7 +595,7 @@ export function CustomerModal({
   );
 }
 
-type MappingTarget = "name" | "email" | "phone" | "metadata" | "none";
+type MappingTarget = "name" | "email" | "phone" | "avatarUrl" | "metadata" | "none";
 
 interface ColumnMapping {
   csvHeader: string;
@@ -559,6 +610,8 @@ const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) =>
       if (!value || m.target === "none") return acc;
       if (m.target === "metadata") {
         acc.metadata[m.metadataKey || m.csvHeader] = value;
+      } else if (m.target === "avatarUrl") {
+        acc.metadata.avatarUrl = value;
       } else {
         acc[m.target] = value;
       }
@@ -595,6 +648,8 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
               ? "email"
               : h.toLowerCase().includes("name")
                 ? "name"
+                : h.toLowerCase().includes("avatar") || h.toLowerCase().includes("image")
+                  ? "avatarUrl"
                 : "metadata",
             metadataKey: h,
           }))
@@ -606,7 +661,13 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
   const schemaLogic = React.useMemo(() => {
     return mappings.reduce((acc, m) => {
       if (m.target !== "none" && (m.target === "metadata" || m.target !== m.csvHeader)) {
-        acc[m.csvHeader] = { from: "CSV", to: m.target === "metadata" ? `meta.${m.metadataKey}` : m.target };
+        const targetPath =
+          m.target === "metadata"
+            ? `meta.${m.metadataKey}`
+            : m.target === "avatarUrl"
+              ? "meta.avatarUrl"
+              : m.target;
+        acc[m.csvHeader] = { from: "CSV", to: targetPath };
       }
       return acc;
     }, {} as any);
@@ -737,6 +798,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
                           { label: "Name", value: "name" },
                           { label: "Email", value: "email" },
                           { label: "Phone", value: "phone" },
+                          { label: "Avatar URL", value: "avatarUrl" },
                           { label: "Metadata", value: "metadata" },
                           { label: "Ignore", value: "none" },
                         ]}

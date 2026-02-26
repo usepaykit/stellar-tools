@@ -27,6 +27,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +37,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { Payment } from "@/db";
+import { CustomerMetadata, Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
@@ -174,11 +175,20 @@ export default function CustomerDetailPage() {
     [payments]
   );
 
-  const isNew = customer && new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
-
   if (customerLoading) return <CustomerDetailSkeleton />;
 
   if (!customer) return <NotFound router={router} />;
+
+  const isNew = new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
+
+  const customerMetadata = (customer.metadata ?? null) as CustomerMetadata | null;
+  const avatarUrl = customerMetadata?.avatarUrl;
+  const initials =
+    customer.name
+      ?.split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() ?? "?";
 
   return (
     <DashboardSidebar>
@@ -199,12 +209,23 @@ export default function CustomerDetailPage() {
           </Breadcrumb>
 
           <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold sm:text-3xl">{customer.name}</h1>
-                {isNew && <Badge variant="secondary">New customer</Badge>}
+            <div className="flex items-start gap-3">
+              <Avatar className="h-12 w-12 sm:h-14 sm:w-14">
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={customer.name ?? "Customer avatar"} />
+                ) : (
+                  <AvatarFallback className="text-muted-foreground text-lg font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold sm:text-3xl">{customer.name}</h1>
+                  {isNew && <Badge variant="secondary">New customer</Badge>}
+                </div>
+                <p className="text-muted-foreground text-sm">{customer.email}</p>
               </div>
-              <p className="text-muted-foreground text-sm">{customer.email}</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="gap-2 shadow-none" onClick={() => setModal({ type: "checkout" })}>
