@@ -49,7 +49,20 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ custome
 
   const result = await Result.andThenAsync(validateSchema(updateCustomerSchema, await req.json()), async (data) => {
     const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
-    const customer = await putCustomer(customerId, data, organizationId, environment);
+
+    const { image, metadata, ...rest } = data as any;
+
+    const mergedMetadata = {
+      ...(metadata ?? {}),
+      ...(image ? { avatarUrl: image } : {}),
+    };
+
+    const retUpdate = {
+      ...rest,
+      ...(Object.keys(mergedMetadata).length ? { metadata: mergedMetadata } : {}),
+    };
+
+    const customer = await putCustomer(customerId, retUpdate, organizationId, environment);
     return Result.ok(customer);
   });
 

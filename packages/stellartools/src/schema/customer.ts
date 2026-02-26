@@ -123,20 +123,37 @@ export const createCustomerSchema = customerSchema
   })
   .extend({
     source: z.string().optional(),
+    image: z.string().url().optional(),
   });
 
 export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata" | "wallets"> {
   source?: string;
+  /**
+   * Optional HTTPS URL to a customer image.
+   * This will be stored as metadata.avatarUrl.
+   */
+  image?: string;
 }
 
-export const updateCustomerSchema = customerSchema.partial().pick({
-  email: true,
-  name: true,
-  phone: true,
-  metadata: true,
-});
+export const updateCustomerSchema = customerSchema
+  .partial()
+  .pick({
+    email: true,
+    name: true,
+    phone: true,
+    metadata: true,
+  })
+  .extend({
+    image: z.string().url().optional(),
+  });
 
-export interface UpdateCustomer extends Partial<Pick<Customer, "email" | "name" | "phone" | "metadata">> {}
+export interface UpdateCustomer extends Partial<Pick<Customer, "email" | "name" | "phone" | "metadata">> {
+  /**
+   * Optional HTTPS URL to a customer image.
+   * This will be stored as metadata.avatarUrl.
+   */
+  image?: string;
+}
 
 export interface ListCustomers extends Partial<Pick<Customer, "email" | "phone">> {}
 

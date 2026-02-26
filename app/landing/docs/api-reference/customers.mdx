@@ -16,11 +16,12 @@ Content-Type: application/json
   "name": "Jane Doe",
   "email": "jane@example.com",
   "phone": "+1234567890",
+  "image": "https://example.com/jane.png",
   "metadata": { "source": "web" }
 }
 ```
 
-- `name` and `email` are required; `phone` and `metadata` are optional.
+- `name` and `email` are required; `phone`, `image`, and `metadata` are optional. The `image` field should be a public HTTPS URL to the customer's avatar.
 
 **Response** `200`: `{ "data": { "id", "name", "email", "phone", "metadata", "createdAt", "wallets": [] } }`
 
@@ -61,6 +62,7 @@ Content-Type: application/json
   "name": "Jane Smith",
   "email": "jane.smith@example.com",
   "phone": "+1234567890",
+  "image": "https://example.com/jane-smith.png",
   "metadata": {}
 }
 ```
