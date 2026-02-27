@@ -46,17 +46,17 @@ export function computeDiff<T extends Record<string, any>>(
   newData: Partial<T>,
   ignoreKeys: string[] = ["updatedAt", "createdAt", "id"],
   delimiter?: string // e.g., "." to enable deep diff
-) {
-  const diff: Record<string, { from: unknown; to: unknown }> = {};
+): (Record<string, unknown> & { previous_attributes: Record<string, unknown> }) | null {
+  const previousAttributes: Record<string, unknown> = {};
+  const current: Record<string, unknown> = {};
+
+  const isObject = (v: unknown) => v && typeof v === "object" && !Array.isArray(v);
 
   for (const key in newData) {
     if (ignoreKeys.includes(key)) continue;
 
     const oldVal = oldData?.[key];
     const newVal = newData[key];
-    const currentPath = key;
-
-    const isObject = (v: unknown) => v && typeof v === "object" && !Array.isArray(v);
 
     if (delimiter && isObject(oldVal) && isObject(newVal)) {
       const nestedDiff = computeDiff(
@@ -65,16 +65,27 @@ export function computeDiff<T extends Record<string, any>>(
         ignoreKeys,
         delimiter
       );
-      if (nestedDiff) Object.assign(diff, nestedDiff);
+
+      if (nestedDiff) {
+        Object.assign(previousAttributes, nestedDiff.previous_attributes);
+        for (const k of Object.keys(nestedDiff)) {
+          if (k !== "previous_attributes") current[k] = nestedDiff[k];
+        }
+      }
     } else if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-      diff[currentPath] = {
-        from: oldVal ?? null,
-        to: newVal ?? null,
-      };
+      previousAttributes[key] = oldVal ?? null;
+      current[key] = newVal ?? null;
     }
   }
 
-  return Object.keys(diff).length > 0 ? diff : null;
+  if (Object.keys(previousAttributes).length === 0 && Object.keys(current).length === 0) {
+    return null;
+  }
+
+  return {
+    ...current,
+    previous_attributes: previousAttributes,
+  };
 }
 
 export const toSnakeCase = (data: unknown): unknown => {

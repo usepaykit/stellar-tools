@@ -85,20 +85,32 @@ function TimelineSummary({ data, manualContent }: { data?: any; manualContent?: 
 }
 
 function TimelineDiff({ changes }: { changes: any }) {
-  if (!changes || Object.keys(changes).length === 0) return null;
+  if (!changes) return null;
+
+  const previous = changes.previous_attributes ?? {};
+  const keys = Object.keys(previous);
+
+  if (keys.length === 0) return null;
 
   return (
     <div className="border-muted mt-2 space-y-1.5 border-l-2 py-0.5 pl-3">
-      {Object.entries(changes).map(([key, val]: [string, any]) => (
-        <div key={key} className="text-[12px] leading-tight">
-          <span className="text-foreground/80 font-medium">{formatLabel(key)}: </span>
-          <span className="text-muted-foreground/60 decoration-muted-foreground/40 italic line-through">
-            {val.from === null || val.from === "" ? "none" : String(val.from)}
-          </span>
-          <span className="text-muted-foreground/40 mx-1.5">→</span>
-          <span className="text-primary font-medium">{val.to === null || val.to === "" ? "none" : String(val.to)}</span>
-        </div>
-      ))}
+      {keys.map((key) => {
+        const from = previous[key] ?? null;
+        const to = key in changes ? changes[key] : null;
+
+        return (
+          <div key={key} className="text-[12px] leading-tight">
+            <span className="text-foreground/80 font-medium">{formatLabel(key)}: </span>
+            <span className="text-muted-foreground/60 decoration-muted-foreground/40 italic line-through">
+              {from === null || from === "" ? "none" : String(from)}
+            </span>
+            <span className="text-muted-foreground/40 mx-1.5">→</span>
+            <span className="text-primary font-medium">
+              {to === null || to === "" ? "none" : String(to)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

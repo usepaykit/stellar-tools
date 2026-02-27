@@ -147,10 +147,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
           map: (subscription) => ({
             customerId: subscription.customerId,
             data: {
-              $changes: {
-                ...computeDiff(oldSubscription ?? {}, subscription, undefined, "."),
-                status: subscription.status,
-              } as Record<string, ReturnType<typeof computeDiff> | SubscriptionStatus>,
+              $changes: computeDiff(oldSubscription ?? {}, subscription, undefined, ".") ?? null,
             },
           }),
         },
@@ -163,7 +160,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
             event: "subscription.updated",
             map: (subscription) => ({
               id: subscription.id,
-              changes: { ...computeDiff(oldSubscription ?? {}, subscription), status: subscription.status },
+              changes: computeDiff(oldSubscription ?? {}, subscription),
             }),
           },
         ],

@@ -10,13 +10,16 @@ import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
 
-type EventDataDiff = { $changes?: Record<string, ReturnType<typeof computeDiff>> };
+type EventDataDiff = { $changes?: ReturnType<typeof computeDiff> };
 
 interface EmitParams {
   type: EventType;
   customerId?: string; // for customer operations
   merchantId?: string; // for merchant operations
-  data?: Record<string, string | number | boolean | null | undefined | Date | EventDataDiff>;
+  data?: Record<
+    string,
+    string | number | boolean | null | undefined | Date | EventDataDiff | ReturnType<typeof computeDiff>
+  >;
 }
 
 export interface EventTrigger<T> {
