@@ -431,7 +431,6 @@ export function CustomerModal({
               <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
             </div>
 
-
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <RHF.Controller
                 control={form.control}
@@ -490,7 +489,6 @@ export function CustomerModal({
               }}
             />
 
-
             <RHF.Controller
               control={form.control}
               name="avatar"
@@ -498,13 +496,13 @@ export function CustomerModal({
                 <div className="">
                   <FileUpload
                     label="Customer image"
-                    
+                    labelClassName="text-left"
                     id="customer-avatar"
                     value={field.value ?? []}
                     onFilesChange={field.onChange}
                     placeholder="Upload customer image"
                     description="PNG, JPG, WEBP up to 5MB"
-                    className="border-muted bg-background flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-dashed"
+                    className="border-muted bg-background flex h-[220px] w-[220px] flex-col  justify-center rounded-full border-2 border-dashed"
                     dropzoneAccept={{
                       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
                     }}
