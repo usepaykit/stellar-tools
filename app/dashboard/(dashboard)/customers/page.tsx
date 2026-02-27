@@ -20,6 +20,7 @@ import {
 import { SelectField } from "@/components/select-field";
 import { TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,7 +75,18 @@ const columns: ColumnDef<ResolvedCustomer>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => <SortableHeader column={column} label="Customer" ariaLabelPrefix="Sort by name" />,
-    cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+    cell: ({ row }) => (
+      <div className="flex items-center gap-3">
+        <Avatar>
+          {row.original.image ? (
+            <AvatarImage src={row.original.image} alt={`${row?.original?.name}`} />
+          ) : (
+            <AvatarFallback>{row.original.name?.[0] ?? "?"}</AvatarFallback>
+          )}
+        </Avatar>
+        <span className="font-medium">{row.original.name}</span>
+      </div>
+    ),
     enableSorting: true,
   },
   {
@@ -317,8 +329,7 @@ export function CustomerModal({
         {} as Record<string, string>
       );
 
-      const hasNewImage =
-        Array.isArray(data.avatar) && data.avatar.length > 0 && data.avatar[0] instanceof File;
+      const hasNewImage = Array.isArray(data.avatar) && data.avatar.length > 0 && data.avatar[0] instanceof File;
       let imageUrl: string | undefined = customer?.image ?? undefined;
 
       if (hasNewImage && data.avatar?.length) {
@@ -420,29 +431,6 @@ export function CustomerModal({
               <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
             </div>
 
-            <RHF.Controller
-              control={form.control}
-              name="avatar"
-              render={({ field }) => (
-                <FileUpload
-                  label="Customer image"
-                  id="customer-avatar"
-                  value={field.value ?? []}
-                  onFilesChange={field.onChange}
-                  placeholder="Upload customer image"
-                  description="PNG, JPG, WEBP up to 5MB"
-                  
-                  className="max-w-[220px] rounded-lg"
-                  dropzoneAccept={{
-                    "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-                  }}
-                  dropzoneMaxSize={5 * 1024 * 1024}
-                  dropzoneMultiple={false}
-                  enableTransformation
-                  targetFormat="image/png"
-                />
-              )}
-            />
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <RHF.Controller
@@ -500,6 +488,33 @@ export function CustomerModal({
                   />
                 );
               }}
+            />
+
+
+            <RHF.Controller
+              control={form.control}
+              name="avatar"
+              render={({ field }) => (
+                <div className="">
+                  <FileUpload
+                    label="Customer image"
+                    
+                    id="customer-avatar"
+                    value={field.value ?? []}
+                    onFilesChange={field.onChange}
+                    placeholder="Upload customer image"
+                    description="PNG, JPG, WEBP up to 5MB"
+                    className="border-muted bg-background flex h-[220px] w-[220px] flex-col items-center justify-center rounded-full border-2 border-dashed"
+                    dropzoneAccept={{
+                      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+                    }}
+                    dropzoneMaxSize={5 * 1024 * 1024}
+                    dropzoneMultiple={false}
+                    enableTransformation
+                    targetFormat="image/png"
+                  />
+                </div>
+              )}
             />
           </div>
 
@@ -649,7 +664,6 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
       },
     });
   }, []);
-  
 
   const schemaLogic = React.useMemo(() => {
     return mappings.reduce((acc, m) => {
