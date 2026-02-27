@@ -66,6 +66,11 @@ export interface Customer {
   phone?: string;
 
   /**
+   * Optional URL to the customer's image (avatar).
+   */
+  image?: string | null;
+
+  /**
    * The application metadata for the customer.
    */
   metadata?: Record<string, string> | null;
@@ -105,6 +110,7 @@ export const customerSchema = schemaFor<Customer>()(
     email: z.email(),
     name: z.string(),
     phone: z.string().optional(),
+    image: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.string()).nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -123,7 +129,7 @@ export const createCustomerSchema = customerSchema
   })
   .extend({
     source: z.string().optional(),
-    image: z.string().url().optional(),
+    image: z.url().nullable(),
   });
 
 export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata" | "wallets"> {
@@ -143,17 +149,9 @@ export const updateCustomerSchema = customerSchema
     phone: true,
     metadata: true,
   })
-  .extend({
-    image: z.string().url().optional(),
-  });
 
-export interface UpdateCustomer extends Partial<Pick<Customer, "email" | "name" | "phone" | "metadata">> {
-  /**
-   * Optional HTTPS URL to a customer image.
-   * This will be stored as metadata.avatarUrl.
-   */
-  image?: string;
-}
+
+export interface UpdateCustomer extends Partial<Pick<Customer, "email" | "name" | "phone" | "metadata" | "image">>{}
 
 export interface ListCustomers extends Partial<Pick<Customer, "email" | "phone">> {}
 

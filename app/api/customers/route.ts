@@ -27,18 +27,14 @@ export const POST = async (req: NextRequest) => {
       const source = data[0].source ?? "API";
 
       const [customer] = await postCustomers(
-        data.map((customer) => {
-          const baseMetadata = customer.metadata ?? null;
-          const imageMetadata = customer.image ? { avatarUrl: customer.image } : {};
-
-          return {
-            name: customer.name,
-            email: customer.email,
-            phone: customer.phone ?? null,
-            metadata: baseMetadata ? { ...baseMetadata, ...imageMetadata } : Object.keys(imageMetadata).length ? imageMetadata : null,
-            wallets: customer.wallets ?? [],
-          };
-        }),
+        data.map((customer) => ({
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone ?? null,
+          image: customer.image ?? null,
+          metadata: customer.metadata ?? null,
+          wallets: customer.wallets ?? [],
+        })),
         organizationId,
         environment,
         { source, customerCount: entitlements.customers }

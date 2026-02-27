@@ -37,7 +37,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { CustomerMetadata, Payment } from "@/db";
+import { Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
@@ -181,8 +181,7 @@ export default function CustomerDetailPage() {
 
   const isNew = new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
 
-  const customerMetadata = (customer.metadata ?? null) as CustomerMetadata | null;
-  const avatarUrl = customerMetadata?.avatarUrl;
+  const imageUrl = customer.image ?? null;
   const initials =
     customer.name
       ?.split(" ")
@@ -211,8 +210,8 @@ export default function CustomerDetailPage() {
           <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
               <Avatar className="h-12 w-12 sm:h-14 sm:w-14">
-                {avatarUrl ? (
-                  <AvatarImage src={avatarUrl} alt={customer.name ?? "Customer avatar"} />
+                {imageUrl ? (
+                  <AvatarImage src={imageUrl} alt={customer.name ?? "Customer avatar"} />
                 ) : (
                   <AvatarFallback className="text-muted-foreground text-lg font-semibold">
                     {initials}

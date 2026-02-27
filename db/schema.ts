@@ -204,6 +204,7 @@ export const customers = pgTable(
     email: text("email"),
     name: text("name"),
     phone: text("phone"),
+    image: text("image"),
     metadata: jsonb("metadata").$type<CustomerMetadata | null>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

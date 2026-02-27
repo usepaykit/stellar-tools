@@ -272,11 +272,8 @@ export function CustomerModal({
   React.useEffect(() => {
     if (open && customer) {
       const phoneNumber = customer.phone ? phoneNumberFromString(customer.phone) : undefined;
-
-      const metadata = customer.metadata as Record<string, string> | null | undefined;
-      const { avatarUrl: _avatarUrl, ...metadataWithoutAvatar } = metadata ?? {};
-
-      const metadataArray = Object.entries(metadataWithoutAvatar).map(([key, value]) => ({
+      const metadata = (customer.metadata ?? null) as Record<string, string> | null;
+      const metadataArray = Object.entries(metadata ?? {}).map(([key, value]) => ({
         key,
         value: String(value),
       }));
@@ -320,31 +317,28 @@ export function CustomerModal({
         {} as Record<string, string>
       );
 
-      const existingAvatarUrl = (customer?.metadata as Record<string, string> | null | undefined)?.avatarUrl;
-      const hasNewAvatar =
+      const hasNewImage =
         Array.isArray(data.avatar) && data.avatar.length > 0 && data.avatar[0] instanceof File;
+      let imageUrl: string | undefined = customer?.image ?? undefined;
 
-      let finalAvatarUrl: string | undefined = existingAvatarUrl;
-
-      if (hasNewAvatar && data.avatar) {
+      if (hasNewImage && data.avatar?.length) {
         const formData = new FormData();
-        formData.append("avatar", data.avatar[0] as File);
-        const uploadedUrl = await createCustomerAvatar(formData);
-        if (uploadedUrl) {
-          finalAvatarUrl = uploadedUrl;
-        }
+        formData.append("image", data.avatar[0] as File);
+        const uploaded = await createCustomerAvatar(formData);
+        if (uploaded) imageUrl = uploaded;
       }
 
-      if (finalAvatarUrl) {
-        metadataRecord.avatarUrl = finalAvatarUrl;
-      }
+      const payload = {
+        name: data.name,
+        email: data.email,
+        phone: phoneString,
+        metadata: metadataRecord,
+        ...(imageUrl !== undefined && { image: imageUrl }),
+      };
 
       if (isEditMode) {
         const response = await api.put<Customer>(`/customers/${customer?.id}`, {
-          name: data.name,
-          email: data.email,
-          phone: phoneString,
-          metadata: metadataRecord,
+          ...payload,
           source: "Dashboard",
         });
 
@@ -354,10 +348,7 @@ export function CustomerModal({
       }
 
       const response = await api.post<Customer>("/customers", {
-        name: data.name,
-        email: data.email,
-        phone: phoneString,
-        metadata: metadataRecord,
+        ...payload,
         wallets: [],
       });
 
@@ -440,7 +431,8 @@ export function CustomerModal({
                   onFilesChange={field.onChange}
                   placeholder="Upload customer image"
                   description="PNG, JPG, WEBP up to 5MB"
-                  className="max-w-[220px]"
+                  
+                  className="max-w-[220px] rounded-lg"
                   dropzoneAccept={{
                     "image/*": [".png", ".jpg", ".jpeg", ".webp"],
                   }}
@@ -595,7 +587,7 @@ export function CustomerModal({
   );
 }
 
-type MappingTarget = "name" | "email" | "phone" | "avatarUrl" | "metadata" | "none";
+type MappingTarget = "name" | "email" | "phone" | "image" | "metadata" | "none";
 
 interface ColumnMapping {
   csvHeader: string;
@@ -610,8 +602,6 @@ const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) =>
       if (!value || m.target === "none") return acc;
       if (m.target === "metadata") {
         acc.metadata[m.metadataKey || m.csvHeader] = value;
-      } else if (m.target === "avatarUrl") {
-        acc.metadata.avatarUrl = value;
       } else {
         acc[m.target] = value;
       }
@@ -648,25 +638,23 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
               ? "email"
               : h.toLowerCase().includes("name")
                 ? "name"
-                : h.toLowerCase().includes("avatar") || h.toLowerCase().includes("image")
-                  ? "avatarUrl"
-                : "metadata",
+                : h.toLowerCase().includes("phone")
+                  ? "phone"
+                  : h.toLowerCase().includes("image")
+                    ? "image"
+                    : "metadata",
             metadataKey: h,
           }))
         );
       },
     });
   }, []);
+  
 
   const schemaLogic = React.useMemo(() => {
     return mappings.reduce((acc, m) => {
       if (m.target !== "none" && (m.target === "metadata" || m.target !== m.csvHeader)) {
-        const targetPath =
-          m.target === "metadata"
-            ? `meta.${m.metadataKey}`
-            : m.target === "avatarUrl"
-              ? "meta.avatarUrl"
-              : m.target;
+        const targetPath = m.target === "metadata" ? `meta.${m.metadataKey}` : m.target;
         acc[m.csvHeader] = { from: "CSV", to: targetPath };
       }
       return acc;
@@ -680,6 +668,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
       { accessorKey: "name", header: "Name" },
       { accessorKey: "email", header: "Email" },
       { accessorKey: "phone", header: "Phone" },
+      { accessorKey: "image", header: "Image" },
       {
         accessorKey: "metadata",
         header: "Metadata",
@@ -722,6 +711,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
           name: row.name,
           email: row.email,
           phone: row.phone,
+          image: row.image,
           metadata: row.metadata,
           wallets: [],
           source: "CSV Import",
@@ -798,7 +788,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
                           { label: "Name", value: "name" },
                           { label: "Email", value: "email" },
                           { label: "Phone", value: "phone" },
-                          { label: "Avatar URL", value: "avatarUrl" },
+                          { label: "Image", value: "image" },
                           { label: "Metadata", value: "metadata" },
                           { label: "Ignore", value: "none" },
                         ]}

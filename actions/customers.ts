@@ -10,7 +10,7 @@ import { MaybeArray } from "@stellartools/core";
 import { SQL, and, eq, inArray, or } from "drizzle-orm";
 
 export const createCustomerAvatar = async (formData: FormData): Promise<string | undefined> => {
-  const avatarFile = formData.get("avatar");
+  const avatarFile = formData.get("image");
 
   if (avatarFile) {
     const uploadResult = await new FileUploadApi().upload([avatarFile as File]);
@@ -206,6 +206,7 @@ export const upsertCustomer = async (
         name: lookupArray.filter((p) => "name" in p).map((p) => p.name)[0] ?? null,
         phone: null,
         metadata: lookupArray.filter((p) => "metadata" in p).map((p) => p.metadata)[0] ?? null,
+        image: lookupArray.filter((p) => "image" in p).map((p) => p.image)[0] as string | null,
       },
     ],
     orgId,
