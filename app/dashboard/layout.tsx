@@ -1,3 +1,5 @@
+import { AppModalProvider } from "@/components/app-modal";
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <AppModalProvider>{children}</AppModalProvider>;
 }

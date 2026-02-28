@@ -3,11 +3,11 @@ import * as React from "react";
 
 import { getCurrentOrganization } from "@/actions/organization";
 import { getWebhooksWithAnalytics } from "@/actions/webhook";
+import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Curl, TypeScript } from "@/components/icon";
 import { LineChart } from "@/components/line-chart";
 import { TextAreaField, TextField } from "@/components/text-field";
@@ -271,9 +271,6 @@ const api = new ApiClient({
 function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [editingWebhook, setEditingWebhook] = React.useState<WebhookDestination | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics(), {
     select: (data) => {
@@ -288,12 +285,77 @@ function WebhooksPageContent() {
     },
   });
 
+  const openCreateModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Configure destination",
+      description: "Tell StellarTools where to send events and give your destination a helpful description.",
+      content: (
+        <WebhooksModalContent
+          editingWebhook={null}
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidateOrgQuery(["webhooks"]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: true,
+    });
+  }, [invalidateOrgQuery]);
+
+  const openEditModal = React.useCallback(
+    (webhook: WebhookDestination) => {
+      AppModal.open({
+        title: "Edit destination",
+        description: "Update where StellarTools sends events for this destination.",
+        content: (
+          <WebhooksModalContent
+            editingWebhook={webhook}
+            onClose={AppModal.close}
+            onSuccess={() => {
+              invalidateOrgQuery(["webhooks"]);
+              AppModal.close();
+            }}
+          />
+        ),
+        footer: null,
+        size: "full",
+        showCloseButton: true,
+      });
+    },
+    [invalidateOrgQuery]
+  );
+
+  const openDeleteModal = React.useCallback(
+    (webhook: WebhookDestination) => {
+      AppModal.open({
+        title: "Delete webhook",
+        description:
+          "This will permanently remove this webhook destination. Events will no longer be sent to this endpoint.",
+        content: (
+          <p className="text-muted-foreground text-sm">
+            This action cannot be undone. The webhook endpoint will stop receiving events immediately.
+          </p>
+        ),
+        size: "small",
+        showCloseButton: true,
+        primaryButton: {
+          children: deleteWebhookMutation.isPending ? "Deleting…" : "Delete",
+          variant: "destructive",
+          onClick: () => deleteWebhookMutation.mutate(webhook.id),
+          disabled: deleteWebhookMutation.isPending,
+        },
+        secondaryButton: { children: "Cancel" },
+      });
+    },
+    [invalidateOrgQuery]
+  );
+
   React.useEffect(() => {
-    if (searchParams?.get("create") === "true") {
-      setEditingWebhook(null);
-      setIsModalOpen(true);
-    }
-  }, [searchParams]);
+    if (searchParams?.get("create") === "true") openCreateModal();
+  }, [searchParams?.get("create"), openCreateModal]);
 
   const toggleWebhookDisabledMutation = useMutation({
     mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => {
@@ -318,39 +380,18 @@ function WebhooksPageContent() {
     },
     onSuccess: () => {
       invalidateOrgQuery(["webhooks"]);
+      AppModal.close();
       toast.success("Webhook deleted");
-      setDeleteConfirmId(null);
     },
     onError: () => {
       toast.error("Failed to delete webhook");
     },
   });
 
-  const handleModalChange = (open: boolean) => {
-    if (!open) setEditingWebhook(null);
-    setIsModalOpen(open);
-    const params = new URLSearchParams(searchParams?.toString());
-    if (open) {
-      params.set("create", "true");
-    } else {
-      params.delete("create");
-    }
-    router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
-  };
-
-  const handleEditWebhook = (webhook: WebhookDestination) => {
-    setEditingWebhook(webhook);
-    setIsModalOpen(true);
-    const params = new URLSearchParams(searchParams?.toString());
-    params.delete("create");
-    const query = params.toString();
-    router.replace(`${window.location.pathname}${query ? `?${query}` : ""}`);
-  };
-
   const tableActions: TableAction<WebhookDestination>[] = [
     {
       label: "Edit",
-      onClick: handleEditWebhook,
+      onClick: openEditModal,
     },
     {
       label: (webhook) => (webhook.isDisabled ? "Enable" : "Disable"),
@@ -358,7 +399,7 @@ function WebhooksPageContent() {
     },
     {
       label: "Delete",
-      onClick: (webhook) => setDeleteConfirmId(webhook.id),
+      onClick: openDeleteModal,
       variant: "destructive",
     },
   ];
@@ -372,7 +413,7 @@ function WebhooksPageContent() {
               <h1 className="text-3xl font-bold tracking-tight">Event destinations</h1>
               <p className="text-muted-foreground">Stream Stellar events to your webhooks and cloud services.</p>
             </div>
-            <Button className="gap-2" onClick={() => handleModalChange(true)}>
+            <Button className="gap-2" onClick={openCreateModal}>
               <Plus className="size-4" /> Add destination
             </Button>
           </header>
@@ -403,40 +444,6 @@ function WebhooksPageContent() {
           </Tabs>
         </div>
       </DashboardSidebarInset>
-      <WebhooksModal
-        open={isModalOpen}
-        onOpenChange={handleModalChange}
-        editingWebhook={editingWebhook}
-        onEditingWebhookChange={setEditingWebhook}
-      />
-
-      <FullScreenModal
-        open={!!deleteConfirmId}
-        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
-        title="Delete webhook?"
-        size="small"
-        description="This will permanently remove this webhook destination. Events will no longer be sent to this endpoint."
-        footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setDeleteConfirmId(null)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => deleteConfirmId && deleteWebhookMutation.mutate(deleteConfirmId)}
-              disabled={deleteWebhookMutation.isPending}
-              isLoading={deleteWebhookMutation.isPending}
-            >
-              {deleteWebhookMutation.isPending ? "Deleting…" : "Delete"}
-            </Button>
-          </div>
-        }
-      >
-        <p className="text-muted-foreground text-sm">
-          This action cannot be undone. The webhook endpoint will stop receiving events immediately.
-        </p>
-      </FullScreenModal>
     </DashboardSidebar>
   );
 }
@@ -479,24 +486,23 @@ interface WebhookDestination extends Pick<Webhook, "id" | "name" | "url" | "isDi
   description?: string | null;
   events?: string[];
 }
-interface WebhooksModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface WebhooksModalContentProps {
   editingWebhook?: WebhookDestination | null;
-  onEditingWebhookChange?: (webhook: WebhookDestination | null) => void;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
-function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWebhookChange }: WebhooksModalProps) {
+function WebhooksModalContent({ editingWebhook = null, onClose, onSuccess }: WebhooksModalContentProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const { data: organization, isLoading } = useOrgContext();
   const [secret, setSecret] = React.useState<string>("");
 
   React.useEffect(() => {
-    if (!open || isLoading) return;
-    const webhookSecret = generateResourceId("whsec", organization?.id!, 32, "sha256");
+    if (editingWebhook || isLoading || !organization?.id) return;
+    const webhookSecret = generateResourceId("whsec", organization.id, 32, "sha256");
     setSecret(webhookSecret);
-  }, [open, organization?.id, isLoading]);
+  }, [editingWebhook, organization?.id, isLoading]);
 
   const { copied, handleCopy } = useCopy();
   const isEditMode = !!editingWebhook;
@@ -522,13 +528,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
 
   const events = form.watch("events");
 
-  // Prefill form when opening for edit; reset when opening for create or when closing
   React.useEffect(() => {
-    if (!open) {
-      form.reset();
-      onEditingWebhookChange?.(null);
-      return;
-    }
     if (editingWebhook) {
       form.reset({
         destinationName: editingWebhook.name ?? "",
@@ -544,7 +544,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
         events: [],
       });
     }
-  }, [open, editingWebhook, form, onEditingWebhookChange]);
+  }, [editingWebhook, form]);
 
   const createWebhookMutation = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
@@ -562,7 +562,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
       invalidateOrgQuery(["webhooks"]);
       toast.success("Webhook destination created successfully");
       form.reset();
-      onOpenChange(false);
+      onSuccess();
     },
     onError: () => {
       toast.error("Failed to create webhook destination");
@@ -590,8 +590,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
       invalidateOrgQuery(["webhooks"]);
       toast.success("Webhook destination updated successfully");
       form.reset();
-      onOpenChange(false);
-      onEditingWebhookChange?.(null);
+      onSuccess();
     },
     onError: () => {
       toast.error("Failed to update webhook destination");
@@ -620,17 +619,12 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
   const isPending = createWebhookMutation.isPending || updateWebhookMutation.isPending;
 
   const footer = (
-    <div className="flex w-full justify-between">
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={() => onOpenChange(false)}
-        className="text-muted-foreground hover:text-foreground"
-      >
+    <div className="flex w-full justify-between border-t pt-4">
+      <Button type="button" variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
         Cancel
       </Button>
       <div className="flex gap-2">
-        <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="gap-2">
+        <Button type="button" variant="outline" onClick={onClose} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
@@ -648,18 +642,8 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
   );
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title={isEditMode ? "Edit destination" : "Configure destination"}
-      description={
-        isEditMode
-          ? "Update where StellarTools sends events for this destination."
-          : "Tell StellarTools where to send events and give your destination a helpful description."
-      }
-      footer={footer}
-      dialogClassName="flex"
-    >
+    <div className="flex flex-col gap-6">
+      {footer}
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <form
           ref={formRef}
@@ -804,7 +788,7 @@ function WebhooksModal({ open, onOpenChange, editingWebhook = null, onEditingWeb
           </div>
         </aside>
       </div>
-    </FullScreenModal>
+    </div>
   );
 }
 

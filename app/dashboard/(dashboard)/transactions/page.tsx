@@ -4,10 +4,10 @@ import * as React from "react";
 
 import { getCurrentOrganization } from "@/actions/organization";
 import { retrievePayment, retrievePaymentsWithDetails } from "@/actions/payment";
+import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -197,17 +197,15 @@ type RefundFormData = z.infer<typeof refundSchema>;
 
 // --- Refund Modal Component ---
 
-export function RefundModal({
-  open,
-  onOpenChange,
+export function RefundModalContent({
   initialPaymentId,
+  onClose,
+  onSuccess,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   initialPaymentId?: string;
+  onClose: () => void;
+  onSuccess: () => void;
 }) {
-  const invalidateOrgQuery = useInvalidateOrgQuery();
-
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
     defaultValues: {
@@ -218,9 +216,7 @@ export function RefundModal({
   });
 
   React.useEffect(() => {
-    if (initialPaymentId) {
-      form.setValue("paymentId", initialPaymentId);
-    }
+    if (initialPaymentId) form.setValue("paymentId", initialPaymentId);
   }, [initialPaymentId, form]);
 
   const createRefundMutation = useMutation({
@@ -250,39 +246,27 @@ export function RefundModal({
     onSuccess: () => {
       toast.success("Refund created successfully!");
       form.reset();
-      onOpenChange(false);
-      invalidateOrgQuery(["refunds"]);
+      onSuccess();
     },
-    onError: () => {
-      toast.error("Failed to create refund");
-    },
+    onError: () => toast.error("Failed to create refund"),
   });
 
-  const onSubmit = async (data: RefundFormData) => {
-    createRefundMutation.mutate(data);
-  };
+  const onSubmit = (data: RefundFormData) => createRefundMutation.mutate(data);
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Create Refund"
-      description="Process a refund for a transaction by providing the payment details."
-      footer={
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={createRefundMutation.isPending}>
-            Cancel
-          </Button>
-          <Button
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={createRefundMutation.isPending}
-            isLoading={createRefundMutation.isPending}
-          >
-            {createRefundMutation.isPending ? "Creating..." : "Create refund"}
-          </Button>
-        </div>
-      }
-    >
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-end gap-3 border-b pb-4">
+        <Button variant="outline" onClick={onClose} disabled={createRefundMutation.isPending}>
+          Cancel
+        </Button>
+        <Button
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={createRefundMutation.isPending}
+          isLoading={createRefundMutation.isPending}
+        >
+          {createRefundMutation.isPending ? "Creating..." : "Create refund"}
+        </Button>
+      </div>
       <div className="space-y-6">
         <RHF.Controller
           control={form.control}
@@ -331,7 +315,7 @@ export function RefundModal({
           )}
         />
       </div>
-    </FullScreenModal>
+    </div>
   );
 }
 
@@ -345,10 +329,30 @@ function TransactionsPageContent() {
   const paymentId = searchParams?.get("paymentId");
 
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
+  const invalidate = useInvalidateOrgQuery();
 
-  const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
-
-  const [selectedPaymentId, setSelectedPaymentId] = React.useState<string | null>(null);
+  const openRefundModal = React.useCallback(
+    (initialPaymentId?: string) => {
+      AppModal.open({
+        title: "Create Refund",
+        description: "Process a refund for a transaction by providing the payment details.",
+        content: (
+          <RefundModalContent
+            initialPaymentId={initialPaymentId}
+            onClose={AppModal.close}
+            onSuccess={() => {
+              invalidate(["refunds"]);
+              AppModal.close();
+            }}
+          />
+        ),
+        footer: null,
+        size: "small",
+        showCloseButton: true,
+      });
+    },
+    [invalidate]
+  );
 
   const { data: payments, isLoading } = useOrgQuery(["payments"], () => retrievePaymentsWithDetails());
 
@@ -393,10 +397,7 @@ function TransactionsPageContent() {
     },
     {
       label: "Refund",
-      onClick: (transaction) => {
-        setSelectedPaymentId(transaction.description);
-        setIsRefundModalOpen(true);
-      },
+      onClick: (transaction) => openRefundModal(transaction.description),
     },
     {
       label: "Delete",
@@ -422,13 +423,7 @@ function TransactionsPageContent() {
                 <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  className="gap-2 shadow-sm"
-                  onClick={() => {
-                    setSelectedPaymentId(null);
-                    setIsRefundModalOpen(true);
-                  }}
-                >
+                <Button className="gap-2 shadow-sm" onClick={() => openRefundModal()}>
                   <Plus className="h-4 w-4" />
                   Create refund
                 </Button>
@@ -515,15 +510,6 @@ function TransactionsPageContent() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-
-      <RefundModal
-        open={isRefundModalOpen}
-        onOpenChange={(open) => {
-          setIsRefundModalOpen(open);
-          if (!open) setSelectedPaymentId(null);
-        }}
-        initialPaymentId={selectedPaymentId ?? undefined}
-      />
     </div>
   );
 }

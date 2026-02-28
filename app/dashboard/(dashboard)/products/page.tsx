@@ -5,11 +5,11 @@ import * as React from "react";
 import { retrieveAssets } from "@/actions/asset";
 import { getCurrentOrganization } from "@/actions/organization";
 import { createProductImage, retrieveProductsWithAsset } from "@/actions/product";
+import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { Markdown } from "@/components/markdown";
 import { NumberField } from "@/components/number-field";
 import { RadioGroup } from "@/components/radio-group";
@@ -192,10 +192,54 @@ const columns: ColumnDef<Product>[] = [
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isModalOpen, setIsModalOpen] = React.useState(searchParams?.get("mode") === "create");
-  const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
-
+  const invalidate = useInvalidateOrgQuery();
   const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
+
+  const openCreateModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Add a product",
+      description: undefined,
+      content: (
+        <ProductsModalContent
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidate(["products"]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: true,
+    });
+  }, [invalidate]);
+
+  const openEditModal = React.useCallback(
+    (product: Product) => {
+      AppModal.open({
+        title: "Edit product",
+        description: undefined,
+        content: (
+          <ProductsModalContent
+            editingProduct={product}
+            onClose={AppModal.close}
+            onSuccess={() => {
+              invalidate(["products"]);
+              AppModal.close();
+            }}
+          />
+        ),
+        footer: null,
+        size: "full",
+        showCloseButton: true,
+      });
+    },
+    [invalidate]
+  );
+
+  React.useEffect(() => {
+    if (searchParams?.get("mode") === "create") openCreateModal();
+  }, [searchParams?.get("mode"), openCreateModal]);
 
   const { data: products, isLoading } = useOrgQuery(["products"], () => retrieveProductsWithAsset(), {
     select: (productsData) => {
@@ -234,33 +278,10 @@ function ProductsPageContent() {
     [products]
   );
 
-  const handleModalChange = React.useCallback(
-    (value: boolean, syncUrlState: boolean) => {
-      const params = new URLSearchParams(searchParams?.toString());
-
-      if (!syncUrlState) return setIsModalOpen(value);
-
-      if (value) {
-        params.set("mode", "create");
-        router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
-      } else {
-        params.delete("mode");
-        router.replace(`${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
-        setEditingProduct(null);
-      }
-
-      setIsModalOpen(value);
-    },
-    [searchParams, router]
-  );
-
   const tableActions: TableAction<Product>[] = [
     {
       label: "Edit",
-      onClick: (p) => {
-        setEditingProduct(p);
-        handleModalChange(true, false);
-      },
+      onClick: openEditModal,
     },
     {
       label: "Archive",
@@ -279,13 +300,7 @@ function ProductsPageContent() {
                 <h1 className="text-3xl font-bold tracking-tight">Product catalog</h1>
                 <p className="text-muted-foreground mt-1.5 text-sm">Manage and organize your product offerings</p>
               </div>
-              <Button
-                onClick={() => {
-                  setEditingProduct(null);
-                  handleModalChange(true, true);
-                }}
-                className="gap-2 shadow-sm"
-              >
+              <Button onClick={openCreateModal} className="gap-2 shadow-sm">
                 <Plus className="h-4 w-4" /> Create product
               </Button>
             </div>
@@ -325,12 +340,6 @@ function ProductsPageContent() {
                 onRowClick={(product) => router.push(`/products/${product.id}`)}
               />
             </div>
-
-            <ProductsModal
-              open={isModalOpen}
-              onOpenChange={(value) => handleModalChange(value, editingProduct ? false : true)}
-              editingProduct={editingProduct}
-            />
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
@@ -348,16 +357,67 @@ export default function ProductsPage() {
 
 // --- Modal Component (exported for use on product detail page) ---
 
-export function ProductsModal({
-  open,
-  onOpenChange,
+const METERED_BILLING_MARKDOWN = /* html */ `
+## What is metered billing?
+
+Metered billing charges customers based on their actual usage. Think pay-as-you-go: upload storage, API calls, AI tokens, processing time, anything measurable.
+
+---
+
+## Unit Label
+
+A human-friendly name for what you're measuring. This can be anything: "tokens", "megabytes", "API calls", "minutes", "images", whatever makes sense for your service.
+
+**Example:** "MB" for file storage, "tokens" for AI usage
+
+---
+
+## Unit Divisor
+
+Converts raw measurements into your chosen unit. For example, if you're measuring file storage and raw data comes in bytes, set this to 1,048,576 to convert bytes to megabytes.
+
+**Common divisors:**
+- File count: 1 (or leave as default)
+- Kilobytes: 1,024
+- Megabytes: 1,048,576
+- Gigabytes: 1,073,741,824
+
+---
+
+## Units per Credit
+
+How many units equal one credit. If you set this to 10, then every 10 units costs 1 credit.
+
+**Example:** Set to 5 means uploading 50MB costs 10 credits (50 / 5)
+
+---
+
+## Credits Granted
+
+The number of credits customers get when they purchase this product. They'll spend these credits as they use your service.
+
+**Example:** Grant 1,000 credits = 5,000 units if unitsPerCredit is 5
+`;
+
+function openLearnMoreModal() {
+  AppModal.open({
+    title: "Understanding Metered Billing",
+    content: <Markdown content={METERED_BILLING_MARKDOWN} />,
+    size: "full",
+    showCloseButton: true,
+    primaryButton: { children: "Got it", onClick: AppModal.close },
+  });
+}
+
+export function ProductsModalContent({
+  onClose,
+  onSuccess,
   editingProduct,
 }: {
-  open: boolean;
-  onOpenChange: (value: boolean) => void;
+  onClose: () => void;
+  onSuccess: () => void;
   editingProduct?: Product | null;
 }) {
-  const [isLearnMoreOpen, setIsLearnMoreOpen] = React.useState(false);
   const isEditMode = !!editingProduct;
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const { data: orgContext } = useOrgContext();
@@ -393,7 +453,7 @@ export function ProductsModal({
   });
 
   React.useEffect(() => {
-    if (open && editingProduct) {
+    if (editingProduct) {
       const metadataArray =
         editingProduct.metadata &&
         typeof editingProduct.metadata === "object" &&
@@ -440,7 +500,7 @@ export function ProductsModal({
           ]);
         });
       }
-    } else if (open && !editingProduct) {
+    } else {
       form.reset({
         name: "",
         description: "",
@@ -451,7 +511,7 @@ export function ProductsModal({
         metadata: [],
       });
     }
-  }, [open, editingProduct, form]);
+  }, [editingProduct, form]);
 
   const putProductMutation = useMutation({
     mutationFn: async ({ data, existingImageUrls }: { data: ProductFormData; existingImageUrls?: string[] }) => {
@@ -530,7 +590,7 @@ export function ProductsModal({
       invalidateOrgQuery(isEditMode ? ["products", product?.id] : ["products"]);
       toast.success(isEditMode ? "Product updated successfully!" : "Product created!");
       form.reset();
-      onOpenChange(false);
+      onSuccess();
     },
     onError: (error: unknown) => {
       console.error(error);
@@ -549,402 +609,336 @@ export function ProductsModal({
   };
 
   return (
-    <>
-      <FullScreenModal
-        open={open}
-        onOpenChange={onOpenChange}
-        title={isEditMode ? "Edit product" : "Add a product"}
-        footer={
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={putProductMutation.isPending}>
-              Cancel
-            </Button>
-            <Button
-              onClick={form.handleSubmit(onSubmit)}
-              disabled={putProductMutation.isPending}
-              isLoading={putProductMutation.isPending}
-            >
-              {isEditMode ? "Update product" : "Add product"}
-            </Button>
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-end gap-3 border-b pb-4">
+        <Button variant="outline" onClick={onClose} disabled={putProductMutation.isPending}>
+          Cancel
+        </Button>
+        <Button
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={putProductMutation.isPending}
+          isLoading={putProductMutation.isPending}
+        >
+          {isEditMode ? "Update product" : "Add product"}
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div className="space-y-6">
+          <RHF.Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                id="name"
+                label="Name"
+                error={error?.message}
+                placeholder="e.g. Premium Subscription"
+                className="shadow-none"
+              />
+            )}
+          />
+
+          <RHF.Controller
+            control={form.control}
+            name="description"
+            render={({ field, fieldState: { error } }) => (
+              <TextAreaField
+                {...field}
+                value={field.value as string}
+                id="description"
+                label="Description"
+                error={error?.message}
+                placeholder="Describe your product..."
+                className="shadow-none"
+              />
+            )}
+          />
+
+          <RHF.Controller
+            control={form.control}
+            name="images"
+            render={({ field }) => (
+              <FileUpload
+                value={field.value}
+                onFilesChange={field.onChange}
+                enableTransformation
+                targetFormat="image/png"
+                dropzoneMultiple={false}
+                dropzoneAccept={{
+                  "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+                }}
+              />
+            )}
+          />
+
+          <div>
+            <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
+            <p className="text-muted-foreground text-sm">
+              Add custom key-value pairs to store additional information about this product.
+            </p>
           </div>
-        }
-      >
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-          <div className="space-y-6">
-            <RHF.Controller
-              control={form.control}
-              name="name"
-              render={({ field, fieldState: { error } }) => (
-                <TextField
-                  {...field}
-                  id="name"
-                  label="Name"
-                  error={error?.message}
-                  placeholder="e.g. Premium Subscription"
-                  className="shadow-none"
-                />
-              )}
-            />
 
-            <RHF.Controller
-              control={form.control}
-              name="description"
-              render={({ field, fieldState: { error } }) => (
-                <TextAreaField
-                  {...field}
-                  value={field.value as string}
-                  id="description"
-                  label="Description"
-                  error={error?.message}
-                  placeholder="Describe your product..."
-                  className="shadow-none"
-                />
-              )}
-            />
-
-            <RHF.Controller
-              control={form.control}
-              name="images"
-              render={({ field }) => (
-                <FileUpload
-                  value={field.value}
-                  onFilesChange={field.onChange}
-                  enableTransformation
-                  targetFormat="image/png"
-                  dropzoneMultiple={false}
-                  dropzoneAccept={{
-                    "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-                  }}
-                />
-              )}
-            />
-
-            <div>
-              <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
-              <p className="text-muted-foreground text-sm">
-                Add custom key-value pairs to store additional information about this product.
-              </p>
-            </div>
-
-            <Card className="shadow-none">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  {metadataFields.length === 0 ? (
-                    <div className="text-muted-foreground py-8 text-center text-sm">
-                      No metadata entries. Click &quot;Add metadata&quot; to add one.
-                    </div>
-                  ) : (
-                    metadataFields.map((field, index) => (
-                      <div key={field.id} className="flex items-start gap-3 rounded-lg border p-4">
-                        <div className="grid flex-1 grid-cols-2 gap-3">
-                          <RHF.Controller
-                            control={form.control}
-                            name={`metadata.${index}.key`}
-                            render={({ field: fieldProps, fieldState: { error } }) => (
-                              <TextField
-                                id={`metadata-key-${index}`}
-                                value={fieldProps.value || ""}
-                                onChange={fieldProps.onChange}
-                                label="Key"
-                                error={error?.message || null}
-                                placeholder="e.g., tier"
-                                className="w-full shadow-none"
-                              />
-                            )}
-                          />
-                          <RHF.Controller
-                            control={form.control}
-                            name={`metadata.${index}.value`}
-                            render={({ field: fieldProps, fieldState: { error } }) => (
-                              <TextField
-                                id={`metadata-value-${index}`}
-                                value={fieldProps.value || ""}
-                                onChange={fieldProps.onChange}
-                                label="Value"
-                                error={error?.message || null}
-                                placeholder="e.g., premium"
-                                className="w-full shadow-none"
-                              />
-                            )}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => metadataRemove(index)}
-                          className="mt-5 shrink-0 shadow-none"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+          <Card className="shadow-none">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {metadataFields.length === 0 ? (
+                  <div className="text-muted-foreground py-8 text-center text-sm">
+                    No metadata entries. Click &quot;Add metadata&quot; to add one.
+                  </div>
+                ) : (
+                  metadataFields.map((field, index) => (
+                    <div key={field.id} className="flex items-start gap-3 rounded-lg border p-4">
+                      <div className="grid flex-1 grid-cols-2 gap-3">
+                        <RHF.Controller
+                          control={form.control}
+                          name={`metadata.${index}.key`}
+                          render={({ field: fieldProps, fieldState: { error } }) => (
+                            <TextField
+                              id={`metadata-key-${index}`}
+                              value={fieldProps.value || ""}
+                              onChange={fieldProps.onChange}
+                              label="Key"
+                              error={error?.message || null}
+                              placeholder="e.g., tier"
+                              className="w-full shadow-none"
+                            />
+                          )}
+                        />
+                        <RHF.Controller
+                          control={form.control}
+                          name={`metadata.${index}.value`}
+                          render={({ field: fieldProps, fieldState: { error } }) => (
+                            <TextField
+                              id={`metadata-value-${index}`}
+                              value={fieldProps.value || ""}
+                              onChange={fieldProps.onChange}
+                              label="Value"
+                              error={error?.message || null}
+                              placeholder="e.g., premium"
+                              className="w-full shadow-none"
+                            />
+                          )}
+                        />
                       </div>
-                    ))
-                  )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => metadataRemove(index)}
+                        className="mt-5 shrink-0 shadow-none"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
+                )}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => metadataAppend({ key: "", value: "" })}
-                    className="w-full shadow-none"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add metadata
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center justify-between">
-                <Label className="font-medium">Pricing Model</Label>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto gap-1.5 px-2 py-1 text-xs"
-                  onClick={() => setIsLearnMoreOpen(true)}
+                  variant="outline"
+                  onClick={() => metadataAppend({ key: "", value: "" })}
+                  className="w-full shadow-none"
                 >
-                  <HelpCircle className="h-3.5 w-3.5" />
-                  Learn about metered billing
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add metadata
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-4 pt-4">
+            <div className="flex items-center justify-between">
+              <Label className="font-medium">Pricing Model</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto gap-1.5 px-2 py-1 text-xs"
+                onClick={openLearnMoreModal}
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                Learn about metered billing
+              </Button>
+            </div>
+            <RHF.Controller
+              control={form.control}
+              name="type"
+              render={({ field, fieldState: { error } }) => (
+                <RadioGroup
+                  id="type"
+                  disabled={isEditMode}
+                  value={isEditMode ? editingProduct?.type : field.value}
+                  onChange={field.onChange}
+                  items={[
+                    { value: "subscription", label: "Recurring" },
+                    { value: "one_time", label: "One-off" },
+                    { value: "metered", label: "Metered (Credits)" },
+                  ]}
+                  error={error?.message}
+                  label={null}
+                  helpText={null}
+                  itemLayout="horizontal"
+                  defaultValue={isEditMode ? editingProduct?.type : undefined}
+                />
+              )}
+            />
+
+            {watched.type === "metered" && (
+              <div className="space-y-4 rounded-lg border p-4">
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold">Credit Configuration</h4>
+                  <p className="text-muted-foreground text-xs">Define how usage is measured and converted to credits</p>
+                </div>
+
+                <RHF.Controller
+                  control={form.control}
+                  name="unit"
+                  render={({ field, fieldState: { error } }) => (
+                    <TextField
+                      {...field}
+                      value={field.value || ""}
+                      id="unit"
+                      label="Unit Label"
+                      placeholder="e.g., tokens, MB, requests, minutes"
+                      helpText="Display name for your unit (can be anything)"
+                      error={error?.message}
+                    />
+                  )}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="unitDivisor"
+                  render={({ field, fieldState: { error } }) => (
+                    <NumberField
+                      {...field}
+                      value={field.value || 1}
+                      id="unitDivisor"
+                      label="Unit Divisor"
+                      helpText="Converts raw data (e.g., bytes) to your unit"
+                      error={error?.message}
+                    />
+                  )}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="unitsPerCredit"
+                  render={({ field, fieldState: { error } }) => (
+                    <NumberField
+                      {...field}
+                      value={field.value || 1}
+                      id="unitsPerCredit"
+                      label="Units per Credit"
+                      helpText="How many units equal 1 credit?"
+                      error={error?.message}
+                    />
+                  )}
+                />
+
+                <RHF.Controller
+                  control={form.control}
+                  name="creditsGranted"
+                  render={({ field, fieldState: { error } }) => (
+                    <NumberField
+                      {...field}
+                      value={field.value || 0}
+                      id="creditsGranted"
+                      label="Credits Granted"
+                      placeholder="e.g., 1000"
+                      helpText="Initial credits included with this product"
+                      error={error?.message}
+                    />
+                  )}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2">
               <RHF.Controller
                 control={form.control}
-                name="type"
+                name="price"
                 render={({ field, fieldState: { error } }) => (
-                  <RadioGroup
-                    id="type"
-                    disabled={isEditMode}
-                    value={isEditMode ? editingProduct?.type : field.value}
-                    onChange={field.onChange}
-                    items={[
-                      { value: "subscription", label: "Recurring" },
-                      { value: "one_time", label: "One-off" },
-                      { value: "metered", label: "Metered (Credits)" },
-                    ]}
-                    error={error?.message}
-                    label={null}
-                    helpText={null}
-                    itemLayout="horizontal"
-                    defaultValue={isEditMode ? editingProduct?.type : undefined}
+                  <SelectInput
+                    id="price"
+                    isLoading={isLoadingAssets}
+                    className="flex-1"
+                    value={{ amount: field.value.amount, option: field.value.asset }}
+                    onChange={(value) => field.onChange({ ...field.value, amount: value.amount, asset: value.option })}
+                    options={assets?.map((asset) => `${asset.code}:${asset.id}`) ?? []}
+                    error={(error as any)?.asset?.message ?? (error as any)?.amount?.message}
+                    optionsDisabled={isEditMode}
                   />
                 )}
               />
 
-              {watched.type === "metered" && (
-                <div className="space-y-4 rounded-lg border p-4">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">Credit Configuration</h4>
-                    <p className="text-muted-foreground text-xs">
-                      Define how usage is measured and converted to credits
-                    </p>
-                  </div>
+              {watched.type == "subscription" && (
+                <RHF.Controller
+                  name="recurringPeriod"
+                  control={form.control}
+                  render={({ field, fieldState: { error } }) => (
+                    <SelectField
+                      id={field.name}
+                      value={field.value as string}
+                      onChange={field.onChange}
+                      triggerValuePlaceholder="Select recurring period"
+                      triggerClassName="mt-2.5 h-12 w-[150px]"
+                      items={[
+                        { value: "day", label: "Daily" },
+                        { value: "week", label: "Weekly" },
+                        { value: "month", label: "Monthly" },
+                        { value: "year", label: "Yearly" },
+                      ]}
+                      error={error?.message}
+                    />
+                  )}
+                />
+              )}
+            </div>
+          </div>
+        </div>
 
-                  <RHF.Controller
-                    control={form.control}
-                    name="unit"
-                    render={({ field, fieldState: { error } }) => (
-                      <TextField
-                        {...field}
-                        value={field.value || ""}
-                        id="unit"
-                        label="Unit Label"
-                        placeholder="e.g., tokens, MB, requests, minutes"
-                        helpText="Display name for your unit (can be anything)"
-                        error={error?.message}
-                      />
-                    )}
-                  />
+        <div className="hidden lg:block">
+          <Card className="bg-muted/30 sticky top-6 shadow-none">
+            <CardContent className="space-y-6 p-6">
+              <h3 className="text-lg font-semibold">Preview</h3>
 
-                  <RHF.Controller
-                    control={form.control}
-                    name="unitDivisor"
-                    render={({ field, fieldState: { error } }) => (
-                      <NumberField
-                        {...field}
-                        value={field.value || 1}
-                        id="unitDivisor"
-                        label="Unit Divisor"
-                        helpText="Converts raw data (e.g., bytes) to your unit"
-                        error={error?.message}
-                      />
-                    )}
-                  />
-
-                  <RHF.Controller
-                    control={form.control}
-                    name="unitsPerCredit"
-                    render={({ field, fieldState: { error } }) => (
-                      <NumberField
-                        {...field}
-                        value={field.value || 1}
-                        id="unitsPerCredit"
-                        label="Units per Credit"
-                        helpText="How many units equal 1 credit?"
-                        error={error?.message}
-                      />
-                    )}
-                  />
-
-                  <RHF.Controller
-                    control={form.control}
-                    name="creditsGranted"
-                    render={({ field, fieldState: { error } }) => (
-                      <NumberField
-                        {...field}
-                        value={field.value || 0}
-                        id="creditsGranted"
-                        label="Credits Granted"
-                        placeholder="e.g., 1000"
-                        helpText="Initial credits included with this product"
-                        error={error?.message}
-                      />
-                    )}
+              {watched.images?.[0] && (
+                <div className="relative aspect-video overflow-hidden rounded-lg border">
+                  <Image
+                    src={watched.images[0].preview || URL.createObjectURL(watched.images[0])}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
                   />
                 </div>
               )}
 
-              <div className="flex gap-2">
-                <RHF.Controller
-                  control={form.control}
-                  name="price"
-                  render={({ field, fieldState: { error } }) => (
-                    <SelectInput
-                      id="price"
-                      isLoading={isLoadingAssets}
-                      className="flex-1"
-                      value={{ amount: field.value.amount, option: field.value.asset }}
-                      onChange={(value) =>
-                        field.onChange({ ...field.value, amount: value.amount, asset: value.option })
-                      }
-                      options={assets?.map((asset) => `${asset.code}:${asset.id}`) ?? []}
-                      error={(error as any)?.asset?.message ?? (error as any)?.amount?.message}
-                      optionsDisabled={isEditMode}
-                    />
-                  )}
-                />
+              <div className="space-y-1">
+                <h4 className="text-base font-bold">{watched.name || "Product Name"}</h4>
+                <p className="text-muted-foreground line-clamp-2 text-sm">
+                  {watched.description || "No description provided."}
+                </p>
+              </div>
 
-                {watched.type == "subscription" && (
-                  <RHF.Controller
-                    name="recurringPeriod"
-                    control={form.control}
-                    render={({ field, fieldState: { error } }) => (
-                      <SelectField
-                        id={field.name}
-                        value={field.value as string}
-                        onChange={field.onChange}
-                        triggerValuePlaceholder="Select recurring period"
-                        triggerClassName="mt-2.5 h-12 w-[150px]"
-                        items={[
-                          { value: "day", label: "Daily" },
-                          { value: "week", label: "Weekly" },
-                          { value: "month", label: "Monthly" },
-                          { value: "year", label: "Yearly" },
-                        ]}
-                        error={error?.message}
-                      />
-                    )}
-                  />
+              <div className="border-t pt-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground font-medium">Total Price</span>
+                  <span className="font-bold">
+                    {total.toFixed(2)} {watched.price?.asset?.split(":")?.[0] ?? "XLM"}
+                  </span>
+                </div>
+                {watched.type === "subscription" && (
+                  <p className="text-muted-foreground mt-1 text-right text-xs">
+                    Billed every {watched.recurringPeriod}
+                  </p>
                 )}
               </div>
-            </div>
-          </div>
-
-          <div className="hidden lg:block">
-            <Card className="bg-muted/30 sticky top-6 shadow-none">
-              <CardContent className="space-y-6 p-6">
-                <h3 className="text-lg font-semibold">Preview</h3>
-
-                {watched.images?.[0] && (
-                  <div className="relative aspect-video overflow-hidden rounded-lg border">
-                    <Image
-                      src={watched.images[0].preview || URL.createObjectURL(watched.images[0])}
-                      alt="Preview"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <h4 className="text-base font-bold">{watched.name || "Product Name"}</h4>
-                  <p className="text-muted-foreground line-clamp-2 text-sm">
-                    {watched.description || "No description provided."}
-                  </p>
-                </div>
-
-                <div className="border-t pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground font-medium">Total Price</span>
-                    <span className="font-bold">
-                      {total.toFixed(2)} {watched.price?.asset?.split(":")?.[0] ?? "XLM"}
-                    </span>
-                  </div>
-                  {watched.type === "subscription" && (
-                    <p className="text-muted-foreground mt-1 text-right text-xs">
-                      Billed every {watched.recurringPeriod}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      </FullScreenModal>
-
-      <FullScreenModal
-        open={isLearnMoreOpen}
-        onOpenChange={setIsLearnMoreOpen}
-        title="Understanding Metered Billing"
-        size="full"
-        footer={<Button onClick={() => setIsLearnMoreOpen(false)}>Got it</Button>}
-      >
-        <Markdown
-          content={
-            /* html */ `
-## What is metered billing?
-
-Metered billing charges customers based on their actual usage. Think pay-as-you-go: upload storage, API calls, AI tokens, processing time, anything measurable.
-
----
-
-## Unit Label
-
-A human-friendly name for what you're measuring. This can be anything: "tokens", "megabytes", "API calls", "minutes", "images", whatever makes sense for your service.
-
-**Example:** "MB" for file storage, "tokens" for AI usage
-
----
-
-## Unit Divisor
-
-Converts raw measurements into your chosen unit. For example, if you're measuring file storage and raw data comes in bytes, set this to 1,048,576 to convert bytes to megabytes.
-
-**Common divisors:**
-- File count: 1 (or leave as default)
-- Kilobytes: 1,024
-- Megabytes: 1,048,576
-- Gigabytes: 1,073,741,824
-
----
-
-## Units per Credit
-
-How many units equal one credit. If you set this to 10, then every 10 units costs 1 credit.
-
-**Example:** Set to 5 means uploading 50MB costs 10 credits (50 / 5)
-
----
-
-## Credits Granted
-
-The number of credits customers get when they purchase this product. They'll spend these credits as they use your service.
-
-**Example:** Grant 1,000 credits = 5,000 units if unitsPerCredit is 5
-`
-          }
-        />
-      </FullScreenModal>
-    </>
+      </div>
+    </div>
   );
 }

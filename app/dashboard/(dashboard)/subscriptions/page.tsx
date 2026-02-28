@@ -6,11 +6,11 @@ import { retrieveCustomers } from "@/actions/customers";
 import { getCurrentOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
 import { retrieveSubscriptions } from "@/actions/subscription";
+import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable } from "@/components/data-table";
 import { DateField } from "@/components/date-field";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { ResourceField } from "@/components/resource-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,8 +36,26 @@ const STATUS_CONFIG = {
 };
 
 export default function SubscriptionsPage() {
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const invalidate = useInvalidateOrgQuery();
   const { data: subs, isLoading } = useOrgQuery(["subscriptions"], () => retrieveSubscriptions());
+
+  const openCreateModal = () => {
+    AppModal.open({
+      title: "New Subscription",
+      content: (
+        <CreateSubscriptionModalContent
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidate(["subscriptions"]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: true,
+    });
+  };
 
   const columns: any[] = [
     {
@@ -78,13 +96,12 @@ export default function SubscriptionsPage() {
           <div className="flex flex-col gap-6 p-6">
             <div className="flex items-center justify-between">
               <h1 className="text-3xl font-bold tracking-tight">Subscriptions</h1>
-              <Button className="gap-2" onClick={() => setIsModalOpen(true)}>
+              <Button className="gap-2" onClick={openCreateModal}>
                 <Plus className="h-4 w-4" /> Add Subscription
               </Button>
             </div>
 
             <DataTable columns={columns} data={subs ?? []} isLoading={isLoading} />
-            <CreateSubscriptionModal open={isModalOpen} onOpenChange={setIsModalOpen} />
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
@@ -101,14 +118,7 @@ const subscriptionSchema = Schema.object({
 
 type Subscription = Schema.infer<typeof subscriptionSchema>;
 
-export function CreateSubscriptionModal({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const invalidate = useInvalidateOrgQuery();
+export function CreateSubscriptionModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { data: allCustomers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
   const { data: allProducts, isLoading: isLoadingProducts } = useOrgQuery(["products"], () => retrieveProducts());
 
@@ -144,40 +154,33 @@ export function CreateSubscriptionModal({
     },
     onSuccess: () => {
       toast.success("Subscriptions created");
-      invalidate(["subscriptions"]);
-      onOpenChange(false);
+      onSuccess();
     },
   });
 
   const selectedProduct = allProducts?.find((p) => p.product.id === form.productId);
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="New Subscription"
-      footer={
-        <div className="flex w-full items-center justify-between">
-          <div className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
-            <ShieldCheck className="text-primary size-3.5" />
-            {form.customerIds.length} Clients • {selectedProduct?.product.name || "Awaiting Selection"}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              disabled={mutation.isPending}
-              onClick={() => mutation.mutate(form)}
-              isLoading={mutation.isPending}
-            >
-              Confirm & Create
-            </Button>
-          </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex w-full items-center justify-between border-b pb-4">
+        <div className="text-muted-foreground flex items-center gap-2 text-xs font-bold tracking-widest uppercase">
+          <ShieldCheck className="text-primary size-3.5" />
+          {form.customerIds.length} Clients • {selectedProduct?.product.name || "Awaiting Selection"}
         </div>
-      }
-    >
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate(form)}
+            isLoading={mutation.isPending}
+          >
+            Confirm & Create
+          </Button>
+        </div>
+      </div>
       <div className="mx-auto max-w-5xl space-y-10 py-4">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
           <ResourceField
@@ -257,6 +260,6 @@ export function CreateSubscriptionModal({
           </div>
         </div>
       </div>
-    </FullScreenModal>
+    </div>
   );
 }

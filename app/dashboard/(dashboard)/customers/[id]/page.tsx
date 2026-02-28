@@ -7,13 +7,13 @@ import { retrieveEvents } from "@/actions/event";
 import { getCurrentOrganization } from "@/actions/organization";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
-import { CustomerModal } from "@/app/dashboard/(dashboard)/customers/page";
-import { RefundModal } from "@/app/dashboard/(dashboard)/transactions/page";
+import { CustomerModalContent } from "@/app/dashboard/(dashboard)/customers/page";
+import { RefundModalContent } from "@/app/dashboard/(dashboard)/transactions/page";
+import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable } from "@/components/data-table";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
@@ -159,6 +159,7 @@ export default function CustomerDetailPage() {
     id?: string | null;
   }>({ type: null });
 
+  const invalidate = useInvalidateOrgQuery();
   const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
     retrievePayments(undefined, { customerId: customerId }, undefined)
   );
@@ -169,6 +170,62 @@ export default function CustomerDetailPage() {
     ["customer-events", customerId],
     () => retrieveEvents({ customerId })
   );
+
+  const openRefundModal = React.useCallback(
+    (paymentId: string) => {
+      AppModal.open({
+        title: "Create Refund",
+        description: "Process a refund for a transaction by providing the payment details.",
+        content: (
+          <RefundModalContent
+            initialPaymentId={paymentId}
+            onClose={AppModal.close}
+            onSuccess={() => {
+              invalidate(["payments", customerId]);
+              AppModal.close();
+            }}
+          />
+        ),
+        footer: null,
+        size: "small",
+        showCloseButton: true,
+      });
+    },
+    [customerId, invalidate]
+  );
+
+  const openCheckoutModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Create Checkout",
+      description: "Create a new checkout session for this customer.",
+      content: <CheckoutModalContent customerId={customerId} onClose={AppModal.close} />,
+      footer: null,
+      size: "small",
+      showCloseButton: true,
+    });
+  }, [customerId]);
+
+  const openEditModal = React.useCallback(() => {
+    if (!customer) return;
+    AppModal.open({
+      title: "Edit customer",
+      description: "Update customer information",
+      content: (
+        <CustomerModalContent
+          customer={customer}
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidate(["customer", customerId]);
+            invalidate(["customer-events", customerId]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: true,
+    });
+  }, [customer, customerId, invalidate]);
 
   const totalSpent = React.useMemo(
     () => payments?.filter((p) => p.status === "confirmed").reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0,
@@ -225,7 +282,7 @@ export default function CustomerDetailPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2 shadow-none" onClick={() => setModal({ type: "checkout" })}>
+              <Button variant="outline" className="gap-2 shadow-none" onClick={openCheckoutModal}>
                 <CreditCard className="h-4 w-4" /> <span>Checkout</span>
               </Button>
               <DropdownMenu>
@@ -235,7 +292,7 @@ export default function CustomerDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setModal({ type: "edit" })}>Edit customer</DropdownMenuItem>
+                  <DropdownMenuItem onClick={openEditModal}>Edit customer</DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive" onClick={() => setModal({ type: "delete" })}>
                     Delete
                   </DropdownMenuItem>
@@ -255,7 +312,7 @@ export default function CustomerDetailPage() {
                   actions={[
                     {
                       label: "Refund payment",
-                      onClick: (p) => setModal({ type: "refund", id: p.id }),
+                      onClick: (p) => openRefundModal(p.id),
                     },
                     {
                       label: "Copy ID",
@@ -336,7 +393,7 @@ export default function CustomerDetailPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Details</h3>
-                  <Button variant="ghost" size="icon-sm" onClick={() => setModal({ type: "edit" })}>
+                  <Button variant="ghost" size="icon-sm" onClick={openEditModal}>
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -361,18 +418,6 @@ export default function CustomerDetailPage() {
           </div>
         </div>
       </DashboardSidebarInset>
-
-      <RefundModal
-        open={modal.type === "refund"}
-        onOpenChange={() => setModal({ type: null })}
-        initialPaymentId={modal.id!}
-      />
-      <CustomerModal open={modal.type === "edit"} onOpenChange={() => setModal({ type: null })} customer={customer} />
-      <CheckoutModal
-        open={modal.type === "checkout"}
-        onOpenChange={() => setModal({ type: null })}
-        customerId={customerId}
-      />
     </DashboardSidebar>
   );
 }
@@ -386,7 +431,7 @@ const checkoutSchema = z.object({
   successMessage: z.string().optional(),
 });
 
-function CheckoutModal({ open, onOpenChange, customerId }: any) {
+function CheckoutModalContent({ customerId, onClose }: { customerId: string; onClose: () => void }) {
   const invalidate = useInvalidateOrgQuery();
   const [createdUrl, setCreatedUrl] = React.useState<string | null>(null);
   const { handleCopy } = useCopy();
@@ -402,7 +447,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
   });
 
   const handleClose = () => {
-    onOpenChange(false);
+    onClose();
     setCreatedUrl(null);
     form.reset();
   };
@@ -494,33 +539,21 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
   });
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={handleClose}
-      title={createdUrl ? "Checkout Link Ready" : "Create Checkout"}
-      description={
-        createdUrl
-          ? "The checkout session has been created. You can now share this link with the customer."
-          : "Create a new checkout session for this customer."
-      }
-      size="small"
-      footer={
-        <div className="flex w-full justify-end gap-2">
-          {createdUrl ? (
-            <Button onClick={handleClose}>Done</Button>
-          ) : (
-            <>
-              <Button variant="ghost" type="button" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button onClick={form.handleSubmit((d) => mutation.mutate(d))} isLoading={mutation.isPending}>
-                Create Checkout
-              </Button>
-            </>
-          )}
-        </div>
-      }
-    >
+    <div className="flex flex-col gap-6">
+      <div className="flex w-full justify-end gap-2 border-b pb-4">
+        {createdUrl ? (
+          <Button onClick={handleClose}>Done</Button>
+        ) : (
+          <>
+            <Button variant="ghost" type="button" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={form.handleSubmit((d) => mutation.mutate(d))} isLoading={mutation.isPending}>
+              Create Checkout
+            </Button>
+          </>
+        )}
+      </div>
       {createdUrl ? (
         <div className="space-y-6 py-4">
           <div className="bg-muted/50 flex items-center justify-between gap-4 rounded-xl border p-4">
@@ -591,7 +624,7 @@ function CheckoutModal({ open, onOpenChange, customerId }: any) {
           />
         </form>
       )}
-    </FullScreenModal>
+    </div>
   );
 }
 

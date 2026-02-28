@@ -2,10 +2,10 @@
 
 import * as React from "react";
 
+import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { NumberField } from "@/components/number-field";
 import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
@@ -194,7 +194,7 @@ const requestPayoutSchema = z
 
 type RequestPayoutFormData = z.infer<typeof requestPayoutSchema>;
 
-function RequestPayoutModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function RequestPayoutModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const form = RHF.useForm<RequestPayoutFormData>({
     resolver: zodResolver(requestPayoutSchema),
     defaultValues: {
@@ -211,26 +211,23 @@ function RequestPayoutModal({ open, onOpenChange }: { open: boolean; onOpenChang
   });
 
   React.useEffect(() => {
-    if (open) {
-      form.reset({
-        paymentMethod: "wallet",
-        amount: undefined,
-        walletAddress: "",
-        memo: "",
-      });
-    }
-  }, [open, form]);
+    form.reset({
+      paymentMethod: "wallet",
+      amount: undefined,
+      walletAddress: "",
+      memo: "",
+    });
+  }, [form]);
 
   const requestPayoutMutation = useMutation({
     mutationFn: async (data: RequestPayoutFormData) => {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       return data;
     },
     onSuccess: () => {
       toast.success("Payout request submitted successfully!");
       form.reset();
-      onOpenChange(false);
+      onSuccess();
     },
     onError: () => {
       toast.error("Failed to submit payout request");
@@ -242,22 +239,15 @@ function RequestPayoutModal({ open, onOpenChange }: { open: boolean; onOpenChang
   };
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Request Payout"
-      description="Request a payout to your preferred payment method"
-      footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={requestPayoutMutation.isPending}>
-            Cancel
-          </Button>
-          <Button onClick={form.handleSubmit(onSubmit)} disabled={requestPayoutMutation.isPending}>
-            {requestPayoutMutation.isPending ? "Submitting..." : "Request Payout"}
-          </Button>
-        </div>
-      }
-    >
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-end gap-2 border-b pb-4">
+        <Button variant="outline" onClick={onClose} disabled={requestPayoutMutation.isPending}>
+          Cancel
+        </Button>
+        <Button onClick={form.handleSubmit(onSubmit)} disabled={requestPayoutMutation.isPending}>
+          {requestPayoutMutation.isPending ? "Submitting..." : "Request Payout"}
+        </Button>
+      </div>
       <div className="space-y-6">
         <div>
           <h3 className="mb-1 text-sm font-semibold">Payment Method</h3>
@@ -351,7 +341,7 @@ function RequestPayoutModal({ open, onOpenChange }: { open: boolean; onOpenChang
           </div>
         )}
       </div>
-    </FullScreenModal>
+    </div>
   );
 }
 
@@ -359,7 +349,17 @@ function RequestPayoutModal({ open, onOpenChange }: { open: boolean; onOpenChang
 
 export default function PayoutPage() {
   const router = useRouter();
-  const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
+
+  const openRequestModal = () => {
+    AppModal.open({
+      title: "Request Payout",
+      description: "Request a payout to your preferred payment method",
+      content: <RequestPayoutModalContent onClose={AppModal.close} onSuccess={AppModal.close} />,
+      footer: null,
+      size: "small",
+      showCloseButton: true,
+    });
+  };
 
   const tableActions: TableAction<Payout>[] = [
     {
@@ -390,7 +390,7 @@ export default function PayoutPage() {
               <h1 className="text-3xl font-bold">Payout history</h1>
               <p className="text-muted-foreground mt-1 text-sm">See the payout history for this store</p>
             </div>
-            <Button onClick={() => setIsRequestModalOpen(true)}>
+            <Button onClick={openRequestModal}>
               <Plus className="mr-2 h-4 w-4" />
               Request Payout
             </Button>
@@ -410,8 +410,6 @@ export default function PayoutPage() {
             {mockPayouts.length} result{mockPayouts.length !== 1 ? "s" : ""}
           </div>
         </div>
-
-        <RequestPayoutModal open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen} />
       </DashboardSidebarInset>
     </DashboardSidebar>
   );

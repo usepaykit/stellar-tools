@@ -5,12 +5,12 @@ import { useState } from "react";
 
 import { createCustomerImage, retrieveCustomers } from "@/actions/customers";
 import { getCurrentOrganization } from "@/actions/organization";
+import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { FileUpload, FileWithPreview } from "@/components/file-upload";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import {
   type PhoneNumber,
   PhoneNumberField,
@@ -172,11 +172,52 @@ type CustomerFormData = z.infer<typeof customerSchema>;
 export default function CustomersPage() {
   const searchParams = useSearchParams();
   const [selectedFilter, setSelectedFilter] = useState<number>(0);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(searchParams?.get("mode") === "create");
-  const [isImportCsvOpen, setIsImportCsvOpen] = useState(false);
   const router = useRouter();
+  const invalidate = useInvalidateOrgQuery();
 
   const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
+
+  const openCreateModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Create customer",
+      description: "Add a new customer to your organization",
+      content: (
+        <CustomerModalContent
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidate(["customers"]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: true,
+    });
+  }, [invalidate]);
+
+  const openImportModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Import Customers",
+      description: "Map CSV columns to system fields or shrink them into metadata.",
+      content: (
+        <ImportCsvModalContent
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidate(["customers"]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: true,
+    });
+  }, [invalidate]);
+
+  React.useEffect(() => {
+    if (searchParams?.get("mode") === "create") openCreateModal();
+  }, [searchParams?.get("mode"), openCreateModal]);
 
   const handleRowClick = (customer: Customer) => {
     router.push(`/customers/${customer.id}`);
@@ -206,11 +247,11 @@ export default function CustomersPage() {
               <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold">Customers</h1>
                 <div className="flex items-center gap-2">
-                  <Button className="gap-2 shadow-none" variant="outline" onClick={() => setIsImportCsvOpen(true)}>
+                  <Button className="gap-2 shadow-none" variant="outline" onClick={openImportModal}>
                     <CloudUpload className="h-4 w-4" />
                     Import CSV
                   </Button>
-                  <Button className="gap-2 shadow-none" onClick={() => setIsCreateModalOpen(true)}>
+                  <Button className="gap-2 shadow-none" onClick={openCreateModal}>
                     <Plus className="h-4 w-4" />
                     Add customer
                   </Button>
@@ -246,24 +287,19 @@ export default function CustomersPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-
-      <CustomerModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
-      <ImportCsvModal open={isImportCsvOpen} onOpenChange={setIsImportCsvOpen} />
     </div>
   );
 }
 
-export function CustomerModal({
-  open,
-  onOpenChange,
+export function CustomerModalContent({
+  onClose,
+  onSuccess,
   customer,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
+  onSuccess: () => void;
   customer?: Partial<Customer> | null;
 }) {
-  const invalidate = useInvalidateOrgQuery();
-
   const isEditMode = !!customer;
   const form = RHF.useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -282,7 +318,7 @@ export function CustomerModal({
   });
 
   React.useEffect(() => {
-    if (open && customer) {
+    if (customer) {
       const phoneNumber = customer.phone ? phoneNumberFromString(customer.phone) : undefined;
       const metadata = (customer.metadata ?? null) as Record<string, string> | null;
       const metadataArray = Object.entries(metadata ?? {}).map(([key, value]) => ({
@@ -297,7 +333,7 @@ export function CustomerModal({
         avatar: [],
         metadata: metadataArray,
       });
-    } else if (open && !customer) {
+    } else {
       form.reset({
         name: "",
         email: "",
@@ -306,7 +342,7 @@ export function CustomerModal({
         metadata: [],
       });
     }
-  }, [open, customer, form]);
+  }, [customer, form]);
 
   const putCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
@@ -367,13 +403,10 @@ export function CustomerModal({
 
       return response.value;
     },
-    onSuccess: (customer) => {
-      invalidate(isEditMode ? ["customers", customer?.id] : ["customers"]);
-      invalidate(["customer-events", customer?.id]);
-
+    onSuccess: () => {
       toast.success(isEditMode ? "Customer updated successfully" : "Customer created successfully");
       form.reset();
-      onOpenChange(false);
+      onSuccess();
     },
     onError: (error: any) => {
       console.error(error);
@@ -381,48 +414,32 @@ export function CustomerModal({
     },
   });
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen && !form.formState.isSubmitting) {
-      form.reset();
-    }
-    onOpenChange(newOpen);
-  };
-
   const onSubmit = (data: CustomerFormData) => {
     putCustomerMutation.mutate(data);
   };
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={handleOpenChange}
-      title={isEditMode ? "Edit customer" : "Create customer"}
-      description={isEditMode ? "Update customer information" : "Add a new customer to your organization"}
-      size="full"
-      showCloseButton
-      footer={
-        <div className="flex justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            className="shadow-none"
-            disabled={form.formState.isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            isLoading={putCustomerMutation.isPending}
-            type="button"
-            onClick={form.handleSubmit(onSubmit)}
-            className="gap-2 shadow-none"
-            disabled={putCustomerMutation.isPending}
-          >
-            {isEditMode ? "Update customer" : "Create customer"}
-          </Button>
-        </div>
-      }
-    >
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-end gap-3 border-b pb-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          className="shadow-none"
+          disabled={form.formState.isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          isLoading={putCustomerMutation.isPending}
+          type="button"
+          onClick={form.handleSubmit(onSubmit)}
+          className="gap-2 shadow-none"
+          disabled={putCustomerMutation.isPending}
+        >
+          {isEditMode ? "Update customer" : "Create customer"}
+        </Button>
+      </div>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex h-full flex-col gap-8">
         <div className="flex flex-1 gap-8 overflow-hidden">
           <div className="flex-1 space-y-6 overflow-y-auto">
@@ -596,7 +613,7 @@ export function CustomerModal({
           </div>
         </div>
       </form>
-    </FullScreenModal>
+    </div>
   );
 }
 
@@ -624,7 +641,7 @@ const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) =>
   );
 };
 
-export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [csvFile, setCsvFile] = React.useState<FileWithPreview | null>(null);
   const [rawRows, setRawRows] = React.useState<Record<string, string>[]>([]);
   const [headers, setHeaders] = React.useState<string[]>([]);
@@ -736,38 +753,30 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
     },
     onSuccess: () => {
       toast.success(`${previewData.length} customers imported successfully`);
-      onOpenChange(false);
+      onSuccess();
     },
   });
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Import Customers"
-      description="Map CSV columns to system fields or shrink them into metadata."
-      size="full"
-      footer={
-        <div className="flex w-full items-center justify-between">
-          <p className="text-muted-foreground/60 text-[10px] font-black tracking-widest uppercase">
-            {rawRows.length} Rows Detected
-          </p>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              disabled={!rawRows.length}
-              isLoading={importCustomersMutation.isPending}
-              onClick={() => importCustomersMutation.mutate()}
-            >
-              {importCustomersMutation.isPending ? "Importing..." : "Import Data"}
-            </Button>
-          </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex w-full items-center justify-between border-b pb-4">
+        <p className="text-muted-foreground/60 text-[10px] font-black tracking-widest uppercase">
+          {rawRows.length} Rows Detected
+        </p>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={!rawRows.length}
+            isLoading={importCustomersMutation.isPending}
+            onClick={() => importCustomersMutation.mutate()}
+          >
+            {importCustomersMutation.isPending ? "Importing..." : "Import Data"}
+          </Button>
         </div>
-      }
-    >
+      </div>
       <div className="grid h-full grid-cols-1 gap-10 pb-10 lg:grid-cols-2">
         <div className="space-y-10">
           <CsvImportSection label="1. Data Source">
@@ -874,7 +883,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
           </div>
         </DialogContent>
       </Dialog>
-    </FullScreenModal>
+    </div>
   );
 }
 

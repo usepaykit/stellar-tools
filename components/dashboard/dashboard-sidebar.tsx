@@ -4,9 +4,8 @@ import * as React from "react";
 
 import { getCurrentUser, signOut } from "@/actions/auth";
 import { retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
-import { FullScreenModal } from "@/components/fullscreen-modal";
+import { AppModal } from "@/components/app-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DropdownMenu,
@@ -86,8 +85,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isSwitching, setIsSwitching] = React.useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = React.useState(false);
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
   const { data: orgContext } = useOrgContext();
   const { data: user } = useQuery({ queryKey: ["current-user"], queryFn: getCurrentUser });
@@ -121,17 +118,14 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   };
 
   const handleLogout = React.useCallback(async () => {
-    setIsLoggingOut(true);
     try {
       await signOut();
       toast.success("Logged out successfully");
       router.push("/signin");
-      setIsLogoutModalOpen(false);
+      AppModal.close();
     } catch (error) {
       toast.error("Failed to log out");
       console.error("Logout error:", error);
-    } finally {
-      setIsLoggingOut(false);
     }
   }, [router]);
 
@@ -318,7 +312,27 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive gap-2" onClick={() => setIsLogoutModalOpen(true)}>
+                  <DropdownMenuItem
+                    className="text-destructive gap-2"
+                    onClick={() =>
+                      AppModal.open({
+                        title: "Log out",
+                        description:
+                          "Are you sure you want to log out? You'll need to sign in again to access your account.",
+                        content: (
+                          <div className="py-4">
+                            <p className="text-muted-foreground text-sm">
+                              This will end your current session and you&apos;ll be redirected to the sign in page.
+                            </p>
+                          </div>
+                        ),
+                        size: "small",
+                        showCloseButton: true,
+                        primaryButton: { children: "Log out", variant: "destructive", onClick: handleLogout },
+                        secondaryButton: { children: "Cancel" },
+                      })
+                    }
+                  >
                     <LogOut className="size-4" /> Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -329,30 +343,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
         <SidebarRail />
       </Sidebar>
       {children}
-      <FullScreenModal
-        open={isLogoutModalOpen}
-        onOpenChange={setIsLogoutModalOpen}
-        title="Log out"
-        description="Are you sure you want to log out? You'll need to sign in again to access your account."
-        size="small"
-        showCloseButton={true}
-        footer={
-          <div className="flex items-center justify-end gap-3">
-            <Button variant="outline" onClick={() => setIsLogoutModalOpen(false)} disabled={isLoggingOut}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut} isLoading={isLoggingOut}>
-              {isLoggingOut ? "Logging out..." : "Log out"}
-            </Button>
-          </div>
-        }
-      >
-        <div className="py-4">
-          <p className="text-muted-foreground text-sm">
-            This will end your current session and you&apos;ll be redirected to the sign in page.
-          </p>
-        </div>
-      </FullScreenModal>
     </SidebarProvider>
   );
 }

@@ -3,7 +3,8 @@
 import * as React from "react";
 
 import { retrievePaymentWithDetails } from "@/actions/payment";
-import { RefundModal } from "@/app/dashboard/(dashboard)/transactions/page";
+import { RefundModalContent } from "@/app/dashboard/(dashboard)/transactions/page";
+import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -167,8 +168,28 @@ export default function TransactionDetailPage() {
   const paymentId = params?.id as string;
   const invalidateOrgQuery = useInvalidateOrgQuery();
 
-  const [isRefundModalOpen, setIsRefundModalOpen] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  const openRefundModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Create Refund",
+      description: "Process a refund for a transaction by providing the payment details.",
+      content: (
+        <RefundModalContent
+          initialPaymentId={paymentId}
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidateOrgQuery(["payment", paymentId]);
+            invalidateOrgQuery(["payments"]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "small",
+      showCloseButton: true,
+    });
+  }, [paymentId, invalidateOrgQuery]);
 
   const { data, isLoading, refetch } = useOrgQuery(
     ["payment", paymentId],
@@ -284,7 +305,7 @@ export default function TransactionDetailPage() {
                         View on Stellar Explorer
                       </DropdownMenuItem>
                       {payment.status === "confirmed" && (
-                        <DropdownMenuItem onClick={() => setIsRefundModalOpen(true)}>Process Refund</DropdownMenuItem>
+                        <DropdownMenuItem onClick={openRefundModal}>Process Refund</DropdownMenuItem>
                       )}
                       <DropdownMenuItem
                         onClick={() => {
@@ -548,7 +569,7 @@ export default function TransactionDetailPage() {
                       <Button
                         variant="outline"
                         className="hover:bg-muted/50 h-auto w-full justify-start gap-2.5 px-3 py-2.5 shadow-none transition-colors"
-                        onClick={() => setIsRefundModalOpen(true)}
+                        onClick={openRefundModal}
                       >
                         <Wallet className="h-4 w-4 shrink-0" />
                         <span className="text-sm font-medium">Process Refund</span>
@@ -561,14 +582,6 @@ export default function TransactionDetailPage() {
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
-
-      <RefundModal
-        open={isRefundModalOpen}
-        onOpenChange={(open) => {
-          setIsRefundModalOpen(open);
-        }}
-        initialPaymentId={paymentId}
-      />
     </div>
   );
 }

@@ -19,8 +19,6 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
     prefix = "/landing";
   }
 
-  console.log({ host, prefix });
-
   url.pathname = `${prefix}${url.pathname}`;
 
   return NextResponse.rewrite(url);

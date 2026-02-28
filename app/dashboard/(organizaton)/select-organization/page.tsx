@@ -5,8 +5,8 @@ import * as React from "react";
 import { retrieveAccount } from "@/actions/account";
 import { postOrganizationAndSecret, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { retrieveOwnerPlan } from "@/actions/plan";
+import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
-import { FullScreenModal } from "@/components/fullscreen-modal";
 import { GitHub } from "@/components/icon";
 import { type PhoneNumber, PhoneNumberField, phoneNumberToString } from "@/components/phone-number-field";
 import { TextAreaField, TextField } from "@/components/text-field";
@@ -29,8 +29,6 @@ import { z } from "zod";
 export default function SelectOrganizationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const showCreate = searchParams?.get("create") === "true";
-  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(showCreate ? true : false);
 
   const { data: organizations, isLoading } = useQuery({
     queryKey: ["organizations"],
@@ -38,6 +36,30 @@ export default function SelectOrganizationPage() {
   });
 
   const hasOrganizations = !!(organizations && organizations.length > 0);
+
+  const openCreateModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Create Organization",
+      description: "Set up your workspace to get started",
+      content: (
+        <CreateOrganizationModalContent
+          hasOrganizations={hasOrganizations}
+          onClose={AppModal.close}
+          onSuccess={() => {
+            AppModal.close();
+            router.push("/");
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: hasOrganizations,
+    });
+  }, [hasOrganizations, router]);
+
+  React.useEffect(() => {
+    if (searchParams?.get("create") === "true") openCreateModal();
+  }, [searchParams?.get("create"), openCreateModal]);
 
   const handleSelectOrg = React.useCallback(
     async (orgId: string) => {
@@ -88,7 +110,7 @@ export default function SelectOrganizationPage() {
 
             <div
               className="hover:bg-accent/50 group flex cursor-pointer items-center gap-4 rounded-lg border-2 border-dashed p-4 transition-all"
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={openCreateModal}
             >
               <div className="bg-muted flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
                 <Plus className="h-6 w-6" />
@@ -101,12 +123,6 @@ export default function SelectOrganizationPage() {
           </div>
         </div>
       </div>
-
-      <CreateOrganizationModal
-        open={isCreateModalOpen}
-        onOpenChange={(open) => setIsCreateModalOpen(open)}
-        hasOrganizations={hasOrganizations}
-      />
     </>
   );
 }
@@ -164,17 +180,15 @@ const createOrganizationSchema = z.object({
 
 type CreateOrganizationFormData = z.infer<typeof createOrganizationSchema>;
 
-const CreateOrganizationModal = ({
-  open,
-  onOpenChange,
+const CreateOrganizationModalContent = ({
   hasOrganizations,
+  onClose,
+  onSuccess,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   hasOrganizations: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
 }) => {
-  const router = useRouter();
-
   const form = RHF.useForm<CreateOrganizationFormData>({
     resolver: zodResolver(createOrganizationSchema),
     defaultValues: {
@@ -219,8 +233,7 @@ const CreateOrganizationModal = ({
       toast.success("Organization created successfully");
       await setCurrentOrganization(org.id);
       form.reset();
-      onOpenChange(false);
-      router.push("/");
+      onSuccess();
     },
     onError: (error) => {
       console.error(error);
@@ -242,51 +255,36 @@ const CreateOrganizationModal = ({
       form.handleSubmit((data) => createOrgMutation.mutateAsync(data))();
     },
     {
-      enabled: open && !createOrgMutation.isPending,
+      enabled: !createOrgMutation.isPending,
       enableOnFormTags: ["input", "textarea"],
     },
-    [open, createOrgMutation.isPending, form]
+    [createOrgMutation.isPending, form]
   );
 
   return (
-    <FullScreenModal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Create Organization"
-      description="Set up your workspace to get started"
-      size="full"
-      showCloseButton={hasOrganizations}
-      footer={
-        <div className="flex w-full items-center justify-between">
-          <div />
-
-          <div className="flex gap-2">
-            {hasOrganizations && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={createOrgMutation.isPending}
-              >
-                Cancel
-              </Button>
-            )}
-            <Button
-              type="button"
-              onClick={async () => {
-                const isValid = await form.trigger();
-                if (isValid) createOrgMutation.mutateAsync(form.getValues());
-              }}
-              disabled={createOrgMutation.isPending}
-              isLoading={createOrgMutation.isPending}
-              className="gap-2"
-            >
-              {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
+    <div className="flex flex-col gap-6">
+      <div className="flex w-full items-center justify-between border-b pb-4">
+        <div />
+        <div className="flex gap-2">
+          {hasOrganizations && (
+            <Button type="button" variant="ghost" onClick={onClose} disabled={createOrgMutation.isPending}>
+              Cancel
             </Button>
-          </div>
+          )}
+          <Button
+            type="button"
+            onClick={async () => {
+              const isValid = await form.trigger();
+              if (isValid) createOrgMutation.mutateAsync(form.getValues());
+            }}
+            disabled={createOrgMutation.isPending}
+            isLoading={createOrgMutation.isPending}
+            className="gap-2"
+          >
+            {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
+          </Button>
         </div>
-      }
-    >
+      </div>
       <form
         onSubmit={form.handleSubmit((data) => createOrgMutation.mutateAsync(data))}
         className="grid h-full w-full gap-8 lg:grid-cols-2"
@@ -520,6 +518,6 @@ const CreateOrganizationModal = ({
           </div>
         </div>
       </form>
-    </FullScreenModal>
+    </div>
   );
 };

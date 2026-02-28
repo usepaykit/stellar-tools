@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { retrieveProductsWithAsset } from "@/actions/product";
+import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -29,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Product as ProductDb } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import {
   CheckCircle2,
   ChevronRight,
@@ -41,13 +42,12 @@ import {
   Pencil,
   Plus,
 } from "lucide-react";
+import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import { type Product, ProductsModal } from "../page";
-
-type ProductDetail = ProductDb & { assetCode?: string };
+import { type Product, ProductsModalContent } from "../page";
 
 const productTypeLabels: Record<string, string> = {
   one_time: "One-off",
@@ -156,13 +156,11 @@ function ProductDetailSkeleton() {
 }
 
 export default function ProductDetailPage() {
-  const params = useParams();
-  const id = params?.id as string;
-
+  const { id } = useParams() as { id: string };
+  const invalidate = useInvalidateOrgQuery();
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
 
-  const { data: productWithAsset, isLoading } = useOrgQuery(
+  const { data: product, isLoading } = useOrgQuery(
     ["products", id],
     () => retrieveProductsWithAsset(undefined, undefined, id),
     {
@@ -170,32 +168,36 @@ export default function ProductDetailPage() {
         const first = data[0];
         if (!first) return null;
         return {
-          product: first.product,
-          asset: first.asset,
+          ...first.product,
+          assetCode: first.asset.code,
         };
       },
     }
   );
 
-  const product: ProductDetail | null = React.useMemo(() => {
-    if (!productWithAsset) return null;
-    return {
-      ...productWithAsset.product,
-      assetCode: productWithAsset.asset.code,
-    };
-  }, [productWithAsset]);
+  const isMetered = product?.type === "metered";
+  const isSubscription = product?.type === "subscription";
 
-  // Map ProductDetail to Product shape for the shared ProductsModal
-  const productForModal: Product | null = React.useMemo(() => {
-    if (!product) return null;
-    return {
-      id: product.id,
-      name: product.name,
+  const formatDate = (date: any) => (date ? moment(date).format("MMM D, YYYY, h:mm A") : "—");
+
+  const createdAtLabel = formatDate(product?.createdAt);
+  const updatedAtLabel = formatDate(product?.updatedAt);
+
+  const formatCurrency = (amt: any, code: any) =>
+    `${Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${code ?? "XLM"}`;
+
+  const mainPriceDisplay = product
+    ? isMetered
+      ? "Usage-based"
+      : formatCurrency(product.priceAmount, product.assetCode)
+    : "";
+
+  const openEditModal = React.useCallback(() => {
+    if (!product) return;
+
+    const productForModal: Product = {
+      ...product,
       description: product.description ?? null,
-      status: product.status,
-      createdAt: product.createdAt,
-      updatedAt: product.updatedAt,
-      type: product.type,
       images: product.images ?? [],
       metadata: product.metadata ?? {},
       pricing: {
@@ -209,44 +211,25 @@ export default function ProductDetailPage() {
       unitsPerCredit: product.unitsPerCredit ?? null,
       creditsGranted: product.creditsGranted ?? null,
     };
-  }, [product]);
 
-  const isMetered = product?.type === "metered";
-  const isSubscription = product?.type === "subscription";
-
-  const createdAtLabel =
-    product && product.createdAt instanceof Date
-      ? product.createdAt.toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })
-      : product
-        ? String(product.createdAt)
-        : "";
-
-  const updatedAtLabel =
-    product && product.updatedAt instanceof Date
-      ? product.updatedAt.toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        })
-      : product
-        ? String(product.updatedAt)
-        : "";
-
-  const mainPriceDisplay = product
-    ? product.type === "metered"
-      ? "Usage-based"
-      : `${Number(product.priceAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${product.assetCode ?? "XLM"}`
-    : "";
+    AppModal.open({
+      title: "Edit product",
+      content: (
+        <ProductsModalContent
+          editingProduct={productForModal}
+          onClose={AppModal.close}
+          onSuccess={() => {
+            invalidate(["products", id]);
+            invalidate(["products"]);
+            AppModal.close();
+          }}
+        />
+      ),
+      footer: null,
+      size: "full",
+      showCloseButton: true,
+    });
+  }, [product, id, invalidate]);
 
   if (isLoading) {
     return (
@@ -363,7 +346,7 @@ export default function ProductDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-2" onClick={() => setIsEditModalOpen(true)}>
+                <Button variant="outline" size="sm" className="gap-2" onClick={openEditModal}>
                   <Edit className="h-4 w-4" />
                   Edit product
                 </Button>
@@ -463,7 +446,7 @@ export default function ProductDetailPage() {
                 <section>
                   <div className="flex items-center gap-2">
                     <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Details</h2>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsEditModalOpen(true)}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={openEditModal}>
                       <Pencil className="h-3.5 w-3.5" />
                       <span className="sr-only">Edit details</span>
                     </Button>
@@ -506,7 +489,7 @@ export default function ProductDetailPage() {
                 <section>
                   <div className="flex items-center gap-2">
                     <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Metadata</h2>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsEditModalOpen(true)}>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={openEditModal}>
                       <Pencil className="h-3.5 w-3.5" />
                       <span className="sr-only">Edit metadata</span>
                     </Button>
@@ -525,8 +508,6 @@ export default function ProductDetailPage() {
                 </section>
               </div>
             </div>
-
-            <ProductsModal open={isEditModalOpen} onOpenChange={setIsEditModalOpen} editingProduct={productForModal} />
           </div>
         </DashboardSidebarInset>
       </DashboardSidebar>
