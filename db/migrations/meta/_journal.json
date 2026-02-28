@@ -57,6 +57,13 @@
       "when": 1770762124507,
       "tag": "0007_smooth_dagger",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1772264772994,
+      "tag": "0008_fat_anthem",
+      "breakpoints": true
     }
   ]
 }

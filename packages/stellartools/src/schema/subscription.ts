@@ -77,6 +77,11 @@ export interface Subscription {
    * The environment of the subscription.
    */
   environment: Environment;
+
+  /**
+   * The number of trial days for the subscription.
+   */
+  trialDays: number;
 }
 
 export const subscriptionSchema = schemaFor<Subscription>()(
@@ -95,6 +100,7 @@ export const subscriptionSchema = schemaFor<Subscription>()(
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}),
     environment: environmentSchema,
+    trialDays: z.number().default(0),
   })
 );
 
@@ -107,6 +113,7 @@ export const createSubscriptionSchema = z.object({
     from: z.coerce.date(),
     to: z.coerce.date(),
   }),
+  trialDays: z.number().default(0).optional().nullable(),
 });
 
 export type CreateSubscription = z.infer<typeof createSubscriptionSchema>;

@@ -339,6 +339,7 @@ export const subscriptions = pgTable("subscription", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
   environment: networkEnum("network").notNull(),
+  trialDays: integer("trial_days").default(0),
 });
 
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "confirmed", "failed"]);
