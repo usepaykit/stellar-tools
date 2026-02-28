@@ -4,9 +4,21 @@ import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { validateLimits } from "@/actions/plan";
 import { Customer, CustomerMetadata, Network, ResolvedCustomer, customerWallets, customers, db } from "@/db";
+import { FileUploadApi } from "@/integrations/file-upload";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
 import { SQL, and, eq, inArray, or } from "drizzle-orm";
+
+export const createCustomerImage = async (formData: FormData): Promise<string | undefined> => {
+  const imageFile = formData.get("image");
+
+  if (imageFile) {
+    const uploadResult = await new FileUploadApi().upload([imageFile as File]);
+    return uploadResult?.[0] ?? undefined;
+  }
+
+  return undefined;
+};
 
 export const postCustomers = async (
   params: Omit<Customer, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">[],
@@ -194,6 +206,7 @@ export const upsertCustomer = async (
         name: lookupArray.filter((p) => "name" in p).map((p) => p.name)[0] ?? null,
         phone: null,
         metadata: lookupArray.filter((p) => "metadata" in p).map((p) => p.metadata)[0] ?? null,
+        image: lookupArray.filter((p) => "image" in p).map((p) => p.image)[0] as string | null,
       },
     ],
     orgId,

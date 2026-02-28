@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 
-import { postCustomers, retrieveCustomers } from "@/actions/customers";
+import { createCustomerImage, retrieveCustomers } from "@/actions/customers";
 import { getCurrentOrganization } from "@/actions/organization";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -20,6 +20,7 @@ import {
 import { SelectField } from "@/components/select-field";
 import { TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -74,7 +75,18 @@ const columns: ColumnDef<ResolvedCustomer>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => <SortableHeader column={column} label="Customer" ariaLabelPrefix="Sort by name" />,
-    cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+    cell: ({ row }) => (
+      <div className="flex items-center gap-3">
+        <Avatar>
+          {row.original.image ? (
+            <AvatarImage src={row.original.image} alt={`${row?.original?.name}`} />
+          ) : (
+            <AvatarFallback>{row.original.name?.[0] ?? "?"}</AvatarFallback>
+          )}
+        </Avatar>
+        <span className="font-medium">{row.original.name}</span>
+      </div>
+    ),
     enableSorting: true,
   },
   {
@@ -139,6 +151,11 @@ const customerSchema = z.object({
     number: z.string(),
     countryCode: z.string().min(1, "Country code is required"),
   }),
+  avatar: z
+    .array(z.any())
+    .transform((val) => val as FileWithPreview[])
+    .default([])
+    .optional(),
   metadata: z
     .array(
       z.object({
@@ -254,6 +271,7 @@ export function CustomerModal({
       name: "",
       email: "",
       phoneNumber: { number: "", countryCode: "US" },
+      avatar: [],
       metadata: [],
     },
   });
@@ -266,18 +284,17 @@ export function CustomerModal({
   React.useEffect(() => {
     if (open && customer) {
       const phoneNumber = customer.phone ? phoneNumberFromString(customer.phone) : undefined;
-
-      const metadataArray = customer.metadata
-        ? Object.entries(customer.metadata).map(([key, value]) => ({
-            key,
-            value: String(value),
-          }))
-        : [];
+      const metadata = (customer.metadata ?? null) as Record<string, string> | null;
+      const metadataArray = Object.entries(metadata ?? {}).map(([key, value]) => ({
+        key,
+        value: String(value),
+      }));
 
       form.reset({
         name: customer.name || "",
         email: customer.email || "",
         phoneNumber,
+        avatar: [],
         metadata: metadataArray,
       });
     } else if (open && !customer) {
@@ -285,6 +302,7 @@ export function CustomerModal({
         name: "",
         email: "",
         phoneNumber: { number: "", countryCode: "US" },
+        avatar: [],
         metadata: [],
       });
     }
@@ -311,12 +329,27 @@ export function CustomerModal({
         {} as Record<string, string>
       );
 
+      const hasNewImage = Array.isArray(data.avatar) && data.avatar.length > 0 && data.avatar[0] instanceof File;
+      let imageUrl: string | undefined = customer?.image ?? undefined;
+
+      if (hasNewImage && data.avatar?.length) {
+        const formData = new FormData();
+        formData.append("image", data.avatar[0] as File);
+        const uploaded = await createCustomerImage(formData);
+        if (uploaded) imageUrl = uploaded;
+      }
+
+      const payload = {
+        name: data.name,
+        email: data.email,
+        phone: phoneString,
+        metadata: metadataRecord,
+        ...(imageUrl !== undefined && { image: imageUrl }),
+      };
+
       if (isEditMode) {
         const response = await api.put<Customer>(`/customers/${customer?.id}`, {
-          name: data.name,
-          email: data.email,
-          phone: phoneString,
-          metadata: metadataRecord,
+          ...payload,
           source: "Dashboard",
         });
 
@@ -326,10 +359,7 @@ export function CustomerModal({
       }
 
       const response = await api.post<Customer>("/customers", {
-        name: data.name,
-        email: data.email,
-        phone: phoneString,
-        metadata: metadataRecord,
+        ...payload,
         wallets: [],
       });
 
@@ -458,6 +488,32 @@ export function CustomerModal({
                 );
               }}
             />
+
+            <RHF.Controller
+              control={form.control}
+              name="avatar"
+              render={({ field }) => (
+                <div className="">
+                  <FileUpload
+                    label="Customer image"
+                    labelClassName="text-left"
+                    id="customer-avatar"
+                    value={field.value ?? []}
+                    onFilesChange={field.onChange}
+                    placeholder="Upload customer image"
+                    description="PNG, JPG, WEBP up to 5MB"
+                    className="border-muted bg-background flex h-[220px] w-[220px] flex-col justify-center rounded-full border-2 border-dashed"
+                    dropzoneAccept={{
+                      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+                    }}
+                    dropzoneMaxSize={5 * 1024 * 1024}
+                    dropzoneMultiple={false}
+                    enableTransformation
+                    targetFormat="image/png"
+                  />
+                </div>
+              )}
+            />
           </div>
 
           <Separator orientation="vertical" className="h-auto" />
@@ -544,7 +600,7 @@ export function CustomerModal({
   );
 }
 
-type MappingTarget = "name" | "email" | "phone" | "metadata" | "none";
+type MappingTarget = "name" | "email" | "phone" | "image" | "metadata" | "none";
 
 interface ColumnMapping {
   csvHeader: string;
@@ -595,7 +651,11 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
               ? "email"
               : h.toLowerCase().includes("name")
                 ? "name"
-                : "metadata",
+                : h.toLowerCase().includes("phone")
+                  ? "phone"
+                  : h.toLowerCase().includes("image")
+                    ? "image"
+                    : "metadata",
             metadataKey: h,
           }))
         );
@@ -606,7 +666,8 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
   const schemaLogic = React.useMemo(() => {
     return mappings.reduce((acc, m) => {
       if (m.target !== "none" && (m.target === "metadata" || m.target !== m.csvHeader)) {
-        acc[m.csvHeader] = { from: "CSV", to: m.target === "metadata" ? `meta.${m.metadataKey}` : m.target };
+        const targetPath = m.target === "metadata" ? `meta.${m.metadataKey}` : m.target;
+        acc[m.csvHeader] = { from: "CSV", to: targetPath };
       }
       return acc;
     }, {} as any);
@@ -619,6 +680,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
       { accessorKey: "name", header: "Name" },
       { accessorKey: "email", header: "Email" },
       { accessorKey: "phone", header: "Phone" },
+      { accessorKey: "image", header: "Image" },
       {
         accessorKey: "metadata",
         header: "Metadata",
@@ -661,6 +723,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
           name: row.name,
           email: row.email,
           phone: row.phone,
+          image: row.image,
           metadata: row.metadata,
           wallets: [],
           source: "CSV Import",
@@ -737,6 +800,7 @@ export function ImportCsvModal({ open, onOpenChange }: { open: boolean; onOpenCh
                           { label: "Name", value: "name" },
                           { label: "Email", value: "email" },
                           { label: "Phone", value: "phone" },
+                          { label: "Image", value: "image" },
                           { label: "Metadata", value: "metadata" },
                           { label: "Ignore", value: "none" },
                         ]}

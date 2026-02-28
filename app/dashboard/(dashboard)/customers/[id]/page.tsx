@@ -17,6 +17,7 @@ import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -174,11 +175,19 @@ export default function CustomerDetailPage() {
     [payments]
   );
 
-  const isNew = customer && new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
-
   if (customerLoading) return <CustomerDetailSkeleton />;
 
   if (!customer) return <NotFound router={router} />;
+
+  const isNew = new Date().getTime() - customer.createdAt.getTime() < 7 * 24 * 60 * 60 * 1000;
+
+  const imageUrl = customer.image ?? null;
+  const initials =
+    customer.name
+      ?.split(" ")
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase() ?? "?";
 
   return (
     <DashboardSidebar>
@@ -199,12 +208,21 @@ export default function CustomerDetailPage() {
           </Breadcrumb>
 
           <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold sm:text-3xl">{customer.name}</h1>
-                {isNew && <Badge variant="secondary">New customer</Badge>}
+            <div className="flex items-start gap-3">
+              <Avatar className="h-12 w-12 sm:h-14 sm:w-14">
+                {imageUrl ? (
+                  <AvatarImage src={imageUrl} alt={customer.name ?? "Customer avatar"} />
+                ) : (
+                  <AvatarFallback className="text-muted-foreground text-lg font-semibold">{initials}</AvatarFallback>
+                )}
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold sm:text-3xl">{customer.name}</h1>
+                  {isNew && <Badge variant="secondary">New customer</Badge>}
+                </div>
+                <p className="text-muted-foreground text-sm">{customer.email}</p>
               </div>
-              <p className="text-muted-foreground text-sm">{customer.email}</p>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="gap-2 shadow-none" onClick={() => setModal({ type: "checkout" })}>

@@ -31,6 +31,7 @@ export const POST = async (req: NextRequest) => {
           name: customer.name,
           email: customer.email,
           phone: customer.phone ?? null,
+          image: customer.image ?? null,
           metadata: customer.metadata ?? null,
           wallets: customer.wallets ?? [],
         })),
