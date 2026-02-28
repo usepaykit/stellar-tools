@@ -25,7 +25,9 @@ import { Calendar, CheckCircle2, Clock, Pause, Plus, ShieldCheck, XCircle } from
 import moment from "moment";
 import { toast } from "sonner";
 
-const formatXLM = (stroops: number) => (stroops / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2 });
+const STROOPS_PER_XLM = 10_000_000;
+const formatXLM = (stroops: number) =>
+  (stroops / STROOPS_PER_XLM).toLocaleString(undefined, { minimumFractionDigits: 2 });
 const formatDate = (date: Date) => moment(date).format("MMM D, YYYY");
 
 const STATUS_CONFIG = {

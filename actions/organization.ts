@@ -397,7 +397,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
   const revenueChartQuery = db
     .select({
       date: sql<string>`date_trunc('day', ${payments.createdAt})::text`,
-      amount: sql<number>`sum(${payments.amount})::int`,
+      amount: sql<number>`sum(${payments.amount})::bigint`,
     })
     .from(payments)
     .where(
@@ -426,13 +426,30 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
-  const [metrics, revenueChart, customersChart, subscriptionsChart, periodRevenue] = await Promise.all([
+  const trialsChartQuery = db
+    .select({
+      date: sql<string>`date_trunc('day', ${subscriptions.createdAt})::text`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.status, "trialing"),
+        gte(subscriptions.createdAt, since)
+      )
+    )
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
+
+  const [metrics, revenueChart, customersChart, subscriptionsChart, trialsChart, periodRevenue] = await Promise.all([
     metricsPromise,
     revenueChartQuery,
     customersChartQuery,
     subscriptionsChartQuery,
+    trialsChartQuery,
     db
-      .select({ sum: sql<number>`coalesce(sum(${payments.amount}), 0)` })
+      .select({ sum: sql<number>`coalesce(sum(${payments.amount}), 0)::bigint` })
       .from(payments)
       .where(
         and(
@@ -441,7 +458,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
           gte(payments.createdAt, since)
         )
       )
-      .then((r) => r[0].sum),
+      .then((r) => Number(r[0]?.sum ?? 0)),
   ]);
 
   const result = {
@@ -450,6 +467,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     customersChart,
     periodRevenue,
     subscriptionsChart,
+    trialsChart,
   };
 
   return {
@@ -467,6 +485,11 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
       ),
       subscriptions: normalizeTimeSeries(
         result.subscriptionsChart.map((s) => ({ date: s.date.split(" ")[0], count: s.count })),
+        28,
+        "day"
+      ),
+      trials: normalizeTimeSeries(
+        result.trialsChart.map((t) => ({ date: t.date.split(" ")[0], count: t.count })),
         28,
         "day"
       ),

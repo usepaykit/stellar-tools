@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -81,9 +80,14 @@ const AppModalUI = ({
                 {description && <DialogDescription className="text-base">{description}</DialogDescription>}
               </DialogHeader>
 
-              <ScrollArea className={cn("min-h-0 flex-1", size !== "full" && "max-h-[60vh]")}>
-                <div className="px-6 py-6">{content}</div>
-              </ScrollArea>
+              <div
+                className={cn(
+                  "flex min-h-0 flex-1 flex-col overflow-hidden",
+                  size !== "full" && "max-h-[60vh]"
+                )}
+              >
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-6">{content}</div>
+              </div>
 
               {footer && <DialogFooter className="bg-muted/30 shrink-0 border-t px-6 py-4">{footer}</DialogFooter>}
             </motion.div>

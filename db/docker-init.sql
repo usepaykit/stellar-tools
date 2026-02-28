@@ -17,12 +17,11 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO root;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO root;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO root;
 
-INSERT INTO public.asset (code, issuer, network) VALUES
-  ('XLM', 'native', 'testnet'),
-  ('XLM', 'native', 'mainnet'),
-  ('USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'testnet'),
-  ('USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'mainnet');
-
+INSERT INTO public.asset (id, code, issuer, network) VALUES
+  ('ast_1', 'XLM', 'native', 'testnet'),
+  ('ast_2', 'XLM', 'native', 'mainnet'),
+  ('ast_3', 'USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'testnet'),
+  ('ast_4', 'USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'mainnet');
 
 INSERT INTO public.plan
 (id, name, description, billing_events, customers, subscriptions, usage_records, payments, organizations, products, custom, monthly_amount_usd_cents, yearly_amount_usd_cents, payment_methods)

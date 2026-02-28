@@ -77,9 +77,9 @@ const columns: ColumnDef<ResolvedCustomer>[] = [
     header: ({ column }) => <SortableHeader column={column} label="Customer" ariaLabelPrefix="Sort by name" />,
     cell: ({ row }) => (
       <div className="flex items-center gap-3">
-        <Avatar>
+        <Avatar className="border-border h-8 w-8 shrink-0 rounded-full border text-xs">
           {row.original.image ? (
-            <AvatarImage src={row.original.image} alt={`${row?.original?.name}`} />
+            <AvatarImage src={row.original.image} alt={row.original.name ?? "Customer"} />
           ) : (
             <AvatarFallback>{row.original.name?.[0] ?? "?"}</AvatarFallback>
           )}
@@ -419,30 +419,13 @@ export function CustomerModalContent({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-end gap-3 border-b pb-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClose}
-          className="shadow-none"
-          disabled={form.formState.isSubmitting}
-        >
-          Cancel
-        </Button>
-        <Button
-          isLoading={putCustomerMutation.isPending}
-          type="button"
-          onClick={form.handleSubmit(onSubmit)}
-          className="gap-2 shadow-none"
-          disabled={putCustomerMutation.isPending}
-        >
-          {isEditMode ? "Update customer" : "Create customer"}
-        </Button>
-      </div>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex h-full flex-col gap-8">
-        <div className="flex flex-1 gap-8 overflow-hidden">
-          <div className="flex-1 space-y-6 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex min-h-0 flex-1 flex-col gap-8 overflow-hidden"
+      >
+        <div className="flex min-h-0 flex-1 gap-8 overflow-hidden">
+          <div className="flex-1 space-y-6 overflow-y-auto min-h-0">
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
@@ -535,7 +518,7 @@ export function CustomerModalContent({
 
           <Separator orientation="vertical" className="h-auto" />
 
-          <div className="flex-1 space-y-6 overflow-y-auto">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
             <div>
               <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
               <p className="text-muted-foreground text-sm">
@@ -613,6 +596,26 @@ export function CustomerModalContent({
           </div>
         </div>
       </form>
+      <div className="flex shrink-0 justify-end gap-3 border-t bg-background pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          className="shadow-none"
+          disabled={form.formState.isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          isLoading={putCustomerMutation.isPending}
+          type="button"
+          onClick={form.handleSubmit(onSubmit)}
+          className="gap-2 shadow-none"
+          disabled={putCustomerMutation.isPending}
+        >
+          {isEditMode ? "Update customer" : "Create customer"}
+        </Button>
+      </div>
     </div>
   );
 }

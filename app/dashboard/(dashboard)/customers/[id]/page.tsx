@@ -266,7 +266,7 @@ export default function CustomerDetailPage() {
 
           <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
-              <Avatar className="h-12 w-12 sm:h-14 sm:w-14">
+              <Avatar className="border-border h-12 w-12 rounded-full border sm:h-14 sm:w-14">
                 {imageUrl ? (
                   <AvatarImage src={imageUrl} alt={customer.name ?? "Customer avatar"} />
                 ) : (

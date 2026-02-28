@@ -196,7 +196,7 @@ export default function DashboardPage() {
                 value={displayStats.activeTrials}
                 subtitle="In total"
                 icon={<HourglassIcon className="text-muted-foreground size-5" />}
-                sparkData={stats.charts.revenue}
+                sparkData={stats.charts.trials}
                 color="var(--chart-1)"
                 usage={displayStats.activeTrials}
                 max={subsLimit}

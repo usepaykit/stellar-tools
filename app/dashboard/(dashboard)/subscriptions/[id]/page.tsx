@@ -23,7 +23,9 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 // --- Helpers ---
-const formatXLM = (stroops: number) => (stroops / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: 2 });
+const STROOPS_PER_XLM = 10_000_000;
+const formatXLM = (stroops: number) =>
+  (stroops / STROOPS_PER_XLM).toLocaleString(undefined, { minimumFractionDigits: 2 });
 const formatDate = (date: Date | string) =>
   new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(date));
 const getExplorerUrl = (hash: string, env: string) =>

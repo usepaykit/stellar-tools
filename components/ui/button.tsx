@@ -1,12 +1,15 @@
+"use client";
+
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
 import { Slot, Slottable } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
+import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "relative inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive overflow-hidden",
   {
     variants: {
       variant: {
@@ -52,13 +55,43 @@ function Button({
 
   return (
     <Comp
-      data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       disabled={isLoading || props.disabled}
       {...props}
     >
-      <Slottable>{children}</Slottable>
-      {isLoading && <Loader2 className="size-4 animate-spin" />}
+      <span className="grid h-full w-full items-center justify-center">
+        <span className="flex items-center justify-center [grid-area:1/1]">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {!isLoading ? (
+              <motion.span
+                key="content"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="inline-flex items-center justify-center gap-2"
+              >
+                <Slottable>{children}</Slottable>
+              </motion.span>
+            ) : (
+              <motion.span
+                key="loader"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="flex items-center justify-center"
+              >
+                <Loader2 className="size-4 animate-spin" />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </span>
+
+        <span className="pointer-events-none invisible flex items-center justify-center gap-2 [grid-area:1/1]">
+          {children}
+        </span>
+      </span>
     </Comp>
   );
 }
