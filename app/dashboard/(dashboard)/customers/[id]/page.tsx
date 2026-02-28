@@ -17,6 +17,7 @@ import { FullScreenModal } from "@/components/fullscreen-modal";
 import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -27,7 +28,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -213,9 +213,7 @@ export default function CustomerDetailPage() {
                 {imageUrl ? (
                   <AvatarImage src={imageUrl} alt={customer.name ?? "Customer avatar"} />
                 ) : (
-                  <AvatarFallback className="text-muted-foreground text-lg font-semibold">
-                    {initials}
-                  </AvatarFallback>
+                  <AvatarFallback className="text-muted-foreground text-lg font-semibold">{initials}</AvatarFallback>
                 )}
               </Avatar>
               <div>

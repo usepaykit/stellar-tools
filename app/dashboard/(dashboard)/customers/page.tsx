@@ -502,7 +502,7 @@ export function CustomerModal({
                     onFilesChange={field.onChange}
                     placeholder="Upload customer image"
                     description="PNG, JPG, WEBP up to 5MB"
-                    className="border-muted bg-background flex h-[220px] w-[220px] flex-col  justify-center rounded-full border-2 border-dashed"
+                    className="border-muted bg-background flex h-[220px] w-[220px] flex-col justify-center rounded-full border-2 border-dashed"
                     dropzoneAccept={{
                       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
                     }}
