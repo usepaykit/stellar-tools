@@ -16,20 +16,20 @@ interface EnvironmentToggleProps {
 export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [isLiveMode, setIsLiveMode] = React.useState(currentEnvironment === "mainnet");
+  const [isTestMode, setIsTestMode] = React.useState(currentEnvironment === "testnet");
   const [isSwitching, setIsSwitching] = React.useState(false);
 
   React.useEffect(() => {
-    setIsLiveMode(currentEnvironment === "mainnet");
+    setIsTestMode(currentEnvironment === "testnet");
   }, [currentEnvironment]);
 
   const handleToggle = async (checked: boolean) => {
     setIsSwitching(true);
-    const newEnv: Network = checked ? "mainnet" : "testnet";
+    const newEnv: Network = checked ? "testnet" : "mainnet";
     try {
       await switchEnvironment(newEnv);
       await queryClient.invalidateQueries({ queryKey: ["org-context"] });
-      toast.success(`Switched to ${checked ? "Live" : "Test"} mode`);
+      toast.success(`Switched to ${checked ? "Test" : "Live"} mode`);
       router.refresh();
     } catch {
       toast.error("Failed to switch environment");
@@ -41,12 +41,13 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
   return (
     <div className="flex items-center gap-3">
       <Switch
-        checked={isLiveMode}
+        checked={isTestMode}
         onCheckedChange={handleToggle}
         disabled={isSwitching}
         className="h-5 w-9 [&>span]:size-4"
       />
-      <span className="text-muted-foreground text-xs">{isLiveMode ? "Live" : "Sandbox data"}</span>
+
+      <span className="text-muted-foreground text-xs">Sandbox data</span>
     </div>
   );
 }

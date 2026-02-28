@@ -77,7 +77,8 @@ export default function SubscriptionsPage() {
     {
       header: "Status",
       cell: ({ row }: any) => {
-        const config = STATUS_CONFIG[row.original.subscription.status as keyof typeof STATUS_CONFIG];
+        const config =
+          STATUS_CONFIG[row.original.subscription.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.active;
         return (
           <Badge variant="outline" className={cn("gap-1.5", config.cls)}>
             <config.icon className="h-3 w-3" /> {config.label}
