@@ -33,6 +33,7 @@ interface CodeBlockProps extends React.HTMLAttributes<HTMLDivElement> {
   logo?: string;
   showCopyButton?: boolean;
   maxHeight?: string | "none";
+  theme?: string;
 }
 
 export function CodeBlock({
@@ -43,6 +44,7 @@ export function CodeBlock({
   showCopyButton = true,
   className,
   maxHeight = "none",
+  theme,
   ...props
 }: CodeBlockProps) {
   const mounted = useMounted();
@@ -53,8 +55,8 @@ export function CodeBlock({
   const showHeader = !isShell || !!filename;
 
   const syntaxTheme = React.useMemo(() => {
-    const isDark = resolvedTheme === "dark";
-    const bg = isShell ? (isDark ? "#1f1f1f" : "#f5f5f5") : isDark ? "#0f0f0f" : "#fafafa";
+    const isDark = theme === "dark" || resolvedTheme === "dark";
+    const bg = isDark ? "#0a0a0a" : "#fafafa";
     const base = isDark ? oneDark : oneLight;
 
     return {
@@ -73,10 +75,12 @@ export function CodeBlock({
         ...base['code[class*="language-"]'],
         background: "transparent",
         fontSize: "0.875rem",
-        fontFamily: "var(--font-mono, monospace)",
+        fontFamily: "var(--font-jetbrains-mono), monospace",
       },
     };
-  }, [resolvedTheme, isShell]);
+  }, [theme, resolvedTheme, isShell]);
+
+  const isDarkTheme = theme === "dark" || resolvedTheme === "dark";
 
   if (!mounted) return <div className={cn("bg-muted h-24 w-full animate-pulse rounded-xl", className)} />;
 
@@ -85,26 +89,35 @@ export function CodeBlock({
   return (
     <TooltipProvider delayDuration={200}>
       <div
-        className={cn("group bg-muted/50 relative flex w-full flex-col overflow-hidden rounded-xl border", className)}
+        className={cn(
+          "group relative flex w-full flex-col overflow-hidden rounded-xl border",
+          isDarkTheme ? "border-white/10 bg-[#0a0a0a]" : "border-border bg-muted/50",
+          className
+        )}
         // Ensure the container actually has a height limit
         style={{ height: maxHeight === "none" ? "auto" : maxHeight }}
         {...props}
       >
         {showHeader && (
-          <div className="bg-muted/50 sticky top-0 z-20 flex shrink-0 items-center justify-between border-b px-4 py-2 backdrop-blur-sm">
+          <div
+            className={cn(
+              "sticky top-0 z-20 flex shrink-0 items-center justify-between border-b px-4 py-2",
+              isDarkTheme ? "border-white/10 bg-[#111111]" : "border-border bg-muted/50 backdrop-blur-sm"
+            )}
+          >
             <div className="flex items-center gap-2">
               {logo && <Image src={logo} alt="" width={14} height={14} className="object-contain" />}
-              {filename && <span className="text-muted-foreground text-xs font-medium">{filename}</span>}
+              {filename && (
+                <span className={cn("text-xs font-medium", isDarkTheme ? "text-white/50" : "text-muted-foreground")}>
+                  {filename}
+                </span>
+              )}
             </div>
-            {showCopyButton && !isShell && <CopyAction copied={copied} onClick={onCopy} />}
+            {showCopyButton && !isShell && <CopyAction copied={copied} onClick={onCopy} isDark={isDarkTheme} />}
           </div>
         )}
 
-        {/* 
-           FIX: Added 'min-h-0' and 'flex-1'. 
-           In flexbox, 'min-h-0' is required for a child to shrink/scroll 
-           correctly if its content is larger than its flex basis.
-        */}
+  
         <ScrollArea className="relative min-h-0 w-full flex-1 bg-transparent">
           <SyntaxHighlighter
             language={language as string}
@@ -117,7 +130,7 @@ export function CodeBlock({
 
           {!showHeader && showCopyButton && (
             <div className="absolute top-2 right-2 z-20 opacity-0 transition-opacity group-hover:opacity-100">
-              <CopyAction copied={copied} onClick={onCopy} isFloating />
+              <CopyAction copied={copied} onClick={onCopy} isFloating isDark={isDarkTheme} />
             </div>
           )}
         </ScrollArea>
@@ -126,7 +139,17 @@ export function CodeBlock({
   );
 }
 
-function CopyAction({ copied, onClick, isFloating }: { copied: boolean; onClick: () => void; isFloating?: boolean }) {
+function CopyAction({
+  copied,
+  onClick,
+  isFloating,
+  isDark,
+}: {
+  copied: boolean;
+  onClick: () => void;
+  isFloating?: boolean;
+  isDark?: boolean;
+}) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -136,8 +159,9 @@ function CopyAction({ copied, onClick, isFloating }: { copied: boolean; onClick:
           type="button"
           aria-label={copied ? "Copied" : "Copy code"}
           className={cn(
-            "text-muted-foreground hover:text-foreground h-7 w-7",
-            isFloating && "bg-muted/80 border backdrop-blur-sm"
+            "h-7 w-7",
+            isDark ? "text-white/50 hover:bg-white/10 hover:text-white" : "text-muted-foreground hover:text-foreground",
+            isFloating && (isDark ? "border border-white/10 bg-black/80" : "bg-muted/80 border backdrop-blur-sm")
           )}
           onClick={onClick}
         >
