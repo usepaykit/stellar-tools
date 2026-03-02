@@ -39,11 +39,11 @@ export default function HowItWorks() {
     date: ``,
     data: {},
     contentOverride: <p className="text-muted-foreground text-sm leading-relaxed">{step.description}</p>,
-    titleClassName: "font-bold text-sm text-foreground"
+    titleClassName: "font-bold text-sm text-foreground",
   });
 
   return (
-    <section className="bg-secondary px-6 py-24 sm:px-10 " id="how-it-works">
+    <section className="bg-secondary px-6 py-24 sm:px-10" id="how-it-works">
       <div className="mx-auto max-w-[1200px]">
         <div className="text-primary mb-4 text-[12.5px] font-bold tracking-[1.2px] uppercase">How It Works</div>
         <h2 className="text-foreground max-w-2xl text-[clamp(34px,4vw,50px)] leading-[1.15] font-bold tracking-tight">

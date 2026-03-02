@@ -25,19 +25,19 @@ export default function SubscriptionsSection() {
         </div>
         <div>
           <div className="text-primary mb-4 text-[12.5px] font-bold tracking-[1.2px] uppercase">Subscriptions</div>
-          <h2 className=" font-bold text-foreground mb-5 text-[clamp(34px,4vw,50px)] leading-[1.15] tracking-tight">
+          <h2 className="text-foreground mb-5 text-[clamp(34px,4vw,50px)] leading-[1.15] font-bold tracking-tight">
             Recurring revenue,
             <br />
             <em className="text-primary italic">enforced on-chain.</em>
           </h2>
           <p className="text-muted-foreground mb-7 text-[17px] leading-relaxed">
-            Our Soroban smart contracts handle subscription state, renewals, cancellations, upgrades transparently
-            and automatically. You set the rules once. The blockchain enforces them forever.
+            Our Soroban smart contracts handle subscription state, renewals, cancellations, upgrades transparently and
+            automatically. You set the rules once. The blockchain enforces them forever.
           </p>
           <ul className="text-muted-foreground flex list-none flex-col gap-3.5 text-[15px]">
             {features.map((feature, index) => (
               <li key={index} className="flex items-center gap-2.5">
-                <span className="text-[#00c48c] text-lg">✓</span> {feature}
+                <span className="text-lg text-[#00c48c]">✓</span> {feature}
               </li>
             ))}
           </ul>

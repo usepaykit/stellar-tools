@@ -71,7 +71,7 @@ export default function DevelopersSection() {
       <div className="mx-auto grid max-w-[1200px] items-start gap-12 md:grid-cols-2 md:gap-20">
         <div>
           <div className="text-primary mb-4 text-[12.5px] font-bold tracking-[1.2px] uppercase">For Developers</div>
-          <h2 className="mb-5 font-bold text-[clamp(34px,4vw,50px)] leading-[1.15] tracking-tight text-white">
+          <h2 className="mb-5 text-[clamp(34px,4vw,50px)] leading-[1.15] font-bold tracking-tight text-white">
             A Stripe-like API you&apos;ll
             <br />
             <em className="text-primary italic">actually enjoy.</em>
@@ -98,7 +98,13 @@ export default function DevelopersSection() {
 
         <div className="flex flex-col gap-4">
           {codeExamples.map((example) => (
-            <CodeBlock key={example.filename} language="typescript" filename={example.filename} showCopyButton theme="dark">
+            <CodeBlock
+              key={example.filename}
+              language="typescript"
+              filename={example.filename}
+              showCopyButton
+              theme="dark"
+            >
               {example.code}
             </CodeBlock>
           ))}

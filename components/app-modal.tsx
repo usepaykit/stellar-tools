@@ -80,12 +80,7 @@ const AppModalUI = ({
                 {description && <DialogDescription className="text-base">{description}</DialogDescription>}
               </DialogHeader>
 
-              <div
-                className={cn(
-                  "flex min-h-0 flex-1 flex-col overflow-hidden",
-                  size !== "full" && "max-h-[60vh]"
-                )}
-              >
+              <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", size !== "full" && "max-h-[60vh]")}>
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-6">{content}</div>
               </div>
 

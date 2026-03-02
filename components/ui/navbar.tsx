@@ -16,13 +16,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { getInitials } from "@/lib/utils";
 import { CirclePlus, LogOut, Monitor, Moon, Sun } from "@aliimam/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getInitials } from "@/lib/utils";
 
 import { Paykit } from "../icon";
 
@@ -33,9 +33,6 @@ const NAV_LINKS = [
   { href: "/docs", label: "Docs" },
   { href: "/pricing", label: "Pricing" },
 ] as const;
-
-
-
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);

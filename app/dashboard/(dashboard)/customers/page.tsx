@@ -420,12 +420,9 @@ export function CustomerModalContent({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-6">
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex min-h-0 flex-1 flex-col gap-8 overflow-hidden"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col gap-8 overflow-hidden">
         <div className="flex min-h-0 flex-1 gap-8 overflow-hidden">
-          <div className="flex-1 space-y-6 overflow-y-auto min-h-0">
+          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
@@ -596,7 +593,7 @@ export function CustomerModalContent({
           </div>
         </div>
       </form>
-      <div className="flex shrink-0 justify-end gap-3 border-t bg-background pt-4">
+      <div className="bg-background flex shrink-0 justify-end gap-3 border-t pt-4">
         <Button
           type="button"
           variant="outline"

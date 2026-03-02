@@ -41,7 +41,7 @@ export default function TestimonialsSection() {
     <section className="bg-secondary px-10 py-24" id="testimonials">
       <div className="mx-auto max-w-[1200px]">
         <div className="text-primary mb-4 text-[12.5px] font-bold tracking-[1.2px] uppercase">From the community</div>
-        <h2 className="font-bold text-foreground mb-16 text-[clamp(34px,4vw,50px)] leading-[1.15] tracking-tight">
+        <h2 className="text-foreground mb-16 text-[clamp(34px,4vw,50px)] leading-[1.15] font-bold tracking-tight">
           Builders love StellarTools.
         </h2>
         <div className="grid gap-5 md:grid-cols-3">

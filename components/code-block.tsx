@@ -117,7 +117,6 @@ export function CodeBlock({
           </div>
         )}
 
-  
         <ScrollArea className="relative min-h-0 w-full flex-1 bg-transparent">
           <SyntaxHighlighter
             language={language as string}

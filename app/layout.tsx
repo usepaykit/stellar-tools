@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toast";
 import { Providers } from "@/providers";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
-import {  DM_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { DM_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 
 import "./globals.css";
 
@@ -21,7 +21,6 @@ const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
-
 
 export const metadata: Metadata = {
   title: "StellarTools | Stripe for Stellar",
@@ -60,5 +59,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-
 }

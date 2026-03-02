@@ -21,7 +21,7 @@ export default function StatsSection() {
       <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-evenly gap-10 text-center sm:flex-row">
         {stats.map((stat) => (
           <div key={stat.label} className="flex-1">
-            <h1 className="text-primary-foreground mb-2 font-bold text-5xl leading-none">{stat.value}</h1>
+            <h1 className="text-primary-foreground mb-2 text-5xl leading-none font-bold">{stat.value}</h1>
             <div className="text-primary-foreground/70 text-sm font-medium">{stat.label}</div>
           </div>
         ))}

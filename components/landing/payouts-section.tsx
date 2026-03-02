@@ -12,7 +12,7 @@ export default function PayoutsSection() {
       <div className="mx-auto grid max-w-[1200px] items-center gap-12 md:grid-cols-2 md:gap-20">
         <div>
           <div className="text-primary mb-4 text-[12.5px] font-bold tracking-[1.2px] uppercase">Global Payouts</div>
-          <h2 className="text-foreground mb-5 font-bold text-[clamp(34px,4vw,50px)] leading-[1.15] tracking-tight">
+          <h2 className="text-foreground mb-5 text-[clamp(34px,4vw,50px)] leading-[1.15] font-bold tracking-tight">
             Get paid in crypto.
             <br />
             <em className="text-primary italic">Cash out locally.</em>

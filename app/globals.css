@@ -332,14 +332,12 @@
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
-  font-family: var(--font-dm-sans), sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
   }
   html {
     scroll-padding-top: 4rem;
-      
   }
 }
-
 
 @keyframes fadeIn {
   from {

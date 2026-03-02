@@ -232,7 +232,7 @@ export function AppConnectionWidget() {
                             placeholder="Your name"
                             value={requestForm.name}
                             onChange={(e) => setRequestForm({ ...requestForm, name: e.target.value })}
-                            className={errors.name ? "border-destructive" : " shadow-none"}
+                            className={errors.name ? "border-destructive" : "shadow-none"}
                           />
                           {errors.name && <p className="text-destructive mt-1 text-xs">{errors.name}</p>}
                         </div>
@@ -243,7 +243,7 @@ export function AppConnectionWidget() {
                             placeholder="you@example.com"
                             value={requestForm.email}
                             onChange={(e) => setRequestForm({ ...requestForm, email: e.target.value })}
-                            className={errors.email ? "border-destructive" : " shadow-none"}
+                            className={errors.email ? "border-destructive" : "shadow-none"}
                           />
                           {errors.email && <p className="text-destructive mt-1 text-xs">{errors.email}</p>}
                         </div>
