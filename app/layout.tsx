@@ -2,26 +2,26 @@ import { Toaster } from "@/components/ui/toast";
 import { Providers } from "@/providers";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import localFont from "next/font/local";
+import {  DM_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  variable: "--font-instrument-serif",
   subsets: ["latin"],
 });
 
-const rosemary = localFont({
-  src: "../public/fonts/rosemary.ttf",
-  variable: "--font-rosemary",
-  display: "swap",
+const jetBrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
 });
+
 
 export const metadata: Metadata = {
   title: "StellarTools | Stripe for Stellar",
@@ -45,7 +45,6 @@ export const metadata: Metadata = {
     images: ["/images/og-image.jpeg"],
   },
 };
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,7 +52,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${rosemary.variable} antialiased`}>
+      <body className={`${dmSans.variable} ${jetBrainsMono.variable} ${instrumentSerif.variable} antialiased`}>
         <Providers>
           {children}
           <Toaster position="bottom-right" />
@@ -61,4 +60,5 @@ export default function RootLayout({
       </body>
     </html>
   );
+
 }

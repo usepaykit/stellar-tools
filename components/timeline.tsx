@@ -19,6 +19,7 @@ export interface TimelineEntry {
   data?: Record<string, any> | null;
   contentOverride?: React.ReactNode;
   key?: string | number;
+    titleClassName?: string;
 }
 
 export interface TimelineProps<T> {
@@ -29,6 +30,7 @@ export interface TimelineProps<T> {
   isLoading?: boolean;
   limit?: number;
   skeletonRowCount?: number;
+
 }
 
 // --- Internal Helpers ---
@@ -182,7 +184,7 @@ export function Timeline<T>({
 
               <div className="flex flex-col gap-0.5">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                  <h4 className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
+                  <h4 className={cn("text-muted-foreground text-[10px] font-bold tracking-widest uppercase", entry.titleClassName)}>
                     {entry.title}
                   </h4>
                   <time className="text-muted-foreground/60 text-[10px] font-medium sm:mt-0">{entry.date}</time>

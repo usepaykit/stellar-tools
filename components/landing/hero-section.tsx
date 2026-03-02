@@ -1,60 +1,77 @@
 import React from "react";
 
-import { CodeBlock } from "@/components/code-block";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heroproviders } from "@/constant/hero-constant";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function HeroSection() {
   return (
-    <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 lg:pt-40 lg:pb-32">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl">
-          <div className="mb-12 text-center">
-            <h1 className="mb-2 text-4xl leading-tight font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-              Stripe for Stellar
-            </h1>
-            <p className="text-muted-foreground mb-8 text-lg leading-8 sm:text-xl">
-              Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes.
-            </p>
-          </div>
+    <section className="mx-auto flex max-w-[1200px] flex-col items-center gap-12 px-6 pt-24 pb-20 lg:gap-20">
+      <div className="flex flex-col items-center text-center">
+        <div className="bg-primary/10 text-primary mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-semibold tracking-wide">
+          <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[11px]">NEW</span>
+          Now with LangChain &amp; AI SDK support
+        </div>
 
-          {/* Tabs with Code Block */}
-          <Tabs defaultValue={Heroproviders[0].id} className="w-full">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <TabsList className="w-full flex-col sm:w-auto sm:flex-row sm:justify-start">
-                {Heroproviders.map((provider) => (
-                  <TabsTrigger
-                    key={provider.id}
-                    value={provider.id}
-                    className="w-full justify-start gap-2 data-[state=active]:shadow-none sm:w-auto sm:justify-center"
-                  >
-                    <Image
-                      src={provider.logo}
-                      alt={`${provider.name} logo`}
-                      width={16}
-                      height={16}
-                      className="size-4 rounded-full object-contain"
-                    />
-                    <span>{provider.name}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              <span className="text-muted-foreground text-center text-sm whitespace-nowrap sm:text-left">
-                + many more
-              </span>
-            </div>
+        <h1 className="text-foreground mb-6 text-[clamp(42px,5vw,62px)] leading-[1.1] font-bold tracking-tight">
+          Payment infrastructure
+          <br />
+          built for the
+          <br />
+          <em className="text-primary italic">blockchain era.</em>
+        </h1>
 
-            {Heroproviders.map((provider) => (
-              <TabsContent key={provider.id} value={provider.id} className="mt-0 w-full">
-                <div className="mx-2 sm:mx-0">
-                  <CodeBlock language="typescript" filename={provider.filename} logo={provider.logo} showCopyButton>
-                    {provider.code}
-                  </CodeBlock>
-                </div>
-              </TabsContent>
+        <p className="text-muted-foreground mx-auto mb-9 max-w-[580px] text-lg leading-relaxed font-normal">
+          Accept payments, manage subscriptions, issue refunds, and automate billing, all on the Stellar network. A
+          complete payments platform your customers interact with in seconds.
+        </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-3.5">
+          <Link
+            href="/dashboard"
+            className="bg-primary text-primary-foreground rounded-xl px-7 py-3.5 text-base font-semibold no-underline transition-all hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(91,79,255,0.35)]"
+          >
+            Start building free
+          </Link>
+          <Link
+            href="#how-it-works"
+            className="text-muted-foreground hover:bg-secondary hover:text-foreground rounded-lg px-4 py-2 text-[15px] font-medium no-underline transition-colors"
+          >
+            See how it works →
+          </Link>
+        </div>
+
+        <div className="text-muted-foreground mt-12 flex items-center justify-center gap-4 text-[13px]">
+          <div className="flex">
+            {["P", "E", "A", "+"].map((letter, index) => (
+              <div
+                key={letter}
+                className={`border-background bg-secondary text-primary flex h-8 w-8 items-center justify-center rounded-full border-2 text-[12px] font-semibold ${index === 0 ? "" : "-ml-2"}`}
+              >
+                {letter}
+              </div>
             ))}
-          </Tabs>
+          </div>
+          Trusted by developers building the next generation of products
+        </div>
+      </div>
+
+      <div className="w-full max-w-[900px]">
+        <div className="bg-card border-border overflow-hidden rounded-2xl border shadow-[0_24px_80px_rgba(0,0,0,0.12),0_4px_20px_rgba(91,79,255,0.08)]">
+          <div className="bg-secondary border-border flex items-center gap-2 border-b px-5 py-3.5">
+            <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]"></div>
+            <div className="h-2.5 w-2.5 rounded-full bg-[#febc2e]"></div>
+            <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]"></div>
+            <div className="bg-muted text-muted-foreground ml-3 flex-1 rounded-md px-3 py-1 font-mono text-[12px]">
+              stellartools.dev/dashboard
+            </div>
+          </div>
+          <Image
+            src="/images/overview-dashboard.png"
+            alt="Overview Dashboard Screenshot"
+            width={1300}
+            height={900}
+            className="w-full"
+          />
         </div>
       </div>
     </section>

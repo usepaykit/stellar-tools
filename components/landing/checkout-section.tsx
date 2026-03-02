@@ -1,6 +1,7 @@
 import React from "react";
 
 import { Link2, Palette, QrCode, Zap } from "lucide-react";
+import Image from "next/image";
 
 const features = [
   {
@@ -66,8 +67,14 @@ export default function CheckoutSection() {
                 <div className="text-muted-foreground mt-0.5 text-sm">Discord Unlimited · billed monthly</div>
               </div>
 
-              <div className="bg-secondary text-muted-foreground mx-auto mb-4 flex h-[120px] w-[120px] items-center justify-center rounded-xl text-4xl">
-                <QrCode className="h-12 w-12" />
+              <div className="mx-auto mb-4 h-[120px] w-[120px] overflow-hidden rounded-xl">
+                <Image
+                  src="/images/qrcode.png"
+                  alt="QR Code"
+                  width={120}
+                  height={120}
+                  className="h-full w-full object-cover"
+                />
               </div>
 
               <p className="text-muted-foreground mb-4 text-center text-[12px]">Scan with Solar or xBull wallet</p>

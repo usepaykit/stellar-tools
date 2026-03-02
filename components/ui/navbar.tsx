@@ -1,8 +1,9 @@
 "use client";
 
-import * as React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getCurrentUser, signOut } from "@/actions/auth";
+import { AppModal } from "@/components/app-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,98 +14,58 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
+import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { CirclePlus, LogOut, Monitor, Moon, Sun } from "@aliimam/icons";
-import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getInitials } from "@/lib/utils";
 
-import { AiApps, GitHub, Paykit, ShoppingCart, WebApps } from "../icon";
+import { Paykit } from "../icon";
 
-const cloud: {
-  title: string;
-  logoUrl: string;
-  href: string;
-  description: string;
-}[] = [
-  {
-    title: "AI SDK",
-    href: "https://ai-sdk.dev/",
-    logoUrl: "/images/integrations/aisdk.jpg",
-    description: "Unified SDK for integrating AI models in TypeScript.",
-  },
-  {
-    title: "Better Auth",
-    href: "https://www.better-auth.com/",
-    logoUrl: "/images/integrations/better-auth.png",
-    description: "Simple, secure authentication and session management.",
-  },
-  {
-    title: "Shopify",
-    href: "https://shopify.dev/",
-    logoUrl: "/images/integrations/shopify.png",
-    description: "Connect your app with Shopify’s e-commerce platform.",
-  },
-  {
-    title: "Medus",
-    href: "https://www.medusajs.com/",
-    logoUrl: "/images/integrations/medusa.svg",
-    description: "Headless commerce backend for custom online stores.",
-  },
-  {
-    title: "UploadThing",
-    href: "https://uploadthing.com/",
-    logoUrl: "/images/integrations/uploadthing.png",
-    description: "Secure, easy file upload service for web apps.",
-  },
-  {
-    title: "PayloadCms",
-    href: "https://payloadcms.com/",
-    logoUrl: "/images/integrations/payloadcms.png",
-    description: "Developer-friendly headless CMS and API backend.",
-  },
-];
+const NAV_LINKS = [
+  { href: "#features", label: "Products" },
+  { href: "#integrations", label: "Integrations" },
+  { href: "#developers", label: "Developers" },
+  { href: "/docs", label: "Docs" },
+  { href: "/pricing", label: "Pricing" },
+] as const;
 
-const cases: {
-  title: string;
-  href: string;
-  description: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>> | React.JSX.Element;
-}[] = [
-  {
-    title: "Al Apps",
-    href: "#",
-    description: "Deploy at the speed of Al",
-    icon: AiApps,
-  },
-  {
-    title: "Composable Commerce",
-    href: "#",
-    description: "Power storefronts that convert",
-    icon: ShoppingCart,
-  },
 
-  {
-    title: "Web Apps",
-    href: "#",
-    description: "Ship features, not infrastructure",
-    icon: WebApps,
-  },
-];
+
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const isAuthenticated = false;
+  const router = useRouter();
+
+  const { data: user, isLoading } = useQuery({
+    queryKey: ["current-user"],
+    queryFn: getCurrentUser,
+  });
+
+  const isAuthenticated = !!user;
+
+  const userName = user?.profile.firstName
+    ? `${user.profile.firstName} ${user.profile.lastName || ""}`.trim()
+    : user?.email.split("@")[0] || "User";
+
+  const userInitials = (user?.profile.firstName?.[0] || user?.email?.[0] || "?").toUpperCase();
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await signOut();
+      toast.success("Logged out successfully");
+      router.push("/signin");
+      AppModal.close();
+    } catch (error) {
+      toast.error("Failed to log out");
+      console.error("Logout error:", error);
+    }
+  }, [router]);
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 0);
@@ -114,255 +75,158 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-
-    (async function fetchGithubRepoStars() {
-      try {
-        const response = await axios.get("https://api.github.com/repos/usepaykit/stellar-tools");
-        if (!mounted) return;
-        console.log("Stars count:", response.data.stargazers_count);
-      } catch (error) {
-        console.error("Failed to fetch GitHub stars", error);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
   return (
-    <div
-      className={`bg-background transition-border sticky top-0 z-50 flex h-16 w-full items-center justify-between px-4 duration-300 ${
-        scrolled ? "border-b" : "border-b-0"
-      }`}
+    <nav
+      className={cn(
+        "sticky top-0 z-50 w-full border-b backdrop-blur-md transition-all duration-300",
+        scrolled ? "border-border bg-background/90" : "bg-background/90 border-transparent"
+      )}
     >
-      {" "}
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between">
-        <div className="flex h-14 justify-center">
-          <Link href="/" className="flex items-center gap-2">
-            <Paykit className="size-8" />
-            <span className="text-muted-foreground">/</span>
-            <Image
-              src="/images/logo-light.png"
-              alt="Stellar Tools logo"
-              width={32}
-              height={32}
-              className="size-8 rounded-md object-contain"
-            />
-            <span className="font-rosemary text-lg font-semibold">Stellar Tools</span>
-          </Link>
-          <NavigationMenu className="ml-8 hidden lg:flex">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger
-                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
-                >
-                  Products
-                </NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-background pt-3">
-                  <ul className="w-[300px]">
-                    <div>
-                      <span className="text-muted-foreground p-4">Adapters</span>
-                      {cloud.map((component) => (
-                        <ListItem
-                          key={component.title}
-                          title={component.title}
-                          href={component.href}
-                          logoUrl={component.logoUrl}
-                        >
-                          {component.description}
-                        </ListItem>
-                      ))}
-                    </div>
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2">
+          <Paykit className="size-8" />
+          <span className="text-muted-foreground">/</span>
+          <Image
+            src="/images/logo-light.png"
+            alt="Stellar Tools logo"
+            width={32}
+            height={32}
+            className="size-8 rounded-md object-contain"
+          />
+          <span className="font-rosemary text-lg font-semibold">StellarTools</span>
+        </Link>
 
-              <NavigationMenuItem>
-                <NavigationMenuTrigger
-                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
-                >
-                  Solutions
-                </NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-background pt-3">
-                  <ul className="w-[300px]">
-                    <div>
-                      <span className="text-muted-foreground p-4">Use Cases</span>
-                      {cases.map((component) => (
-                        <ListItem
-                          key={component.title}
-                          title={component.title}
-                          href={component.href}
-                          icon={component.icon}
-                        >
-                          {component.description}
-                        </ListItem>
-                      ))}
-                    </div>
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
-                >
-                  <Link href="#">Docs</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={cn(navigationMenuTriggerStyle(), "text-muted-foreground h-7.5 rounded-full font-normal")}
-                >
-                  <Link href="#">Pricing</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
-        </div>
-        <div className="flex gap-2">
-          {isAuthenticated ? (
+        {/* Navigation Links */}
+        <ul className="hidden list-none gap-8 md:flex">
+          <li>
+            <Link
+              href="#features"
+              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
+            >
+              Products
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="#integrations"
+              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
+            >
+              Integrations
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="#developers"
+              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
+            >
+              Developers
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/docs"
+              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
+            >
+              Docs
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/pricing"
+              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
+            >
+              Pricing
+            </Link>
+          </li>
+        </ul>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          {isLoading ? (
+            <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
+          ) : isAuthenticated ? (
             <>
-              <Button variant={"outline"} size={"sm"}>
-                Contact
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/dashboard">Dashboard</Link>
               </Button>
-              <Button variant={"outline"} size={"sm"}>
-                Dashboard
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="cursor-pointer border">
+                    <AvatarImage src={user?.profile.avatarUrl || ""} alt={userName} />
+                    <AvatarFallback>{userInitials}</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-70 rounded-xl p-3" align="end">
+                  <div className="p-2">
+                    <h1 className="font-semibold">{userName}</h1>
+                    <p className="text-muted-foreground text-sm">{user?.email}</p>
+                  </div>
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem className="py-3" asChild>
+                      <Link href="/dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="py-3" asChild>
+                      <Link href="/settings">Account Settings</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="justify-between py-3" asChild>
+                      <Link href="/select-organization?create=true">
+                        Create Teams <CirclePlus strokeWidth={2} />
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="-mx-3" />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem className="justify-between py-3">
+                      Theme <ThemeSwitcher />
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator className="-mx-3" />
+                  <DropdownMenuItem
+                    className="text-destructive justify-between py-3"
+                    onClick={() =>
+                      AppModal.open({
+                        title: "Log out",
+                        description:
+                          "Are you sure you want to log out? You'll need to sign in again to access your account.",
+                        content: (
+                          <div className="py-4">
+                            <p className="text-muted-foreground text-sm">
+                              This will end your current session and you&apos;ll be redirected to the sign in page.
+                            </p>
+                          </div>
+                        ),
+                        size: "small",
+                        showCloseButton: true,
+                        primaryButton: { children: "Log out", variant: "destructive", onClick: handleLogout },
+                        secondaryButton: { children: "Cancel" },
+                      })
+                    }
+                  >
+                    Logout <LogOut strokeWidth={2} />
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           ) : (
             <>
-              <Button asChild size={"sm"} variant={"ghost"} className="flex items-center gap-2">
-                <a
-                  href="https://github.com/usepaykit/stellar-tools"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <GitHub color="black" />
-                  {/* <span className="text-xs font-medium">
-                    {starsNumber} Stars
-                  </span> */}
-                </a>
-              </Button>
-              <Button variant={"secondary"} size={"sm"} className="shadow-buttons-inverted shadow-md">
-                Docs
-              </Button>
-              <Button variant={"default"} size={"sm"}>
-                <Link href="/create">Get Started</Link>
-              </Button>
+              <Link
+                href="/login"
+                className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg px-4 py-2 text-[14.5px] font-medium no-underline transition-colors"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/create"
+                className="bg-primary text-primary-foreground rounded-[9px] px-5 py-2 text-[14.5px] font-semibold no-underline transition-all hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(91,79,255,0.35)]"
+              >
+                Start for free →
+              </Link>
             </>
           )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Avatar className="border">
-              <AvatarImage
-                src="https://raw.githubusercontent.com/aliimam-in/templates/refs/heads/main/apps/vercel/public/ali.jpg"
-                alt="Ali Imam"
-              />
-              <AvatarFallback>AI</AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-70 rounded-xl p-3" align="end">
-            <div className="p-2">
-              <h1 className="font-semibold">Ali Imam</h1>
-              <p className="text-muted-foreground text-sm">contact@aliimam.in</p>
-            </div>
-            <DropdownMenuGroup>
-              <DropdownMenuItem className="py-3">Dadhboard</DropdownMenuItem>
-              <DropdownMenuItem className="py-3">Account Settings</DropdownMenuItem>
-              <DropdownMenuItem className="justify-between py-3">
-                Create Taems <CirclePlus strokeWidth={2} />
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator className="-mx-3" />
-            <DropdownMenuGroup>
-              <DropdownMenuItem className="justify-between py-3">
-                Theme <ThemeSwitcher />
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator className="-mx-3" />
-
-            <DropdownMenuItem className="justify-between py-3">
-              Logout <LogOut strokeWidth={2} />
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="-mx-3" />
-            <DropdownMenuItem className="pt-3">
-              <Button className="w-full">Upgrade to Pro</Button>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
-    </div>
-  );
-}
-
-function ListItem({
-  title,
-  icon,
-  logoUrl,
-  children,
-  href,
-  ...props
-}: React.ComponentPropsWithoutRef<"li"> & {
-  href: string;
-  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>> | React.ReactElement;
-  logoUrl?: string;
-}) {
-  let IconElement: React.ReactNode = null;
-  if (icon) {
-    if (React.isValidElement(icon)) {
-      IconElement = icon;
-    } else if (typeof icon === "function") {
-      IconElement = React.createElement(icon as React.ComponentType<React.SVGProps<SVGSVGElement>>, {
-        className: "size-6",
-      });
-    }
-  }
-
-  return (
-    <li {...props}>
-      <NavigationMenuLink asChild className="w-fit hover:bg-transparent">
-        <Link href={href} target="_blank" rel="noreferrer">
-          <div className="flex items-start gap-3 rounded p-2">
-            {logoUrl ? (
-              <Image
-                src={logoUrl}
-                alt={`${title} logo`}
-                width={24}
-                height={24}
-                className="size-6 rounded-full object-contain"
-              />
-            ) : IconElement ? (
-              <div className="icon-container rounded-sm border p-2">{IconElement}</div>
-            ) : null}
-            <div className="text-container">
-              <div className="text-sm leading-none font-medium">{title}</div>
-              <p className="text-muted-foreground line-clamp-2 pt-1 text-xs leading-snug">{children}</p>
-            </div>
-          </div>
-        </Link>
-      </NavigationMenuLink>
-      <style jsx>{`
-        li:hover .icon-container {
-          background-color: var(--foreground);
-          color: var(--background);
-          transform: scale(1.05);
-          transition: all 0.2s ease;
-        }
-        li:hover .text-container .text-sm {
-          color: var(--foreground);
-          transition: color 0.2s ease;
-        }
-        li:hover .text-container p {
-          color: var(--foreground);
-          transition: color 0.2s ease;
-        }
-      `}</style>
-    </li>
+    </nav>
   );
 }
 
