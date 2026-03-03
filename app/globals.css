@@ -339,6 +339,35 @@
   }
 }
 
+@layer utilities {
+  .no-autofill-bg {
+    &:-webkit-autofill {
+      -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+      -webkit-text-fill-color: inherit !important;
+      transition: background-color 5000s ease-in-out 0s !important;
+    }
+    &:-webkit-autofill:hover {
+      -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+      -webkit-text-fill-color: inherit !important;
+    }
+    &:-webkit-autofill:focus,
+    &:-webkit-autofill:focus-visible {
+      -webkit-box-shadow:
+        0 0 0 1000px transparent inset,
+        0 0 0 3px color-mix(in oklch, var(--color-ring) 50%, transparent) !important;
+      -webkit-text-fill-color: inherit !important;
+    }
+    &:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+      -webkit-text-fill-color: inherit !important;
+    }
+    &:-moz-autofill {
+      background-color: transparent !important;
+      color: inherit !important;
+    }
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
