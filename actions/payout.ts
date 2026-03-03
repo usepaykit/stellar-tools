@@ -14,6 +14,18 @@ export const retrievePayouts = async () => {
     .orderBy(desc(payouts.createdAt));
 };
 
+export const retrievePayoutById = async (id: string) => {
+  const { organizationId } = await resolveOrgContext();
+
+  const [payout] = await db
+    .select()
+    .from(payouts)
+    .where(and(eq(payouts.id, id), eq(payouts.organizationId, organizationId)))
+    .limit(1);
+
+  return payout ?? null;
+};
+
 export const postPayout = async (
   params: Omit<Payout, "organizationId" | "environment" | "createdAt" | "updatedAt">,
   orgId?: string,

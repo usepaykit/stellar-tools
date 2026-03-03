@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrieveCreditBalances } from "@/actions/credit";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
@@ -14,6 +15,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight, Package, Search } from "lucide-react";
 import Link from "next/link";
@@ -21,8 +23,8 @@ import { useRouter } from "next/navigation";
 
 type UsageRecord = {
   id: string;
-  customerId: string;
-  productId: string;
+  customerId: string | null;
+  productId: string | null;
   balance: number;
   consumed: number;
   granted: number;
@@ -38,104 +40,6 @@ type UsageRecord = {
     name: string;
   };
 };
-
-const mockUsageRecords: UsageRecord[] = [
-  {
-    id: "usage_1",
-    customerId: "cus_1",
-    productId: "prod_1",
-    balance: 1000,
-    consumed: 250,
-    granted: 1000,
-    createdAt: new Date("2024-12-20"),
-    updatedAt: new Date("2024-12-22"),
-    customer: {
-      id: "cus_1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-    },
-    product: {
-      id: "prod_1",
-      name: "Premium Plan",
-    },
-  },
-  {
-    id: "usage_2",
-    customerId: "cus_2",
-    productId: "prod_2",
-    balance: 5000,
-    consumed: 3200,
-    granted: 5000,
-    createdAt: new Date("2024-12-18"),
-    updatedAt: new Date("2024-12-22"),
-    customer: {
-      id: "cus_2",
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-    },
-    product: {
-      id: "prod_2",
-      name: "Enterprise Plan",
-    },
-  },
-  {
-    id: "usage_3",
-    customerId: "cus_3",
-    productId: "prod_1",
-    balance: 2000,
-    consumed: 150,
-    granted: 2000,
-    createdAt: new Date("2024-12-15"),
-    updatedAt: new Date("2024-12-21"),
-    customer: {
-      id: "cus_3",
-      name: "Bob Johnson",
-      email: "bob.johnson@example.com",
-    },
-    product: {
-      id: "prod_1",
-      name: "Premium Plan",
-    },
-  },
-  {
-    id: "usage_4",
-    customerId: "cus_4",
-    productId: "prod_3",
-    balance: 10000,
-    consumed: 8500,
-    granted: 10000,
-    createdAt: new Date("2024-12-10"),
-    updatedAt: new Date("2024-12-22"),
-    customer: {
-      id: "cus_4",
-      name: "Alice Williams",
-      email: "alice.williams@example.com",
-    },
-    product: {
-      id: "prod_3",
-      name: "Business Plan",
-    },
-  },
-  {
-    id: "usage_5",
-    customerId: "cus_5",
-    productId: "prod_2",
-    balance: 3000,
-    consumed: 2800,
-    granted: 3000,
-    createdAt: new Date("2024-12-12"),
-    updatedAt: new Date("2024-12-20"),
-    customer: {
-      id: "cus_5",
-      name: "Charlie Brown",
-      email: "charlie.brown@example.com",
-    },
-    product: {
-      id: "prod_2",
-      name: "Enterprise Plan",
-    },
-  },
-];
 
 const columns: ColumnDef<UsageRecord>[] = [
   {
@@ -216,18 +120,33 @@ export default function UsagePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState("");
 
+  const { data: rawBalances = [], isLoading } = useOrgQuery(["credit-balances"], () => retrieveCreditBalances());
+
+  const usageRecords: UsageRecord[] = rawBalances.map((b) => ({
+    id: b.id,
+    customerId: b.customerId,
+    productId: b.productId,
+    balance: b.balance,
+    consumed: b.consumed,
+    granted: b.granted,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+    customer: b.customerName ? { id: b.customerId!, name: b.customerName, email: b.customerEmail ?? "" } : undefined,
+    product: b.productName ? { id: b.productId!, name: b.productName } : undefined,
+  }));
+
   const filteredRecords = React.useMemo(() => {
-    if (!searchQuery.trim()) return mockUsageRecords;
+    if (!searchQuery.trim()) return usageRecords;
 
     const query = searchQuery.toLowerCase();
-    return mockUsageRecords.filter(
+    return usageRecords.filter(
       (record) =>
         record.customer?.name.toLowerCase().includes(query) ||
         record.customer?.email.toLowerCase().includes(query) ||
         record.product?.name.toLowerCase().includes(query) ||
         record.id.toLowerCase().includes(query)
     );
-  }, [searchQuery]);
+  }, [searchQuery, usageRecords]);
 
   const tableActions: TableAction<UsageRecord>[] = [
     {
@@ -305,6 +224,7 @@ export default function UsagePage() {
               columns={columns}
               data={filteredRecords}
               actions={tableActions}
+              isLoading={isLoading}
               onRowClick={(row) => {
                 router.push(`/usage/${row.id}`);
               }}

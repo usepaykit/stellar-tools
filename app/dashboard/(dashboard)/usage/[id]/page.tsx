@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrieveCreditBalanceById, retrieveCreditTransactionsByBalance } from "@/actions/credit";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UnderlineTabs, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/underline-tabs";
 import { useCopy } from "@/hooks/use-copy";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowRight,
@@ -33,20 +35,21 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 type UsageRecordStatus = "granted" | "consumed" | "revoked";
 
 type UsageRecord = {
   id: string;
   organizationId: string;
-  customerId: string;
-  productId: string;
+  customerId: string | null;
+  productId: string | null;
   balanceId: string;
   amount: number;
   balanceBefore: number;
   balanceAfter: number;
-  reason?: string;
-  metadata?: object;
+  reason?: string | null;
+  metadata?: Record<string, unknown> | null;
   createdAt: Date;
   status: UsageRecordStatus;
   customer?: {
@@ -60,123 +63,11 @@ type UsageRecord = {
   };
 };
 
-const mockUsageRecords: UsageRecord[] = [
-  {
-    id: "usage_1",
-    organizationId: "org_1",
-    customerId: "cus_1",
-    productId: "prod_1",
-    balanceId: "bal_1",
-    amount: 1000,
-    balanceBefore: 0,
-    balanceAfter: 1000,
-    reason: "Initial grant",
-    metadata: { source: "admin", note: "Welcome bonus" },
-    createdAt: new Date("2024-12-22T10:30:00"),
-    status: "granted",
-    customer: {
-      id: "cus_1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-    },
-    product: {
-      id: "prod_1",
-      name: "Premium Plan",
-    },
-  },
-  {
-    id: "usage_2",
-    organizationId: "org_1",
-    customerId: "cus_1",
-    productId: "prod_1",
-    balanceId: "bal_1",
-    amount: -250,
-    balanceBefore: 1000,
-    balanceAfter: 750,
-    reason: "API call consumption",
-    metadata: { endpoint: "/api/v1/chat", tokens: 250 },
-    createdAt: new Date("2024-12-22T11:15:00"),
-    status: "consumed",
-    customer: {
-      id: "cus_1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-    },
-    product: {
-      id: "prod_1",
-      name: "Premium Plan",
-    },
-  },
-  {
-    id: "usage_3",
-    organizationId: "org_1",
-    customerId: "cus_1",
-    productId: "prod_1",
-    balanceId: "bal_1",
-    amount: -150,
-    balanceBefore: 750,
-    balanceAfter: 600,
-    reason: "API call consumption",
-    metadata: { endpoint: "/api/v1/image", tokens: 150 },
-    createdAt: new Date("2024-12-22T12:00:00"),
-    status: "consumed",
-    customer: {
-      id: "cus_1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-    },
-    product: {
-      id: "prod_1",
-      name: "Premium Plan",
-    },
-  },
-  {
-    id: "usage_4",
-    organizationId: "org_1",
-    customerId: "cus_1",
-    productId: "prod_1",
-    balanceId: "bal_1",
-    amount: 500,
-    balanceBefore: 600,
-    balanceAfter: 1100,
-    reason: "Top-up purchase",
-    metadata: { paymentId: "pay_123", transactionHash: "abc123..." },
-    createdAt: new Date("2024-12-22T14:30:00"),
-    status: "granted",
-    customer: {
-      id: "cus_1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-    },
-    product: {
-      id: "prod_1",
-      name: "Premium Plan",
-    },
-  },
-  {
-    id: "usage_5",
-    organizationId: "org_1",
-    customerId: "cus_1",
-    productId: "prod_1",
-    balanceId: "bal_1",
-    amount: -100,
-    balanceBefore: 1100,
-    balanceAfter: 1000,
-    reason: "Revoked by admin",
-    metadata: { adminId: "admin_1", reason: "Policy violation" },
-    createdAt: new Date("2024-12-22T16:00:00"),
-    status: "revoked",
-    customer: {
-      id: "cus_1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-    },
-    product: {
-      id: "prod_1",
-      name: "Premium Plan",
-    },
-  },
-];
+const TX_TYPE_STATUS: Record<string, UsageRecordStatus> = {
+  grant: "granted",
+  deduct: "consumed",
+  refund: "granted",
+};
 
 const StatusBadge = ({ status }: { status: UsageRecordStatus }) => {
   const variants = {
@@ -378,44 +269,46 @@ const columns: ColumnDef<UsageRecord>[] = [
 ];
 
 export default function UsageDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
+  const { data: balance } = useOrgQuery(["credit-balance", id], () => retrieveCreditBalanceById(id));
+
+  const { data: rawTransactions = [], isLoading } = useOrgQuery(["credit-transactions", id], () =>
+    retrieveCreditTransactionsByBalance(id)
+  );
+
+  const records: UsageRecord[] = rawTransactions.map((tx) => ({
+    id: tx.id,
+    organizationId: tx.organizationId,
+    customerId: tx.customerId,
+    productId: tx.productId,
+    balanceId: tx.balanceId,
+    amount: tx.amount,
+    balanceBefore: tx.balanceBefore,
+    balanceAfter: tx.balanceAfter,
+    reason: tx.reason,
+    metadata: tx.metadata,
+    createdAt: tx.createdAt,
+    status: TX_TYPE_STATUS[tx.type] ?? "consumed",
+    customer: tx.customerName
+      ? { id: tx.customerId!, name: tx.customerName, email: tx.customerEmail ?? "" }
+      : undefined,
+    product: tx.productName ? { id: tx.productId!, name: tx.productName } : undefined,
+  }));
+
   const filteredRecords = React.useMemo(() => {
-    let records = mockUsageRecords;
-
-    if (statusFilter && statusFilter !== "all") {
-      records = records.filter((record) => record.status === statusFilter);
-    }
-
-    return records;
-  }, [statusFilter]);
+    if (statusFilter === "all") return records;
+    return records.filter((record) => record.status === statusFilter);
+  }, [statusFilter, records]);
 
   const usageMeter = React.useMemo(() => {
-    const sortedRecords = [...mockUsageRecords].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-
-    let totalGranted = 0;
-    let totalConsumed = 0;
-
-    sortedRecords.forEach((record) => {
-      if (record.amount > 0) {
-        totalGranted += record.amount;
-      } else {
-        totalConsumed += Math.abs(record.amount);
-      }
-    });
-
-    const currentBalance = sortedRecords.length > 0 ? sortedRecords[sortedRecords.length - 1].balanceAfter : 0;
-
-    const remaining = currentBalance;
-    const usagePercentage = totalGranted > 0 ? (totalConsumed / totalGranted) * 100 : 0;
-
-    return {
-      granted: totalGranted,
-      consumed: totalConsumed,
-      remaining,
-      usagePercentage: Math.min(usagePercentage, 100),
-    };
-  }, []);
+    const granted = balance?.granted ?? 0;
+    const consumed = balance?.consumed ?? 0;
+    const remaining = balance?.balance ?? 0;
+    const usagePercentage = granted > 0 ? (consumed / granted) * 100 : 0;
+    return { granted, consumed, remaining, usagePercentage: Math.min(usagePercentage, 100) };
+  }, [balance]);
 
   const formatJSON = (obj: object) => {
     return JSON.stringify(obj, null, 2);
@@ -465,7 +358,7 @@ export default function UsageDetailPage() {
                         </Link>
                       }
                     />
-                    <CopyButton text={record.customerId} label="Copy customer ID" />
+                    <CopyButton text={record.customerId ?? ""} label="Copy customer ID" />
                   </div>
                   <LogDetailItem label="Email" value={record.customer.email} />
                 </>
@@ -488,7 +381,7 @@ export default function UsageDetailPage() {
                       </Link>
                     }
                   />
-                  <CopyButton text={record.productId} label="Copy product ID" />
+                  <CopyButton text={record.productId ?? ""} label="Copy product ID" />
                 </div>
               ) : (
                 <p className="text-muted-foreground text-sm">No product data</p>

@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { retrieveEvents } from "@/actions/event";
+import { retrievePayoutById } from "@/actions/payout";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { PayoutReceipt } from "@/components/payout/payout-receipt";
@@ -109,10 +110,10 @@ const DetailRow = ({ label, value, icon: Icon, action, mono = false }: any) => (
 
 export default function PayoutDetailPage() {
   const router = useRouter();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
-  const payout = mockPayouts.find((p) => p.id === id);
+  const { data: payout, isLoading: isLoadingPayout } = useOrgQuery(["payout", id], () => retrievePayoutById(id));
 
   const { data: payoutEvents, isLoading: isLoadingPayoutEvents } = useOrgQuery(["payout-events", id], () =>
     retrieveEvents({ merchantId: "current" }, ["payout::requested", "payout::processed"])
@@ -141,6 +142,18 @@ export default function PayoutDetailPage() {
     navigator.clipboard.writeText(text);
     toast.success(msg);
   };
+
+  if (isLoadingPayout) {
+    return (
+      <DashboardSidebar>
+        <DashboardSidebarInset>
+          <div className="py-12 text-center">
+            <div className="border-primary mx-auto h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+          </div>
+        </DashboardSidebarInset>
+      </DashboardSidebar>
+    );
+  }
 
   if (!payout)
     return (
@@ -321,33 +334,3 @@ export async function generateAndDownloadReceipt(
   }
 }
 
-const mockPayouts: Array<Payout> = [
-  {
-    id: "1",
-    organizationId: "1",
-    walletAddress: "GABC...ABCD",
-    memo: null,
-    status: "pending",
-    amount: 91.94,
-    environment: "testnet",
-    transactionHash: "0xabc...",
-    createdAt: new Date(),
-    completedAt: new Date(),
-    metadata: null,
-    asset: "XLM",
-  },
-  {
-    id: "2",
-    organizationId: "1",
-    walletAddress: "GXYZ...CDEF",
-    memo: null,
-    status: "succeeded",
-    amount: 76.45,
-    environment: "testnet",
-    transactionHash: "0xabc...",
-    createdAt: new Date(),
-    completedAt: new Date(),
-    metadata: null,
-    asset: "XLM",
-  },
-];

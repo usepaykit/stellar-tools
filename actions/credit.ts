@@ -1,7 +1,19 @@
+"use server";
+
+import { resolveOrgContext } from "@/actions/organization";
 import { validateLimits } from "@/actions/plan";
-import { CreditBalance, CreditTransaction, Network, creditBalances, creditTransactions, db } from "@/db";
+import {
+  CreditBalance,
+  CreditTransaction,
+  Network,
+  creditBalances,
+  creditTransactions,
+  customers,
+  db,
+  products,
+} from "@/db";
 import { generateResourceId } from "@/lib/utils";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 export const postCreditBalance = async (
   params: Omit<CreditBalance, "id" | "organizationId" | "environment">,
@@ -61,6 +73,58 @@ export const deleteCreditBalance = async (id: string) => {
     .where(eq(creditBalances.id, id))
     .returning()
     .then(() => null);
+};
+
+export const retrieveCreditBalances = async () => {
+  const { organizationId, environment } = await resolveOrgContext();
+  return db
+    .select({
+      id: creditBalances.id,
+      organizationId: creditBalances.organizationId,
+      customerId: creditBalances.customerId,
+      productId: creditBalances.productId,
+      balance: creditBalances.balance,
+      consumed: creditBalances.consumed,
+      granted: creditBalances.granted,
+      createdAt: creditBalances.createdAt,
+      updatedAt: creditBalances.updatedAt,
+      isRevoked: creditBalances.isRevoked,
+      customerName: customers.name,
+      customerEmail: customers.email,
+      productName: products.name,
+    })
+    .from(creditBalances)
+    .leftJoin(customers, eq(creditBalances.customerId, customers.id))
+    .leftJoin(products, eq(creditBalances.productId, products.id))
+    .where(and(eq(creditBalances.organizationId, organizationId), eq(creditBalances.environment, environment)))
+    .orderBy(desc(creditBalances.createdAt));
+};
+
+export const retrieveCreditTransactionsByBalance = async (balanceId: string) => {
+  const { organizationId } = await resolveOrgContext();
+  return db
+    .select({
+      id: creditTransactions.id,
+      organizationId: creditTransactions.organizationId,
+      customerId: creditTransactions.customerId,
+      productId: creditTransactions.productId,
+      balanceId: creditTransactions.balanceId,
+      amount: creditTransactions.amount,
+      balanceBefore: creditTransactions.balanceBefore,
+      balanceAfter: creditTransactions.balanceAfter,
+      reason: creditTransactions.reason,
+      type: creditTransactions.type,
+      metadata: creditTransactions.metadata,
+      createdAt: creditTransactions.createdAt,
+      customerName: customers.name,
+      customerEmail: customers.email,
+      productName: products.name,
+    })
+    .from(creditTransactions)
+    .leftJoin(customers, eq(creditTransactions.customerId, customers.id))
+    .leftJoin(products, eq(creditTransactions.productId, products.id))
+    .where(and(eq(creditTransactions.balanceId, balanceId), eq(creditTransactions.organizationId, organizationId)))
+    .orderBy(desc(creditTransactions.createdAt));
 };
 
 // TRANSACTIONS
