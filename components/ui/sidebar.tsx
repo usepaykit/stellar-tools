@@ -42,6 +42,12 @@ function useSidebar() {
   return context;
 }
 
+function getPersistedSidebarState(): boolean | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(^|; )${SIDEBAR_COOKIE_NAME}=([^;]*)`));
+  return match ? match[2] === "true" : null;
+}
+
 function SidebarProvider({
   defaultOpen = true,
   open: openProp,
@@ -58,15 +64,10 @@ function SidebarProvider({
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
 
-  const [_open, _setOpen] = React.useState(defaultOpen);
-
-  React.useEffect(() => {
-    const match = document.cookie.match(new RegExp(`(^|; )${SIDEBAR_COOKIE_NAME}=([^;]*)`));
-    const persisted = match ? match[2] === "true" : null;
-    if (persisted !== null && openProp === undefined) {
-      _setOpen(persisted);
-    }
-  }, [openProp]);
+  const [_open, _setOpen] = React.useState(() => {
+    const persisted = getPersistedSidebarState();
+    return persisted !== null ? persisted : defaultOpen;
+  });
 
   const open = openProp ?? _open;
   const setOpen = React.useCallback(
