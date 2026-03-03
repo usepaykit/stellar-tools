@@ -117,75 +117,38 @@ export default function SignIn() {
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden bg-black lg:flex">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-linear-to-br from-black via-gray-950 to-black" />
-          <div className="bg-primary/5 absolute top-0 right-0 h-1/2 w-1/2 blur-3xl" />
-          <div className="bg-primary/3 absolute bottom-0 left-0 h-1/2 w-1/2 blur-3xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.1),transparent_50%)]" />
-        </div>
+      <div className="bg-foreground hidden flex-col justify-between overflow-hidden p-16 lg:flex">
+        <div className="space-y-8">
+          <Image
+            src="/images/logo-dark.png"
+            alt="Stellar Tools"
+            width={150}
+            height={40}
+            className="object-contain"
+            priority
+          />
 
-        <div className="relative z-10 flex w-full flex-col justify-between p-16">
-          <div className="space-y-10">
-            <div className="space-y-6">
-              <div className="relative inline-block">
-                <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
-                <Image
-                  src="/images/logo-dark.png"
-                  alt="Stellar Tools"
-                  width={150}
-                  height={1}
-                  className="object-contain p-5"
-                  priority
-                />
-              </div>
+          <h1 className="text-background text-4xl font-bold">
+            Payment infrastructure
+            <br />
+            for the
+            <em className="text-primary ml-1 italic">blockchain era.</em>
+          </h1>
 
-              <div className="space-y-3">
-                <h1 className="text-6xl leading-[1.1] font-bold tracking-[-0.02em] text-white">Stellar Tools</h1>
-                <div className="from-primary/50 h-px w-16 bg-linear-to-r to-transparent" />
-              </div>
-            </div>
-
-            <div className="max-w-lg space-y-6">
-              <p className="text-lg leading-relaxed font-light tracking-wide text-white/80">
-                The cloud platform for managing Stellar payment SDKs. Centralized control with enterprise reliability.
-              </p>
-
-              <div className="flex flex-col gap-4 pt-2">
-                <div className="group flex items-start gap-4">
-                  <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">Cloud-Native</h4>
-                    <p className="text-sm leading-relaxed text-white/60">
-                      Unified dashboard to deploy, monitor, and scale—zero infrastructure overhead.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="group flex items-start gap-4">
-                  <div>
-                    <h4 className="mb-1 text-sm font-semibold text-white">Global Infrastructure</h4>
-                    <p className="text-sm leading-relaxed text-white/60">
-                      99.9% uptime with enterprise-grade security by default.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="relative">
-            {/* Subtle border accent */}
-            <div className="absolute -top-px right-0 left-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
-
-            <div className="space-y-4 pt-8">
-              <div className="flex items-center gap-3">
-                <h3 className="text-base font-semibold tracking-wide text-white">Trusted Cloud Platform</h3>
-              </div>
-              <p className="max-w-md text-sm leading-relaxed font-light text-white/70">
-                Trusted by BetterAuth, Medusa, Shopify, and thousands of applications worldwide.
-              </p>
-            </div>
+          <div className="text-background/70 max-w-xs text-sm">
+            Accept payments, manage subscriptions, and withdraw to local currency, all on the Stellar network.
           </div>
         </div>
+        <p className="text-background/70 text-sm">
+          © {new Date().getFullYear()} StellarTools ·{" "}
+          <Link href="/terms" className="underline hover:opacity-80">
+            Terms
+          </Link>{" "}
+          ·{" "}
+          <Link href="/privacy" className="underline hover:opacity-80">
+            Privacy
+          </Link>
+        </p>
       </div>
 
       <div className="bg-background relative flex flex-col justify-center">
@@ -193,8 +156,9 @@ export default function SignIn() {
           onSubmit={form.handleSubmit(onSubmit)}
           className="mx-auto flex w-full max-w-md flex-col items-center justify-center space-y-4 px-6 py-12"
         >
-          <div className="w-full space-y-2 text-center">
-            <h2 className="f text-3xl tracking-tighter">Sign in to your account</h2>
+          <div className="w-full space-y-1 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+            <p className="text-muted-foreground text-sm">Sign in to your StellarTools account</p>
           </div>
 
           <AuthErrorAlert error={error} onDismissError={() => setDismissedError(true)} />
