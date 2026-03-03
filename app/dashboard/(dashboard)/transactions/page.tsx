@@ -479,7 +479,7 @@ function TransactionsPageContent() {
               </div>
             </div>
 
-            <div className="border-border/50 overflow-hidden rounded-lg border">
+            <div className="overflow-hidden">
               <DataTable
                 columns={columns}
                 data={filteredTransactions.map((it) => ({

@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useId } from "react";
 
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import { CartesianGrid, Line, LineChart as RechartsLineChart, XAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, Line, XAxis, YAxis } from "recharts";
 
 export type BaseChartData = Record<string, string | number>;
 
@@ -48,6 +48,9 @@ export function LineChart<T extends BaseChartData>({
   showGrid = true,
   ...mixinProps
 }: LineChartProps<T>) {
+  const uid = useId().replace(/:/g, "");
+  const gradientId = `lg-${uid}`;
+
   const defaultFormatter = (value: string | number) => {
     const date = new Date(value);
 
@@ -63,7 +66,17 @@ export function LineChart<T extends BaseChartData>({
 
   return (
     <ChartContainer {...rest} config={config} className={cn("aspect-auto h-[250px] w-full", className)}>
-      <RechartsLineChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
+      <AreaChart accessibilityLayer data={data} margin={{ left: 0, right: 0, top: 8, bottom: 0 }}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.14} />
+            <stop offset="75%" stopColor={color} stopOpacity={0.04} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+
+        <YAxis domain={[0, (max: number) => (max === 0 ? 10 : max * 1.15)]} hide />
+
         {showGrid && <CartesianGrid vertical={false} {...grid} />}
 
         {showXAxis && (
@@ -95,8 +108,17 @@ export function LineChart<T extends BaseChartData>({
           />
         )}
 
-        <Line type="monotone" stroke={color} strokeWidth={2} dot={false} {...line} dataKey={activeKey} />
-      </RechartsLineChart>
+        <Area
+          type="monotone"
+          dataKey={activeKey}
+          stroke={color}
+          strokeWidth={1.5}
+          fill={`url(#${gradientId})`}
+          dot={false}
+          activeDot={{ r: 3, strokeWidth: 0 }}
+          {...(line as Omit<React.ComponentProps<typeof Area>, "dataKey" | "key" | "ref">)}
+        />
+      </AreaChart>
     </ChartContainer>
   );
 }

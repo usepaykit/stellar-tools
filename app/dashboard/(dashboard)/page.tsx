@@ -4,6 +4,7 @@ import React from "react";
 
 import { retrieveOverviewStats } from "@/actions/organization";
 import { retrieveOwnerPlan } from "@/actions/plan";
+import { AppModal } from "@/components/app-modal";
 import { CircularProgress } from "@/components/circular-progress";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -16,6 +17,7 @@ import {
   SubscriptionIcon,
 } from "@/components/icon";
 import { LineChart } from "@/components/line-chart";
+import { ShareWidget } from "@/components/share-widget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -24,7 +26,7 @@ import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { TCountryCode, countries } from "countries-list";
-import { ChevronsUpDown, Info } from "lucide-react";
+import { ArrowUpRight, ChevronsUpDown, Info } from "lucide-react";
 import Link from "next/link";
 
 const STROOPS_PER_XLM = 10_000_000;
@@ -336,13 +338,32 @@ function StatCard({
   const chartData = hasSpark ? sparkData : Array.from({ length: 7 }, (_, i) => ({ i: `d${i}`, value: 0 }));
   const showProgress = typeof max === "number" && max > 0 && typeof usage === "number";
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    AppModal.open({
+      title: `Share ${title}`,
+      content: <ShareWidget title={title} value={value} subtitle={subtitle} sparkData={sparkData} />,
+      size: "medium",
+      showCloseButton: true,
+    });
+  };
+
   const card = (
     <Card
       className={cn(
-        "border-border/60 bg-card relative overflow-hidden rounded-2xl shadow-xs transition-shadow",
+        "border-border/60 bg-card group relative overflow-hidden rounded-2xl shadow-xs transition-shadow",
         href && "cursor-pointer hover:shadow-sm"
       )}
     >
+      <button
+        onClick={handleShare}
+        title={`Share ${title}`}
+        className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-3 right-3 z-10 flex size-6 cursor-pointer items-center justify-center rounded-md opacity-0 transition-all group-hover:opacity-100"
+      >
+        <ArrowUpRight className="size-3.5" />
+      </button>
+
       <CardContent className="flex flex-col gap-5 p-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-2">

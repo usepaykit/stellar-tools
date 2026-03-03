@@ -60,7 +60,7 @@ export const DataTable = <TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
-  const { row, checkbox, body, cell, ...rest } = splitProps(mixProps, "row", "checkbox", "body", "head", "cell");
+  const { row, checkbox, body, cell, rest } = splitProps(mixProps, "row", "checkbox", "body", "head", "cell");
 
   const tableColumns = React.useMemo(() => {
     let cols = columns;
@@ -180,8 +180,8 @@ export const DataTable = <TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border">
-        <Table {...rest}>
+      <div className="">
+        <Table {...rest} className={cn("rounded-lg border", rest.className)}>
           <TableHeader>
             {reactTable.getHeaderGroups().map((headerGroup) => (
               <TableRow {...row} key={headerGroup.id}>
