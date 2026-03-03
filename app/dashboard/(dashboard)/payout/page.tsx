@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrievePayouts } from "@/actions/payout";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { PayoutStatus } from "@/constant/schema.client";
 import { Payout } from "@/db";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -24,65 +26,6 @@ import * as RHF from "react-hook-form";
 import { z } from "zod";
 
 import { generateAndDownloadReceipt } from "./[id]/page";
-
-const mockPayouts: Payout[] = [
-  {
-    id: "1",
-    organizationId: "1",
-    walletAddress: "GABC...ABCD",
-    memo: null,
-    status: "pending",
-    amount: 91.94,
-    environment: "testnet",
-    transactionHash: "0xabc...",
-    createdAt: new Date(),
-    completedAt: new Date(),
-    metadata: null,
-    asset: "XLM",
-  },
-  {
-    id: "2",
-    organizationId: "1",
-    walletAddress: "GXYZ...CDEF",
-    memo: null,
-    status: "succeeded",
-    amount: 76.45,
-    environment: "testnet",
-    transactionHash: "0xabc...",
-    createdAt: new Date(),
-    completedAt: new Date(),
-    metadata: null,
-    asset: "XLM",
-  },
-  {
-    id: "3",
-    organizationId: "1",
-    walletAddress: "GABC...ABCD",
-    memo: null,
-    status: "succeeded",
-    amount: 150.0,
-    environment: "testnet",
-    transactionHash: "0xabc...",
-    createdAt: new Date(),
-    completedAt: new Date(),
-    metadata: null,
-    asset: "XLM",
-  },
-  {
-    id: "4",
-    organizationId: "1",
-    walletAddress: "GXYZ...CDEF",
-    memo: null,
-    status: "succeeded",
-    amount: 200.5,
-    environment: "testnet",
-    transactionHash: "0xabc...",
-    createdAt: new Date(),
-    completedAt: new Date(),
-    metadata: null,
-    asset: "XLM",
-  },
-];
 
 const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const variants = {
@@ -350,6 +293,8 @@ function RequestPayoutModalContent({ onClose, onSuccess }: { onClose: () => void
 export default function PayoutPage() {
   const router = useRouter();
 
+  const { data: payoutList = [], isLoading } = useOrgQuery(["payouts"], () => retrievePayouts());
+
   const openRequestModal = () => {
     AppModal.open({
       title: "Request Payout",
@@ -399,15 +344,16 @@ export default function PayoutPage() {
           <DataTable
             className="border-x-0"
             columns={columns}
-            data={mockPayouts}
+            data={payoutList}
             actions={tableActions}
             onRowClick={(row) => {
               router.push(`/payout/${row.id}`);
             }}
+            isLoading={isLoading}
           />
 
           <div className="text-muted-foreground text-sm">
-            {mockPayouts.length} result{mockPayouts.length !== 1 ? "s" : ""}
+            {payoutList.length} result{payoutList.length !== 1 ? "s" : ""}
           </div>
         </div>
       </DashboardSidebarInset>

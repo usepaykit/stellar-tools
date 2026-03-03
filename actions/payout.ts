@@ -3,7 +3,16 @@
 import { EventTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payout, db, payouts } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+
+export const retrievePayouts = async () => {
+  const { organizationId, environment } = await resolveOrgContext();
+  return db
+    .select()
+    .from(payouts)
+    .where(and(eq(payouts.organizationId, organizationId), eq(payouts.environment, environment)))
+    .orderBy(desc(payouts.createdAt));
+};
 
 export const postPayout = async (
   params: Omit<Payout, "organizationId" | "environment" | "createdAt" | "updatedAt">,
