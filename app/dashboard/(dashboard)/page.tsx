@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { TCountryCode, countries } from "countries-list";
@@ -109,15 +109,18 @@ const SPARKLINE_CONFIG = {
 export default function DashboardPage() {
   const [countryCode, setCountryCode] = React.useState<string>("US");
   const [countryOpen, setCountryOpen] = React.useState(false);
+  const { data: orgContext } = useOrgContext();
 
   const { data: accountPlan } = useQuery({
     queryKey: ["account-plan"],
     queryFn: () => retrieveOwnerPlan({ currentUser: true }),
   });
 
-  const { data: stats, isLoading } = useOrgQuery(["overview-stats"], () => retrieveOverviewStats(), {
-    staleTime: 60 * 1000,
-  });
+  const { data: stats, isLoading } = useOrgQuery(
+    ["overview-stats", orgContext?.id, orgContext?.environment],
+    () => retrieveOverviewStats(),
+    { staleTime: 60 * 1000 }
+  );
 
   const displayStats = stats;
   const plan = accountPlan?.plan;

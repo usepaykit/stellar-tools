@@ -28,7 +28,10 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
     const newEnv: Network = checked ? "testnet" : "mainnet";
     try {
       await switchEnvironment(newEnv);
-      await queryClient.invalidateQueries({ queryKey: ["org-context"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["org-context"] }),
+        queryClient.invalidateQueries({ queryKey: ["overview-stats"] }),
+      ]);
       toast.success(`Switched to ${checked ? "Test" : "Live"} mode`);
       router.refresh();
     } catch {

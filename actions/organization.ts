@@ -401,7 +401,12 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     })
     .from(payments)
     .where(
-      and(eq(payments.organizationId, organizationId), eq(payments.status, "confirmed"), gte(payments.createdAt, since))
+      and(
+        eq(payments.organizationId, organizationId),
+        eq(payments.environment, environment),
+        eq(payments.status, "confirmed"),
+        gte(payments.createdAt, since)
+      )
     )
     .groupBy(sql`1`)
     .orderBy(sql`1`);
@@ -412,7 +417,13 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
       count: sql<number>`count(*)::int`,
     })
     .from(customers)
-    .where(and(eq(customers.organizationId, organizationId), gte(customers.createdAt, since)))
+    .where(
+      and(
+        eq(customers.organizationId, organizationId),
+        eq(customers.environment, environment),
+        gte(customers.createdAt, since)
+      )
+    )
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
@@ -422,7 +433,13 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
       count: sql<number>`count(*)::int`,
     })
     .from(subscriptions)
-    .where(and(eq(subscriptions.organizationId, organizationId), gte(subscriptions.createdAt, since)))
+    .where(
+      and(
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment),
+        gte(subscriptions.createdAt, since)
+      )
+    )
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
@@ -435,6 +452,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     .where(
       and(
         eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment),
         eq(subscriptions.status, "trialing"),
         gte(subscriptions.createdAt, since)
       )
@@ -454,6 +472,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
       .where(
         and(
           eq(payments.organizationId, organizationId),
+          eq(payments.environment, environment),
           eq(payments.status, "confirmed"),
           gte(payments.createdAt, since)
         )

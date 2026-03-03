@@ -1,56 +1,65 @@
-# Stellar Tools
+<p align="center">
+  <img src="./public/images/logo-dark.png#gh-dark-mode-only" width="180" alt="Stellar Tools" />
+  <img src="./public/images/logo-light.png#gh-light-mode-only" width="180" alt="Stellar Tools" />
+</p>
 
-## Compound Components with MixinProps
+<p align="center">
+  Payment infrastructure built on the Stellar blockchain.
+</p>
 
-Use `MixinProps` and `splitProps` to create compound components that accept props for child elements.
+<p align="center">
+  <a href="https://stellartools.dev">Website</a> &bull;
+  <a href="https://docs.stellartools.dev">Docs</a> &bull;
+  <a href="DEVELOPMENT.md">Development</a>
+</p>
 
-Pattern:
+---
 
-1. Extend your component props with `MixinProps<"mixinName", ComponentProps>`
-2. Use `splitProps()` to separate prefixed props
-3. Spread the separated props onto child components
+## What is Stellar Tools?
 
-**Example:**
+Stellar Tools is an open-source payment platform that lets developers accept and manage payments using the Stellar network. It handles subscriptions, checkouts, webhooks, customer management, and payouts, with smart contract support via Soroban.
 
-```typescript
-interface MyComponentProps
-  extends MixinProps<"label", React.ComponentProps<typeof Label>>,
-    MixinProps<"error", React.ComponentProps<"p">> {
-  value: string;
-  onChange: (value: string) => void;
-}
+- Accept payments in Stellar-native assets
+- Manage subscriptions with metered billing via Soroban smart contracts
+- Hosted checkout pages with QR code support
+- Webhook delivery for payment and subscription events
+- Dashboard for managing customers, products, and payouts
 
-export function MyComponent({
-  value,
-  onChange,
-  ...mixProps
-}: MyComponentProps) {
-  const { label, error, rest } = splitProps(mixProps, "label", "error");
+## Tech Stack
 
-  return (
-    <div>
-      <Label {...label}>Label</Label>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        {...rest}
-      />
-      {error && <p {...error}>Error message</p>}
-    </div>
-  );
-}
-```
+- [Next.js](https://nextjs.org) 16 + [React](https://react.dev) 19 - framework
+- [TypeScript](https://typescriptlang.org) - language
+- [Tailwind CSS](https://tailwindcss.com) 4 - styling
+- [PostgreSQL](https://www.postgresql.org) + [Drizzle ORM](https://orm.drizzle.team) - database
+- [Stellar SDK](https://stellar.org) + [Soroban](https://soroban.stellar.org) - blockchain
+- [BetterAuth](https://better-auth.com) - authentication
+- [Inngest](https://inngest.com) - background jobs and workflows
+- [Resend](https://resend.com) - emails
+- [Mintlify](https://mintlify.com) - docs
+- [pnpm](https://pnpm.io) - package manager
 
-**Usage:**
+## Packages
 
-```typescript
-<MyComponent
-  value={value}
-  onChange={setValue}
-  labelClassName="text-sm font-medium" // Goes to Label
-  errorClassName="text-red-500" // Goes to error <p>
-  className="border rounded" // Goes to input (rest)
-/>
-```
+| Package                             | Description                                         |
+| ----------------------------------- | --------------------------------------------------- |
+| `@stellartools/core`                | Core SDK for interacting with the Stellar Tools API |
+| `@stellartools/plugin-sdk`          | Build metered integrations on top of Stellar Tools  |
+| `@stellartools/betterauth-adapter`  | BetterAuth integration                              |
+| `@stellartools/aisdk-adapter`       | Vercel AI SDK integration                           |
+| `@stellartools/medusajs-adapter`    | MedusaJS integration                                |
+| `@stellartools/uploadthing-adapter` | UploadThing integration                             |
+| `langchain-adapter`                 | LangChain integration                               |
 
-Props prefixed with the mixin name (e.g., `labelClassName`, `errorId`) are automatically routed to their respective components.
+## Contributing
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) to get your local environment set up.
+
+Found a bug? [Open an issue](https://github.com/usepaykit/stellar-tools/issues).
+
+## Maintained by
+
+[Emmanuel Odii](https://github.com/devodii)
+
+## License
+
+MIT License. Copyright 2025 PayKit.
