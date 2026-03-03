@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { Product as ProductSchema } from "@/db";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
-import { urlToFile } from "@/lib/utils";
+import { fileFromUrl } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, RecurringPeriod } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
@@ -490,7 +490,7 @@ export function ProductsModalContent({
       });
 
       if (editingProduct.images?.length && editingProduct.images[0]) {
-        urlToFile(editingProduct.images[0], "existing-image.png").then((file) => {
+        fileFromUrl(editingProduct.images[0], "existing-image.png").then((file) => {
           form.setValue("images", [
             {
               ...file,

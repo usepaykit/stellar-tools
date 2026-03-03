@@ -10,13 +10,13 @@ const steps = [
     number: "01",
     title: "Create your account & add your first product",
     description:
-      "Sign up, create a product (one-time or subscription), and set your price in XLM or pegged to USD. No blockchain knowledge required.",
+      "Sign up, create a product (one-time or subscription), and set your price in XLM or a stable coin like USDC",
   },
   {
     number: "02",
     title: "Generate a payment link or use the API",
     description:
-      "Share a hosted checkout link or integrate via our REST API and JS SDK. Your checkout page is hosted — zero frontend work needed.",
+      "Share a hosted checkout link or integrate via our REST API and JS SDK. Your checkout page is managed by us.",
   },
   {
     number: "03",

@@ -13,11 +13,14 @@ import { TCountryCode, getCountryData } from "countries-list";
 import { countries } from "country-flag-icons";
 import * as CountryFlags from "country-flag-icons/react/3x2";
 import { Check } from "lucide-react";
+import { z as Schema } from "zod";
 
-export interface PhoneNumber {
-  number: string;
-  countryCode: string;
-}
+export const phoneNumberSchema = Schema.object({
+  number: Schema.string().min(10, "Invalid phone"),
+  countryCode: Schema.string().default("US"),
+});
+
+export type PhoneNumber = Schema.infer<typeof phoneNumberSchema>;
 
 export const phoneNumberToString = (phoneNumber: PhoneNumber) => {
   const { phone } = getCountryData(phoneNumber.countryCode as TCountryCode);

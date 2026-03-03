@@ -18,7 +18,7 @@ export interface FileWithPreview extends File {
 
 interface FileUploadProps
   extends
-    MixinProps<"dropzone", Omit<DropzoneOptions, "onDrop">>,
+    MixinProps<"dropzone", Omit<DropzoneOptions, "onDrop"> & { className?: string }>,
     MixinProps<"label", Omit<LabelProps, "children">>,
     MixinProps<"error", Omit<ErrorProps, "children">> {
   id?: string;
@@ -41,6 +41,7 @@ interface FileUploadProps
   targetFormat?: MimeType;
   label?: LabelProps["children"];
   error?: ErrorProps["children"];
+  shape?: "square" | "circle";
 }
 
 export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
@@ -58,6 +59,7 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
       targetFormat = "image/png",
       label,
       error,
+      shape = "square",
       ...mixinProps
     },
     ref
@@ -142,11 +144,13 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
           aria-disabled={disabled || isTransforming}
           aria-invalid={!!error}
           className={cn(
-            "group border-input bg-muted/5 relative flex h-64 w-full cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all",
+            "group border-input bg-muted/5 relative flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed transition-all",
             isDragActive && "border-primary bg-primary/5 ring-primary/10 ring-4",
             (disabled || isTransforming) && "cursor-not-allowed opacity-50",
             !hasFile && !isTransforming && "hover:bg-muted/50 hover:border-primary/50",
-            hasFile && !hasImage && "bg-background border-solid"
+            hasFile && !hasImage && "bg-background border-solid",
+            shape == "circle" ? "size-20 rounded-full" : "h-64 w-full",
+            dropzone.className
           )}
         >
           <input
@@ -173,14 +177,14 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
                 src={currentFile.preview}
                 alt={currentFile.name}
                 fill
-                className="object-cover"
+                className={cn("object-cover", shape == "circle" && "rounded-full")}
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-200 group-hover:bg-black/40">
                 <div className="flex flex-col items-center gap-2 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                   <div className="rounded-full bg-white/20 p-3 backdrop-blur-sm">
-                    <Pencil className="h-6 w-6" />
+                    <Pencil className={cn(shape == "circle" ? "size-4" : "size-6")} />
                   </div>
-                  <p className="text-sm font-medium">Change image</p>
+                  {shape == "square" && <p className="text-sm font-medium">Change image</p>}
                 </div>
               </div>
             </>
@@ -199,10 +203,12 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
               <div className="bg-background rounded-full border p-4 shadow-sm">
                 <ImagePlus className="text-muted-foreground h-6 w-6" />
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">{placeholder}</p>
-                {description && <p className="text-muted-foreground text-xs">{description}</p>}
-              </div>
+              {shape == "square" && (
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{placeholder}</p>
+                  {description && <p className="text-muted-foreground text-xs">{description}</p>}
+                </div>
+              )}
             </div>
           )}
         </div>

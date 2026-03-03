@@ -123,7 +123,18 @@ export const retrieveOrganizationIdAndSecret = async (id: string, environment: N
   return result;
 };
 
-export const putOrganization = async (id: string, params: Partial<Organization>) => {
+export const putOrganization = async (
+  id: string,
+  params: Partial<Organization>,
+  options?: { formDataWithFiles?: FormData }
+) => {
+  const logoFile = options?.formDataWithFiles?.get("logo");
+
+  if (logoFile) {
+    const logoUploadResult = await new FileUploadApi().upload([logoFile as File]);
+    params.logoUrl = logoUploadResult?.[0] ?? null;
+  }
+
   const [organization] = await db
     .update(organizations)
     .set({ ...params, updatedAt: new Date() })

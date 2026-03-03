@@ -4,7 +4,7 @@ import {
   type MeteredPluginConfig,
   createMeteredPlugin,
 } from "@stellartools/plugin-sdk";
-import { InvalidArgumentError, generateObject, generateText, streamObject, streamText } from "ai";
+import * as AI from "ai";
 
 export class MeteredAISDK {
   private plugin: MeteredPlugin;
@@ -15,7 +15,7 @@ export class MeteredAISDK {
 
   private wrapError(err: unknown): never {
     if (err instanceof InsufficientCreditsError) {
-      throw new InvalidArgumentError({
+      throw new AI.InvalidArgumentError({
         message: err.message,
         parameter: "credits",
         value: err.required,
@@ -24,11 +24,11 @@ export class MeteredAISDK {
     throw err;
   }
 
-  async generateText(customerId: string, ...args: Parameters<typeof generateText>) {
+  async generateText(customerId: string, ...args: Parameters<typeof AI.generateText>) {
     try {
       return await this.plugin.meter(
         customerId,
-        () => generateText(...args),
+        () => AI.generateText(...args),
         (result) => result.usage.totalTokens ?? 0,
         { operation: "generateText" }
       );
@@ -37,11 +37,11 @@ export class MeteredAISDK {
     }
   }
 
-  async generateObject(customerId: string, ...args: Parameters<typeof generateObject>) {
+  async generateObject(customerId: string, ...args: Parameters<typeof AI.generateObject>) {
     try {
       return await this.plugin.meter(
         customerId,
-        () => generateObject(...args),
+        () => AI.generateObject(...args),
         (result) => result.usage.totalTokens ?? 0,
         { operation: "generateObject" }
       );
@@ -50,7 +50,7 @@ export class MeteredAISDK {
     }
   }
 
-  async streamText(customerId: string, ...args: Parameters<typeof streamText>) {
+  async streamText(customerId: string, ...args: Parameters<typeof AI.streamText>) {
     try {
       await this.plugin.preflight(customerId);
     } catch (err) {
@@ -59,7 +59,7 @@ export class MeteredAISDK {
 
     const originalOnFinish = args[0]?.onFinish;
 
-    return streamText({
+    return AI.streamText({
       ...args[0],
       onFinish: async (event) => {
         await this.plugin.charge(customerId, event.usage.totalTokens ?? 0, { operation: "streamText" });
@@ -68,7 +68,7 @@ export class MeteredAISDK {
     });
   }
 
-  async streamObject(customerId: string, ...args: Parameters<typeof streamObject>) {
+  async streamObject(customerId: string, ...args: Parameters<typeof AI.streamObject>) {
     try {
       await this.plugin.preflight(customerId);
     } catch (err) {
@@ -77,7 +77,7 @@ export class MeteredAISDK {
 
     const originalOnFinish = args[0]?.onFinish;
 
-    return streamObject({
+    return AI.streamObject({
       ...args[0],
       onFinish: async (event) => {
         await this.plugin.charge(customerId, event.usage.totalTokens ?? 0, { operation: "streamObject" });

@@ -32,15 +32,6 @@ export const parseJSON = <T>(str: string, schema: z.ZodSchema<T>): T => {
   return schema.parse(parsed);
 };
 
-export const getInitials = (name: string): string => {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-};
-
 export function computeDiff<T extends Record<string, any>>(
   oldData: T,
   newData: Partial<T>,
@@ -103,7 +94,7 @@ export const toSnakeCase = (data: unknown): unknown => {
   return data;
 };
 
-export const urlToFile = async (url: string, fileName: string): Promise<File> => {
+export const fileFromUrl = async (url: string, fileName: string): Promise<File> => {
   const response = await fetch(url);
   const blob = await response.blob();
   return new File([blob], fileName, { type: blob.type });

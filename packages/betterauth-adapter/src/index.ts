@@ -40,7 +40,7 @@ type EndpointsFromRoutes<T> = {
   [K in keyof T]: T[K] extends (options: BillingConfig) => infer R ? R : never;
 };
 
-export const createBilling = (options: BillingConfig) => {
+export const stellarTools = (options: BillingConfig) => {
   const endpoints = Object.fromEntries(
     Object.entries(routes).map(([key, factory]) => [key, factory(options)])
   ) as EndpointsFromRoutes<RouteFactories>;
@@ -67,4 +67,4 @@ export const createBilling = (options: BillingConfig) => {
   } satisfies BetterAuthPlugin;
 };
 
-export type BillingPlugin = ReturnType<typeof createBilling>;
+export type StellarToolsPlugin = ReturnType<typeof stellarTools>;

@@ -71,54 +71,54 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {
+export const FileUploadSquare: Story = {
   render: (args) => <FileUploadWithState {...args} />,
   args: {
     label: "Upload file",
     placeholder: "Drag & drop an image here, or click to select",
-  } as any,
+    shape: "square",
+  },
 };
 
-export const WithDescription: Story = {
+export const FileUploadCircle: Story = {
   render: (args) => <FileUploadWithState {...args} />,
   args: {
-    label: "Upload file",
-    placeholder: "Drag & drop an image here, or click to select",
-    description: "PNG, JPG or GIF up to 10MB",
-  } as any,
+    label: "Upload picture",
+    placeholder: undefined,
+    shape: "circle",
+    dropzoneAccept: { "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"] },
+    dropzoneMaxSize: 5 * 1024 * 1024,
+    dropzoneMultiple: false,
+    enableTransformation: true,
+    targetFormat: "image/png",
+  },
 };
 
-export const WithError: Story = {
+export const FileUploadSquareWithError: Story = {
   render: (args) => <FileUploadWithState {...args} />,
   args: {
     label: "Upload file",
     placeholder: "Drag & drop an image here, or click to select",
     error: "Please upload an image file",
-  } as any,
+    shape: "square",
+  },
 };
 
-export const Disabled: Story = {
+export const FileUploadSquareDisabled: Story = {
   render: (args) => <FileUploadWithState {...args} />,
   args: {
     label: "Upload file",
     placeholder: "Drag & drop an image here, or click to select",
     disabled: true,
-  } as any,
+    shape: "square",
+  },
 };
 
-export const WithoutLabel: Story = {
-  render: (args) => <FileUploadWithState {...args} />,
-  args: {
-    label: null,
-    placeholder: "Drag & drop an image here, or click to select",
-  } as any,
-};
-
-export const WithNonImageFile: Story = {
+export const FileUploadSquareWithNonImageFile: Story = {
   render: (args) => <FileUploadWithState {...args} />,
   args: {
     label: "Upload file",
     placeholder: "Drag & drop an image here, or click to select",
     value: [createNonImageFile("document.pdf", "application/pdf")],
-  } as any,
+  },
 };

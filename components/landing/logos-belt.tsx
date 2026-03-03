@@ -3,12 +3,12 @@ import React from "react";
 import Image from "next/image";
 
 const integrations = [
-  { name: "AI SDK (Vercel)", logo: "/images/integrations/aisdk.jpg" },
+  { name: "LangChain", logo: "/images/integrations/langchain.png" },
+  { name: "AI SDK", logo: "/images/integrations/aisdk.jpg" },
   { name: "BetterAuth", logo: "/images/integrations/better-auth.png" },
   { name: "MedusaJS", logo: "/images/integrations/medusa.svg" },
+  { name: "WordPress", logo: "/images/integrations/wordpress.png" },
   { name: "UploadThing", logo: "/images/integrations/uploadthing.png" },
-  { name: "Stellar / XLM", logo: "/images/integrations/stellar-official.png" },
-  { name: "Clerk", logo: "/images/integrations/clerk.png" },
 ];
 
 export default function LogosBelt() {

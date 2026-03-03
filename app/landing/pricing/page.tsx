@@ -54,22 +54,15 @@ const PricingContent = async () => {
 
 export default async function PricingPage() {
   return (
-    <AuroraBackground>
-      <div className="bg-background min-h-screen scroll-smooth">
-        <Header />
+    <AuroraBackground className="bg-background min-h-screen scroll-smooth">
+      <Header />
 
-        <main className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-          <React.Suspense fallback={<PricingLoadingFallback />}>
-            <PricingContent />
-            {/* <Pricing
-              title="Simple, transparent pricing"
-              description="Accept Stellar payments with ease. Start free, pay only for what you use. No hidden fees, no surprises."
-              plans={MOCK_PRICING_PLANS}
-            /> */}
-          </React.Suspense>
-        </main>
-        <FooterSection />
+      <div className="relative z-10 mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+        <React.Suspense fallback={<PricingLoadingFallback />}>
+          <PricingContent />
+        </React.Suspense>
       </div>
+      <FooterSection />
     </AuroraBackground>
   );
 }

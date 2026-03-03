@@ -8,6 +8,7 @@ import {
   PhoneNumber,
   PhoneNumberField,
   phoneNumberFromString,
+  phoneNumberSchema,
   phoneNumberToString,
 } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
@@ -34,13 +35,7 @@ import { z } from "zod";
 
 const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: {} });
 
-const checkoutSchema = z.object({
-  email: z.email("Required"),
-  phoneNumber: z.object({
-    number: z.string().min(10, "Invalid phone"),
-    countryCode: z.string().default("US"),
-  }),
-});
+const checkoutSchema = z.object({ email: z.email("Required"), phoneNumber: phoneNumberSchema });
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
 

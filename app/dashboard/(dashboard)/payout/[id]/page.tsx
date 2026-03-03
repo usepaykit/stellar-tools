@@ -333,4 +333,3 @@ export async function generateAndDownloadReceipt(
     throw new Error("Failed to generate receipt");
   }
 }
-

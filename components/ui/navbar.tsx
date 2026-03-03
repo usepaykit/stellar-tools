@@ -6,6 +6,7 @@ import { getCurrentUser, signOut } from "@/actions/auth";
 import { AppModal } from "@/components/app-modal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,8 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { getInitials } from "@/lib/utils";
-import { CirclePlus, LogOut, Monitor, Moon, Sun } from "@aliimam/icons";
+import { CirclePlus, LogOut, Menu, Monitor, Moon, Sun } from "@aliimam/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import Image from "next/image";
@@ -36,6 +36,7 @@ const NAV_LINKS = [
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
 
   const { data: user, isLoading } = useQuery({
@@ -73,154 +74,203 @@ export function Header() {
   }, []);
 
   return (
-    <nav
-      className={cn(
-        "sticky top-0 z-50 w-full border-b backdrop-blur-md transition-all duration-300",
-        scrolled ? "border-border bg-background/90" : "bg-background/90 border-transparent"
-      )}
-    >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <Paykit className="size-8" />
-          <span className="text-muted-foreground">/</span>
-          <Image
-            src="/images/logo-light.png"
-            alt="Stellar Tools logo"
-            width={32}
-            height={32}
-            className="size-8 rounded-md object-contain"
-          />
-          <span className="font-rosemary text-lg font-semibold">StellarTools</span>
-        </Link>
+    <nav className="sticky top-0 z-50 w-full">
+      {/* Mobile: floating pill */}
+      <div className="px-4 pt-3 pb-1 md:hidden">
+        <div className="bg-background/95 border-border flex items-center justify-between rounded-2xl border px-4 py-2.5 shadow-sm backdrop-blur-md">
+          <Link href="/" className="flex items-center gap-2">
+            <Paykit className="size-7" />
+            <span className="text-muted-foreground text-sm">/</span>
+            <Image
+              src="/images/logo-light.png"
+              alt="Stellar Tools logo"
+              width={28}
+              height={28}
+              className="size-7 rounded-md object-contain"
+            />
+            <span className="font-rosemary text-base font-semibold">StellarTools</span>
+          </Link>
 
-        {/* Navigation Links */}
-        <ul className="hidden list-none gap-8 md:flex">
-          <li>
-            <Link
-              href="#features"
-              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
-            >
-              Products
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="#integrations"
-              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
-            >
-              Integrations
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="#developers"
-              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
-            >
-              Developers
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/docs"
-              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
-            >
-              Docs
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/pricing"
-              className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
-            >
-              Pricing
-            </Link>
-          </li>
-        </ul>
+          <button
+            aria-label="Open menu"
+            onClick={() => setMenuOpen(true)}
+            className="border-border hover:bg-muted flex h-9 w-9 items-center justify-center rounded-xl border transition-colors"
+          >
+            <Menu className="size-4" />
+          </button>
+        </div>
+      </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-3">
-          {isLoading ? (
-            <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
-          ) : isAuthenticated ? (
-            <>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/dashboard">Dashboard</Link>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Avatar className="cursor-pointer border">
-                    <AvatarImage src={user?.profile.avatarUrl || ""} alt={userName} />
-                    <AvatarFallback>{userInitials}</AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-70 rounded-xl p-3" align="end">
-                  <div className="p-2">
-                    <h1 className="font-semibold">{userName}</h1>
-                    <p className="text-muted-foreground text-sm">{user?.email}</p>
-                  </div>
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem className="py-3" asChild>
-                      <Link href="/dashboard">Dashboard</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="py-3" asChild>
-                      <Link href="/settings">Account Settings</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="justify-between py-3" asChild>
-                      <Link href="/select-organization?create=true">
-                        Create Teams <CirclePlus strokeWidth={2} />
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator className="-mx-3" />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem className="justify-between py-3">
-                      Theme <ThemeSwitcher />
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator className="-mx-3" />
-                  <DropdownMenuItem
-                    className="text-destructive justify-between py-3"
-                    onClick={() =>
-                      AppModal.open({
-                        title: "Log out",
-                        description:
-                          "Are you sure you want to log out? You'll need to sign in again to access your account.",
-                        content: (
-                          <div className="py-4">
-                            <p className="text-muted-foreground text-sm">
-                              This will end your current session and you&apos;ll be redirected to the sign in page.
-                            </p>
-                          </div>
-                        ),
-                        size: "small",
-                        showCloseButton: true,
-                        primaryButton: { children: "Log out", variant: "destructive", onClick: handleLogout },
-                        secondaryButton: { children: "Cancel" },
-                      })
-                    }
-                  >
-                    Logout <LogOut strokeWidth={2} />
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <>
+      {/* Mobile full-screen menu */}
+      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+        <DialogContent className="inset-0! top-0! left-0! m-0! flex h-screen! w-screen! max-w-none! translate-x-0! translate-y-0! flex-col gap-0 rounded-none border-none p-0">
+          <DialogTitle className="sr-only">Navigation menu</DialogTitle>
+
+          <nav className="flex flex-1 flex-col justify-center gap-1 px-8">
+            {NAV_LINKS.map(({ href, label }) => (
               <Link
-                href="/login"
-                className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg px-4 py-2 text-[14.5px] font-medium no-underline transition-colors"
+                key={href}
+                href={href}
+                onClick={() => setMenuOpen(false)}
+                className="text-foreground hover:text-primary flex items-center justify-between border-b py-5 text-[22px] font-semibold no-underline transition-colors last:border-b-0"
               >
-                Sign in
+                {label}
+                <span className="text-muted-foreground text-base">→</span>
               </Link>
+            ))}
+          </nav>
+
+          <div className="flex flex-col gap-3 px-8 pb-12">
+            {isAuthenticated ? (
               <Link
-                href="/create"
-                className="bg-primary text-primary-foreground rounded-[9px] px-5 py-2 text-[14.5px] font-semibold no-underline transition-all hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(91,79,255,0.35)]"
+                href="/dashboard"
+                onClick={() => setMenuOpen(false)}
+                className="bg-primary text-primary-foreground block rounded-xl px-5 py-4 text-center text-[15px] font-semibold no-underline"
               >
-                Start for free →
+                Go to Dashboard →
               </Link>
-            </>
-          )}
+            ) : (
+              <>
+                <Link
+                  href="/create"
+                  onClick={() => setMenuOpen(false)}
+                  className="bg-primary text-primary-foreground block rounded-xl px-5 py-4 text-center text-[15px] font-semibold no-underline"
+                >
+                  Start for free →
+                </Link>
+                <Link
+                  href="/login"
+                  onClick={() => setMenuOpen(false)}
+                  className="text-muted-foreground hover:text-foreground block rounded-xl px-5 py-4 text-center text-[15px] font-medium no-underline transition-colors"
+                >
+                  Sign in
+                </Link>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Desktop: full-width bar */}
+      <div
+        className={cn(
+          "hidden border-b backdrop-blur-md transition-all duration-300 md:block",
+          scrolled ? "border-border bg-background/90" : "bg-background/90 border-transparent"
+        )}
+      >
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <Paykit className="size-8" />
+            <span className="text-muted-foreground">/</span>
+            <Image
+              src="/images/logo-light.png"
+              alt="Stellar Tools logo"
+              width={32}
+              height={32}
+              className="size-8 rounded-md object-contain"
+            />
+            <span className="font-rosemary text-lg font-semibold">StellarTools</span>
+          </Link>
+
+          {/* Navigation Links */}
+          <ul className="flex list-none gap-8">
+            {NAV_LINKS.map(({ href, label }) => (
+              <li key={href}>
+                <Link
+                  href={href}
+                  className="text-muted-foreground hover:text-foreground text-[14.5px] font-medium no-underline transition-colors"
+                >
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          {/* Desktop Actions */}
+          <div className="flex items-center gap-3">
+            {isLoading ? (
+              <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />
+            ) : isAuthenticated ? (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Avatar className="cursor-pointer border">
+                      <AvatarImage src={user?.profile.avatarUrl || ""} alt={userName} />
+                      <AvatarFallback>{userInitials}</AvatarFallback>
+                    </Avatar>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-70 rounded-xl p-3" align="end">
+                    <div className="p-2">
+                      <h1 className="font-semibold">{userName}</h1>
+                      <p className="text-muted-foreground text-sm">{user?.email}</p>
+                    </div>
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem className="py-3" asChild>
+                        <Link href="/dashboard">Dashboard</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="py-3" asChild>
+                        <Link href="/settings">Account Settings</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="justify-between py-3" asChild>
+                        <Link href="/select-organization?create=true">
+                          Create Teams <CirclePlus strokeWidth={2} />
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator className="-mx-3" />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem className="justify-between py-3">
+                        Theme <ThemeSwitcher />
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator className="-mx-3" />
+                    <DropdownMenuItem
+                      className="text-destructive justify-between py-3"
+                      onClick={() =>
+                        AppModal.open({
+                          title: "Log out",
+                          description:
+                            "Are you sure you want to log out? You'll need to sign in again to access your account.",
+                          content: (
+                            <div className="py-4">
+                              <p className="text-muted-foreground text-sm">
+                                This will end your current session and you&apos;ll be redirected to the sign in page.
+                              </p>
+                            </div>
+                          ),
+                          size: "small",
+                          showCloseButton: true,
+                          primaryButton: { children: "Log out", variant: "destructive", onClick: handleLogout },
+                          secondaryButton: { children: "Cancel" },
+                        })
+                      }
+                    >
+                      Logout <LogOut strokeWidth={2} />
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg px-4 py-2 text-[14.5px] font-medium no-underline transition-colors"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/create"
+                  className="bg-primary text-primary-foreground rounded-[9px] px-5 py-2 text-[14.5px] font-semibold no-underline transition-all hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(91,79,255,0.35)]"
+                >
+                  Start for free →
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </nav>

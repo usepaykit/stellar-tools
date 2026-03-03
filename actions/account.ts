@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/actions/auth";
 import { AuthProvider } from "@/constant/schema.client";
 import { Account, accounts, db, plan } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
+import { FileUploadApi } from "@/integrations/file-upload";
 import { JWTApi } from "@/integrations/jwt";
 import { asc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -58,7 +59,14 @@ export const retrieveAccount = async (payload: AccountLookup): Promise<Account |
   return account ?? null;
 };
 
-export const putAccount = async (id: string, params: Partial<Account>) => {
+export const putAccount = async (id: string, params: Partial<Account>, options?: { formDataWithFiles?: FormData }) => {
+  const avatarFile = options?.formDataWithFiles?.get("avatar");
+
+  if (avatarFile) {
+    const avatarUploadResult = await new FileUploadApi().upload([avatarFile as File]);
+    params.profile = { ...params.profile, avatarUrl: avatarUploadResult?.[0] };
+  }
+
   const [account] = await db
     .update(accounts)
     .set({ ...params, updatedAt: new Date() })

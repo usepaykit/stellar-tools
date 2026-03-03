@@ -1,7 +1,7 @@
 "use client";
 
 import { AuroraBackground } from "@/components/aurora-background";
-import { AppConnectionWidget } from "@/components/landing/app-connection-wdget";
+import { AppConnectionWidget } from "@/components/landing/app-connection-widget";
 import CheckoutSection from "@/components/landing/checkout-section";
 import CTASection from "@/components/landing/cta-section";
 import DevelopersSection from "@/components/landing/developers-section";
@@ -18,25 +18,23 @@ import { Header } from "@/components/ui/navbar";
 
 export default function Home() {
   return (
-    <AuroraBackground>
-      <div className="bg-background min-h-screen scroll-smooth">
-        <Header />
+    <AuroraBackground className="bg-background min-h-screen scroll-smooth">
+      <Header />
 
-        <HeroSection />
-        <LogosBelt />
+      <HeroSection />
+      <LogosBelt />
 
-        <WidgetSection />
-        <HowItWorks />
-        <CheckoutSection />
-        <StatsSection />
-        <AppConnectionWidget />
-        <PayoutsSection />
-        <DevelopersSection />
-        <SubscriptionsSection />
-        <TestimonialsSection />
-        <CTASection />
-        <FooterSection />
-      </div>
+      <WidgetSection />
+      <HowItWorks />
+      <CheckoutSection />
+      <StatsSection />
+      <AppConnectionWidget />
+      <PayoutsSection />
+      <DevelopersSection />
+      <SubscriptionsSection />
+      <TestimonialsSection />
+      <CTASection />
+      <FooterSection />
     </AuroraBackground>
   );
 }

@@ -26,9 +26,11 @@ import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchem
 export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarToolsMedusaAdapterOptions> {
   static identifier = "stellar";
   private stellar: StellarTools;
+  private options: StellarToolsMedusaAdapterOptions;
 
   constructor(cradle: any, options: StellarToolsMedusaAdapterOptions) {
     super(cradle, options);
+    this.options = options;
     this.stellar = new StellarTools({ apiKey: options.apiKey });
   }
 
@@ -50,6 +52,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   }
 
   private getCustomerId(input: any): string {
+    if (this.options.debug) {
+      this.log("Getting customer ID", { input });
+    }
+
     const id = input?.data?.id || input?.id;
     if (!id) throw new MedusaError(MedusaError.Types.INVALID_DATA, "Stellar ID is missing from input data");
     return id;
@@ -61,7 +67,9 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     currency_code,
     data,
   }: InitiatePaymentInput): Promise<InitiatePaymentOutput> => {
-    this.log("Initiating payment", { amount, currency_code, data });
+    if (this.options.debug) {
+      this.log("Initiating payment", { amount, currency_code, data });
+    }
 
     return this.unwrap(
       (
@@ -92,6 +100,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   };
 
   getPaymentStatus = async (input: GetPaymentStatusInput): Promise<GetPaymentStatusOutput> => {
+    if (this.options.debug) {
+      this.log("Getting payment status", { input });
+    }
+
     const payment = await this.stellar.payments.retrieve(this.getCustomerId(input), { verifyOnChain: true });
 
     const statusMap: Record<string, PaymentSessionStatus> = {
@@ -113,6 +125,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   capturePayment = async (): Promise<CapturePaymentOutput> => ({ data: { captured: true } });
 
   refundPayment = async (input: RefundPaymentInput): Promise<RefundPaymentOutput> => {
+    if (this.options.debug) {
+      this.log("Refunding payment", { input });
+    }
+
     const result = validateSchema(
       Schema.object({ receiverPublicKey: Schema.string(), reason: Schema.string().nullable() }),
       input.data
@@ -134,6 +150,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   };
 
   createAccountHolder = async ({ context }: CreateAccountHolderInput): Promise<CreateAccountHolderOutput> => {
+    if (this.options.debug) {
+      this.log("Creating account holder", { context });
+    }
+
     const { customer } = context;
 
     const res = await this.stellar.customers.create({
@@ -149,6 +169,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   };
 
   updateAccountHolder = async ({ context, data }: UpdateAccountHolderInput): Promise<UpdateAccountHolderOutput> => {
+    if (this.options.debug) {
+      this.log("Updating account holder", { context, data });
+    }
+
     const { customer } = context;
 
     const res = await this.stellar.customers.update(this.getCustomerId(context.account_holder), {
@@ -162,11 +186,34 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   };
 
   deleteAccountHolder = async ({ context }: DeleteAccountHolderInput): Promise<DeleteAccountHolderOutput> => {
+    if (this.options.debug) {
+      this.log("Deleting account holder", { context });
+    }
+
     const res = await this.stellar.customers.delete(this.getCustomerId(context.account_holder));
     return { data: res as any };
   };
 
   getWebhookActionAndData = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
+    if (this.options.debug) {
+      this.log("Getting webhook action and data", { payload });
+    }
+
+    const webhookSecret = this.options.webhookSecret;
+
+    if (!webhookSecret) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Webhook secret is missing");
+    }
+    const isValid = this.stellar.webhooks.verifySignature(
+      payload.rawData.toString(),
+      payload.headers["X-StellarTools-Signature"] as string,
+      webhookSecret
+    );
+
+    if (!isValid) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Invalid webhook signature");
+    }
+
     const body = JSON.parse(payload.rawData.toString());
     const actionMap: Partial<Record<WebhookEvent, PaymentActions>> = {
       "payment.pending": PaymentActions.PENDING,
@@ -183,9 +230,11 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
   cancelPayment = async () => {
     throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Blockchain transactions are immutable");
   };
+
   deletePayment = async () => {
     throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Blockchain transactions are immutable");
   };
+
   updatePayment = async () => {
     throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Blockchain transactions are immutable");
   };

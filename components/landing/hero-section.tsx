@@ -7,17 +7,18 @@ export default function HeroSection() {
   return (
     <section className="mx-auto flex max-w-[1200px] flex-col items-center gap-12 px-6 pt-24 pb-20 lg:gap-20">
       <div className="flex flex-col items-center text-center">
-        <div className="bg-primary/10 text-primary mb-6 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-semibold tracking-wide">
-          <span className="bg-primary text-primary-foreground rounded-full px-1.5 py-0.5 text-[11px]">NEW</span>
+        <div className="bg-primary/10 text-primary mb-6 flex flex-col items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-semibold tracking-wide sm:flex-row">
+          <span className="bg-primary text-primary-foreground text-clamp(8px,1.5vw,13px) rounded-full px-1.5 py-0.5">
+            NEW
+          </span>
           Now with LangChain &amp; AI SDK support
         </div>
 
         <h1 className="text-foreground mb-6 text-[clamp(42px,5vw,62px)] leading-[1.1] font-bold tracking-tight">
-          Payment infrastructure
+          Open source payment infrastructure
           <br />
           built for the
-          <br />
-          <em className="text-primary italic">blockchain era.</em>
+          <span className="text-primary ml-2">blockchain era.</span>
         </h1>
 
         <p className="text-muted-foreground mx-auto mb-9 max-w-[580px] text-lg leading-relaxed font-normal">
@@ -62,7 +63,7 @@ export default function HeroSection() {
             <div className="h-2.5 w-2.5 rounded-full bg-[#febc2e]"></div>
             <div className="h-2.5 w-2.5 rounded-full bg-[#28c840]"></div>
             <div className="bg-muted text-muted-foreground ml-3 flex-1 rounded-md px-3 py-1 font-mono text-[12px]">
-              stellartools.dev/dashboard
+              https://app.stellartools.dev/
             </div>
           </div>
           <Image
