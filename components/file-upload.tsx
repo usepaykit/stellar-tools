@@ -166,7 +166,7 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
           {isTransforming && (
             <div className="bg-background/80 absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
               <Loader2 className="text-primary h-8 w-8 animate-spin" />
-              <p className="text-sm font-medium">Processing image...</p>
+              {shape == "square" && <p className="text-sm font-medium">Processing image...</p>}
             </div>
           )}
 

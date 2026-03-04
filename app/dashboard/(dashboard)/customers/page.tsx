@@ -15,6 +15,7 @@ import {
   type PhoneNumber,
   PhoneNumberField,
   phoneNumberFromString,
+  phoneNumberSchema,
   phoneNumberToString,
 } from "@/components/phone-number-field";
 import { SelectField } from "@/components/select-field";
@@ -31,7 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer, ResolvedCustomer } from "@/db";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn, truncate } from "@/lib/utils";
+import { cn, fileFromUrl, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
@@ -147,22 +148,10 @@ const filterOptions = [0, 1, 2];
 const customerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.email(),
-  phoneNumber: z.object({
-    number: z.string(),
-    countryCode: z.string().min(1, "Country code is required"),
-  }),
-  avatar: z
-    .array(z.any())
-    .transform((val) => val as FileWithPreview[])
-    .default([])
-    .optional(),
+  phoneNumber: phoneNumberSchema,
+  avatar: z.custom<FileWithPreview>((val) => val instanceof File).optional(),
   metadata: z
-    .array(
-      z.object({
-        key: z.string().min(1, "Key is required"),
-        value: z.string(),
-      })
-    )
+    .array(z.object({ key: z.string().min(1, "Key is required"), value: z.string() }))
     .default([])
     .optional(),
 });
@@ -301,13 +290,13 @@ export function CustomerModalContent({
   customer?: Partial<Customer> | null;
 }) {
   const isEditMode = !!customer;
-  const form = RHF.useForm<CustomerFormData>({
+  const form = RHF.useForm({
     resolver: zodResolver(customerSchema),
     defaultValues: {
       name: "",
       email: "",
       phoneNumber: { number: "", countryCode: "US" },
-      avatar: [],
+      avatar: undefined,
       metadata: [],
     },
   });
@@ -316,6 +305,23 @@ export function CustomerModalContent({
     control: form.control,
     name: "metadata",
   });
+
+  React.useEffect(() => {
+    if (!customer?.image) return;
+
+    let revoked = false;
+    fileFromUrl(customer.image, "avatar.png").then((file) => {
+      if (revoked) return;
+      const withPreview = Object.assign(file, { preview: URL.createObjectURL(file) }) as FileWithPreview;
+      form.setValue("avatar", withPreview);
+    });
+
+    return () => {
+      revoked = true;
+      const current = form.getValues("avatar");
+      if (current?.preview) URL.revokeObjectURL(current.preview);
+    };
+  }, [customer?.image]);
 
   React.useEffect(() => {
     if (customer) {
@@ -330,7 +336,7 @@ export function CustomerModalContent({
         name: customer.name || "",
         email: customer.email || "",
         phoneNumber,
-        avatar: [],
+        avatar: undefined,
         metadata: metadataArray,
       });
     } else {
@@ -338,7 +344,7 @@ export function CustomerModalContent({
         name: "",
         email: "",
         phoneNumber: { number: "", countryCode: "US" },
-        avatar: [],
+        avatar: undefined,
         metadata: [],
       });
     }
@@ -365,13 +371,12 @@ export function CustomerModalContent({
         {} as Record<string, string>
       );
 
-      const hasNewImage = Array.isArray(data.avatar) && data.avatar.length > 0 && data.avatar[0] instanceof File;
       let imageUrl: string | undefined = customer?.image ?? undefined;
 
-      if (hasNewImage && data.avatar?.length) {
-        const formData = new FormData();
-        formData.append("image", data.avatar[0] as File);
-        const uploaded = await createCustomerImage(formData);
+      if (data.avatar instanceof File) {
+        const formdata = new FormData();
+        formdata.append("image", data.avatar);
+        const uploaded = await createCustomerImage(formdata);
         if (uploaded) imageUrl = uploaded;
       }
 
@@ -427,6 +432,29 @@ export function CustomerModalContent({
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
             </div>
+
+            <RHF.Controller
+              control={form.control}
+              name="avatar"
+              render={({ field }) => (
+                <div className="">
+                  <FileUpload
+                    label="Customer image"
+                    labelClassName="text-left"
+                    id="customer-avatar"
+                    value={field.value ? [field.value] : []}
+                    onFilesChange={(files) => field.onChange(files[0])}
+                    dropzoneAccept={{ "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"] }}
+                    dropzoneMaxSize={5 * 1024 * 1024}
+                    dropzoneMultiple={false}
+                    enableTransformation
+                    targetFormat="image/png"
+                    shape="circle"
+                    className="w-fit"
+                  />
+                </div>
+              )}
+            />
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <RHF.Controller
@@ -484,32 +512,6 @@ export function CustomerModalContent({
                   />
                 );
               }}
-            />
-
-            <RHF.Controller
-              control={form.control}
-              name="avatar"
-              render={({ field }) => (
-                <div className="">
-                  <FileUpload
-                    label="Customer image"
-                    labelClassName="text-left"
-                    id="customer-avatar"
-                    value={field.value ?? []}
-                    onFilesChange={field.onChange}
-                    placeholder="Upload customer image"
-                    description="PNG, JPG, WEBP up to 5MB"
-                    className="border-muted bg-background flex h-[220px] w-[220px] flex-col justify-center rounded-full border-2 border-dashed"
-                    dropzoneAccept={{
-                      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
-                    }}
-                    dropzoneMaxSize={5 * 1024 * 1024}
-                    dropzoneMultiple={false}
-                    enableTransformation
-                    targetFormat="image/png"
-                  />
-                </div>
-              )}
             />
           </div>
 

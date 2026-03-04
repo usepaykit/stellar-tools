@@ -8,7 +8,12 @@ import { retrieveOwnerPlan } from "@/actions/plan";
 import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import { GitHub } from "@/components/icon";
-import { type PhoneNumber, PhoneNumberField, phoneNumberToString } from "@/components/phone-number-field";
+import {
+  type PhoneNumber,
+  PhoneNumberField,
+  phoneNumberSchema,
+  phoneNumberToString,
+} from "@/components/phone-number-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -159,10 +164,7 @@ const LoadingSkeleton = () => {
 
 const createOrganizationSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  phoneNumber: z.object({
-    number: z.string(),
-    countryCode: z.string(),
-  }),
+  phoneNumber: phoneNumberSchema,
   description: z.string().optional(),
   physicalAddress: z.string().optional(),
   supportEmail: z.email(),
@@ -189,7 +191,7 @@ const CreateOrganizationModalContent = ({
   onClose: () => void;
   onSuccess: () => void;
 }) => {
-  const form = RHF.useForm<CreateOrganizationFormData>({
+  const form = RHF.useForm({
     resolver: zodResolver(createOrganizationSchema),
     defaultValues: {
       name: "",
@@ -275,7 +277,7 @@ const CreateOrganizationModalContent = ({
             type="button"
             onClick={async () => {
               const isValid = await form.trigger();
-              if (isValid) createOrgMutation.mutateAsync(form.getValues());
+              if (isValid) createOrgMutation.mutateAsync(form.getValues() as CreateOrganizationFormData);
             }}
             disabled={createOrgMutation.isPending}
             isLoading={createOrgMutation.isPending}

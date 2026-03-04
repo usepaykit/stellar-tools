@@ -154,11 +154,6 @@ export default function CustomerDetailPage() {
   const { id: customerId } = useParams() as { id: string };
   const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(new Set());
 
-  const [modal, setModal] = React.useState<{
-    type: "refund" | "edit" | "delete" | "checkout" | null;
-    id?: string | null;
-  }>({ type: null });
-
   const invalidate = useInvalidateOrgQuery();
   const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
     retrievePayments(undefined, { customerId: customerId }, undefined)
@@ -293,9 +288,7 @@ export default function CustomerDetailPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={openEditModal}>Edit customer</DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive" onClick={() => setModal({ type: "delete" })}>
-                    Delete
-                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
