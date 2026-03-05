@@ -168,10 +168,7 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
         triggers: [
           {
             event: "customer.updated",
-            map: (newCustomer) => ({
-              customerId: newCustomer.id,
-              data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer) },
-            }),
+            map: (newCustomer) => computeDiff(oldCustomer, newCustomer) ?? {},
           },
         ],
       },

@@ -2,7 +2,6 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { SubscriptionStatus } from "@/constant/schema.client";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { and, desc, eq, lt } from "drizzle-orm";
@@ -147,7 +146,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
           map: (subscription) => ({
             customerId: subscription.customerId,
             data: {
-              $changes: computeDiff(oldSubscription ?? {}, subscription, undefined, ".") ?? null,
+              $changes: computeDiff(oldSubscription, subscription),
             },
           }),
         },
@@ -158,10 +157,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
         triggers: [
           {
             event: "subscription.updated",
-            map: (subscription) => ({
-              id: subscription.id,
-              changes: computeDiff(oldSubscription ?? {}, subscription),
-            }),
+            map: (subscription) => computeDiff(oldSubscription, subscription) ?? {},
           },
         ],
       },

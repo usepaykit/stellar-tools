@@ -396,7 +396,7 @@ function StatCard({
             color={color as "var(--chart-1)"}
             className="h-full w-full"
             showXAxis={false}
-            showTooltip={false}
+            showTooltip={true}
             showGrid={false}
           />
         </div>

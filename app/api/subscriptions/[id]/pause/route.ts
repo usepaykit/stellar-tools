@@ -70,7 +70,7 @@ export const POST = async (req: NextRequest, context: { params: Promise<{ id: st
       );
       await triggerWebhooks(
         "subscription.updated",
-        { id: subscription.id, changes: computeDiff(subscription, updatedSubscription) },
+        { id: subscription.id, ...computeDiff(subscription, updatedSubscription) },
         organizationId,
         environment
       );
