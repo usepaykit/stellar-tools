@@ -42,14 +42,8 @@ function useSidebar() {
   return context;
 }
 
-function getPersistedSidebarState(): boolean | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(new RegExp(`(^|; )${SIDEBAR_COOKIE_NAME}=([^;]*)`));
-  return match ? match[2] === "true" : null;
-}
-
 function SidebarProvider({
-  defaultOpen = true,
+  defaultOpen = false,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -63,13 +57,22 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
+  const [isHydrated, setIsHydrated] = React.useState(false);
+  const match = document.cookie.match(new RegExp(`(^|; )${SIDEBAR_COOKIE_NAME}=([^;]*)`));
 
-  const [_open, _setOpen] = React.useState(() => {
-    const persisted = getPersistedSidebarState();
-    return persisted !== null ? persisted : defaultOpen;
-  });
+  const persisted = match ? match[2] === "true" : true;
+
+  const [_open, _setOpen] = React.useState(persisted);
+
+  React.useEffect(() => {
+    if (persisted !== null && openProp === undefined) {
+      _setOpen(persisted);
+    }
+    setIsHydrated(true);
+  }, [openProp]);
 
   const open = openProp ?? _open;
+
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
@@ -130,7 +133,12 @@ function SidebarProvider({
               ...style,
             } as React.CSSProperties
           }
-          className={cn("group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full", className)}
+          className={cn(
+            "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
+            !isHydrated && "opacity-0",
+            isHydrated && "animate-in fade-in-0 duration-150",
+            className
+          )}
           {...props}
         >
           {children}
