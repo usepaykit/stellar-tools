@@ -1,0 +1,1 @@
+ALTER TABLE "customer_wallet" DROP CONSTRAINT "customer_wallet_address_unique";

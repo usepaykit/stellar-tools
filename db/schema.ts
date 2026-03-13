@@ -191,7 +191,7 @@ export const customerWallets = pgTable(
     customerId: text("customer_id")
       .notNull()
       .references(() => customers.id),
-    address: text("address").notNull().unique(),
+    address: text("address").notNull(),
     isDefault: boolean("is_default").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
