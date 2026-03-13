@@ -217,7 +217,7 @@ export function Timeline<T>({
         <Button
           variant="secondary"
           size="sm"
-          className="pointer-events-auto h-8 rounded-full border shadow-sm"
+          className="pointer-events-auto mx-auto mt-2 h-8 w-fit rounded-full border shadow-sm"
           onClick={() => setIsExpanded(false)}
         >
           <ChevronUp className="mr-2 size-3" /> Show less
