@@ -27,7 +27,7 @@ export const POST = async (
       await req.json()
     ),
     async ({ amount, type, reason, metadata, dryRun }): Promise<Result<{ isSufficient: boolean }, Error>> => {
-      const { organizationId, environment, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey);
+      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
       const [product, creditBalance] = await Promise.all([
         retrieveProduct(productId, organizationId),

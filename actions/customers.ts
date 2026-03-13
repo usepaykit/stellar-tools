@@ -2,7 +2,6 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { validateLimits } from "@/actions/plan";
 import { Customer, CustomerMetadata, Network, ResolvedCustomer, customerWallets, customers, db } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { computeDiff, generateResourceId } from "@/lib/utils";
@@ -24,15 +23,9 @@ export const postCustomers = async (
   params: Omit<Customer, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">[],
   orgId?: string,
   env?: Network,
-  options?: { source?: string; customerCount?: number }
+  options?: { source?: string }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  if (options?.customerCount) {
-    await validateLimits(organizationId, environment, [
-      { domain: "customers", table: customers, limit: options.customerCount, type: "capacity", count: params.length },
-    ]);
-  }
 
   return withEvent(
     async () => {

@@ -1,7 +1,7 @@
 "use server";
 
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
-import { ApiKey, Network, accounts, apiKeys, db, organizations, plan } from "@/db";
+import { ApiKey, Network, apiKeys, db, organizations } from "@/db";
 import { JWTApi } from "@/integrations/jwt";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
@@ -93,44 +93,29 @@ export const resolveApiKeyOrAuthorizationToken$1 = async (apiKey: string, sessio
 };
 
 export const resolveApiKeyOrAuthorizationToken = async (apiKey?: string | null, sessionToken?: string | null) => {
-  const context = await (async () => {
-    if (sessionToken) {
-      const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
-        orgId: string;
-        environment: Network;
-      };
+  if (sessionToken) {
+    const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
+      orgId: string;
+      environment: Network;
+    };
 
-      return await db
-        .select({
-          organizationId: organizations.id,
-          environment: sql<Network>`${environment}`,
-          plan: plan,
-        })
-        .from(organizations)
-        .innerJoin(accounts, eq(organizations.accountId, accounts.id))
-        .leftJoin(plan, eq(accounts.planId, plan.id))
-        .where(eq(organizations.id, orgId))
-        .limit(1)
-        .then(([r]) => r);
-    }
+    const [row] = await db
+      .select({ organizationId: organizations.id, environment: sql<Network>`${environment}` })
+      .from(organizations)
+      .where(eq(organizations.id, orgId))
+      .limit(1);
 
-    return await db
-      .select({
-        organizationId: organizations.id,
-        environment: apiKeys.environment,
-        apiKeyId: apiKeys.id,
-        plan: plan,
-      })
-      .from(apiKeys)
-      .innerJoin(organizations, eq(apiKeys.organizationId, organizations.id))
-      .innerJoin(accounts, eq(organizations.accountId, accounts.id))
-      .leftJoin(plan, eq(accounts.planId, plan.id))
-      .where(apiKey ? eq(apiKeys.token, apiKey) : undefined)
-      .limit(1)
-      .then(([res]) => res);
-  })();
+    if (!row) throw new Error("Invalid Auth");
+    return row;
+  }
 
-  if (!context) throw new Error("Invalid Auth");
+  const [row] = await db
+    .select({ organizationId: organizations.id, environment: apiKeys.environment, apiKeyId: apiKeys.id })
+    .from(apiKeys)
+    .innerJoin(organizations, eq(apiKeys.organizationId, organizations.id))
+    .where(apiKey ? eq(apiKeys.token, apiKey) : undefined)
+    .limit(1);
 
-  return { ...context, entitlements: context.plan! };
+  if (!row) throw new Error("Invalid Auth");
+  return row;
 };

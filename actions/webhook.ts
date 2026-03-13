@@ -1,7 +1,6 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
-import { retrieveOwnerPlan, validateLimits } from "@/actions/plan";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
 import { normalizeTimeSeries, toSnakeCase } from "@/lib/utils";
@@ -230,21 +229,9 @@ export const triggerWebhooks = async (
   orgId?: string,
   env?: Network
 ) => {
-  const [{ organizationId, environment }, { plan }] = await Promise.all([
-    resolveOrgContext(orgId, env),
-    retrieveOwnerPlan({ orgId }),
-  ]);
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const snakePayload = toSnakeCase(payload);
-
-  const usage = await validateLimits(
-    organizationId,
-    environment,
-    [{ domain: "billing_events", table: webhookLogs, limit: plan.billingEvents, type: "throughput" }],
-    { throwOnError: false }
-  );
-
-  const isOverLimit = (usage["billing_events"] ?? 0) >= plan.billingEvents;
 
   const subscribers = (
     await db
@@ -262,38 +249,12 @@ export const triggerWebhooks = async (
   if (subscribers.length === 0) return { success: true, delivered: 0 };
 
   const results = await Promise.allSettled(
-    subscribers.map(async (webhook) => {
-      if (isOverLimit) {
-        return await postWebhookLog(
-          webhook.id,
-          {
-            id: generateResourceId("wh+evt", webhook.id, 52),
-            eventType,
-            request: snakePayload,
-            statusCode: 429, // Too Many Requests / Quota Exceeded
-            errorMessage: "Webhook skipped: billing events limit reached.",
-            responseTime: 0,
-            response: null,
-            description: `Automatic skip (Limit: ${plan.billingEvents})`,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            nextRetry: null,
-            apiVersion: "2025-12-27.stellartools",
-          },
-          organizationId,
-          environment
-        );
-      }
-
-      // NORMAL: Deliver via network
-      return new WebhookDelivery().deliver(webhook, eventType, snakePayload as any);
-    })
+    subscribers.map((webhook) => new WebhookDelivery().deliver(webhook, eventType, snakePayload as any))
   );
 
   return {
     success: true,
     delivered: results.filter((r) => r.status === "fulfilled").length,
-    skipped: isOverLimit,
   };
 };
 

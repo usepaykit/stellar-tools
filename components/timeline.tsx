@@ -79,7 +79,7 @@ function TimelineSummary({ data, manualContent }: { data?: any; manualContent?: 
                 </span>,
                 curr,
               ],
-        [] as any[]
+        [] as React.ReactNode[]
       )}
     </div>
   );
@@ -215,9 +215,9 @@ export function Timeline<T>({
 
       {isExpanded && (
         <Button
-          variant="ghost"
+          variant="secondary"
           size="sm"
-          className="text-muted-foreground hover:text-foreground mt-4 h-8 text-xs"
+          className="pointer-events-auto h-8 rounded-full border shadow-sm"
           onClick={() => setIsExpanded(false)}
         >
           <ChevronUp className="mr-2 size-3" /> Show less

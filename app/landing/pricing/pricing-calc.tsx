@@ -1,0 +1,139 @@
+"use client";
+
+import * as React from "react";
+
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { FREE_THRESHOLD_USD, calculateMonthlyFee, effectivePct, getVolumeTierRateBps } from "@/lib/pricing";
+import NumberFlow from "@number-flow/react";
+import Link from "next/link";
+
+const MILESTONES = [
+  { value: 0, label: "$0" },
+  { value: 5_000, label: "$5K" },
+  { value: 10_000, label: "$10K" },
+  { value: 50_000, label: "$50K" },
+  { value: 100_000, label: "$100K" },
+  { value: 250_000, label: "$250K" },
+  { value: 500_000, label: "$500K" },
+  { value: 1_000_000, label: "$1M" },
+  { value: 3_000_000, label: "$3M" },
+  { value: 5_000_000, label: "$5M" },
+  { value: 10_000_000, label: "$10M" },
+  { value: 20_000_000, label: "$20M" },
+  { value: Infinity, label: "$20M+" },
+] as const;
+
+const MAX_SLIDER = MILESTONES.length - 1;
+
+function formatUsd(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+export function PricingCalc() {
+  const [index, setIndex] = React.useState(4);
+  const milestone = MILESTONES[index];
+  const isEnterprise = milestone.value === Infinity;
+
+  const volume = isEnterprise ? 0 : milestone.value;
+  const rateBps = getVolumeTierRateBps(volume);
+  const fee = calculateMonthlyFee(volume, rateBps);
+  const pct = effectivePct(volume, fee);
+  const isFree = volume <= FREE_THRESHOLD_USD;
+
+  return (
+    <div className="bg-card border-border rounded-2xl border p-8 shadow-sm">
+      <div className="mb-10 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-muted-foreground text-sm font-medium">Monthly payment volume</p>
+          <p className="text-foreground text-sm font-semibold">{isEnterprise ? "$20M+" : formatUsd(volume)}</p>
+        </div>
+
+        <div className="relative px-1">
+          <Slider
+            min={0}
+            max={MAX_SLIDER}
+            step={1}
+            value={[index]}
+            onValueChange={([v]) => setIndex(v)}
+            className="**:data-[slot=slider-thumb]:border-background **:data-[slot=slider-thumb]:bg-primary **:data-[slot=slider-thumb]:shadow-primary/30 **:data-[slot=slider-thumb]:ring-background/50 **:data-[slot=slider-thumb]:size-5 **:data-[slot=slider-thumb]:border-2 **:data-[slot=slider-thumb]:shadow-lg **:data-[slot=slider-thumb]:ring-2 **:data-[slot=slider-thumb]:transition-all **:data-[slot=slider-thumb]:hover:scale-110"
+          />
+        </div>
+
+        <div className="text-muted-foreground flex justify-between px-1 text-xs">
+          <span>$0</span>
+          <span>$1M</span>
+          <span>$20M+</span>
+        </div>
+      </div>
+
+      {isEnterprise ? (
+        <div className="flex flex-col items-center gap-4 text-center">
+          <p className="text-foreground text-2xl font-semibold">Let&apos;s talk</p>
+          <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
+            At this scale, rates are negotiated directly. We&apos;ll build a custom agreement that works for your
+            business.
+          </p>
+          <div className="inline-flex">
+            <Button size="lg" className="w-fit items-center justify-center">
+              <Link className="w-full text-center" href="/book-call">
+                Contact sales
+              </Link>
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-6 sm:grid-cols-3">
+          <Stat
+            label="Monthly volume"
+            value={
+              <NumberFlow
+                value={volume}
+                format={{ style: "currency", currency: "USD", maximumFractionDigits: 0 }}
+                className="text-foreground text-2xl font-bold"
+              />
+            }
+          />
+          <Stat
+            label="StellarTools fee"
+            value={
+              isFree ? (
+                <span className="text-primary text-2xl font-bold">Free</span>
+              ) : (
+                <NumberFlow
+                  value={fee}
+                  format={{ style: "currency", currency: "USD", maximumFractionDigits: 0 }}
+                  className="text-foreground text-2xl font-bold"
+                />
+              )
+            }
+            note={isFree ? "First $10K/month" : undefined}
+          />
+          <Stat
+            label="Effective rate"
+            value={
+              isFree ? (
+                <span className="text-primary text-2xl font-bold">0%</span>
+              ) : (
+                <span className="text-foreground text-2xl font-bold">{pct.toFixed(2)}%</span>
+              )
+            }
+            note={!isFree ? `${(rateBps / 100).toFixed(2)}% on billable volume` : undefined}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, note }: { label: string; value: React.ReactNode; note?: string }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{label}</p>
+      {value}
+      {note && <p className="text-muted-foreground text-xs">{note}</p>}
+    </div>
+  );
+}

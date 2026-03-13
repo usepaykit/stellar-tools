@@ -1,7 +1,6 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
-import { validateLimits } from "@/actions/plan";
 import { Network, Product, assets, db, products } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { generateResourceId } from "@/lib/utils";
@@ -21,16 +20,9 @@ export const createProductImage = async (formData: FormData) => {
 export const postProduct = async (
   params: Omit<Product, "id" | "organizationId" | "environment">,
   orgId?: string,
-  env?: Network,
-  options?: { productCount?: number }
+  env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  if (options?.productCount) {
-    await validateLimits(organizationId, environment, [
-      { domain: "products", table: products, limit: options.productCount, type: "capacity" },
-    ]);
-  }
 
   const [product] = await db
     .insert(products)

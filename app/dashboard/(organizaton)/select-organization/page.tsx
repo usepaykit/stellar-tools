@@ -4,7 +4,6 @@ import * as React from "react";
 
 import { retrieveAccount } from "@/actions/account";
 import { postOrganizationAndSecret, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
-import { retrieveOwnerPlan } from "@/actions/plan";
 import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import { GitHub } from "@/components/icon";
@@ -106,7 +105,7 @@ export default function SelectOrganizationPage() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold">{org.name}</h3>
+                  <b className="font-semibold">{org.name}</b>
                   <p className="text-muted-foreground mt-1 text-sm">Your organization</p>
                 </div>
                 <ChevronRight className="text-muted-foreground h-5 w-5" />
@@ -203,16 +202,10 @@ const CreateOrganizationModalContent = ({
 
   const createOrgMutation = useMutation({
     mutationFn: async (data: CreateOrganizationFormData) => {
-      const account = await retrieveAccount({ accessToken: true });
-
-      if (!account) throw new Error("Account not found");
-
       const defaultEnvironment = "testnet" as const;
       const formData = new FormData();
 
       if (data.logo?.[0]) formData.append("logo", data.logo[0]);
-
-      const { plan } = await retrieveOwnerPlan({ accId: account.id });
 
       return await postOrganizationAndSecret(
         {
@@ -228,7 +221,7 @@ const CreateOrganizationModalContent = ({
           socialLinks: null,
         },
         defaultEnvironment,
-        { organizationCount: plan.organizations, formDataWithFiles: formData }
+        { formDataWithFiles: formData }
       );
     },
     onSuccess: async (org) => {
@@ -361,7 +354,6 @@ const CreateOrganizationModalContent = ({
           </div>
         </div>
 
-        {/* Right Column - Contact & Social */}
         <div className="space-y-6">
           <div>
             <h3 className="mb-4 text-lg font-semibold">Contact Details</h3>

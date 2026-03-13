@@ -20,7 +20,7 @@ export const POST = async (req: NextRequest) => {
   const body = await req.json();
 
   const result = await Result.andThenAsync(validateSchema(createProductSchema, body), async (data) => {
-    const { organizationId, environment, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
+    const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
 
     const productData: Parameters<typeof postProduct>[0] = {
       name: data.name,
@@ -41,9 +41,7 @@ export const POST = async (req: NextRequest) => {
       updatedAt: new Date(),
     };
 
-    return await postProduct(productData, organizationId, environment, {
-      productCount: entitlements.products,
-    }).then(Result.ok);
+    return await postProduct(productData, organizationId, environment).then(Result.ok);
   });
 
   if (result.isErr()) {

@@ -1,10 +1,10 @@
 "use server";
 
+import { applyPaymentFee } from "@/actions/billing";
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { validateLimits } from "@/actions/plan";
 import {
   Customer,
   Network,
@@ -24,65 +24,58 @@ import { generateResourceId } from "@/lib/utils";
 import { ApiClient, Result } from "@stellartools/core";
 import { and, desc, eq } from "drizzle-orm";
 
-const paymentActionHandler = (call: () => Promise<Payment>, organizationId: string, environment: Network) => {
-  return withEvent(
-    async () => {
-      const payment = await call();
-      return payment;
-    },
-    (payment) => {
-      let events: EventTrigger<typeof payment>[] = [];
-      const webhooksTriggers: WebhookTrigger<typeof payment>[] = [];
+const paymentActionHandler = async (call: () => Promise<Payment>, organizationId: string, environment: Network) => {
+  const payment = await withEvent(call, (payment) => {
+    let events: EventTrigger<typeof payment>[] = [];
+    const webhooksTriggers: WebhookTrigger<typeof payment>[] = [];
 
-      if (payment.status == "confirmed") {
-        events.push({
-          type: "payment::completed",
-          map: ({ checkoutId, amount, customerId, id: paymentId }) => {
-            return {
-              customerId: customerId ?? undefined,
-              data: { amount, checkoutId, paymentId },
-            };
-          },
-        });
-        webhooksTriggers.push({
-          event: "payment.confirmed",
-          map: ({ amount, checkoutId, customerId, id: paymentId }) => ({ customerId, checkoutId, amount, paymentId }),
-        });
-      }
-
-      if (payment.status == "failed") {
-        events.push({
-          type: "payment::failed",
-          map: ({ checkoutId, amount, customerId, id: paymentId }) => ({
-            customerId: customerId ?? undefined,
-            data: { customerId, amount, checkoutId, paymentId },
-          }),
-        });
-
-        webhooksTriggers.push({
-          event: "payment.failed",
-          map: ({ customerId, amount, checkoutId, id: paymentId }) => ({ customerId, amount, checkoutId, paymentId }),
-        });
-      }
-
-      return { events, webhooks: { organizationId, environment, triggers: webhooksTriggers } };
+    if (payment.status == "confirmed") {
+      events.push({
+        type: "payment::completed",
+        map: ({ checkoutId, amount, customerId, id: paymentId }) => ({
+          customerId: customerId ?? undefined,
+          data: { amount, checkoutId, paymentId },
+        }),
+      });
+      webhooksTriggers.push({
+        event: "payment.confirmed",
+        map: ({ amount, checkoutId, customerId, id: paymentId }) => ({ customerId, checkoutId, amount, paymentId }),
+      });
     }
-  );
+
+    if (payment.status == "failed") {
+      events.push({
+        type: "payment::failed",
+        map: ({ checkoutId, amount, customerId, id: paymentId }) => ({
+          customerId: customerId ?? undefined,
+          data: { customerId, amount, checkoutId, paymentId },
+        }),
+      });
+      webhooksTriggers.push({
+        event: "payment.failed",
+        map: ({ customerId, amount, checkoutId, id: paymentId }) => ({ customerId, amount, checkoutId, paymentId }),
+      });
+    }
+
+    return { events, webhooks: { organizationId, environment, triggers: webhooksTriggers } };
+  });
+
+  if (payment.status === "confirmed") {
+    await applyPaymentFee(payment.id, organizationId, payment.amount);
+  }
+
+  return payment;
 };
 
 export const postPayment = async (
-  params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">,
+  params: Omit<
+    Payment,
+    "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "platformFeeUsd" | "orgMonthlyVolumeUsd"
+  >,
   orgId?: string,
-  env?: Network,
-  options?: { paymentCount?: number }
+  env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  if (options?.paymentCount) {
-    await validateLimits(organizationId, environment, [
-      { domain: "payments", table: payments, limit: options.paymentCount, type: "throughput" },
-    ]);
-  }
 
   return paymentActionHandler(
     async () => {
@@ -310,15 +303,19 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
         environment
       ),
     ]);
+    return checkout;
   }
+
+  const confirmedPayment = await postPayment(
+    { customerId, checkoutId, amount: parseInt(amount), transactionHash: hash, status: "confirmed" },
+    organizationId,
+    environment
+  );
 
   await Promise.all([
     putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment),
-    postPayment(
-      { customerId, checkoutId, amount: parseInt(amount), transactionHash: hash, status: "confirmed" },
-      organizationId,
-      environment
-    ),
+    // Apply the StellarTools platform fee — advances tier automatically if volume crosses a boundary
+    applyPaymentFee(confirmedPayment.id, organizationId, parseInt(amount)),
     ...(productType === "subscription" ? [createSubscriptionHandler()] : []),
   ]);
 

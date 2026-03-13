@@ -2,7 +2,6 @@ import {
   AssetCode,
   AssetIssuer,
   AuthProvider,
-  accountBillingCycleEnum as accountBillingCycleEnum$1,
   authProviderEnum as authProviderEnum$1,
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
@@ -37,8 +36,6 @@ export type AccountProfile = {
   avatarUrl?: string;
 };
 
-export const accountBillingCycleEnum = pgEnum("account_billing_cycle", accountBillingCycleEnum$1);
-
 export const accounts = pgTable("account", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
@@ -47,39 +44,7 @@ export const accounts = pgTable("account", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   metadata: jsonb("metadata").$type<object | null>(),
-  billingCycle: accountBillingCycleEnum("billing_cycle"),
-  planId: text("plan_id").references(() => plan.id),
 });
-
-export type PaymentMethodWithIds = {
-  polarId: string | null;
-  paystackId: string | null;
-  usdcId: string | null;
-};
-
-export const plan = pgTable(
-  "plan",
-  {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    description: text("description"),
-    billingEvents: integer("billing_events").notNull(),
-    customers: integer("customers").notNull(),
-    subscriptions: integer("subscriptions").notNull(),
-    usageRecords: integer("usage_records").notNull(),
-    payments: integer("payments").notNull(),
-    organizations: integer("organizations").notNull().default(1),
-    products: integer("products").notNull().default(0),
-    isCustom: boolean("custom").default(false).notNull(), // for enterprise accounts
-    monthlyAmountUsdCents: integer("monthly_amount_usd_cents").notNull(),
-    yearlyAmountUsdCents: integer("yearly_amount_usd_cents").notNull(),
-    paymentMethods: jsonb("payment_methods").$type<PaymentMethodWithIds | null>(),
-    metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-  },
-  (table) => ({
-    uniqueMonthlyAmount: unique().on(table.monthlyAmountUsdCents, table.yearlyAmountUsdCents),
-  })
-);
 
 export const auth = pgTable("auth", {
   id: text("id").primaryKey(),
@@ -113,6 +78,12 @@ export const organizations = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+    /**
+     * Opaque encoded fee rate (basis points) for this organisation.
+     * Decoded server-side only – never exposed as a plain number to clients.
+     * null = auto-calculate from published volume tiers.
+     */
+    feeToken: text("fee_token"),
   },
   (table) => ({
     idxOrgCreatedAt: index("idx_org_created_at").on(table.accountId, table.createdAt),
@@ -300,9 +271,6 @@ export const checkouts = pgTable(
     subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
     initialPagingToken: text("initial_paging_token"),
     asset: text("asset").references(() => assets.id),
-    internalPlanId: text("internal_plan_id")
-      .notNull()
-      .references(() => plan.id),
   },
   (table) => ({
     amountOrProductCheck: check(
@@ -358,6 +326,15 @@ export const payments = pgTable("payment", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   environment: networkEnum("network").notNull(),
+  platformFeeUsd: integer("platform_fee_usd"),
+  /**
+   * The org's cumulative confirmed payment volume (USD cents) for the
+   * billing month at the time this payment was confirmed.
+   * Acts as a running index: the latest confirmed payment for an org/month
+   * is the authoritative source for the current monthly volume.
+   * null on pending/failed payments.
+   */
+  orgMonthlyVolumeUsd: integer("org_monthly_volume_usd"),
 });
 
 export const payoutStatusEnum = pgEnum("payout_status", payoutStatusEnum$1);
@@ -558,7 +535,6 @@ export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
-export type Plan = InferSelectModel<typeof plan>;
 
 export type { ProductStatus, ProductType };
 

@@ -3,7 +3,6 @@
 import React from "react";
 
 import { retrieveOverviewStats } from "@/actions/organization";
-import { retrieveOwnerPlan } from "@/actions/plan";
 import { AppModal } from "@/components/app-modal";
 import { CircularProgress } from "@/components/circular-progress";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -24,7 +23,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
 import { TCountryCode, countries } from "countries-list";
 import { ArrowUpRight, ChevronsUpDown, Info } from "lucide-react";
 import Link from "next/link";
@@ -113,11 +111,6 @@ export default function DashboardPage() {
   const [countryOpen, setCountryOpen] = React.useState(false);
   const { data: orgContext } = useOrgContext();
 
-  const { data: accountPlan } = useQuery({
-    queryKey: ["account-plan"],
-    queryFn: () => retrieveOwnerPlan({ currentUser: true }),
-  });
-
   const { data: stats, isLoading } = useOrgQuery(
     ["overview-stats", orgContext?.id, orgContext?.environment],
     () => retrieveOverviewStats(),
@@ -125,7 +118,6 @@ export default function DashboardPage() {
   );
 
   const displayStats = stats;
-  const plan = accountPlan?.plan;
 
   if (isLoading || !displayStats) {
     return (
@@ -143,9 +135,6 @@ export default function DashboardPage() {
   const mrrDisplay = stroopsToDisplay(displayStats.mrr, countryCode);
   const selectedCountry =
     COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
-
-  const subsLimit = plan && plan.subscriptions !== -1 ? plan.subscriptions : 1;
-  const customersLimit = plan && plan.customers !== -1 ? plan.customers : 1;
 
   return (
     <div className="w-full">
@@ -204,7 +193,6 @@ export default function DashboardPage() {
                 sparkData={stats.charts.trials}
                 color="var(--chart-1)"
                 usage={displayStats.activeTrials}
-                max={subsLimit}
               />
               <StatCard
                 title="Active Subscriptions"
@@ -214,7 +202,6 @@ export default function DashboardPage() {
                 sparkData={stats.charts.subscriptions}
                 color="var(--chart-2)"
                 usage={displayStats.activeSubscriptions}
-                max={subsLimit}
               />
               <StatCard
                 title="MRR"
@@ -249,7 +236,6 @@ export default function DashboardPage() {
                 sparkData={stats.charts.customers}
                 color="var(--chart-3)"
                 usage={displayStats.totalCustomers}
-                max={customersLimit}
               />
             </div>
 

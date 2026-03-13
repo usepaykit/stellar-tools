@@ -1,7 +1,6 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
-import { validateLimits } from "@/actions/plan";
 import {
   CreditBalance,
   CreditTransaction,
@@ -18,15 +17,8 @@ import { and, desc, eq } from "drizzle-orm";
 export const postCreditBalance = async (
   params: Omit<CreditBalance, "id" | "organizationId" | "environment">,
   orgId: string,
-  env: Network,
-  options?: { creditBalanceCount?: number }
+  env: Network
 ) => {
-  if (options?.creditBalanceCount) {
-    await validateLimits(orgId, env, [
-      { domain: "credit_balances", table: creditBalances, limit: options.creditBalanceCount, type: "capacity" },
-    ]);
-  }
-
   return await db
     .insert(creditBalances)
     .values({ id: generateResourceId("cb", orgId, 25), organizationId: orgId, environment: env, ...params })

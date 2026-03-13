@@ -1,7 +1,6 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { upsertCustomer } from "@/actions/customers";
-import { retrieveOwnerPlan } from "@/actions/plan";
 import { getCorsHeaders } from "@/constant";
 import { Result, createCheckoutSchema, createDirectCheckoutSchema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -42,20 +41,17 @@ export const POST = async (req: NextRequest) => {
     async function processCheckout(data: any, checkoutType: "product" | "direct") {
       const auth = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
 
-      const [customer, { plan }] = await Promise.all([
-        upsertCustomer(
-          {
-            id: data.customerId,
-            email: data.customerEmail,
-            phone: data.customerPhone,
-            name: data.customerEmail?.split("@")[0] ?? "Guest",
-            metadata: data.metadata,
-          },
-          auth.organizationId,
-          auth.environment
-        ),
-        retrieveOwnerPlan({ orgId: auth.organizationId }),
-      ]);
+      const customer = await upsertCustomer(
+        {
+          id: data.customerId,
+          email: data.customerEmail,
+          phone: data.customerPhone,
+          name: data.customerEmail?.split("@")[0] ?? "Guest",
+          metadata: data.metadata,
+        },
+        auth.organizationId,
+        auth.environment
+      );
 
       const payload = {
         organizationId: auth.organizationId,
@@ -70,7 +66,6 @@ export const POST = async (req: NextRequest) => {
         successUrl: data.successUrl ?? null,
         successMessage: data.successMessage ?? null,
         subscriptionData: data.subscriptionData ?? null,
-        internalPlanId: plan.id,
         productId: checkoutType === "product" ? data.productId : null,
         amount: checkoutType === "direct" ? data.amount : null,
         assetCode: checkoutType === "direct" ? data.assetCode : null,

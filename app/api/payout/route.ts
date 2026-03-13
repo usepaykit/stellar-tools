@@ -1,10 +1,12 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
+import { getOrgFeeRateBps } from "@/actions/billing";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { postPayout, putPayout } from "@/actions/payout";
 import { getCorsHeaders } from "@/constant";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { BPS_DENOMINATOR } from "@/lib/pricing";
 import { generateResourceId } from "@/lib/utils";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
@@ -41,13 +43,17 @@ export const POST = async (req: NextRequest) => {
 
       if (!secret) return Result.err("Invalid stellar secret");
 
+      const rateBps = await getOrgFeeRateBps(organizationId);
+      const feeAmount = Math.round((data.amount * rateBps) / BPS_DENOMINATOR);
+      const netAmount = data.amount - feeAmount;
+
       const payoutId = generateResourceId("pay", organizationId, 25);
 
       const payout = await postPayout(
         {
           id: payoutId,
           status: "pending",
-          amount: data.amount,
+          amount: netAmount,
           walletAddress: data.walletAddress,
           memo: data.memo ?? null,
           metadata: null,
@@ -65,25 +71,34 @@ export const POST = async (req: NextRequest) => {
 
         const asset = await retrieveAsset(data.assetId);
 
-        const result = await api.sendAssetPayment(
-          secretKey,
-          data.walletAddress,
-          asset.code,
-          asset.issuer!,
-          data.amount.toString(),
-          data.memo
-        );
+        const keeperKey = process.env.KEEPER_PUBLIC_KEY;
 
-        if (result.isErr()) {
+        const [payoutResult, feeResult] = await Promise.all([
+          api.sendAssetPayment(
+            secretKey,
+            data.walletAddress,
+            asset.code,
+            asset.issuer!,
+            netAmount.toString(),
+            data.memo
+          ),
+          feeAmount > 0 && keeperKey
+            ? api.sendAssetPayment(secretKey, keeperKey, asset.code, asset.issuer!, feeAmount.toString())
+            : Promise.resolve(Result.ok(null)),
+        ]);
+
+        if (payoutResult.isErr()) {
           await putPayout(payoutId, { status: "failed", completedAt: new Date() });
-          return Result.err(result.error);
+          return Result.err(payoutResult.error);
         }
 
         await putPayout(payoutId, {
           status: "succeeded",
-          transactionHash: result.value?.hash,
+          transactionHash: payoutResult.value?.hash,
           completedAt: new Date(),
         });
+
+        return feeResult;
       };
 
       waitUntil(runSideEffects());

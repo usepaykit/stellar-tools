@@ -2,24 +2,17 @@
 
 import { getCurrentUser } from "@/actions/auth";
 import { AuthProvider } from "@/constant/schema.client";
-import { Account, accounts, db, plan } from "@/db";
+import { Account, accounts, db } from "@/db";
 import { CookieManager } from "@/integrations/cookie-manager";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWTApi } from "@/integrations/jwt";
-import { asc, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 export const postAccount = async (params: Partial<Account>) => {
-  const freePlan = await db
-    .select({ id: plan.id })
-    .from(plan)
-    .orderBy(asc(plan.customers))
-    .limit(1)
-    .then(([p]) => p);
-
   const [account] = await db
     .insert(accounts)
-    .values({ id: `ac_${nanoid(25)}`, planId: freePlan.id, ...params } as Account)
+    .values({ id: `ac_${nanoid(25)}`, ...params } as Account)
     .returning();
 
   return account;

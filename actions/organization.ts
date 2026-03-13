@@ -1,7 +1,6 @@
 "use server";
 
 import { resolveAccountContext } from "@/actions/account";
-import { validateLimits } from "@/actions/plan";
 import {
   Network,
   Organization,
@@ -21,13 +20,14 @@ import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { TIER_FEE_TOKENS } from "@/lib/pricing.server";
 import { generateResourceId, normalizeTimeSeries, stroopsToXlm } from "@/lib/utils";
 import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 
 export const postOrganizationAndSecret = async (
-  params: Omit<Organization, "id" | "accountId">,
+  params: Omit<Organization, "id" | "accountId" | "feeToken">,
   defaultEnvironment: Network,
-  options?: { organizationCount?: number; formDataWithFiles?: FormData }
+  options?: { formDataWithFiles?: FormData }
 ) => {
   const logoFile = options?.formDataWithFiles?.get("logo");
 
@@ -40,16 +40,9 @@ export const postOrganizationAndSecret = async (
 
   const organizationId = generateResourceId("org", accountId, 25);
 
-  if (options?.organizationCount) {
-    const organizationTable = { ...organizations, organizationId: organizations.id, environment: null };
-    await validateLimits(organizationId, defaultEnvironment, [
-      { domain: "organizations", table: organizationTable, limit: options.organizationCount, type: "capacity" },
-    ]);
-  }
-
   const [organization] = await db
     .insert(organizations)
-    .values({ ...params, id: organizationId, accountId })
+    .values({ ...params, id: organizationId, accountId, feeToken: TIER_FEE_TOKENS.FREE })
     .returning();
 
   const account = await new StellarCoreApi(defaultEnvironment).createAccount();
@@ -471,31 +464,45 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
-  const [metrics, revenueChart, customersChart, subscriptionsChart, trialsChart, periodRevenue] = await Promise.all([
-    metricsPromise,
-    revenueChartQuery,
-    customersChartQuery,
-    subscriptionsChartQuery,
-    trialsChartQuery,
-    db
-      .select({ sum: sql<number>`coalesce(sum(${payments.amount}), 0)::bigint` })
-      .from(payments)
-      .where(
-        and(
-          eq(payments.organizationId, organizationId),
-          eq(payments.environment, environment),
-          eq(payments.status, "confirmed"),
-          gte(payments.createdAt, since)
+  const [metrics, revenueChart, customersChart, subscriptionsChart, trialsChart, periodRevenue, periodFeesUsdCents] =
+    await Promise.all([
+      metricsPromise,
+      revenueChartQuery,
+      customersChartQuery,
+      subscriptionsChartQuery,
+      trialsChartQuery,
+      db
+        .select({ sum: sql<number>`coalesce(sum(${payments.amount}), 0)::bigint` })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.organizationId, organizationId),
+            eq(payments.environment, environment),
+            eq(payments.status, "confirmed"),
+            gte(payments.createdAt, since)
+          )
         )
-      )
-      .then((r) => Number(r[0]?.sum ?? 0)),
-  ]);
+        .then((r) => Number(r[0]?.sum ?? 0)),
+      db
+        .select({ sum: sql<number>`coalesce(sum(${payments.platformFeeUsd}), 0)::bigint` })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.organizationId, organizationId),
+            eq(payments.environment, environment),
+            eq(payments.status, "confirmed"),
+            gte(payments.createdAt, since)
+          )
+        )
+        .then((r) => Number(r[0]?.sum ?? 0)),
+    ]);
 
   const result = {
     metrics,
     revenueChart,
     customersChart,
     periodRevenue,
+    periodFeesUsdCents,
     subscriptionsChart,
     trialsChart,
   };
@@ -505,6 +512,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     activeSubscriptions: Number(result.metrics.activeSubscriptions),
     mrr: Number(result.metrics.mrr),
     revenue: Number(result.periodRevenue),
+    platformFeesUsd: Number(result.periodFeesUsdCents) / 100,
     totalCustomers: Number(result.metrics.totalCustomers),
     newCustomers: result.customersChart.reduce((acc, curr) => acc + curr.count, 0),
     charts: {

@@ -8,6 +8,13 @@
       "when": 1772286159559,
       "tag": "0000_boring_zeigeist",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773361581233,
+      "tag": "0001_new_proteus",
+      "breakpoints": true
     }
   ]
 }

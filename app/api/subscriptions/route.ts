@@ -1,10 +1,8 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveCustomers } from "@/actions/customers";
-import { validateLimits } from "@/actions/plan";
 import { retrieveProduct } from "@/actions/product";
 import { listSubscriptions, postSubscriptionsBulk } from "@/actions/subscription";
 import { getCorsHeaders } from "@/constant";
-import { subscriptions as subscriptionsSchema } from "@/db";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { createSubscriptionSchema } from "@stellartools/core";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
@@ -24,17 +22,7 @@ export const POST = async (req: NextRequest) => {
   }
 
   const result = await Result.andThenAsync(validateSchema(createSubscriptionSchema, await req.json()), async (data) => {
-    const { environment, organizationId, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
-
-    await validateLimits(organizationId, environment, [
-      {
-        domain: "subscriptions",
-        table: subscriptionsSchema,
-        limit: entitlements.subscriptions,
-        type: "capacity",
-        count: data.customerIds.length,
-      },
-    ]);
+    const { environment, organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
 
     const [customers, product] = await Promise.all([
       retrieveCustomers(

@@ -23,7 +23,7 @@ export const POST = async (req: NextRequest) => {
   const result = await Result.andThenAsync(
     validateSchema(Schema.array(createCustomerSchema), customers),
     async (data) => {
-      const { organizationId, environment, entitlements } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
+      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
       const source = data[0].source ?? "API";
 
       const [customer] = await postCustomers(
@@ -37,7 +37,7 @@ export const POST = async (req: NextRequest) => {
         })),
         organizationId,
         environment,
-        { source, customerCount: entitlements.customers }
+        { source }
       );
       return Result.ok(customer);
     }
