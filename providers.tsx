@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { AppModalProvider } from "@/components/app-modal";
 import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
 import { Networks } from "@stellar/stellar-sdk";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -31,8 +32,10 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
-      <ReactQueryDevtools initialIsOpen={false} />
+      <AppModalProvider>
+        {children}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </AppModalProvider>
     </QueryClientProvider>
   );
 };

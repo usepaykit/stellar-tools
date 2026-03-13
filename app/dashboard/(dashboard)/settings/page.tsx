@@ -75,15 +75,23 @@ const ProfileTabContent = ({ user }: { user: User }) => {
     },
   });
 
+  const [imageLoading, setImageLoading] = React.useState(false);
+
   React.useEffect(() => {
     if (!user.profile?.avatarUrl) return;
 
+    setImageLoading(true);
+
     let revoked = false;
-    fileFromUrl(user.profile.avatarUrl, "avatar.png").then((file) => {
-      if (revoked) return;
-      const withPreview = Object.assign(file, { preview: URL.createObjectURL(file) }) as FileWithPreview;
-      profileForm.setValue("avatar", withPreview);
-    });
+    fileFromUrl(user.profile.avatarUrl, "avatar.png")
+      .then((file) => {
+        if (revoked) return;
+        const withPreview = Object.assign(file, { preview: URL.createObjectURL(file) }) as FileWithPreview;
+        profileForm.setValue("avatar", withPreview);
+      })
+      .finally(() => {
+        setImageLoading(false);
+      });
 
     return () => {
       revoked = true;
@@ -137,6 +145,7 @@ const ProfileTabContent = ({ user }: { user: User }) => {
               dropzoneAccept={{ "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"] }}
               dropzoneMaxSize={5 * 1024 * 1024}
               dropzoneMultiple={false}
+              isLoading={imageLoading}
               enableTransformation
               targetFormat="image/png"
               error={profileForm.formState.errors.avatar?.message}
@@ -215,6 +224,7 @@ const ProfileTabContent = ({ user }: { user: User }) => {
 const OrganizationTabContent = ({ organization }: { organization: Organization }) => {
   const queryClient = useQueryClient();
   const { data: orgContext } = useOrgContext();
+  const [imageLoading, setImageLoading] = React.useState(false);
 
   const organizationForm = RHF.useForm({
     resolver: zodResolver(organizationSchema),
@@ -257,12 +267,18 @@ const OrganizationTabContent = ({ organization }: { organization: Organization }
   React.useEffect(() => {
     if (!organization.logoUrl) return;
 
+    setImageLoading(true);
+
     let revoked = false;
-    fileFromUrl(organization.logoUrl, "logo.png").then((file) => {
-      if (revoked) return;
-      const withPreview = Object.assign(file, { preview: URL.createObjectURL(file) }) as FileWithPreview;
-      organizationForm.setValue("logo", withPreview);
-    });
+    fileFromUrl(organization.logoUrl, "logo.png")
+      .then((file) => {
+        if (revoked) return;
+        const withPreview = Object.assign(file, { preview: URL.createObjectURL(file) }) as FileWithPreview;
+        organizationForm.setValue("logo", withPreview);
+      })
+      .finally(() => {
+        setImageLoading(false);
+      });
 
     return () => {
       revoked = true;
@@ -288,6 +304,7 @@ const OrganizationTabContent = ({ organization }: { organization: Organization }
               targetFormat="image/png"
               shape="circle"
               className="w-fit"
+              isLoading={imageLoading}
             />
 
             <div className="flex-1 space-y-2">

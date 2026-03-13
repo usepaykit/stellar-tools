@@ -55,6 +55,7 @@ import {
   Edit,
   Eye,
   EyeOff,
+  Link2,
   MoreHorizontal,
   Plus,
   XCircle,
@@ -222,6 +223,17 @@ export default function CustomerDetailPage() {
     });
   }, [customer, customerId, invalidate]);
 
+  const openPortalLinkModal = React.useCallback(() => {
+    AppModal.open({
+      title: "Customer portal link",
+      description: "Generate a link for this customer to access their portal.",
+      content: <PortalLinkModalContent customerId={customerId} onClose={AppModal.close} />,
+      footer: null,
+      size: "small",
+      showCloseButton: true,
+    });
+  }, [customerId]);
+
   const totalSpent = React.useMemo(
     () => payments?.filter((p) => p.status === "confirmed").reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0,
     [payments]
@@ -287,6 +299,10 @@ export default function CustomerDetailPage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={openPortalLinkModal}>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Generate portal link
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={openEditModal}>Edit customer</DropdownMenuItem>
                   <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -616,6 +632,78 @@ function CheckoutModalContent({ customerId, onClose }: { customerId: string; onC
             )}
           />
         </form>
+      )}
+    </div>
+  );
+}
+
+function PortalLinkModalContent({ customerId, onClose }: { customerId: string; onClose: () => void }) {
+  const [url, setUrl] = React.useState<string | null>(null);
+
+  const { handleCopy } = useCopy();
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const organization = await getCurrentOrganization();
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-auth-token": organization?.token! },
+      });
+
+      const response = await api.post<{ url: string; token: string; expiresAt: Date }>(
+        `/customers/${customerId}/portal`
+      );
+
+      if (response.isErr()) {
+        throw new Error(response.error.message);
+      }
+
+      return response.value;
+    },
+    onSuccess: (data) => {
+      setUrl(data.url);
+      toast.success("Portal link generated");
+    },
+    onError: (error) => {
+      toast.error(error.message ?? "Failed to generate link");
+    },
+  });
+
+  const handleClose = () => {
+    onClose();
+    setUrl(null);
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex w-full justify-end gap-2 border-b pb-4">
+        {url ? (
+          <Button onClick={handleClose}>Done</Button>
+        ) : (
+          <>
+            <Button variant="ghost" type="button" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button onClick={() => mutation.mutate()} isLoading={mutation.isPending}>
+              Generate link
+            </Button>
+          </>
+        )}
+      </div>
+      {url ? (
+        <div className="space-y-4 py-2">
+          <p className="text-muted-foreground text-sm">Share this link with the customer. It expires in 24 hours.</p>
+          <div className="bg-muted/50 flex items-center justify-between gap-4 rounded-xl border p-4">
+            <code className="text-muted-foreground flex-1 truncate text-sm">{url}</code>
+            <Button variant="outline" size="sm" onClick={() => handleCopy({ text: url, message: "Copied" })}>
+              Copy link
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-muted-foreground py-2 text-sm">
+          Generate a one-time link for this customer to view subscriptions and payments.
+        </p>
       )}
     </div>
   );

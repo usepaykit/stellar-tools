@@ -2,11 +2,26 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { Customer, CustomerMetadata, Network, ResolvedCustomer, customerWallets, customers, db } from "@/db";
+import {
+  Customer,
+  CustomerMetadata,
+  Network,
+  ResolvedCustomer,
+  creditBalances as creditBalancesSchema,
+  customerPortalSessions,
+  customerWallets,
+  customers as customersSchema,
+  db,
+  payments as paymentsSchema,
+  products as productsSchema,
+  subscriptions as subscriptionsSchema,
+} from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
-import { SQL, and, eq, inArray, or } from "drizzle-orm";
+import crypto from "crypto";
+import { SQL, and, desc, eq, gt, inArray, or } from "drizzle-orm";
+import moment from "moment";
 
 export const createCustomerImage = async (formData: FormData): Promise<string | undefined> => {
   const imageFile = formData.get("image");
@@ -30,7 +45,7 @@ export const postCustomers = async (
   return withEvent(
     async () => {
       const results = await db
-        .insert(customers)
+        .insert(customersSchema)
         .values(
           params.map((p) => ({ ...p, id: generateResourceId("cus", organizationId, 25), organizationId, environment }))
         )
@@ -77,22 +92,22 @@ export const retrieveCustomers = async (
   const phones = lookupArray.filter((p): p is { phone: string } => "phone" in p && p.phone != null).map((p) => p.phone);
 
   const orFilters: (SQL | undefined)[] = [];
-  if (ids.length) orFilters.push(inArray(customers.id, ids));
-  if (emails.length) orFilters.push(inArray(customers.email, emails));
-  if (phones.length) orFilters.push(inArray(customers.phone, phones));
+  if (ids.length) orFilters.push(inArray(customersSchema.id, ids));
+  if (emails.length) orFilters.push(inArray(customersSchema.email, emails));
+  if (phones.length) orFilters.push(inArray(customersSchema.phone, phones));
 
   const rows = await db
     .select({
-      customer: customers,
+      customer: customersSchema,
       wallet: customerWallets,
     })
-    .from(customers)
-    .leftJoin(customerWallets, eq(customers.id, customerWallets.customerId))
+    .from(customersSchema)
+    .leftJoin(customerWallets, eq(customersSchema.id, customerWallets.customerId))
     .where(
       and(
         orFilters.length ? or(...orFilters.filter((f): f is SQL => !!f)) : undefined,
-        eq(customers.organizationId, organizationId),
-        eq(customers.environment, environment)
+        eq(customersSchema.organizationId, organizationId),
+        eq(customersSchema.environment, environment)
       )
     );
 
@@ -115,7 +130,13 @@ export const retrieveCustomers = async (
   return Array.from(customerMap.values());
 };
 
-export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgId?: string, env?: Network) => {
+export const putCustomer = async (
+  id: string,
+  retUpdate: Partial<Customer>,
+  orgId?: string,
+  env?: Network,
+  options?: { source?: string }
+) => {
   const [{ organizationId, environment }, [oldCustomer]] = await Promise.all([
     resolveOrgContext(orgId, env),
     retrieveCustomers({ id }, undefined, orgId, env),
@@ -124,7 +145,7 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
   return withEvent(
     async () => {
       const [customer] = await db
-        .update(customers)
+        .update(customersSchema)
         .set({
           ...retUpdate,
           updatedAt: new Date(),
@@ -134,9 +155,9 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
         })
         .where(
           and(
-            eq(customers.id, id),
-            eq(customers.organizationId, organizationId),
-            eq(customers.environment, environment)
+            eq(customersSchema.id, id),
+            eq(customersSchema.organizationId, organizationId),
+            eq(customersSchema.environment, environment)
           )
         )
         .returning();
@@ -151,7 +172,12 @@ export const putCustomer = async (id: string, retUpdate: Partial<Customer>, orgI
           type: "customer::updated",
           map: (newCustomer) => ({
             customerId: newCustomer.id,
-            data: { $changes: computeDiff(oldCustomer ?? {}, newCustomer, undefined, ".") },
+            data: {
+              $changes: {
+                ...(computeDiff(oldCustomer ?? {}, newCustomer, undefined, ".") ?? {}),
+                ...(options?.source ? { source: options.source } : {}),
+              } as Record<string, unknown> & { previous_attributes: Record<string, unknown> },
+            },
           }),
         },
       ],
@@ -210,12 +236,12 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
   return withEvent(
     async () => {
       const [customer] = await db
-        .delete(customers)
+        .delete(customersSchema)
         .where(
           and(
-            eq(customers.id, id),
-            eq(customers.organizationId, organizationId),
-            eq(customers.environment, environment)
+            eq(customersSchema.id, id),
+            eq(customersSchema.organizationId, organizationId),
+            eq(customersSchema.environment, environment)
           )
         )
         .returning();
@@ -234,3 +260,114 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
     }
   );
 };
+
+// -- PORTAL --
+
+export async function createCustomerPortalSession(customerId: string, orgId?: string, env?: Network) {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const token = crypto.randomBytes(32).toString("base64url");
+
+  const [session] = await db
+    .insert(customerPortalSessions)
+    .values({
+      id: generateResourceId("cps", organizationId, 20),
+      token,
+      customerId,
+      organizationId,
+      environment,
+      expiresAt: moment().add(24, "hours").toDate(),
+    })
+    .returning();
+
+  const url = `${process.env.NEXT_PUBLIC_PORTAL_URL!}/${token}`;
+
+  return { session, url };
+}
+
+export async function retrieveCustomerPortalSession(token: string) {
+  const [session] = await db
+    .select()
+    .from(customerPortalSessions)
+    .where(and(eq(customerPortalSessions.token, token), gt(customerPortalSessions.expiresAt, new Date())))
+    .limit(1);
+
+  return session ?? null;
+}
+
+export async function getCustomerPortalData(token: string) {
+  const session = await retrieveCustomerPortalSession(token);
+  if (!session) return null;
+
+  const { customerId, organizationId, environment } = session;
+
+  const [customer, customerSubscriptions, customerPayments, customerCredits] = await Promise.all([
+    db
+      .select()
+      .from(customersSchema)
+      .where(eq(customersSchema.id, customerId))
+      .limit(1)
+      .then((r) => r[0] ?? null),
+
+    db
+      .select({
+        id: subscriptionsSchema.id,
+        status: subscriptionsSchema.status,
+        currentPeriodStart: subscriptionsSchema.currentPeriodStart,
+        currentPeriodEnd: subscriptionsSchema.currentPeriodEnd,
+        cancelAtPeriodEnd: subscriptionsSchema.cancelAtPeriodEnd,
+        canceledAt: subscriptionsSchema.canceledAt,
+        productId: subscriptionsSchema.productId,
+        productName: productsSchema.name,
+        productType: productsSchema.type,
+        productUnit: productsSchema.unit,
+        creditsGranted: productsSchema.creditsGranted,
+      })
+      .from(subscriptionsSchema)
+      .leftJoin(productsSchema, eq(subscriptionsSchema.productId, productsSchema.id))
+      .where(
+        and(
+          eq(subscriptionsSchema.customerId, customerId),
+          eq(subscriptionsSchema.organizationId, organizationId),
+          eq(subscriptionsSchema.environment, environment)
+        )
+      )
+      .orderBy(desc(subscriptionsSchema.createdAt)),
+
+    db
+      .select()
+      .from(paymentsSchema)
+      .where(
+        and(
+          eq(paymentsSchema.customerId, customerId),
+          eq(paymentsSchema.organizationId, organizationId),
+          eq(paymentsSchema.environment, environment),
+          eq(paymentsSchema.status, "confirmed")
+        )
+      )
+      .orderBy(desc(paymentsSchema.createdAt))
+      .limit(20),
+
+    db
+      .select({
+        balance: creditBalancesSchema.balance,
+        consumed: creditBalancesSchema.consumed,
+        granted: creditBalancesSchema.granted,
+        productId: creditBalancesSchema.productId,
+        productName: productsSchema.name,
+        productUnit: productsSchema.unit,
+        creditsGranted: productsSchema.creditsGranted,
+      })
+      .from(creditBalancesSchema)
+      .leftJoin(productsSchema, eq(creditBalancesSchema.productId, productsSchema.id))
+      .where(
+        and(
+          eq(creditBalancesSchema.customerId, customerId),
+          eq(creditBalancesSchema.organizationId, organizationId),
+          eq(creditBalancesSchema.environment, environment)
+        )
+      ),
+  ]);
+
+  return { customer, subscriptions: customerSubscriptions, payments: customerPayments, credits: customerCredits };
+}

@@ -42,6 +42,7 @@ interface FileUploadProps
   label?: LabelProps["children"];
   error?: ErrorProps["children"];
   shape?: "square" | "circle";
+  isLoading?: boolean;
 }
 
 export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
@@ -60,6 +61,7 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
       label,
       error,
       shape = "square",
+      isLoading = false,
       ...mixinProps
     },
     ref
@@ -167,6 +169,12 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
             <div className="bg-background/80 absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
               <Loader2 className="text-primary h-8 w-8 animate-spin" />
               {shape == "square" && <p className="text-sm font-medium">Processing image...</p>}
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="bg-background/80 absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+              <Loader2 className="text-primary h-8 w-8 animate-spin" />
             </div>
           )}
 

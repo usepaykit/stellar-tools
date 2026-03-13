@@ -214,10 +214,22 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Right: Steps Card */}
         <Card className="border-primary/10 overflow-hidden rounded-2xl shadow-xl lg:min-w-[400px]">
           <CardContent className="space-y-8 p-6 sm:p-8 lg:p-10">
             <div className="space-y-6">
+              {checkout.customerImage && (
+                <div className="flex items-center gap-3">
+                  <div className="border-border bg-muted relative size-12 shrink-0 overflow-hidden rounded-full border-2">
+                    <Image src={checkout.customerImage} alt="" fill className="object-cover" sizes="48px" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-muted-foreground text-[11px] font-bold tracking-widest uppercase">Paying as</p>
+                    <p className="text-foreground truncate text-sm font-medium">
+                      {checkout.customerEmail || "Customer"}
+                    </p>
+                  </div>
+                </div>
+              )}
               <div className="space-y-4">
                 <RHF.Controller
                   name="email"

@@ -1,10 +1,10 @@
 "use server";
 
-import { withEvent } from "@/actions/event";
+import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 export const postSubscriptionsBulk = async (
   params: { customerIds: string[]; productId: string; period: { from: Date; to: Date }; cancelAtPeriodEnd: boolean },
@@ -139,9 +139,29 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
 
       return record;
     },
-    {
-      events: [
-        {
+    (subscription) => {
+      let events: EventTrigger<typeof subscription>[] = [];
+      let webhookTriggers: WebhookTrigger<typeof subscription>[] = [];
+
+      if (subscription.status === "canceled") {
+        webhookTriggers.push({
+          event: "subscription.canceled",
+          map: (subscription) => computeDiff(oldSubscription, subscription) ?? {},
+        });
+
+        events.push({
+          type: "subscription::canceled",
+          map: (subscription) => ({
+            customerId: subscription.customerId,
+          }),
+        });
+      } else {
+        webhookTriggers.push({
+          event: "subscription.updated",
+          map: (subscription) => computeDiff(oldSubscription, subscription) ?? {},
+        });
+
+        events.push({
           type: "subscription::updated",
           map: (subscription) => ({
             customerId: subscription.customerId,
@@ -149,18 +169,13 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
               $changes: computeDiff(oldSubscription, subscription),
             },
           }),
-        },
-      ],
-      webhooks: {
-        organizationId,
-        environment,
-        triggers: [
-          {
-            event: "subscription.updated",
-            map: (subscription) => computeDiff(oldSubscription, subscription) ?? {},
-          },
-        ],
-      },
+        });
+      }
+
+      return {
+        events,
+        webhooks: { organizationId, environment, triggers: webhookTriggers },
+      };
     }
   );
 };
@@ -190,13 +205,24 @@ export const retrieveDueSubscriptions = async () => {
         productId: subscriptions.productId,
         organizationId: subscriptions.organizationId,
         environment: subscriptions.environment,
+        cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
       },
       customer: { id: customers.id },
       asset: { code: assets.code, issuer: assets.issuer },
       wallet: customerWallets,
     })
     .from(subscriptions)
-    .where(and(lt(subscriptions.currentPeriodEnd, new Date()), eq(subscriptions.status, "active")))
+    .where(
+      or(
+        and(lt(subscriptions.currentPeriodEnd, new Date()), eq(subscriptions.status, "active")),
+        and(
+          eq(subscriptions.cancelAtPeriodEnd, true),
+          lt(subscriptions.currentPeriodEnd, new Date()),
+          isNull(subscriptions.canceledAt)
+        )
+      )
+    )
     .innerJoin(customers, eq(subscriptions.customerId, customers.id))
     .innerJoin(products, eq(subscriptions.productId, products.id))
     .innerJoin(assets, eq(products.assetId, assets.id))

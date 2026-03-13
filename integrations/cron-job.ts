@@ -92,6 +92,17 @@ export class CronJobApi {
           let failed = 0;
 
           for (const sub of subs) {
+            if (sub.subscription.cancelAtPeriodEnd) {
+              await putSubscription(
+                sub.subscription.id,
+                { status: "canceled", canceledAt: new Date() },
+                sub.subscription.organizationId,
+                sub.subscription.environment
+              );
+              succeeded += 1;
+              continue;
+            }
+
             const walletAddress = sub.wallet.address;
             if (!walletAddress) continue;
 

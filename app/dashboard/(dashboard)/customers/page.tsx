@@ -356,7 +356,7 @@ export function CustomerModalContent({
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
+        headers: { "x-auth-token": organization?.token!, "x-source": "Dashboard" },
       });
 
       const phoneString = data.phoneNumber.number ? phoneNumberToString(data.phoneNumber) : "";

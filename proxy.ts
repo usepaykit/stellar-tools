@@ -15,6 +15,8 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
     prefix = "/dashboard";
   } else if (host == new URL(process.env.NEXT_PUBLIC_CHECKOUT_URL!).host) {
     prefix = "/checkout";
+  } else if (host == new URL(process.env.NEXT_PUBLIC_PORTAL_URL!).host) {
+    prefix = "/portal";
   } else if (host == new URL(process.env.NEXT_PUBLIC_APP_URL!).host) {
     prefix = "/landing";
   }

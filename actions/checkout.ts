@@ -190,6 +190,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     assetCode: assets$1?.code ?? null,
     assetIssuer: assets$1?.issuer ?? null,
     productImage: product?.images?.[0] ?? null,
+    customerImage: customer?.image ?? null,
     organizationName,
     organizationLogo,
   };

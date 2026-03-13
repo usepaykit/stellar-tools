@@ -151,3 +151,15 @@ export interface ListCustomers extends Partial<Pick<Customer, "email" | "phone">
 export const listCustomersSchema = schemaFor<ListCustomers>()(
   z.union([z.object({ email: z.email() }), z.object({ phone: z.string() })])
 );
+
+export interface CustomerPortal {
+  /**
+   * The URL of the portal session.
+   */
+  url: string;
+
+  /**
+   * The date and time the portal session expires.
+   */
+  expiresAt: string;
+}

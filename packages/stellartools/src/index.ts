@@ -4,7 +4,7 @@ import z from "zod";
 import { ApiClient } from "./api-client";
 import { CheckoutApi } from "./resources/checkout";
 import { CreditApi } from "./resources/credit";
-import { CustomerApi } from "./resources/customers";
+import { CustomerApi } from "./resources/customer";
 import { PaymentApi } from "./resources/payment";
 import { ProductApi } from "./resources/product";
 import { RefundApi } from "./resources/refund";

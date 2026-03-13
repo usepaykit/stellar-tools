@@ -1,6 +1,7 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { triggerWebhooks } from "@/actions/webhook";
+import { getCorsHeaders } from "@/constant";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { computeDiff } from "@/lib/utils";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
@@ -9,41 +10,45 @@ import { NextRequest, NextResponse } from "next/server";
 export const POST = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
   const { id } = await context.params;
 
-  const apiKey = req.headers.get("x-api-key");
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  const apiKey = req.headers.get("x-api-key");
+  const authToken = req.headers.get("x-auth-token");
+  const portalToken = req.headers.get("x-portal-token");
+
+  if (!apiKey && !authToken && !portalToken) {
+    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
-  const result = await Result.andThenAsync(
-    validateSchema(Schema.object({ customerAddress: Schema.string(), productId: Schema.string() }), await req.json()),
-    async ({ customerAddress, productId }) => {
-      const [subscription, { organizationId, environment }] = await Promise.all([
-        retrieveSubscription(id),
-        resolveApiKeyOrAuthorizationToken(apiKey),
-      ]);
+  const result = await Result.andThenAsync(validateSchema(Schema.string(id), id), async (id) => {
+    const customerAddress = "G..."; // todo: get customer address from customer
 
-      const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-      await api.cancelSubscription(customerAddress, productId);
-      const updatedSubscription = await putSubscription(
-        id,
-        { status: "canceled", canceledAt: new Date() },
+    const [subscription, { organizationId, environment }] = await Promise.all([
+      retrieveSubscription(id),
+      resolveApiKeyOrAuthorizationToken(apiKey, authToken, portalToken),
+    ]);
+
+    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
+    await api.cancelSubscription(customerAddress, subscription.productId);
+    const updatedSubscription = await putSubscription(
+      id,
+      { canceledAt: new Date(), cancelAtPeriodEnd: true },
+      organizationId,
+      environment
+    );
+
+    await Promise.all([
+      triggerWebhooks(
+        "subscription.updated",
+        { id: subscription.id, ...computeDiff(subscription, updatedSubscription) },
         organizationId,
         environment
-      );
-
-      await Promise.all([
-        triggerWebhooks(
-          "subscription.updated",
-          { id: subscription.id, ...computeDiff(subscription, updatedSubscription) },
-          organizationId,
-          environment
-        ),
-        triggerWebhooks("subscription.canceled", subscription, organizationId, environment),
-      ]);
-      return Result.ok(subscription);
-    }
-  );
+      ),
+      triggerWebhooks("subscription.canceled", subscription, organizationId, environment),
+    ]);
+    return Result.ok(subscription);
+  });
 
   if (result.isErr()) {
     return NextResponse.json({ error: result.error.message }, { status: 500 });

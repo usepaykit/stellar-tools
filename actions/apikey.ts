@@ -1,5 +1,6 @@
 "use server";
 
+import { retrieveCustomerPortalSession } from "@/actions/customers";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { ApiKey, Network, apiKeys, db, organizations } from "@/db";
 import { JWTApi } from "@/integrations/jwt";
@@ -92,7 +93,22 @@ export const resolveApiKeyOrAuthorizationToken$1 = async (apiKey: string, sessio
   };
 };
 
-export const resolveApiKeyOrAuthorizationToken = async (apiKey?: string | null, sessionToken?: string | null) => {
+export const resolveApiKeyOrAuthorizationToken = async (
+  apiKey?: string | null, // 1st degree
+  sessionToken?: string | null, // 2nd degree
+  portalToken?: string | null // 3rd degree
+) => {
+  if (portalToken) {
+    const session = await retrieveCustomerPortalSession(portalToken);
+
+    if (!session) throw new Error("Invalid portal token");
+
+    return {
+      organizationId: session.organizationId,
+      environment: session.environment,
+    };
+  }
+
   if (sessionToken) {
     const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
       orgId: string;
@@ -106,6 +122,7 @@ export const resolveApiKeyOrAuthorizationToken = async (apiKey?: string | null, 
       .limit(1);
 
     if (!row) throw new Error("Invalid Auth");
+
     return row;
   }
 
@@ -117,5 +134,6 @@ export const resolveApiKeyOrAuthorizationToken = async (apiKey?: string | null, 
     .limit(1);
 
   if (!row) throw new Error("Invalid Auth");
+
   return row;
 };

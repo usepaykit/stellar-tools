@@ -5,6 +5,7 @@ import { ApiClient } from "../api-client";
 import {
   CreateCustomer,
   Customer,
+  CustomerPortal,
   ListCustomers,
   UpdateCustomer,
   createCustomerSchema,
@@ -15,9 +16,11 @@ import { unwrap, validateSchema } from "../utils";
 
 export class CustomerApi {
   private apiClient: ApiClient;
+  public portal: CustomerPortalApi;
 
   constructor(apiClient: ApiClient) {
     this.apiClient = apiClient;
+    this.portal = new CustomerPortalApi(apiClient);
   }
 
   async create(params: CreateCustomer) {
@@ -58,5 +61,13 @@ export class CustomerApi {
         return await this.apiClient.delete<Customer>(`/customers/${id}`);
       })
     );
+  }
+}
+
+export class CustomerPortalApi {
+  constructor(private apiClient: ApiClient) {}
+
+  async create(customerId: string): Promise<CustomerPortal> {
+    return unwrap(await this.apiClient.post<CustomerPortal>(`/customers/${customerId}/portal`));
   }
 }

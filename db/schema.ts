@@ -513,6 +513,26 @@ export const events = pgTable("event", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const customerPortalSessions = pgTable(
+  "customer_portal_session",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").notNull().unique(),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    environment: networkEnum("network").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    tokenIdx: index("customer_portal_session_token_idx").on(table.token),
+  })
+);
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type ApiKey = InferSelectModel<typeof apiKeys>;
@@ -535,6 +555,7 @@ export type SecretAccessLog = InferSelectModel<typeof secretAccessLog>;
 export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
+export type CustomerPortalSession = InferSelectModel<typeof customerPortalSessions>;
 
 export type { ProductStatus, ProductType };
 

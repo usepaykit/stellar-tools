@@ -38,18 +38,21 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ custome
 export const PUT = async (req: NextRequest, context: { params: Promise<{ customerId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
   const authToken = req.headers.get("x-auth-token");
+  const portalToken = req.headers.get("x-portal-token");
+  const source = req.headers.get("x-source");
+
   const origin = req.headers.get("origin");
   const corsHeaders = getCorsHeaders(origin);
 
-  if (!apiKey && !authToken) {
+  if (!apiKey && !authToken && !portalToken) {
     return NextResponse.json({ error: "API key or Auth Token is required" }, { status: 400, headers: corsHeaders });
   }
 
   const { customerId } = await context.params;
 
   const result = await Result.andThenAsync(validateSchema(updateCustomerSchema, await req.json()), async (data) => {
-    const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
-    const customer = await putCustomer(customerId, data, organizationId, environment);
+    const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken, portalToken);
+    const customer = await putCustomer(customerId, data, organizationId, environment, { ...(source && { source }) });
     return Result.ok(customer);
   });
 

@@ -15,6 +15,13 @@
       "when": 1773361581233,
       "tag": "0001_new_proteus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773367543197,
+      "tag": "0002_lean_morg",
+      "breakpoints": true
     }
   ]
 }
