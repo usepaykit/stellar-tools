@@ -1,8 +1,8 @@
 import * as React from "react";
 
+import { PricingCalc } from "@/app/landing/pricing/pricing-calc";
 import { AuroraBackground } from "@/components/aurora-background";
 import { FooterSection } from "@/components/landing/footer-section";
-import { PricingCalc } from "@/app/landing/pricing/pricing-calc";
 import { Header } from "@/components/ui/navbar";
 
 export default function PricingPage() {

@@ -2,11 +2,11 @@ import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { upsertCustomer } from "@/actions/customers";
 import { getCorsHeaders } from "@/constant";
+import { createOptionsHandler } from "@/lib/api-handler";
 import { Result, createCheckoutSchema, createDirectCheckoutSchema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
-export const OPTIONS = (req: NextRequest) =>
-  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
+export const OPTIONS = createOptionsHandler();
 
 export const POST = async (req: NextRequest) => {
   const origin = req.headers.get("origin");

@@ -20,9 +20,9 @@ async function syncUserWithStellar(user: User, ctx: GenericEndpointContext<Bette
       metadata: {
         ...(user.image ? { image: user.image } : {}),
         ...(ctx.context.session?.session?.id ? { initialSessionId: ctx.context?.session?.session?.id } : {}),
+        source: "BetterAuth Adapter",
       },
       wallets: [],
-      source: "BetterAuth Adapter",
     });
 
     customerId = created.id;

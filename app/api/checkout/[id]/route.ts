@@ -1,56 +1,33 @@
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { deleteCheckout, putCheckout, retrieveCheckout } from "@/actions/checkout";
-import { updateCheckoutSchema } from "@stellartools/core";
-import { NextRequest, NextResponse } from "next/server";
+import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { Result, z as Schema, updateCheckoutSchema } from "@stellartools/core";
 
-export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const { id } = await context.params;
+export const OPTIONS = createOptionsHandler();
 
-  const apiKey = req.headers.get("x-api-key");
+const paramsSchema = Schema.object({ id: Schema.string() });
+export const GET = apiHandler({
+  auth: true,
+  schema: { params: paramsSchema },
+  handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
+    const checkout = await retrieveCheckout(id, organizationId, environment);
+    return Result.ok(checkout);
+  },
+});
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
-  }
+export const PUT = apiHandler({
+  auth: true,
+  schema: { params: paramsSchema, body: updateCheckoutSchema },
+  handler: async ({ params: { id }, auth: { organizationId, environment }, body }) => {
+    const checkout = await putCheckout(id, body, organizationId, environment);
+    return Result.ok(checkout);
+  },
+});
 
-  const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
-
-  const checkout = await retrieveCheckout(id, organizationId, environment);
-
-  return NextResponse.json({ data: checkout });
-};
-
-export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const { id } = await context.params;
-
-  const apiKey = req.headers.get("x-api-key");
-
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
-  }
-
-  const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
-
-  const { error, data } = updateCheckoutSchema.safeParse(await req.json());
-
-  if (error) return NextResponse.json({ error }, { status: 400 });
-
-  const checkout = await putCheckout(id, data, organizationId, environment);
-
-  return NextResponse.json({ data: checkout });
-};
-
-export const DELETE = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const { id } = await context.params;
-
-  const apiKey = req.headers.get("x-api-key");
-
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
-  }
-
-  const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
-
-  await deleteCheckout(id, organizationId, environment);
-
-  return NextResponse.json({ data: null });
-};
+export const DELETE = apiHandler({
+  auth: true,
+  schema: { params: paramsSchema },
+  handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
+    await deleteCheckout(id, organizationId, environment);
+    return Result.ok(null);
+  },
+});

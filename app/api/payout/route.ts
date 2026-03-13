@@ -1,113 +1,85 @@
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
 import { getOrgFeeRateBps } from "@/actions/billing";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { postPayout, putPayout } from "@/actions/payout";
-import { getCorsHeaders } from "@/constant";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
+import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { BPS_DENOMINATOR } from "@/lib/pricing";
 import { generateResourceId } from "@/lib/utils";
-import { Result, z as Schema, validateSchema } from "@stellartools/core";
+import { Result, z as Schema } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
-import { NextRequest, NextResponse } from "next/server";
 
-export const OPTIONS = (req: NextRequest) =>
-  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
+export const OPTIONS = createOptionsHandler();
 
-export const POST = async (req: NextRequest) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-  const authToken = req.headers.get("x-auth-token");
-  const apiKey = req.headers.get("x-api-key");
+export const POST = apiHandler({
+  auth: true,
+  schema: {
+    body: Schema.object({
+      amount: Schema.number(),
+      walletAddress: Schema.string(),
+      memo: Schema.string().optional(),
+      assetId: Schema.string(),
+    }),
+  },
+  handler: async ({ body, auth: { organizationId, environment } }) => {
+    const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 
-  if (!apiKey && !authToken) {
-    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
-  }
+    if (!secret) throw new Error("Invalid stellar secret");
 
-  if (!authToken) return NextResponse.json({ error: "Auth Token is required" }, { status: 400, headers: corsHeaders });
+    const rateBps = await getOrgFeeRateBps(organizationId);
+    const feeAmount = Math.round((body.amount * rateBps) / BPS_DENOMINATOR);
+    const netAmount = body.amount - feeAmount;
 
-  const result = await Result.andThenAsync(
-    validateSchema(
-      Schema.object({
-        amount: Schema.number(),
-        walletAddress: Schema.string(),
-        memo: Schema.string().optional(),
-        assetId: Schema.string(),
-      }),
-      await req.json()
-    ),
-    async (data) => {
-      const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken("dummy-api-key", authToken); // resolves org from session token
-      const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
+    const payoutId = generateResourceId("pay", organizationId, 25);
 
-      if (!secret) return Result.err("Invalid stellar secret");
+    const payout = await postPayout(
+      {
+        id: payoutId,
+        status: "pending",
+        amount: netAmount,
+        walletAddress: body.walletAddress,
+        memo: body.memo ?? null,
+        metadata: null,
+        transactionHash: "---",
+        completedAt: null,
+        asset: body.assetId,
+      },
+      organizationId,
+      environment
+    );
 
-      const rateBps = await getOrgFeeRateBps(organizationId);
-      const feeAmount = Math.round((data.amount * rateBps) / BPS_DENOMINATOR);
-      const netAmount = data.amount - feeAmount;
+    const runSideEffects = async () => {
+      const api = new StellarCoreApi(environment);
+      const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
-      const payoutId = generateResourceId("pay", organizationId, 25);
+      const asset = await retrieveAsset(body.assetId);
 
-      const payout = await postPayout(
-        {
-          id: payoutId,
-          status: "pending",
-          amount: netAmount,
-          walletAddress: data.walletAddress,
-          memo: data.memo ?? null,
-          metadata: null,
-          transactionHash: "---",
-          completedAt: null,
-          asset: data.assetId,
-        },
-        organizationId,
-        environment
-      );
+      const keeperKey = process.env.KEEPER_PUBLIC_KEY;
 
-      const runSideEffects = async () => {
-        const api = new StellarCoreApi(environment);
-        const secretKey = new EncryptionApi().decrypt(secret.encrypted);
+      const [payoutResult, feeResult] = await Promise.all([
+        api.sendAssetPayment(secretKey, body.walletAddress, asset.code, asset.issuer!, netAmount.toString(), body.memo),
+        feeAmount > 0 && keeperKey
+          ? api.sendAssetPayment(secretKey, keeperKey, asset.code, asset.issuer!, feeAmount.toString())
+          : Promise.resolve(Result.ok(null)),
+      ]);
 
-        const asset = await retrieveAsset(data.assetId);
+      if (payoutResult.isErr()) {
+        await putPayout(payoutId, { status: "failed", completedAt: new Date() });
+        return Result.err(payoutResult.error);
+      }
 
-        const keeperKey = process.env.KEEPER_PUBLIC_KEY;
+      await putPayout(payoutId, {
+        status: "succeeded",
+        transactionHash: payoutResult.value?.hash,
+        completedAt: new Date(),
+      });
 
-        const [payoutResult, feeResult] = await Promise.all([
-          api.sendAssetPayment(
-            secretKey,
-            data.walletAddress,
-            asset.code,
-            asset.issuer!,
-            netAmount.toString(),
-            data.memo
-          ),
-          feeAmount > 0 && keeperKey
-            ? api.sendAssetPayment(secretKey, keeperKey, asset.code, asset.issuer!, feeAmount.toString())
-            : Promise.resolve(Result.ok(null)),
-        ]);
+      return feeResult;
+    };
 
-        if (payoutResult.isErr()) {
-          await putPayout(payoutId, { status: "failed", completedAt: new Date() });
-          return Result.err(payoutResult.error);
-        }
+    waitUntil(runSideEffects());
 
-        await putPayout(payoutId, {
-          status: "succeeded",
-          transactionHash: payoutResult.value?.hash,
-          completedAt: new Date(),
-        });
-
-        return feeResult;
-      };
-
-      waitUntil(runSideEffects());
-
-      return Result.ok(payout);
-    }
-  );
-
-  if (result.isErr()) return NextResponse.json({ error: result.error }, { status: 400, headers: corsHeaders });
-
-  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
-};
+    return Result.ok(payout);
+  },
+});

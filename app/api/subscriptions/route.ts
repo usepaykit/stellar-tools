@@ -1,40 +1,28 @@
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveCustomers } from "@/actions/customers";
 import { retrieveProduct } from "@/actions/product";
 import { listSubscriptions, postSubscriptionsBulk } from "@/actions/subscription";
-import { getCorsHeaders } from "@/constant";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
+import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { createSubscriptionSchema } from "@stellartools/core";
-import { Result, z as Schema, validateSchema } from "@stellartools/core";
-import { NextRequest, NextResponse } from "next/server";
+import { Result, z as Schema } from "@stellartools/core";
 
-export const OPTIONS = (req: NextRequest) =>
-  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
+export const OPTIONS = createOptionsHandler();
 
-export const POST = async (req: NextRequest) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-  const apiKey = req.headers.get("x-api-key");
-  const authToken = req.headers.get("x-auth-token");
-
-  if (!apiKey && !authToken) {
-    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
-  }
-
-  const result = await Result.andThenAsync(validateSchema(createSubscriptionSchema, await req.json()), async (data) => {
-    const { environment, organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
-
+export const POST = apiHandler({
+  auth: true,
+  schema: { body: createSubscriptionSchema },
+  handler: async ({ body, auth: { organizationId, environment }, authToken }) => {
     const [customers, product] = await Promise.all([
       retrieveCustomers(
-        data.customerIds.map((id) => ({ id })),
+        body.customerIds.map((id) => ({ id })),
         { withWallets: true },
         organizationId,
         environment
       ),
-      retrieveProduct(data.productId, organizationId),
+      retrieveProduct(body.productId, organizationId),
     ]);
 
-    if (product.type !== "subscription") return Result.err(new Error("Product must be a subscription type"));
+    if (product.type !== "subscription") throw new Error("Product must be a subscription type");
 
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
     const successfulCustomerIds: string[] = [];
@@ -51,10 +39,10 @@ export const POST = async (req: NextRequest) => {
 
       const onChainResult = await api.createSubscription({
         customerAddress,
-        productId: data.productId,
+        productId: body.productId,
         amount: product.priceAmount,
-        periodStart: Math.floor(data.period.from.getTime() / 1000),
-        periodEnd: Math.floor(data.period.to.getTime() / 1000),
+        periodStart: Math.floor(body.period.from.getTime() / 1000),
+        periodEnd: Math.floor(body.period.to.getTime() / 1000),
       });
 
       if (onChainResult.isOk()) {
@@ -65,52 +53,34 @@ export const POST = async (req: NextRequest) => {
     }
 
     if (successfulCustomerIds.length === 0) {
-      return Result.err(new Error(`All transactions failed: ${failedLogs.join(" | ")}`));
+      throw new Error(`All transactions failed: ${failedLogs.join(" | ")}`);
     }
 
     await postSubscriptionsBulk(
       {
         customerIds: successfulCustomerIds,
-        productId: data.productId,
-        period: data.period,
-        cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? false,
+        productId: body.productId,
+        period: body.period,
+        cancelAtPeriodEnd: body.cancelAtPeriodEnd ?? false,
       },
       organizationId,
       environment
     );
 
     return Result.ok({
-      count: successfulCustomerIds.length,
+      success: successfulCustomerIds,
       failed: failedLogs,
+      productId: body.productId,
+      period: body.period,
+      totalRequested: body.customerIds?.length,
     });
-  });
+  },
+});
 
-  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
-  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
-};
-
-export const GET = async (req: NextRequest) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-  const apiKey = req.headers.get("x-api-key");
-  const authToken = req.headers.get("x-auth-token");
-
-  if (!apiKey && !authToken) {
-    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
-  }
-
-  const { searchParams } = new URL(req.url);
-
-  const result = await Result.andThenAsync(
-    validateSchema(Schema.object({ customerId: Schema.string() }), { customerId: searchParams.get("customerId") }),
-    async (data) => {
-      const { environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
-      const subscriptions = await listSubscriptions(data.customerId, environment);
-      return Result.ok(subscriptions);
-    }
-  );
-
-  if (result.isErr()) return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
-
-  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
-};
+export const GET = apiHandler({
+  auth: true,
+  schema: { query: Schema.object({ customerId: Schema.string() }) },
+  handler: async ({ query: { customerId }, auth: { environment } }) => {
+    return await listSubscriptions(customerId, environment).then(Result.ok);
+  },
+});

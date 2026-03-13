@@ -99,7 +99,7 @@ export const customerSchema = schemaFor<Customer>()(
     email: z.email(),
     name: z.string(),
     phone: z.string().optional(),
-    image: z.string().nullable().optional(),
+    image: z.url().nullable().optional(),
     metadata: z.record(z.string(), z.string()).nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -108,22 +108,16 @@ export const customerSchema = schemaFor<Customer>()(
   })
 );
 
-export const createCustomerSchema = customerSchema
-  .pick({
-    email: true,
-    name: true,
-    phone: true,
-    metadata: true,
-    wallets: true,
-  })
-  .extend({
-    source: z.string().optional(),
-    image: z.url().nullable(),
-  });
+export const createCustomerSchema = customerSchema.pick({
+  email: true,
+  name: true,
+  phone: true,
+  metadata: true,
+  wallets: true,
+  image: true,
+});
 
-export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata" | "wallets" | "image"> {
-  source?: string;
-}
+export interface CreateCustomer extends Pick<Customer, "email" | "name" | "phone" | "metadata" | "wallets" | "image"> {}
 
 export const updateCustomerSchema = customerSchema.partial().pick({
   email: true,

@@ -132,7 +132,7 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
         productId,
         rawAmount: amount,
         reason: "deduct",
-        metadata: { source: "plugin-sdk", ...metadata },
+        metadata: { source: "Plugin SDK", ...metadata },
       });
 
       return { balance: result.balance, charged: amount, transactionId: result.id };
@@ -154,7 +154,7 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
         productId,
         amount,
         reason: reason ?? "refund",
-        metadata: { source: "plugin-sdk", ...metadata },
+        metadata: { source: "Plugin SDK", ...metadata },
       });
 
       return { balance: result.balance, charged: -amount, transactionId: result.id };

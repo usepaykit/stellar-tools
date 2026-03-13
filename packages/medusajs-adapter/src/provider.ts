@@ -142,7 +142,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       paymentId: this.getCustomerId(input),
       amount: Number(input.amount),
       reason: result.value.reason ?? "Refund",
-      metadata: { source: "medusajs-adapter" },
+      metadata: { source: "MedusaJS Adapter" },
       receiverPublicKey: result.value.receiverPublicKey,
     });
 
@@ -160,9 +160,8 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       email: customer?.email,
       name: `${customer?.first_name} ${customer?.last_name}`.trim(),
       phone: customer?.phone ?? undefined,
-      metadata: (context?.account_holder?.data as Record<string, any>) ?? null,
+      metadata: { ...((context?.account_holder?.data as Record<string, any>) ?? null), source: "MedusaJS Adapter" },
       wallets: [],
-      source: "MedusaJS Adapter",
     });
 
     return { id: res.id, data: res as any };

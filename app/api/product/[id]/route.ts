@@ -1,36 +1,16 @@
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { putProduct } from "@/actions/product";
-import { getCorsHeaders } from "@/constant";
-import { Result, updateProductSchema, validateSchema } from "@stellartools/core";
-import { NextRequest, NextResponse } from "next/server";
+import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { Result, z as Schema, updateProductSchema } from "@stellartools/core";
 
-export const OPTIONS = (req: NextRequest) =>
-  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
+export const OPTIONS = createOptionsHandler();
 
-export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const apiKey = req.headers.get("x-api-key");
-  const authToken = req.headers.get("x-auth-token");
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
+const paramsSchema = Schema.object({ id: Schema.string() });
 
-  if (!apiKey && !authToken) {
-    return NextResponse.json(
-      { error: "API key or Authorization Token is required" },
-      { status: 400, headers: corsHeaders }
-    );
-  }
-
-  const { id } = await context.params;
-
-  const result = await Result.andThenAsync(validateSchema(updateProductSchema, await req.json()), async (data) => {
-    const { organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
-    const product = await putProduct(id, organizationId, data as Parameters<typeof putProduct>[2]);
+export const PUT = apiHandler({
+  auth: true,
+  schema: { body: updateProductSchema, params: paramsSchema },
+  handler: async ({ body, auth: { organizationId }, params: { id } }) => {
+    const product = await putProduct(id, organizationId, body);
     return Result.ok(product);
-  });
-
-  if (result.isErr()) {
-    return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
-  }
-
-  return NextResponse.json({ data: result.value }, { headers: corsHeaders });
-};
+  },
+});

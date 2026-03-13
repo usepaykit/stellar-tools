@@ -146,7 +146,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
       if (subscription.status === "canceled") {
         webhookTriggers.push({
           event: "subscription.canceled",
-          map: (subscription) => computeDiff(oldSubscription, subscription) ?? {},
+          map: (subscription) => ({ id: subscription.id, ...(computeDiff(oldSubscription, subscription) ?? {}) }),
         });
 
         events.push({
@@ -158,7 +158,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
       } else {
         webhookTriggers.push({
           event: "subscription.updated",
-          map: (subscription) => computeDiff(oldSubscription, subscription) ?? {},
+          map: (subscription) => ({ id: subscription.id, ...(computeDiff(oldSubscription, subscription) ?? {}) }),
         });
 
         events.push({

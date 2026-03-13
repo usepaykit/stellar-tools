@@ -389,10 +389,7 @@ export function CustomerModalContent({
       };
 
       if (isEditMode) {
-        const response = await api.put<Customer>(`/customers/${customer?.id}`, {
-          ...payload,
-          source: "Dashboard",
-        });
+        const response = await api.put<Customer>(`/customers/${customer?.id}`, payload);
 
         if (response.isErr()) throw new Error(response.error.message);
 

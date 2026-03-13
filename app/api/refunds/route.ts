@@ -1,59 +1,48 @@
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveAsset } from "@/actions/asset";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayment } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
-import { getCorsHeaders } from "@/constant";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
-import { createRefundSchema, validateSchema } from "@stellartools/core";
+import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { createRefundSchema } from "@stellartools/core";
 import { Result } from "@stellartools/core";
-import { NextRequest, NextResponse } from "next/server";
 
-export const OPTIONS = (req: NextRequest) =>
-  new NextResponse(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
+export const OPTIONS = createOptionsHandler();
 
-export const POST = async (req: NextRequest) => {
-  const apiKey = req.headers.get("x-api-key");
-  const authToken = req.headers.get("x-auth-token");
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-
-  if (!apiKey && !authToken) {
-    return NextResponse.json({ error: "API Key or Auth Token is required" }, { status: 400, headers: corsHeaders });
-  }
-
-  const result = await Result.andThenAsync(validateSchema(createRefundSchema, await req.json()), async (data) => {
-    const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
+export const POST = apiHandler({
+  auth: true,
+  schema: { body: createRefundSchema },
+  handler: async ({ body, auth: { organizationId, environment } }) => {
     const [payment, asset] = await Promise.all([
-      retrievePayment(data.paymentId, organizationId, environment),
-      retrieveAsset(data.assetId),
+      retrievePayment(body.paymentId, organizationId, environment),
+      retrieveAsset(body.assetId),
     ]);
 
-    if (!payment) return Result.err("Payment not found");
+    if (!payment) throw new Error("Payment not found");
 
-    if (!asset) return Result.err("Asset not found");
+    if (!asset) throw new Error("Asset not found");
 
-    if (payment.environment !== environment) return Result.err("Invalid state");
+    if (payment.environment !== environment) throw new Error("Invalid state");
 
     const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 
-    if (!secret) return Result.err("Invalid stellar secret");
+    if (!secret) throw new Error("Invalid stellar secret");
 
     const stellar = new StellarCoreApi(environment);
 
-    const txMemo = JSON.stringify({ checkoutId: payment.checkoutId, amount: data.amount });
+    const txMemo = JSON.stringify({ checkoutId: payment.checkoutId, amount: body.amount });
     const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
     const result = await withEvent(
       async () => {
         const refundResult = await stellar.sendAssetPayment(
           secretKey,
-          data.receiverPublicKey,
+          body.receiverPublicKey,
           asset.code,
           asset.issuer || "",
-          (data.amount / 10_000_000).toString(), // Convert stroops to XLM,
+          (body.amount / 10_000_000).toString(), // Convert stroops to XLM,
           txMemo
         );
 
@@ -61,14 +50,14 @@ export const POST = async (req: NextRequest) => {
 
         const refund = await postRefund(
           {
-            ...data,
+            ...body,
             status: "succeeded",
-            receiverPublicKey: data.receiverPublicKey,
-            metadata: data.metadata ?? {},
-            customerId: data.customerId,
-            paymentId: data.paymentId,
-            amount: data.amount,
-            reason: data.reason ?? null,
+            receiverPublicKey: body.receiverPublicKey,
+            metadata: body.metadata ?? {},
+            customerId: body.customerId,
+            paymentId: body.paymentId,
+            amount: body.amount,
+            reason: body.reason ?? null,
           },
           organizationId,
           environment
@@ -87,8 +76,8 @@ export const POST = async (req: NextRequest) => {
               error: refund.isErr() ? refund.error.message : undefined,
               success: false,
               timestamp: new Date(),
-              paymentId: data.paymentId,
-              amount: data.amount,
+              paymentId: body.paymentId,
+              amount: body.amount,
             }),
           });
         }
@@ -120,9 +109,5 @@ export const POST = async (req: NextRequest) => {
     );
 
     return Result.ok(result);
-  });
-
-  if (result.isErr()) return NextResponse.json({ error: result.error }, { status: 400 });
-
-  return NextResponse.json(result.value);
-};
+  },
+});
