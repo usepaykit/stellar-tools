@@ -373,7 +373,7 @@ export async function getCustomerPortalData(token: string) {
 
 // -- Customer Wallet --
 
-export const createCustomerWallet = (
+export const createCustomerWallet = async (
   organizationId: string,
   environment: Network,
   params: Omit<CustomerWalletSchema, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">

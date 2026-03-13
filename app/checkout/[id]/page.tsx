@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
 import { truncate } from "@/lib/utils";
+import { Networks } from "@stellar/stellar-sdk";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
@@ -87,6 +88,16 @@ export default function CheckoutPage() {
   React.useEffect(() => {
     return stellarWalletsKit.onConnectionChange(setConnectedAddress);
   }, [stellarWalletsKit]);
+
+  React.useEffect(() => {
+    if (!checkout) return;
+    const network = checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
+    stellarWalletsKit.init({ network });
+
+    return () => {
+      stellarWalletsKit.disconnect();
+    };
+  }, [checkout?.environment, stellarWalletsKit]);
 
   React.useEffect(() => {
     if (isPaid || isFailed) return;

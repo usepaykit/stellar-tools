@@ -90,8 +90,11 @@ export class StellarWalletsKitApi {
   }
 
   async disconnect(): Promise<void> {
-    this.ensureInitialized();
+    if (!this.isInitialized) return;
     await StellarWalletsKit.disconnect();
+    this.eventUnsubscriber?.();
+    this.eventUnsubscriber = null;
+    this.isInitialized = false;
   }
 
   onConnectionChange(callback: WalletConnectionCallback): () => void {

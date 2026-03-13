@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772286159559,
-      "tag": "0000_boring_zeigeist",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773361581233,
-      "tag": "0001_new_proteus",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1773367543197,
-      "tag": "0002_lean_morg",
+      "when": 1773402197698,
+      "tag": "0000_sleepy_anthem",
       "breakpoints": true
     }
   ]
