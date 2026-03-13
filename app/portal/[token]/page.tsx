@@ -105,7 +105,6 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   }, [data?.customer?.image, form]);
 
   const [saving, startSave] = React.useTransition();
-  const [cancelingId, setCancelingId] = React.useState<string | null>(null);
 
   const isDirty = form.formState.isDirty;
 
@@ -144,27 +143,32 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
     });
   });
 
-  const { mutate: cancelSubscription } = useMutation({
-    mutationFn: async (subscriptionId: string) => {
-      setCancelingId(subscriptionId);
-      const response = await api.post<Subscription>(`/subscriptions/${subscriptionId}/cancel`, {
-        headers: { "x-portal-token": token },
-      });
-      if (response.isErr()) {
-        throw new Error(response.error.message);
-      }
-      return response.value;
-    },
-    onSuccess: () => {
-      toast.success("Subscription canceled");
-      queryClient.invalidateQueries({ queryKey: ["customer-portal", token] });
-      setCancelingId(null);
-    },
-    onError: (error) => {
-      toast.error(error.message);
-      setCancelingId(null);
-    },
-  });
+  const [actionId, setActionId] = React.useState<string | null>(null);
+
+  const makeSubscriptionMutation = (path: string, successMessage: string) =>
+    useMutation({
+      mutationFn: async (subscriptionId: string) => {
+        setActionId(subscriptionId);
+        const response = await api.post<Subscription>(`/subscriptions/${subscriptionId}/${path}`, {
+          headers: { "x-portal-token": token },
+        });
+        if (response.isErr()) throw new Error(response.error.message);
+        return response.value;
+      },
+      onSuccess: () => {
+        toast.success(successMessage);
+        queryClient.invalidateQueries({ queryKey: ["customer-portal", token] });
+        setActionId(null);
+      },
+      onError: (error: Error) => {
+        toast.error(error.message);
+        setActionId(null);
+      },
+    });
+
+  const { mutate: cancelSubscription } = makeSubscriptionMutation("cancel", "Subscription canceled");
+  const { mutate: pauseSubscription } = makeSubscriptionMutation("pause", "Subscription paused");
+  const { mutate: resumeSubscription } = makeSubscriptionMutation("resume", "Subscription resumed");
 
   const { mutate: deleteWallet, isPending: deletingWallet } = useMutation({
     mutationFn: (walletId: string) => deleteCustomerPortalWallet(walletId, token),
@@ -193,6 +197,28 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
         onClick: () => {
           AppModal.close();
           cancelSubscription(subscriptionId);
+        },
+      },
+    });
+  };
+
+  const handlePause = (subscriptionId: string) => {
+    AppModal.open({
+      title: "Pause subscription",
+      description: "Pause this subscription?",
+      content: (
+        <p className="text-muted-foreground text-sm">
+          Your subscription will be paused immediately. You can resume it at any time.
+        </p>
+      ),
+      size: "small",
+      showCloseButton: true,
+      secondaryButton: { children: "Keep active" },
+      primaryButton: {
+        children: "Pause",
+        onClick: () => {
+          AppModal.close();
+          pauseSubscription(subscriptionId);
         },
       },
     });
@@ -254,7 +280,9 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   }
 
   const { subscriptions, payments, credits, wallets } = data;
-  const activeSubscriptions = subscriptions.filter((s) => s.status === "active" || s.status === "trialing");
+  const activeSubscriptions = subscriptions.filter(
+    (s) => s.status === "active" || s.status === "trialing" || s.status === "paused"
+  );
   const activeWalletIds = new Set(activeSubscriptions.map((s) => s.customerWalletId).filter(Boolean));
   const hasActivity = payments.length > 0 || activeSubscriptions.length > 0 || credits.length > 0;
 
@@ -386,8 +414,10 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
                 <SubscriptionRow
                   key={sub.id}
                   sub={sub}
-                  canceling={cancelingId === sub.id}
+                  busy={actionId === sub.id}
                   onCancel={() => handleCancel(sub.id)}
+                  onPause={() => handlePause(sub.id)}
+                  onResume={() => resumeSubscription(sub.id)}
                 />
               ))}
             </div>
@@ -465,13 +495,19 @@ function WalletRow({
 
 function SubscriptionRow({
   sub,
-  canceling,
+  busy,
   onCancel,
+  onPause,
+  onResume,
 }: {
   sub: Subscription;
-  canceling: boolean;
+  busy: boolean;
   onCancel: () => void;
+  onPause: () => void;
+  onResume: () => void;
 }) {
+  const isPaused = sub.status === "paused";
+
   return (
     <div className="flex items-start justify-between px-4 py-4">
       <div className="space-y-1">
@@ -479,6 +515,8 @@ function SubscriptionRow({
           <p className="text-foreground text-sm font-medium">{sub.productName ?? "Product"}</p>
           {sub.cancelAtPeriodEnd ? (
             <Badge variant="outline">Canceling</Badge>
+          ) : isPaused ? (
+            <Badge variant="secondary">Paused</Badge>
           ) : sub.status === "trialing" ? (
             <Badge variant="secondary">Trial</Badge>
           ) : (
@@ -488,16 +526,29 @@ function SubscriptionRow({
         <p className="text-muted-foreground text-xs">
           {sub.cancelAtPeriodEnd
             ? `Cancels ${moment(sub.currentPeriodEnd).format("MMM D, YYYY")}`
-            : `Renews ${moment(sub.currentPeriodEnd).format("MMM D, YYYY")}`}
+            : isPaused
+              ? "Paused — no charges until resumed"
+              : `Renews ${moment(sub.currentPeriodEnd).format("MMM D, YYYY")}`}
         </p>
         {sub.walletAddress && (
           <p className="text-muted-foreground font-mono text-xs">{truncate(sub.walletAddress, { start: 6, end: 6 })}</p>
         )}
       </div>
       {!sub.cancelAtPeriodEnd && (
-        <Button variant="outline" size="sm" onClick={onCancel} disabled={canceling}>
-          {canceling ? "Canceling…" : "Cancel"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {isPaused ? (
+            <Button variant="outline" size="sm" onClick={onResume} disabled={busy}>
+              {busy ? "Resuming…" : "Resume"}
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={onPause} disabled={busy} className="text-muted-foreground">
+              {busy ? "Pausing…" : "Pause"}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
+            Cancel
+          </Button>
+        </div>
       )}
     </div>
   );
