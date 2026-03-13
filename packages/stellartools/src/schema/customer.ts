@@ -15,16 +15,6 @@ export interface CustomerWallet {
   address: string;
 
   /**
-   * The name of the wallet.
-   */
-  name?: string;
-
-  /**
-   * Whether the wallet is the default wallet for the customer.
-   */
-  isDefault: boolean;
-
-  /**
    * The metadata of the wallet.
    */
   metadata?: Record<string, unknown>;
@@ -96,7 +86,6 @@ export const customerWalletSchema = schemaFor<CustomerWallet>()(
     id: z.string(),
     address: z.string(),
     name: z.string().optional(),
-    isDefault: z.boolean(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     createdAt: z.string(),
     lastUsedAt: z.string().optional(),

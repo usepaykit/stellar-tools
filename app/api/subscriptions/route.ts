@@ -41,7 +41,7 @@ export const POST = async (req: NextRequest) => {
     const failedLogs: string[] = [];
 
     for (const customer of customers) {
-      const wallet = customer.wallets?.find((w) => w.isDefault) ?? customer.wallets?.[0];
+      const wallet = customer.wallets?.[0];
       const customerAddress = wallet?.address;
 
       if (!customerAddress) {

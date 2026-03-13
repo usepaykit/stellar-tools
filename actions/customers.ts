@@ -300,7 +300,7 @@ export async function getCustomerPortalData(token: string) {
 
   const { customerId, organizationId, environment } = session;
 
-  const [customer, customerSubscriptions, customerPayments, customerCredits] = await Promise.all([
+  const [customer, customerSubscriptions, customerPayments, customerCredits, customerWalletList] = await Promise.all([
     db
       .select()
       .from(customersSchema)
@@ -321,9 +321,12 @@ export async function getCustomerPortalData(token: string) {
         productType: productsSchema.type,
         productUnit: productsSchema.unit,
         creditsGranted: productsSchema.creditsGranted,
+        customerWalletId: subscriptionsSchema.customerWalletId,
+        walletAddress: customerWallets.address,
       })
       .from(subscriptionsSchema)
       .leftJoin(productsSchema, eq(subscriptionsSchema.productId, productsSchema.id))
+      .leftJoin(customerWallets, eq(subscriptionsSchema.customerWalletId, customerWallets.id))
       .where(
         and(
           eq(subscriptionsSchema.customerId, customerId),
@@ -366,9 +369,27 @@ export async function getCustomerPortalData(token: string) {
           eq(creditBalancesSchema.environment, environment)
         )
       ),
+
+    db
+      .select()
+      .from(customerWallets)
+      .where(
+        and(
+          eq(customerWallets.customerId, customerId),
+          eq(customerWallets.organizationId, organizationId),
+          eq(customerWallets.environment, environment)
+        )
+      )
+      .orderBy(desc(customerWallets.createdAt)),
   ]);
 
-  return { customer, subscriptions: customerSubscriptions, payments: customerPayments, credits: customerCredits };
+  return {
+    customer,
+    subscriptions: customerSubscriptions,
+    payments: customerPayments,
+    credits: customerCredits,
+    wallets: customerWalletList,
+  };
 }
 
 // -- Customer Wallet --
@@ -400,7 +421,7 @@ export const createCustomerWallet = async (
           type: "customer_wallet::created",
           map: (wallet) => ({
             customerId: wallet.customerId,
-            data: { id: wallet.id, walletAddress: wallet.address, isDefault: wallet.isDefault },
+            data: { id: wallet.id, walletAddress: wallet.address },
           }),
         },
       ],
@@ -412,7 +433,7 @@ export const createCustomerWallet = async (
             event: "customer.wallet_linked",
             map: (wallet) => ({
               customerId: wallet.customerId,
-              data: { id: wallet.id, walletAddress: wallet.address, isDefault: wallet.isDefault },
+              data: { id: wallet.id, walletAddress: wallet.address },
             }),
           },
         ],
@@ -451,4 +472,45 @@ export const retrieveCustomerWallet = async (
     );
 
   return wallet ?? null;
+};
+
+export const deleteCustomerPortalWallet = async (walletId: string, token: string) => {
+  const session = await retrieveCustomerPortalSession(token);
+
+  if (!session) throw new Error("Invalid or expired session");
+
+  const { customerId, organizationId, environment } = session;
+
+  const activeSubscription = await db
+    .select({ id: subscriptionsSchema.id })
+    .from(subscriptionsSchema)
+    .where(
+      and(
+        eq(subscriptionsSchema.customerWalletId, walletId),
+        eq(subscriptionsSchema.customerId, customerId),
+        inArray(subscriptionsSchema.status, ["active", "trialing"])
+      )
+    )
+    .limit(1)
+    .then(([s]) => s ?? null);
+
+  if (activeSubscription) {
+    throw new Error("This wallet is linked to an active subscription and cannot be removed.");
+  }
+
+  const [deleted] = await db
+    .delete(customerWallets)
+    .where(
+      and(
+        eq(customerWallets.id, walletId),
+        eq(customerWallets.customerId, customerId),
+        eq(customerWallets.organizationId, organizationId),
+        eq(customerWallets.environment, environment)
+      )
+    )
+    .returning();
+
+  if (!deleted) throw new Error("Wallet not found");
+
+  return deleted;
 };

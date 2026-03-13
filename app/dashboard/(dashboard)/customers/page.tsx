@@ -108,7 +108,7 @@ const columns: ColumnDef<ResolvedCustomer>[] = [
     ),
     cell: ({ row }) => (
       <div className="text-muted-foreground font-mono text-sm">
-        {truncate(row.original.wallets?.find((w) => w.isDefault)?.address ?? row.original.wallets?.[0]?.address ?? "-")}
+        {truncate(row.original.wallets?.[0]?.address ?? "-")}
       </div>
     ),
     enableSorting: true,

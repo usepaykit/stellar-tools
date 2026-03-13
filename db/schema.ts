@@ -192,7 +192,6 @@ export const customerWallets = pgTable(
       .notNull()
       .references(() => customers.id),
     address: text("address").notNull(),
-    isDefault: boolean("is_default").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     environment: networkEnum("network").notNull(),

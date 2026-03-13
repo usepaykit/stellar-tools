@@ -357,7 +357,7 @@ export default function CustomerDetailPage() {
                   </Button>
                 </div>
                 <div className="space-y-3">
-                  {customer.wallets?.map(({ address, name }) => (
+                  {customer.wallets?.map(({ address }) => (
                     <div key={address} className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4">
                       <Image
                         src="/images/integrations/stellar-official.png"
@@ -370,7 +370,6 @@ export default function CustomerDetailPage() {
                         <div className="font-mono text-xs break-all sm:text-sm">
                           {hiddenWallets.has(address) ? "•".repeat(20) : address}
                         </div>
-                        {name && <p className="text-muted-foreground text-[10px]">{name}</p>}
                       </div>
                       <div className="flex gap-1">
                         <Button

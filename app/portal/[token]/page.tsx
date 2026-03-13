@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { createCustomerImage, getCustomerPortalData } from "@/actions/customers";
+import { createCustomerImage, deleteCustomerPortalWallet, getCustomerPortalData } from "@/actions/customers";
 import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import {
@@ -19,10 +19,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/toast";
-import { fileFromUrl, stroopsToXlm } from "@/lib/utils";
+import { fileFromUrl, stroopsToXlm, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Customer } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,6 +34,7 @@ type PortalData = Awaited<ReturnType<typeof getCustomerPortalData>>;
 type Subscription = NonNullable<PortalData>["subscriptions"][number];
 type Credit = NonNullable<PortalData>["credits"][number];
 type Payment = NonNullable<PortalData>["payments"][number];
+type Wallet = NonNullable<PortalData>["wallets"][number];
 
 const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: {} });
 
@@ -164,6 +166,15 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
     },
   });
 
+  const { mutate: deleteWallet, isPending: deletingWallet } = useMutation({
+    mutationFn: (walletId: string) => deleteCustomerPortalWallet(walletId, token),
+    onSuccess: () => {
+      toast.success("Wallet removed");
+      queryClient.invalidateQueries({ queryKey: ["customer-portal", token] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const handleCancel = (subscriptionId: string) => {
     AppModal.open({
       title: "Cancel subscription",
@@ -182,6 +193,29 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
         onClick: () => {
           AppModal.close();
           cancelSubscription(subscriptionId);
+        },
+      },
+    });
+  };
+
+  const handleDeleteWallet = (wallet: Wallet) => {
+    AppModal.open({
+      title: "Remove wallet",
+      description: `Remove ${truncate(wallet.address, { start: 6, end: 6 })}?`,
+      content: (
+        <p className="text-muted-foreground text-sm">
+          This wallet will be unlinked from your account. Wallets tied to active subscriptions cannot be removed.
+        </p>
+      ),
+      size: "small",
+      showCloseButton: true,
+      secondaryButton: { children: "Keep wallet" },
+      primaryButton: {
+        children: "Remove",
+        variant: "destructive",
+        onClick: () => {
+          AppModal.close();
+          deleteWallet(wallet.id);
         },
       },
     });
@@ -219,8 +253,9 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
     );
   }
 
-  const { subscriptions, payments, credits } = data;
+  const { subscriptions, payments, credits, wallets } = data;
   const activeSubscriptions = subscriptions.filter((s) => s.status === "active" || s.status === "trialing");
+  const activeWalletIds = new Set(activeSubscriptions.map((s) => s.customerWalletId).filter(Boolean));
   const hasActivity = payments.length > 0 || activeSubscriptions.length > 0 || credits.length > 0;
 
   const image = form.watch("image");
@@ -319,6 +354,23 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
           </div>
         </div>
 
+        {wallets.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-foreground mb-3 text-sm font-medium">Connected Wallets</h2>
+            <div className="border-border divide-border divide-y rounded-xl border">
+              {wallets.map((wallet) => (
+                <WalletRow
+                  key={wallet.id}
+                  wallet={wallet}
+                  isLinkedToActiveSubscription={activeWalletIds.has(wallet.id)}
+                  deleting={deletingWallet}
+                  onDelete={() => handleDeleteWallet(wallet)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {!hasActivity && (
           <div className="border-border rounded-xl border py-16 text-center">
             <p className="text-foreground font-medium">No activity yet</p>
@@ -371,6 +423,46 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   );
 }
 
+function WalletRow({
+  wallet,
+  isLinkedToActiveSubscription,
+  deleting,
+  onDelete,
+}: {
+  wallet: Wallet;
+  isLinkedToActiveSubscription: boolean;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3">
+      <div className="space-y-0.5">
+        <p className="text-foreground font-mono text-sm">{truncate(wallet.address, { start: 8, end: 8 })}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-muted-foreground text-xs">Added {moment(wallet.createdAt).format("MMM D, YYYY")}</p>
+          {isLinkedToActiveSubscription && (
+            <Badge variant="secondary" className="text-[10px]">
+              Active subscription
+            </Badge>
+          )}
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground hover:text-destructive size-8 shrink-0"
+        onClick={onDelete}
+        disabled={deleting || isLinkedToActiveSubscription}
+        title={
+          isLinkedToActiveSubscription ? "Cannot remove a wallet linked to an active subscription" : "Remove wallet"
+        }
+      >
+        <Trash2 className="size-4" />
+      </Button>
+    </div>
+  );
+}
+
 function SubscriptionRow({
   sub,
   canceling,
@@ -398,6 +490,9 @@ function SubscriptionRow({
             ? `Cancels ${moment(sub.currentPeriodEnd).format("MMM D, YYYY")}`
             : `Renews ${moment(sub.currentPeriodEnd).format("MMM D, YYYY")}`}
         </p>
+        {sub.walletAddress && (
+          <p className="text-muted-foreground font-mono text-xs">{truncate(sub.walletAddress, { start: 6, end: 6 })}</p>
+        )}
       </div>
       {!sub.cancelAtPeriodEnd && (
         <Button variant="outline" size="sm" onClick={onCancel} disabled={canceling}>

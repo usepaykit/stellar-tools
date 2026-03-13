@@ -14,11 +14,11 @@ export default function HeroSection() {
           Now with LangChain &amp; AI SDK support
         </div>
 
-        <h1 className="text-foreground mb-6 text-[clamp(42px,5vw,62px)] leading-[1.1] font-bold tracking-tight">
-          Open source payment infrastructure
+        <h1 className="text-foreground mb-6 text-[clamp(42px,5vw,62px)] leading-[1.1] font-extrabold tracking-normal">
+          The financial infrastructure
           <br />
-          built for the
-          <span className="text-primary ml-2">blockchain era.</span>
+          for the
+          <span className="text-primary ml-2">Stellar economy.</span>
         </h1>
 
         <p className="text-muted-foreground mx-auto mb-9 max-w-[580px] text-lg leading-relaxed font-normal">

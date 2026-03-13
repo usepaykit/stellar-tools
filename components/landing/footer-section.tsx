@@ -123,7 +123,7 @@ export const FooterSection = () => {
           target="_blank"
           className="flex items-center gap-1 text-sm text-white/40 transition-colors hover:text-white/60"
         >
-          <span>Made with</span>
+          <span>Built with</span>
           <Heart className="h-4 w-4 fill-red-500 text-red-500" />
           <span>by</span>
           <span className="font-semibold text-white">Paykit</span>

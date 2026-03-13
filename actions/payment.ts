@@ -349,7 +349,6 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       ? await createCustomerWallet(organizationId, environment, {
           customerId,
           address: payerAddress,
-          isDefault: true,
           metadata: null,
         })
       : Promise.resolve(),
