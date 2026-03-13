@@ -16,6 +16,7 @@ import {
   products as productsSchema,
   subscriptions as subscriptionsSchema,
 } from "@/db";
+import { CustomerWallet as CustomerWalletSchema } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
@@ -173,10 +174,8 @@ export const putCustomer = async (
           map: (newCustomer) => ({
             customerId: newCustomer.id,
             data: {
-              $changes: {
-                ...(computeDiff(oldCustomer ?? {}, newCustomer, undefined, ".") ?? {}),
-                ...(options?.source ? { source: options.source } : {}),
-              } as Record<string, unknown> & { previous_attributes: Record<string, unknown> },
+              $changes: computeDiff(oldCustomer ?? {}, newCustomer, undefined, ".") ?? {},
+              ...(options?.source ? { source: options.source } : {}),
             },
           }),
         },
@@ -371,3 +370,85 @@ export async function getCustomerPortalData(token: string) {
 
   return { customer, subscriptions: customerSubscriptions, payments: customerPayments, credits: customerCredits };
 }
+
+// -- Customer Wallet --
+
+export const createCustomerWallet = (
+  organizationId: string,
+  environment: Network,
+  params: Omit<CustomerWalletSchema, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">
+) => {
+  return withEvent(
+    async () => {
+      return await db
+        .insert(customerWallets)
+        .values({
+          ...params,
+          id: generateResourceId("cwl", organizationId, 25),
+          organizationId,
+          environment,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoNothing()
+        .returning()
+        .then(([w]) => w);
+    },
+    {
+      events: [
+        {
+          type: "customer_wallet::created",
+          map: (wallet) => ({
+            customerId: wallet.customerId,
+            data: { id: wallet.id, walletAddress: wallet.address, isDefault: wallet.isDefault },
+          }),
+        },
+      ],
+      webhooks: {
+        organizationId,
+        environment,
+        triggers: [
+          {
+            event: "customer.wallet_linked",
+            map: (wallet) => ({
+              customerId: wallet.customerId,
+              data: { id: wallet.id, walletAddress: wallet.address, isDefault: wallet.isDefault },
+            }),
+          },
+        ],
+      },
+    }
+  );
+};
+
+export const retrieveCustomerWallet = async (
+  customerId: string,
+  loopUpKey: { walletAddress?: string | null } | { id?: string | null },
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const orFilters: (SQL | undefined)[] = [];
+
+  if ("walletAddress" in loopUpKey && loopUpKey.walletAddress) {
+    orFilters.push(eq(customerWallets.address, loopUpKey.walletAddress));
+  }
+  if ("id" in loopUpKey && loopUpKey.id) {
+    orFilters.push(eq(customerWallets.id, loopUpKey.id));
+  }
+
+  const [wallet] = await db
+    .select()
+    .from(customerWallets)
+    .where(
+      and(
+        eq(customerWallets.customerId, customerId),
+        eq(customerWallets.organizationId, organizationId),
+        eq(customerWallets.environment, environment),
+        ...orFilters.filter((f): f is SQL => !!f)
+      )
+    );
+
+  return wallet ?? null;
+};

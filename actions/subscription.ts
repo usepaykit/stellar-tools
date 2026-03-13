@@ -226,7 +226,7 @@ export const retrieveDueSubscriptions = async () => {
     .innerJoin(customers, eq(subscriptions.customerId, customers.id))
     .innerJoin(products, eq(subscriptions.productId, products.id))
     .innerJoin(assets, eq(products.assetId, assets.id))
-    .innerJoin(customerWallets, eq(subscriptions.walletId, customerWallets.id))
+    .innerJoin(customerWallets, eq(subscriptions.customerWalletId, customerWallets.id))
     .orderBy(desc(subscriptions.currentPeriodEnd));
 
   return results;

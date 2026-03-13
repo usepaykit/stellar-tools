@@ -433,7 +433,7 @@ export class StellarCoreApi {
     merchantAddress: string,
     memo: string,
     sinceToken: string
-  ): Promise<Result<{ hash: string; amount: string; successful: boolean } | null, Error>> => {
+  ): Promise<Result<{ hash: string; amount: string; successful: boolean; from: string } | null, Error>> => {
     try {
       const { server } = this.getServerAndNetwork();
 
@@ -448,7 +448,12 @@ export class StellarCoreApi {
         );
 
         if (paymentOp) {
-          return Result.ok({ hash: match.hash, amount: paymentOp.amount, successful: match.successful });
+          return Result.ok({
+            hash: match.hash,
+            amount: paymentOp.amount,
+            successful: match.successful,
+            from: paymentOp.from,
+          });
         }
       }
 

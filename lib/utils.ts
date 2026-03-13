@@ -7,6 +7,7 @@ import { z } from "zod";
 
 export const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 type HashAlgorithm = "shake128" | "sha256";
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

@@ -1,4 +1,5 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
+import { retrieveCustomerWallet } from "@/actions/customers";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { triggerWebhooks } from "@/actions/webhook";
 import { getCorsHeaders } from "@/constant";
@@ -22,15 +23,17 @@ export const POST = async (req: NextRequest, context: { params: Promise<{ id: st
   }
 
   const result = await Result.andThenAsync(validateSchema(Schema.string(id), id), async (id) => {
-    const customerAddress = "G..."; // todo: get customer address from customer
-
     const [subscription, { organizationId, environment }] = await Promise.all([
       retrieveSubscription(id),
       resolveApiKeyOrAuthorizationToken(apiKey, authToken, portalToken),
     ]);
 
+    const customerWallet = await retrieveCustomerWallet(subscription.customerId, { id: subscription.customerWalletId });
+
+    if (!customerWallet?.address) return Result.err(new Error("Customer wallet not found"));
+
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-    await api.cancelSubscription(customerAddress, subscription.productId);
+    await api.cancelSubscription(customerWallet.address, subscription.productId);
     const updatedSubscription = await putSubscription(
       id,
       { canceledAt: new Date(), cancelAtPeriodEnd: true },

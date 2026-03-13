@@ -111,6 +111,7 @@ export class SorobanContractApi {
     Result<
       {
         hash: string;
+        customerWalletAddress?: string;
         events: Array<{
           topic: string;
           topics: string[];
@@ -196,7 +197,18 @@ export class SorobanContractApi {
           return { topic: topics[0], topics, data, success: true };
         });
 
-        return Result.ok({ hash, events: parsedEvents });
+        let customerWalletAddress: string | undefined = undefined;
+
+        try {
+          if (res.envelopeXdr) {
+            const tx = new StellarSDK.Transaction(res.envelopeXdr, this.networkPassphrase);
+            customerWalletAddress = tx.source;
+          }
+        } catch (e) {
+          console.error("Failed to extract customer wallet address from transaction envelope", e);
+        }
+
+        return Result.ok({ hash, events: parsedEvents, customerWalletAddress });
       }
 
       if (res.status === "FAILED") {

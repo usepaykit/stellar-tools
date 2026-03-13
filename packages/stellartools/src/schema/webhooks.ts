@@ -7,6 +7,7 @@ export const webhookEvent = [
   "customer.created",
   "customer.updated",
   "customer.deleted",
+  "customer.wallet_linked",
   "checkout.created",
   "payment.pending",
   "payment.confirmed",

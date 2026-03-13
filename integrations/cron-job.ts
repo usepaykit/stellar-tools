@@ -131,7 +131,8 @@ export class CronJobApi {
                   status: "failed",
                 },
                 sub.subscription.organizationId,
-                sub.subscription.environment
+                sub.subscription.environment,
+                { customerWalletAddress: result.value.customerWalletAddress }
               );
               failed += 1;
               continue;
@@ -156,7 +157,8 @@ export class CronJobApi {
                   status: "confirmed",
                 },
                 sub.subscription.organizationId,
-                sub.subscription.environment
+                sub.subscription.environment,
+                { customerWalletAddress: result.value.customerWalletAddress }
               ),
             ]);
             succeeded += 1;

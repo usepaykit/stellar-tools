@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { sweepAndProcessPayment } from "@/actions/payment";
 import { AnimatedCheckmark } from "@/components/icon";
 import {
   PhoneNumber,
@@ -120,7 +121,11 @@ export default function CheckoutPage() {
 
   const handleWalletPay = async () => {
     const walletKit = StellarWalletsKitApi.getInstance();
-    if (!walletKit.isConnected()) return walletKit.connectWallet();
+
+    if (!walletKit.isConnected()) {
+      await walletKit.connectWallet();
+      return;
+    }
 
     setIsProcessing(true);
     try {
@@ -135,15 +140,14 @@ export default function CheckoutPage() {
         },
         async (xdr) => {
           const { signedTxXdr } = await walletKit.signTransaction(xdr, { address });
-          // Standard callback logic
-          await fetch(`/api/checkout/verify-callback?checkoutId=${checkoutId}`, {
-            method: "POST",
-            body: JSON.stringify({ xdr: signedTxXdr }),
-          });
           return signedTxXdr;
         }
       );
+
       if (result.isErr()) throw new Error(result.error.message);
+
+      await sweepAndProcessPayment(checkoutId);
+      queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
     } catch (e: any) {
       toast.error(e.message || "Payment failed");
     } finally {

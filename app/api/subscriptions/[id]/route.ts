@@ -1,4 +1,5 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
+import { retrieveCustomerWallet } from "@/actions/customers";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { Result, z as Schema, updateSubscriptionSchema, validateSchema } from "@stellartools/core";
@@ -8,19 +9,25 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
+  const authToken = req.headers.get("x-auth-token");
+  const portalToken = req.headers.get("x-portal-token");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !authToken && !portalToken) {
+    return NextResponse.json({ error: "API key or Auth Token is required" }, { status: 400 });
   }
 
   const result = await Result.andThenAsync(validateSchema(Schema.string(), id), async (id) => {
-    const { environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
+    const { environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken, portalToken);
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
     const subscription = await retrieveSubscription(id);
-    const walletAddress = ""; // todo: get wallet address from customer
+    const customerWallet = await retrieveCustomerWallet(subscription.customerId, { id: subscription.customerWalletId });
 
-    const onchainSubscription = await api.getSubscription(walletAddress, subscription.productId);
+    if (!customerWallet?.address) {
+      return Result.err(new Error("Customer wallet not found"));
+    }
+
+    const onchainSubscription = await api.getSubscription(customerWallet.address, subscription.productId);
 
     if (!onchainSubscription) return Result.err(new Error("Subscription not found"));
 
@@ -41,24 +48,30 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
   const { id } = await context.params;
 
   const apiKey = req.headers.get("x-api-key");
+  const authToken = req.headers.get("x-auth-token");
+  const portalToken = req.headers.get("x-portal-token");
 
-  if (!apiKey) {
-    return NextResponse.json({ error: "API key is required" }, { status: 400 });
+  if (!apiKey && !authToken && !portalToken) {
+    return NextResponse.json({ error: "API key or Auth Token is required" }, { status: 400 });
   }
 
   const result = await Result.andThenAsync(
     validateSchema(updateSubscriptionSchema, await req.json()),
     async ({ metadata, cancelAtPeriodEnd }) => {
-      const { environment, organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey);
+      const { environment, organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken, portalToken);
       const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
       const subscription = await retrieveSubscription(id);
-      const walletAddress = ""; // todo: get wallet address from customer
+      const customerWallet = await retrieveCustomerWallet(subscription.customerId, {
+        id: subscription.customerWalletId,
+      });
+
+      if (!customerWallet?.address) return Result.err(new Error("Customer wallet not found"));
 
       let cancellationResult: Result<string, Error> | null = null;
 
       if (cancelAtPeriodEnd) {
-        cancellationResult = await api.cancelSubscription(walletAddress, subscription.productId);
+        cancellationResult = await api.cancelSubscription(customerWallet.address, subscription.productId);
       }
 
       if (cancellationResult?.isErr()) return Result.err(cancellationResult.error);

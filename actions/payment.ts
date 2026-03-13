@@ -12,6 +12,7 @@ import {
   Refund,
   assets,
   checkouts,
+  customerWallets,
   customers,
   db,
   payments,
@@ -23,6 +24,8 @@ import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { ApiClient, Result } from "@stellartools/core";
 import { and, desc, eq } from "drizzle-orm";
+
+import { createCustomerWallet, retrieveCustomerWallet } from "./customers";
 
 const paymentActionHandler = async (call: () => Promise<Payment>, organizationId: string, environment: Network) => {
   const payment = await withEvent(call, (payment) => {
@@ -70,18 +73,45 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
 export const postPayment = async (
   params: Omit<
     Payment,
-    "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "platformFeeUsd" | "orgMonthlyVolumeUsd"
+    | "id"
+    | "organizationId"
+    | "environment"
+    | "createdAt"
+    | "updatedAt"
+    | "platformFeeUsd"
+    | "orgMonthlyVolumeUsd"
+    | "customerWalletId"
   >,
   orgId?: string,
-  env?: Network
+  env?: Network,
+  options?: { customerWalletAddress?: string }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  let customerWalletId: string | null = null;
+
+  if (params?.customerId && options?.customerWalletAddress) {
+    customerWalletId = (
+      await retrieveCustomerWallet(
+        params.customerId,
+        { walletAddress: options.customerWalletAddress },
+        organizationId,
+        environment
+      )
+    )?.id;
+  }
 
   return paymentActionHandler(
     async () => {
       const [payment] = await db
         .insert(payments)
-        .values({ ...params, id: generateResourceId("pay", organizationId, 25), organizationId, environment })
+        .values({
+          ...params,
+          id: generateResourceId("pay", organizationId, 25),
+          organizationId,
+          environment,
+          customerWalletId,
+        })
         .returning();
       return payment;
     },
@@ -255,7 +285,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   if (!result.value) return checkout;
 
-  const { hash, amount, successful } = result.value;
+  const { hash, amount, successful, from: payerAddress } = result.value;
 
   const createSubscriptionHandler = async () => {
     if (!checkout.productId) return Result.err(new Error("Product ID is required for subscription"));
@@ -314,8 +344,15 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   await Promise.all([
     putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment),
-    // Apply the StellarTools platform fee — advances tier automatically if volume crosses a boundary
     applyPaymentFee(confirmedPayment.id, organizationId, parseInt(amount)),
+    customerId
+      ? await createCustomerWallet(organizationId, environment, {
+          customerId,
+          address: payerAddress,
+          isDefault: true,
+          metadata: null,
+        })
+      : Promise.resolve(),
     ...(productType === "subscription" ? [createSubscriptionHandler()] : []),
   ]);
 

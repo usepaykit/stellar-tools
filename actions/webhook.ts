@@ -3,7 +3,7 @@
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { WebhookDelivery } from "@/integrations/webhook-delivery";
-import { normalizeTimeSeries, toSnakeCase } from "@/lib/utils";
+import { toSnakeCase } from "@/lib/utils";
 import { generateResourceId } from "@/lib/utils";
 import { WebhookEvent } from "@stellartools/core";
 import { and, eq, sql } from "drizzle-orm";

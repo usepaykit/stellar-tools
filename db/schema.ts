@@ -78,11 +78,6 @@ export const organizations = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-    /**
-     * Opaque encoded fee rate (basis points) for this organisation.
-     * Decoded server-side only – never exposed as a plain number to clients.
-     * null = auto-calculate from published volume tiers.
-     */
     feeToken: text("fee_token"),
   },
   (table) => ({
@@ -196,15 +191,19 @@ export const customerWallets = pgTable(
     customerId: text("customer_id")
       .notNull()
       .references(() => customers.id),
-    address: text("address").notNull(),
-    name: text("name"), // e.g. "My LOBSTR"
+    address: text("address").notNull().unique(),
     isDefault: boolean("is_default").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    lastUsedAt: timestamp("last_used_at"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    environment: networkEnum("network").notNull(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     uniqueWallet: unique().on(table.customerId, table.address),
+    paymentWallet: index("idx_payment_wallet").on(table.customerId, table.address),
   })
 );
 
@@ -291,7 +290,6 @@ export const subscriptions = pgTable("subscription", {
   customerId: text("customer_id")
     .notNull()
     .references(() => customers.id),
-  walletId: text("wallet_id").references(() => customerWallets.id),
   productId: text("product_id")
     .notNull()
     .references(() => products.id),
@@ -309,6 +307,7 @@ export const subscriptions = pgTable("subscription", {
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
   environment: networkEnum("network").notNull(),
   trialDays: integer("trial_days").default(0),
+  customerWalletId: text("customer_wallet_id").references(() => customerWallets.id),
 });
 
 export const paymentStatusEnum = pgEnum("payment_status", ["pending", "confirmed", "failed"]);
@@ -335,6 +334,7 @@ export const payments = pgTable("payment", {
    * null on pending/failed payments.
    */
   orgMonthlyVolumeUsd: integer("org_monthly_volume_usd"),
+  customerWalletId: text("customer_wallet_id").references(() => customerWallets.id),
 });
 
 export const payoutStatusEnum = pgEnum("payout_status", payoutStatusEnum$1);
@@ -556,7 +556,6 @@ export type OrganizationSecret = InferSelectModel<typeof organizationSecrets>;
 export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
 export type CustomerPortalSession = InferSelectModel<typeof customerPortalSessions>;
-
 export type { ProductStatus, ProductType };
 
 export type ResolvedCustomer = Customer & { wallets?: Array<CustomerWallet> };
