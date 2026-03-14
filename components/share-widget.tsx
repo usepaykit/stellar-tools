@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { useCookieState } from "@/hooks/use-cookie-state";
 import { Button } from "@/components/ui/button";
 import { type NormalizedChartPoint, cn } from "@/lib/utils";
 import { saveAs } from "file-saver";
@@ -272,7 +273,7 @@ const LOGO_LIGHT_SRC = "/images/logo-light.png";
 const LOGO_DARK_SRC = "/images/logo-dark.png";
 
 export function ShareWidget({ title, value, subtitle, sparkData }: ShareWidgetProps) {
-  const [theme, setTheme] = React.useState<ThemeId>("dark");
+  const [theme, setTheme] = useCookieState<ThemeId>("share_theme", "dark");
   const [copied, setCopied] = React.useState(false);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [logos, setLogos] = React.useState<{ light: HTMLImageElement | null; dark: HTMLImageElement | null }>({

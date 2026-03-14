@@ -33,6 +33,7 @@ import {
   UnderlineTabsList,
   UnderlineTabsTrigger,
 } from "@/components/underline-tabs";
+import { useCookieState } from "@/hooks/use-cookie-state";
 import { useOrgContext } from "@/hooks/use-org-query";
 import { fileFromUrl } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -405,7 +406,7 @@ const OrganizationTabContent = ({ organization }: { organization: Organization }
 };
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = React.useState("profile");
+  const [activeTab, setActiveTab] = useCookieState("settings_tab", "profile");
   const { data: orgContext } = useOrgContext();
 
   const { data: user, isLoading: isLoadingUser } = useQuery({

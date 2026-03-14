@@ -2,7 +2,15 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Stellar Tools",
-  "description": "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes.",
+  "description": "The financial infrastructure for the Stellar economy.",
+  "fonts": {
+    "heading": {
+      "family": "Instrument Serif"
+    },
+    "body": {
+      "family": "DM Sans"
+    }
+  },
   "colors": {
     "primary": "#6347eb",
     "light": "#6347eb",

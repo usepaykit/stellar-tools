@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { resendWebhookLog, retrieveWebhookLogs } from "@/actions/webhook";
+import { useCookieState } from "@/hooks/use-cookie-state";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -113,7 +114,7 @@ export default function WebhookLogPage() {
   const params = useParams();
   const webhookId = params?.id as string;
   const [searchQuery, _] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("all");
+  const [statusFilter, setStatusFilter] = useCookieState("webhook_status_filter", "all");
 
   const {
     data: webhookLogs,
