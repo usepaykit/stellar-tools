@@ -50,8 +50,11 @@ export class StellarWalletsKitApi {
   }
 
   init(options?: { network?: Networks }): void {
-    if (this.isInitialized) return;
     if (typeof window === "undefined") return;
+
+    // Clean up previous event subscription before re-initializing
+    this.eventUnsubscriber?.();
+    this.eventUnsubscriber = null;
 
     StellarWalletsKit.init({
       modules: defaultModules(),

@@ -6,7 +6,7 @@ import { Result, z as Schema } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const GET = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { query: Schema.object({ asset: Schema.string(), issuer: Schema.string() }) },
   handler: async ({ query: { asset: assetCode, issuer: assetIssuer }, auth: { environment } }) => {
     const asset = await retrieveAsset({ code: assetCode, issuer: assetIssuer }, environment);

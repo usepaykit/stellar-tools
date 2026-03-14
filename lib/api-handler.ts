@@ -5,13 +5,26 @@ import { getCorsHeaders } from "@/constant";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
+export type AuthScope = "session" | "apikey" | "portal";
+
+const AUTH_SCOPE_LABELS: Record<AuthScope, string> = {
+  apikey: "Api key",
+  session: "Session token",
+  portal: "Portal token",
+};
+
+function authRequiredMessage(scopes: AuthScope[]): string {
+  const labels = scopes.map((s) => AUTH_SCOPE_LABELS[s]);
+  return `${labels.join(" or ")} required`;
+}
+
 type HandlerConfig<TBody, TParams, TQuery> = {
   schema?: {
     body?: Schema.ZodSchema<TBody>;
     params?: Schema.ZodSchema<TParams>;
     query?: Schema.ZodSchema<TQuery>;
   };
-  auth?: boolean | { allowPortal?: boolean };
+  auth?: AuthScope[] | null;
   handler: (args: {
     body: TBody;
     params: TParams;
@@ -36,19 +49,25 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
 
       let authResult: null | Awaited<ReturnType<typeof resolveApiKeyOrAuthorizationToken>> = null;
 
-      if (config.auth) {
+      const scopes = config.auth?.length ? config.auth : null;
+      if (scopes) {
         const apiKey = req.headers.get("x-api-key");
         const authToken = req.headers.get("x-auth-token");
         const portalToken = req.headers.get("x-portal-token");
 
-        if (!apiKey && !authToken && (!portalToken || typeof config.auth === "boolean")) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: corsHeaders });
+        const hasAllowedAuth =
+          (scopes.includes("apikey") && apiKey) ||
+          (scopes.includes("session") && authToken) ||
+          (scopes.includes("portal") && portalToken);
+
+        if (!hasAllowedAuth) {
+          return NextResponse.json({ error: authRequiredMessage(scopes) }, { status: 401, headers: corsHeaders });
         }
 
         authResult = await resolveApiKeyOrAuthorizationToken(
           apiKey,
           authToken,
-          typeof config.auth === "object" && config.auth.allowPortal ? portalToken : undefined
+          scopes.includes("portal") ? (portalToken ?? undefined) : undefined
         );
       }
 

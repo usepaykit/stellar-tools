@@ -443,9 +443,9 @@ export const createCustomerWallet = async (
   );
 };
 
-export const retrieveCustomerWallet = async (
+export const retrieveCustomerWallets = async (
   customerId: string,
-  loopUpKey: { walletAddress?: string | null } | { id?: string | null },
+  loopUpKey?: { walletAddress?: string | null } | { id?: string | null },
   orgId?: string,
   env?: Network
 ) => {
@@ -453,14 +453,15 @@ export const retrieveCustomerWallet = async (
 
   const orFilters: (SQL | undefined)[] = [];
 
-  if ("walletAddress" in loopUpKey && loopUpKey.walletAddress) {
+  if (loopUpKey && "walletAddress" in loopUpKey && loopUpKey.walletAddress) {
     orFilters.push(eq(customerWallets.address, loopUpKey.walletAddress));
   }
-  if ("id" in loopUpKey && loopUpKey.id) {
+
+  if (loopUpKey && "id" in loopUpKey && loopUpKey.id) {
     orFilters.push(eq(customerWallets.id, loopUpKey.id));
   }
 
-  const [wallet] = await db
+  return await db
     .select()
     .from(customerWallets)
     .where(
@@ -471,8 +472,6 @@ export const retrieveCustomerWallet = async (
         ...orFilters.filter((f): f is SQL => !!f)
       )
     );
-
-  return wallet ?? null;
 };
 
 export const deleteCustomerPortalWallet = async (walletId: string, token: string) => {

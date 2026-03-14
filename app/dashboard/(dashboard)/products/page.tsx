@@ -50,7 +50,7 @@ import { z } from "zod";
 
 export interface Product extends Pick<
   ProductSchema,
-  "id" | "name" | "status" | "createdAt" | "updatedAt" | "type" | "images" | "metadata"
+  "id" | "name" | "status" | "createdAt" | "updatedAt" | "type" | "images" | "metadata" | "assetId"
 > {
   description?: string | null;
   pricing: {
@@ -189,7 +189,7 @@ const columns: ColumnDef<Product>[] = [
   },
 ];
 
-function ProductsModalFooter({
+export function ProductsModalFooter({
   onClose,
   submitRef,
   isPending,
@@ -205,12 +205,7 @@ function ProductsModalFooter({
       <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
         Cancel
       </Button>
-      <Button
-        type="button"
-        onClick={() => submitRef.current?.()}
-        disabled={isPending}
-        isLoading={isPending}
-      >
+      <Button type="button" onClick={() => submitRef.current?.()} disabled={isPending} isLoading={isPending}>
         {isEditMode ? "Update product" : "Add product"}
       </Button>
     </div>
@@ -250,8 +245,8 @@ function ProductsPageContent() {
         <ProductsModalFooter
           onClose={AppModal.close}
           submitRef={productModalSubmitRef}
-          isPending={productModalFooterProps.isPending}
-          isEditMode={productModalFooterProps.isEditMode}
+          isPending={false}
+          isEditMode={false}
         />
       ),
       size: "full",
@@ -285,8 +280,8 @@ function ProductsPageContent() {
           <ProductsModalFooter
             onClose={AppModal.close}
             submitRef={productModalSubmitRef}
-            isPending={productModalFooterProps.isPending}
-            isEditMode={productModalFooterProps.isEditMode}
+            isPending={false}
+            isEditMode
           />
         ),
         size: "full",
@@ -312,7 +307,7 @@ function ProductsPageContent() {
         ),
       });
     }
-  }, [productModalFooterProps.isPending]);
+  }, [productModalFooterProps.isPending, productModalFooterProps.isEditMode]);
 
   React.useEffect(() => {
     if (searchParams?.get("mode") === "create") openCreateModal();
@@ -341,6 +336,7 @@ function ProductsPageContent() {
           unitDivisor: product.unitDivisor ?? null,
           unitsPerCredit: product.unitsPerCredit ?? null,
           creditsGranted: product.creditsGranted ?? null,
+          assetId: product.assetId ?? null,
         };
       });
     },
@@ -715,11 +711,7 @@ export function ProductsModalContent({
           <Button variant="outline" onClick={onClose} disabled={putProductMutation.isPending}>
             Cancel
           </Button>
-          <Button
-            onClick={submitForm}
-            disabled={putProductMutation.isPending}
-            isLoading={putProductMutation.isPending}
-          >
+          <Button onClick={submitForm} disabled={putProductMutation.isPending} isLoading={putProductMutation.isPending}>
             {isEditMode ? "Update product" : "Add product"}
           </Button>
         </div>

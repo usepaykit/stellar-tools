@@ -5,12 +5,12 @@ const resend = new ResendClient(process.env.RESEND_API_KEY);
 export class EmailApi {
   constructor() {}
 
-  async sendEmail(email: string, subject: string, html: string) {
+  async sendEmail(email: string, subject: string, react: React.ReactNode) {
     const result = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
       to: email,
       subject,
-      html,
+      react,
     });
 
     return result;

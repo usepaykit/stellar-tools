@@ -85,7 +85,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
               metadata: data?.metadata as any,
               description: (data?.description as string) ?? "Order Payment",
               customerId: context?.customer?.id as string,
-              successUrl: data?.successUrl as string,
+              redirectUrl: data?.redirectUrl as string,
             };
             const checkout = await this.stellar.checkouts.createDirect(checkoutPayload);
             return Result.ok(checkout);

@@ -4,6 +4,20 @@ import { Sep7Pay } from "@stellar/typescript-wallet-sdk";
 import { Result } from "@stellartools/core";
 import { createHash } from "crypto";
 
+function stellarOpErrorMessage(code: string): string {
+  const messages: Record<string, string> = {
+    op_no_trust: "Destination account has no trustline for this asset. Add a trustline first.",
+    op_src_no_trust: "Your account has no trustline for this asset.",
+    op_underfunded: "Insufficient balance to complete the payment.",
+    op_no_destination: "Destination account does not exist on the network.",
+    op_not_authorized: "Your account is not authorized to send this asset.",
+    op_line_full: "Destination account's trustline is full.",
+    op_no_issuer: "The asset issuer account does not exist.",
+    op_malformed: "Payment operation is malformed.",
+  };
+  return messages[code] ?? `Payment failed: ${code}`;
+}
+
 export class StellarCoreApi {
   constructor(private network: Network) {}
 
@@ -12,11 +26,13 @@ export class StellarCoreApi {
       return {
         networkPassphrase: StellarSDK.Networks.TESTNET,
         server: new StellarSDK.Horizon.Server(process.env.NEXT_PUBLIC_STELLAR_HORIZON_TESTNET!),
+        horizonUrl: process.env.NEXT_PUBLIC_STELLAR_HORIZON_TESTNET!,
       };
     } else {
       return {
         networkPassphrase: StellarSDK.Networks.PUBLIC,
         server: new StellarSDK.Horizon.Server(process.env.NEXT_PUBLIC_STELLAR_HORIZON_MAINNET!),
+        horizonUrl: process.env.NEXT_PUBLIC_STELLAR_HORIZON_MAINNET!,
       };
     }
   }
@@ -81,18 +97,22 @@ export class StellarCoreApi {
   ): Promise<Result<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, Error>> {
     try {
       const { server, networkPassphrase } = this.getServerAndNetwork();
-
-      // Parse the signed transaction
       const signedTx = StellarSDK.TransactionBuilder.fromXDR(signedTxXdr, networkPassphrase);
-
-      // Submit to network
       const result = await server.submitTransaction(signedTx);
-
       return Result.ok(result);
-    } catch (error) {
-      if (error instanceof Error) {
-        return Result.err(error);
-      } else return Result.err(new Error("Unknown error"));
+    } catch (error: any) {
+      const codes = error?.response?.data?.extras?.result_codes;
+      if (codes) {
+        const opCode = Array.isArray(codes.operations) ? codes.operations[0] : null;
+        const txCode = codes.transaction;
+        const msg = opCode
+          ? stellarOpErrorMessage(opCode)
+          : txCode
+            ? `Transaction failed: ${txCode}`
+            : "Transaction failed";
+        return Result.err(new Error(msg));
+      }
+      return Result.err(error instanceof Error ? error : new Error("Unknown error"));
     }
   }
 
@@ -159,11 +179,12 @@ export class StellarCoreApi {
         }
       }
 
-      const transaction = txBuilder.setTimeout(params.timeout || 30).build();
+      const transaction = txBuilder.setTimeout(params.timeout || 300).build();
       const xdr = transaction.toXDR();
 
       return Result.ok(xdr);
     } catch (error) {
+      console.error(error);
       if (error instanceof Error) {
         return Result.err(error);
       } else return Result.err(new Error("Unknown error"));
@@ -201,6 +222,7 @@ export class StellarCoreApi {
 
       return await this.submitSignedTransaction(signedTxXdr);
     } catch (error) {
+      console.error(error);
       if (error instanceof Error) {
         return Result.err(error);
       } else return Result.err(new Error("Unknown error"));
@@ -294,6 +316,7 @@ export class StellarCoreApi {
 
       return Result.ok(result);
     } catch (error) {
+      console.error(error);
       if (error instanceof Error) {
         return Result.err(error);
       } else return Result.err(new Error("Unknown error"));
@@ -469,5 +492,49 @@ export class StellarCoreApi {
       const txs = await server.transactions().forAccount(publicKey).order("desc").limit(1).call();
       return txs.records[0]?.paging_token || "now";
     }).catch(() => Result.ok("now"));
+  };
+
+  addTrustline = async (
+    secretKey: string,
+    assetCode: string,
+    assetIssuer: string
+  ): Promise<Result<StellarSDK.Horizon.HorizonApi.SubmitTransactionResponse | null, Error>> => {
+    try {
+      const { server, networkPassphrase } = this.getServerAndNetwork();
+      const keypair = StellarSDK.Keypair.fromSecret(secretKey);
+      const account = await server.loadAccount(keypair.publicKey());
+      const asset = new StellarSDK.Asset(assetCode, assetIssuer);
+      const tx = new StellarSDK.TransactionBuilder(account, { fee: StellarSDK.BASE_FEE, networkPassphrase })
+        .addOperation(StellarSDK.Operation.changeTrust({ asset }))
+        .setTimeout(30)
+        .build();
+      tx.sign(keypair);
+      const result = await server.submitTransaction(tx);
+      return Result.ok(result);
+    } catch (error: any) {
+      const codes = error?.response?.data?.extras?.result_codes;
+      if (codes) return Result.err(new Error(JSON.stringify(codes)));
+      return Result.err(error instanceof Error ? error : new Error("Failed to add trustline"));
+    }
+  };
+
+  checkTrustline = async (
+    publicKey: string,
+    assetCode: string,
+    assetIssuer: string
+  ): Promise<Result<boolean, Error>> => {
+    const { horizonUrl } = this.getServerAndNetwork();
+
+    try {
+      const res = await fetch(`${horizonUrl}/accounts/${publicKey}`);
+      if (!res.ok) return Result.err(new Error("Account not found"));
+      const account = await res.json();
+      const hasTrustline: boolean = account.balances?.some(
+        (b: any) => b.asset_type !== "native" && b.asset_code === assetCode && b.asset_issuer === assetIssuer
+      );
+      return Result.ok(hasTrustline);
+    } catch (error) {
+      return Result.err(error instanceof Error ? error : new Error("Failed to check trustline"));
+    }
   };
 }

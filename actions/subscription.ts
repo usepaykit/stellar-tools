@@ -207,6 +207,7 @@ export const retrieveDueSubscriptions = async () => {
         environment: subscriptions.environment,
         cancelAtPeriodEnd: subscriptions.cancelAtPeriodEnd,
         currentPeriodEnd: subscriptions.currentPeriodEnd,
+        assetId: products.assetId,
       },
       customer: { id: customers.id },
       asset: { code: assets.code, issuer: assets.issuer },

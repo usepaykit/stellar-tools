@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { retrievePaymentWithDetails } from "@/actions/payment";
-import { RefundModalContent } from "@/app/dashboard/(dashboard)/transactions/page";
+import { RefundModalContent, RefundModalFooter } from "@/app/dashboard/(dashboard)/transactions/page";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -170,22 +170,47 @@ export default function TransactionDetailPage() {
 
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
+  const refundModalSubmitRef = React.useRef<(() => void) | null>(null);
+  const [refundModalFooterProps, setRefundModalFooterProps] = React.useState({ isPending: false });
+  const isRefundModalOpenRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!isRefundModalOpenRef.current) return;
+    AppModal.updateConfig({
+      footer: (
+        <RefundModalFooter
+          onClose={AppModal.close}
+          submitRef={refundModalSubmitRef}
+          isPending={refundModalFooterProps.isPending}
+        />
+      ),
+    });
+  }, [refundModalFooterProps.isPending]);
+
   const openRefundModal = React.useCallback(() => {
+    isRefundModalOpenRef.current = true;
+    setRefundModalFooterProps({ isPending: false });
     AppModal.open({
       title: "Create Refund",
       description: "Process a refund for a transaction by providing the payment details.",
       content: (
         <RefundModalContent
           initialPaymentId={paymentId}
-          onClose={AppModal.close}
+          onClose={() => {
+            isRefundModalOpenRef.current = false;
+            AppModal.close();
+          }}
           onSuccess={() => {
             invalidateOrgQuery(["payment", paymentId]);
             invalidateOrgQuery(["payments"]);
+            isRefundModalOpenRef.current = false;
             AppModal.close();
           }}
+          setSubmitRef={refundModalSubmitRef}
+          onFooterChange={(props) => setRefundModalFooterProps(props)}
         />
       ),
-      footer: null,
+      footer: <RefundModalFooter onClose={AppModal.close} submitRef={refundModalSubmitRef} isPending={false} />,
       size: "small",
       showCloseButton: true,
     });

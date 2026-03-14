@@ -7,7 +7,7 @@ export const OPTIONS = createOptionsHandler();
 const paramsSchema = Schema.object({ id: Schema.string() });
 
 export const GET = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: paramsSchema, body: Schema.object({ verifyOnChain: Schema.boolean().optional().default(false) }) },
   handler: async ({ params: { id }, body: { verifyOnChain }, auth: { organizationId, environment } }) => {
     const payment = await retrievePayment(id, organizationId, environment);

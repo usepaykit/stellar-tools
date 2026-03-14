@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { cn, STROOPS_PER_XLM } from "@/lib/utils";
+import { STROOPS_PER_XLM, cn } from "@/lib/utils";
 import { CheckCircle2, ChevronRight, Clock, Copy, ExternalLink, Pause, Play, RefreshCw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";

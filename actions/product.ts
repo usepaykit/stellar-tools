@@ -1,6 +1,7 @@
 "use server";
 
-import { resolveOrgContext } from "@/actions/organization";
+import { retrieveAsset } from "@/actions/asset";
+import { resolveOrgContext, setupMerchantTrustline } from "@/actions/organization";
 import { Network, Product, assets, db, products } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { generateResourceId } from "@/lib/utils";
@@ -28,6 +29,22 @@ export const postProduct = async (
     .insert(products)
     .values({ ...params, id: generateResourceId("prod", organizationId, 25), organizationId, environment })
     .returning();
+
+  console.log({ params });
+
+  if (params.assetId) {
+    const asset = await retrieveAsset({ id: params.assetId }, environment);
+    if (!asset) return;
+    if (!asset?.issuer || asset.code === "XLM") return;
+    console.log("setting up merchant trustline for asset", asset.code, asset.issuer);
+    setupMerchantTrustline(organizationId, environment, asset.code, asset.issuer)
+      .then((result) => {
+        console.log("setupMerchantTrustline result", result);
+      })
+      .catch(() => {
+        console.error("Failed to setup merchant trustline for asset", asset.code, asset.issuer);
+      });
+  }
 
   return product;
 };
@@ -109,6 +126,16 @@ export const putProduct = async (id: string, organizationId: string, retUpdate: 
     .returning();
 
   if (!product) throw new Error("Product not found");
+
+  if (retUpdate.assetId) {
+    const asset = await retrieveAsset({ id: retUpdate.assetId }, product.environment);
+    if (!asset) return;
+    if (!asset?.issuer || asset.code === "XLM") return;
+    console.log("setting up merchant trustline for asset", asset.code, asset.issuer);
+    setupMerchantTrustline(organizationId, product.environment, asset.code, asset.issuer).catch(() => {
+      console.error("Failed to setup merchant trustline for asset", asset.code, asset.issuer);
+    });
+  }
 
   return product;
 };

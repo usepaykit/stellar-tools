@@ -44,7 +44,7 @@ const customer = await st.customers.create({
 // Generate a hosted checkout link
 const link = await st.checkout.create({
   customerId: customer.id,
-  successUrl: 'https://yourapp.com/success',
+  redirectUrl: 'https://yourapp.com/success',
 });
 
 console.log(link.url); // → share with customer`,

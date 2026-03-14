@@ -5,7 +5,7 @@ import { Result, createProductSchema } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { body: createProductSchema },
   handler: async ({ body, auth: { organizationId, environment } }) => {
     const productData: Parameters<typeof postProduct>[0] = {

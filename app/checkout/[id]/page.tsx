@@ -2,179 +2,56 @@
 
 import * as React from "react";
 
-import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
-import { sweepAndProcessPayment } from "@/actions/payment";
 import { AnimatedCheckmark } from "@/components/icon";
-import {
-  PhoneNumber,
-  PhoneNumberField,
-  phoneNumberFromString,
-  phoneNumberSchema,
-  phoneNumberToString,
-} from "@/components/phone-number-field";
+import { PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StellarCoreApi } from "@/integrations/stellar-core";
-import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
+import { useCheckout } from "@/hooks/use-checkout";
+import { useCookieState } from "@/hooks/use-cookie-state";
 import { truncate } from "@/lib/utils";
 import { BeautifulQRCode } from "@beautiful-qr-code/react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Networks } from "@stellar/stellar-sdk";
-import { ApiClient } from "@stellartools/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, X } from "lucide-react";
+import { AlertCircle, Info, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import * as RHF from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
-
-const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: {} });
-
-const checkoutSchema = z.object({ email: z.email("Required"), phoneNumber: phoneNumberSchema });
-
-type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPage() {
   const { id: checkoutId } = useParams<{ id: string }>();
-  const queryClient = useQueryClient();
-  const [showBanner, setShowBanner] = React.useState(true);
-  const [connectedAddress, setConnectedAddress] = React.useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = React.useState(false);
-  const [paymentURI, setPaymentURI] = React.useState<{
-    status: "pending" | "loading" | "success" | "error";
-    uri: string | null;
-    message?: string | null;
-  }>({ status: "pending", uri: null, message: null });
-
-  const { data: checkout, isLoading } = useQuery({
-    queryKey: ["checkout", checkoutId],
-    queryFn: () => retrieveCheckoutAndCustomer(checkoutId),
-    refetchInterval: 10000,
-  });
-
-  const form = RHF.useForm({
-    resolver: zodResolver(checkoutSchema),
-    values: {
-      email: checkout?.customerEmail || "",
-      phoneNumber: checkout?.customerPhone
-        ? phoneNumberFromString(checkout.customerPhone)
-        : { number: "", countryCode: "US" },
-    },
-  });
-
-  const updateDetails = useMutation({
-    mutationFn: (data: CheckoutFormData) =>
-      putCheckout(
-        checkoutId,
-        { customerEmail: data.email, customerPhone: phoneNumberToString(data.phoneNumber) },
-        checkout?.organizationId,
-        checkout?.environment
-      ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] }),
-  });
-
-  const isPaid = checkout?.status === "completed";
-  const isFailed = checkout?.status === "failed";
-  const hasDetails = !!(checkout?.customerEmail && checkout?.customerPhone);
-
-  const stellarWalletsKit = StellarWalletsKitApi.getInstance();
-  React.useEffect(() => {
-    return stellarWalletsKit.onConnectionChange(setConnectedAddress);
-  }, [stellarWalletsKit]);
-
-  React.useEffect(() => {
-    if (!checkout) return;
-    const network = checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
-    stellarWalletsKit.init({ network });
-
-    return () => {
-      stellarWalletsKit.disconnect();
-    };
-  }, [checkout?.environment, stellarWalletsKit]);
-
-  React.useEffect(() => {
-    if (isPaid || isFailed) return;
-    if (!hasDetails || !checkout?.merchantPublicKey) return;
-
-    const fetchURI = async () => {
-      setPaymentURI({ status: "loading", uri: null });
-
-      const response = await api.get<{ uri: string } | { error: string }>(
-        `checkout/${checkoutId}/uri?environment=${checkout?.environment}`
-      );
-
-      if (response.isErr()) {
-        setPaymentURI({ status: "error", uri: null });
-        return;
-      }
-
-      setPaymentURI({
-        status: "uri" in response.value ? "success" : "error",
-        uri: "uri" in response.value ? response.value.uri : null,
-        message: "error" in response.value ? response.value.error : null,
-      });
-    };
-
-    fetchURI();
-  }, [hasDetails, checkout, checkoutId, isPaid, isFailed]);
+  const {
+    checkout,
+    isLoading,
+    isPaid,
+    isFailed,
+    hasDetails,
+    form,
+    updateDetails,
+    paymentURI,
+    merchantTrustlineError,
+    wallet,
+    banner,
+  } = useCheckout(checkoutId);
 
   if (isLoading) return <Checkout.Skeleton />;
   if (!checkout) return notFound();
   if (isPaid) return <Checkout.Success checkout={checkout} checkoutId={checkoutId} />;
   if (isFailed) return <Checkout.Error checkoutId={checkoutId} onRetry={() => window.location.reload()} />;
 
-  const handleWalletPay = async () => {
-    const walletKit = StellarWalletsKitApi.getInstance();
-
-    if (!walletKit.isConnected()) {
-      await walletKit.connectWallet();
-      return;
-    }
-
-    setIsProcessing(true);
-    try {
-      const address = walletKit.getAddressSync()!;
-      const stellar = new StellarCoreApi(checkout.environment);
-      const result = await stellar.processWalletPayment(
-        {
-          sourcePublicKey: address,
-          destination: checkout.merchantPublicKey,
-          amount: checkout.finalAmount.toString(),
-          memo: checkoutId,
-        },
-        async (xdr) => {
-          const { signedTxXdr } = await walletKit.signTransaction(xdr, { address });
-          return signedTxXdr;
-        }
-      );
-
-      if (result.isErr()) throw new Error(result.error.message);
-
-      await sweepAndProcessPayment(checkoutId);
-      queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
-    } catch (e: any) {
-      toast.error(e.message || "Payment failed");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   const showPaymentError = paymentURI.status === "error" && !!paymentURI.message;
   const showQR = paymentURI.status !== "loading" && !showPaymentError;
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
-      {showBanner && checkout.environment === "testnet" && (
-        <div className="bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-1 relative p-3 text-center text-xs font-medium">
+      {banner.showBanner && checkout.environment === "testnet" && (
+        <div className="bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-1 relative py-1.5 text-center text-xs font-medium">
+          <Info className="text-muted h-4 w-4" />
           Note: Please use a Testnet-compatible wallet like Solar or xBull.
-          <button onClick={() => setShowBanner(false)} className="absolute top-1/2 right-4 -translate-y-1/2">
+          <button onClick={() => banner.setShowBanner(false)} className="absolute top-1/2 right-4 -translate-y-1/2">
             <X className="size-4" />
           </button>
         </div>
@@ -183,14 +60,13 @@ export default function CheckoutPage() {
       <main className="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 items-start gap-8 px-4 py-10 sm:gap-10 sm:px-6 lg:max-w-6xl lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:px-8">
         <div className="space-y-6 lg:sticky lg:top-12">
           <div className="bg-card overflow-hidden rounded-2xl border shadow-sm lg:min-w-[360px]">
-            {/* Org branding - Stripe style */}
             {(checkout.organizationName || checkout.organizationLogo) && (
               <div className="flex items-center gap-3 border-b px-6 py-4">
                 {checkout.organizationLogo && (
                   <div className="bg-muted relative size-10 shrink-0 overflow-hidden rounded-lg">
                     <Image
                       src={checkout.organizationLogo}
-                      alt={checkout.organizationName || "Merchant"}
+                      alt=""
                       width={40}
                       height={40}
                       className="size-full object-contain p-1"
@@ -245,6 +121,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               )}
+
               <div className="space-y-4">
                 <RHF.Controller
                   name="email"
@@ -253,7 +130,6 @@ export default function CheckoutPage() {
                     <TextField
                       {...field}
                       id={field.name}
-                      value={field.value || ""}
                       label="Billing Email"
                       disabled={hasDetails}
                       error={fieldState.error?.message}
@@ -264,14 +140,14 @@ export default function CheckoutPage() {
                   name="phoneNumber"
                   control={form.control}
                   render={({ field, fieldState }) => {
-                    const phoneValue: PhoneNumber = {
+                    const fieldValue: PhoneNumber = {
                       number: field.value?.number || "",
                       countryCode: field.value?.countryCode || "US",
                     };
                     return (
                       <PhoneNumberField
-                        {...field}
-                        value={phoneValue}
+                        value={fieldValue}
+                        onChange={field.onChange}
                         id={field.name}
                         label="Phone Number"
                         disabled={hasDetails}
@@ -283,69 +159,87 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              <AnimatePresence mode="wait">
-                {!hasDetails ? (
-                  <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <Button
-                      className="h-12 w-full font-bold"
-                      onClick={form.handleSubmit((d) => updateDetails.mutate(d as unknown as CheckoutFormData))}
-                      isLoading={updateDetails.isPending}
+              {merchantTrustlineError ? (
+                <div className="bg-destructive/10 flex items-start gap-2 rounded-lg p-3 text-sm">
+                  <AlertCircle className="text-destructive mt-0.5 size-4 shrink-0" />
+                  <p className="text-destructive">{merchantTrustlineError}</p>
+                </div>
+              ) : (
+                <AnimatePresence mode="wait">
+                  {!hasDetails ? (
+                    <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      <Button
+                        className="h-12 w-full font-bold"
+                        onClick={form.handleSubmit((d) => updateDetails.mutate(d))}
+                        isLoading={updateDetails.isPending}
+                      >
+                        Continue to Payment
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="step2"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-6"
                     >
-                      Continue to Payment
-                    </Button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="step2"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="space-y-6"
-                  >
-                    <div className="flex justify-center py-4">
-                      <div className="rounded-2xl border-2 border-dashed bg-white p-3 shadow-sm">
-                        {paymentURI.status === "loading" && (
-                          <div className="flex size-6 items-center justify-center">
-                            <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
-                          </div>
-                        )}
-                        {showPaymentError && (
-                          <div className="bg-destructive/10 flex max-w-[200px] flex-col items-center gap-2 rounded-lg p-4 text-center">
-                            <AlertCircle className="text-destructive size-5 shrink-0" />
-                            <p className="text-destructive text-xs font-medium">{paymentURI.message}</p>
-                          </div>
-                        )}
-                        {showQR && (
-                          <BeautifulQRCode
-                            data={paymentURI.uri as string}
-                            foregroundColor="#000000"
-                            backgroundColor="#ffffff"
-                            radius={1}
-                            padding={1}
-                            className="size-50"
-                          />
+                      <div className="flex justify-center py-4">
+                        <div className="rounded-2xl border-2 border-dashed bg-white p-3 shadow-sm">
+                          {paymentURI.status === "loading" && (
+                            <div className="flex size-6 items-center justify-center">
+                              <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
+                            </div>
+                          )}
+                          {showPaymentError && (
+                            <div className="bg-destructive/10 flex max-w-[200px] flex-col items-center gap-2 rounded-lg p-4 text-center">
+                              <AlertCircle className="text-destructive size-5 shrink-0" />
+                              <p className="text-destructive text-xs font-medium">{paymentURI.message}</p>
+                            </div>
+                          )}
+                          {showQR && (
+                            <BeautifulQRCode
+                              data={paymentURI.uri!}
+                              foregroundColor="#000000"
+                              backgroundColor="#ffffff"
+                              radius={1}
+                              padding={1}
+                              className="size-50"
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 py-2 opacity-50">
+                        <Separator className="flex-1" />
+                        <span className="text-[10px] font-black tracking-widest uppercase">or connect wallet</span>
+                        <Separator className="flex-1" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Button
+                          type="button"
+                          className="h-14 w-full text-lg font-bold shadow-lg"
+                          onClick={wallet.handleWalletPay}
+                          isLoading={wallet.isProcessing}
+                        >
+                          {wallet.connectedAddress
+                            ? `Pay as ${truncate(wallet.connectedAddress, { start: 4, end: 4 })}`
+                            : "Connect Wallet"}
+                        </Button>
+                        {wallet.connectedAddress && !wallet.isProcessing && (
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-foreground w-full text-center text-xs underline-offset-2 transition-colors hover:underline"
+                            onClick={() => wallet.kit.connectWallet()}
+                          >
+                            Change wallet
+                          </button>
                         )}
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 py-2 opacity-50">
-                      <Separator className="flex-1" />
-                      <span className="text-[10px] font-black tracking-widest uppercase">or connect wallet</span>
-                      <Separator className="flex-1" />
-                    </div>
-
-                    <Button
-                      type="button"
-                      className="h-14 w-full text-lg font-bold shadow-lg"
-                      onClick={handleWalletPay}
-                      isLoading={isProcessing}
-                    >
-                      {connectedAddress
-                        ? `Pay as ${truncate(connectedAddress, { start: 4, end: 4 })}`
-                        : "Connect Wallet"}
-                    </Button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -359,36 +253,55 @@ export default function CheckoutPage() {
 // --- Composables ---
 
 const Checkout = {
-  Success: ({ checkout, checkoutId }: any) => (
-    <div className="bg-background animate-in fade-in flex min-h-screen items-center justify-center p-6 duration-500">
-      <div className="w-full max-w-lg space-y-8 text-center">
-        <AnimatedCheckmark />
-        <div className="space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">Thank you!</h1>
-          <p className="text-muted-foreground text-lg">
-            {checkout.successMessage || "Your payment was processed successfully."}
-          </p>
-        </div>
-        <div className="bg-muted/50 space-y-4 rounded-2xl border p-6 text-left sm:p-8">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-muted-foreground shrink-0 font-medium">Order ID</span>
-            <span className="text-right font-mono break-all">{checkoutId}</span>
+  Success: ({ checkout, checkoutId }: any) => {
+    const [seenIds, setSeenIds] = useCookieState<string[]>("checkout_seen", []);
+    const isFirstVisit = !seenIds.includes(checkoutId);
+
+    React.useEffect(() => {
+      if (isFirstVisit && checkoutId) setSeenIds((prev) => (prev.includes(checkoutId) ? prev : [...prev, checkoutId]));
+    }, [checkoutId, isFirstVisit, setSeenIds]);
+
+    React.useEffect(() => {
+      if (!isFirstVisit || !checkout?.redirectUrl) return;
+      const t = setTimeout(() => {
+        window.location.href = checkout.redirectUrl!;
+      }, 2000);
+      return () => clearTimeout(t);
+    }, [isFirstVisit, checkout?.redirectUrl]);
+
+    return (
+      <div className="bg-background animate-in fade-in flex min-h-screen items-center justify-center p-6 duration-500">
+        <div className="w-full max-w-lg space-y-8 text-center">
+          {isFirstVisit && <AnimatedCheckmark />}
+          <div className="space-y-2">
+            <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">
+              {isFirstVisit ? "Payment received" : "Checkout"}
+            </h1>
+            <p className="text-muted-foreground text-lg">
+              {isFirstVisit ? "This checkout has been completed." : "This checkout has been completed or expired."}
+            </p>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground font-medium">Status</span>
-            <Badge variant="secondary" className="bg-green-100 text-green-700">
-              Paid
-            </Badge>
-          </div>
+          {isFirstVisit && (
+            <div className="bg-muted/50 space-y-4 rounded-2xl border p-6 text-left sm:p-8">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-muted-foreground shrink-0 font-medium">Order ID</span>
+                <span className="text-right font-mono break-all">{checkoutId}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground font-medium">Status</span>
+                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  Paid
+                </Badge>
+              </div>
+            </div>
+          )}
+          {isFirstVisit && checkout?.redirectUrl && (
+            <p className="text-muted-foreground text-sm">Redirecting you shortly…</p>
+          )}
         </div>
-        {checkout.successUrl && (
-          <Button asChild className="h-12 w-full text-base font-bold" size="lg">
-            <Link href={checkout.successUrl}>Continue to {checkout.productName}</Link>
-          </Button>
-        )}
       </div>
-    </div>
-  ),
+    );
+  },
 
   Error: ({ checkoutId, onRetry }: any) => (
     <div className="bg-background animate-in zoom-in-95 flex min-h-screen flex-col items-center justify-center p-6 text-center duration-300">

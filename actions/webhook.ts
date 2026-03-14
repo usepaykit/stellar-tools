@@ -162,8 +162,6 @@ export const retrieveWebhookLogs = async (webhookId: string, orgId?: string, env
       )
     );
 
-  if (!webhookLogsResult.length) throw new Error("Failed to retrieve webhook logs");
-
   return webhookLogsResult;
 };
 

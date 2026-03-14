@@ -96,14 +96,9 @@ export interface Checkout {
   environment: Environment;
 
   /**
-   * The success URL of the checkout.
+   * URL to redirect the customer to after payment (e.g. thank-you page).
    */
-  successUrl?: string;
-
-  /**
-   * The success message of the checkout.
-   */
-  successMessage?: string;
+  redirectUrl?: string;
 
   /**
    * The subscription data of the checkout.
@@ -134,8 +129,7 @@ export const checkoutSchema = schemaFor<Checkout>()(
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}),
     environment: environmentSchema,
-    successUrl: z.string().optional(),
-    successMessage: z.string().optional(),
+    redirectUrl: z.string().optional(),
     subscriptionData: subscriptionDataSchema.optional(),
   })
 );
@@ -146,8 +140,7 @@ const baseCreateSchema = z.object({
   customerPhone: z.string().optional(),
   description: z.string().optional(),
   metadata: z.record(z.string(), z.any()).nullable().optional(),
-  successUrl: z.string().optional(),
-  successMessage: z.string().optional(),
+  redirectUrl: z.string().optional(),
   subscriptionData: z
     .object({
       periodStart: z.coerce.date(),

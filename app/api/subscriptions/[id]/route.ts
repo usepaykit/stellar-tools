@@ -1,5 +1,5 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
-import { retrieveCustomerWallet } from "@/actions/customers";
+import { retrieveCustomerWallets } from "@/actions/customers";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { Result, z as Schema, updateSubscriptionSchema, validateSchema } from "@stellartools/core";
@@ -21,7 +21,9 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
     const subscription = await retrieveSubscription(id);
-    const customerWallet = await retrieveCustomerWallet(subscription.customerId, { id: subscription.customerWalletId });
+    const [customerWallet] = await retrieveCustomerWallets(subscription.customerId, {
+      id: subscription.customerWalletId,
+    });
 
     if (!customerWallet?.address) {
       return Result.err(new Error("Customer wallet not found"));
@@ -62,7 +64,7 @@ export const PUT = async (req: NextRequest, context: { params: Promise<{ id: str
       const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
 
       const subscription = await retrieveSubscription(id);
-      const customerWallet = await retrieveCustomerWallet(subscription.customerId, {
+      const [customerWallet] = await retrieveCustomerWallets(subscription.customerId, {
         id: subscription.customerWalletId,
       });
 

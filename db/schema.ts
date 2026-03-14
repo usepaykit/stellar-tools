@@ -268,8 +268,7 @@ export const checkouts = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
     environment: networkEnum("network").notNull(),
-    successUrl: text("success_url"),
-    successMessage: text("success_message"),
+    redirectUrl: text("redirect_url"),
     // Store data captured during the checkout session
     customerEmail: text("customer_email"),
     customerPhone: text("customer_phone"),
@@ -281,10 +280,6 @@ export const checkouts = pgTable(
     amountOrProductCheck: check(
       "amount_or_product_check",
       sql`${table.productId} IS NOT NULL OR ${table.amount} IS NOT NULL`
-    ),
-    successUrlOrMessageCheck: check(
-      "success_url_or_message_check",
-      sql`${table.successUrl} IS NOT NULL OR ${table.successMessage} IS NOT NULL`
     ),
   })
 );

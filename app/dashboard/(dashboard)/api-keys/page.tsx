@@ -41,60 +41,6 @@ const apiKeySchema = z.object({
 
 type ApiKeyFormData = z.infer<typeof apiKeySchema>;
 
-function DeleteKeyContent({ name, id }: { name: string; id: string }) {
-  return (
-    <div className="space-y-6">
-      <div className="border-muted/30 bg-muted/30 rounded-lg border p-4">
-        <p className="text-muted-foreground mb-2 text-sm font-medium">Key to delete</p>
-        <p className="font-medium">{name}</p>
-        <p className="text-muted-foreground mt-1 font-mono text-xs">{id}</p>
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-2 text-sm font-medium">What happens when you delete</p>
-        <ul className="text-muted-foreground list-inside list-disc space-y-1.5 text-sm">
-          <li>This key will be permanently removed from your account</li>
-          <li>Any requests using this key will be rejected</li>
-          <li>You can create a new key anytime if you need API access again</li>
-          <li>Deletion cannot be undone</li>
-        </ul>
-      </div>
-      <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4">
-        <p className="text-sm text-red-800 dark:text-red-200">
-          <strong>Warning:</strong> Deleting this key is permanent. If anything is still using it, those integrations
-          will stop working immediately.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function RevokeKeyContent({ name, id }: { name: string; id: string }) {
-  return (
-    <div className="space-y-6">
-      <div className="border-muted/30 bg-muted/30 rounded-lg border p-4">
-        <p className="text-muted-foreground mb-2 text-sm font-medium">Key to revoke</p>
-        <p className="font-medium">{name}</p>
-        <p className="text-muted-foreground mt-1 font-mono text-xs">{id}</p>
-      </div>
-      <div>
-        <p className="text-muted-foreground mb-2 text-sm font-medium">What happens when you revoke</p>
-        <ul className="text-muted-foreground list-inside list-disc space-y-1.5 text-sm">
-          <li>All requests using this key will be rejected</li>
-          <li>Integrations or scripts using this key will stop working</li>
-          <li>You can create a new key later if you need API access again</li>
-          <li>Revocation cannot be undone</li>
-        </ul>
-      </div>
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-        <p className="text-sm text-amber-800 dark:text-amber-200">
-          <strong>Before you continue:</strong> Make sure no critical services are depending on this key. Update your
-          environment variables or configs to use a different key if needed.
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function ApiKeysPage() {
   const invalidate = useInvalidateOrgQuery();
   const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () => retrieveApiKeys());
@@ -261,7 +207,7 @@ export default function ApiKeysPage() {
         AppModal.open({
           title: "Revoke API key",
           description: "This key will immediately stop working. You can create a new key anytime.",
-          content: <RevokeKeyContent name={key.name} id={key.id} />,
+          content: null,
           primaryButton: {
             children: revokeMutation.isPending ? "Revoking..." : "Revoke",
             onClick: () => revokeMutation.mutate(key.id),
@@ -279,7 +225,7 @@ export default function ApiKeysPage() {
         AppModal.open({
           title: "Delete API key",
           description: "This key will be permanently removed. This action cannot be undone.",
-          content: <DeleteKeyContent name={key.name} id={key.id} />,
+          content: null,
           primaryButton: {
             children: deleteMutation.isPending ? "Deleting..." : "Delete",
             variant: "destructive",
@@ -499,25 +445,21 @@ function ApiKeyModalContent({
         </form>
       ) : createdApiKey ? (
         <div className="space-y-4">
-          <div className="bg-muted/50 border-border rounded-lg border p-4">
-            <p className="text-muted-foreground text-sm">
-              <strong className="text-foreground">Important:</strong> Make sure to copy your API key now. You won’t be
-              able to see it again!
-            </p>
-          </div>
-          <div className="space-y-2">
+          <p className="text-muted-foreground flex items-center gap-2 text-sm">
+            <Info className="text-muted-foreground h-4 w-4 shrink-0" />
+            <span className="truncate">Copy your API key now — you won't see it again.</span>
+          </p>
+          <div className="space-y-1.5">
             <label className="text-sm font-medium">Your API key</label>
-            <div className="flex items-center gap-2">
-              <div className="bg-muted border-border flex-1 rounded-md border p-3">
-                <code className="font-mono text-sm break-all">{createdApiKey}</code>
-              </div>
-              <Button type="button" variant="outline" size="icon" onClick={handleCopyKey} className="shrink-0">
+            <div className="border-border bg-muted/50 flex min-w-0 items-center gap-2 rounded-md border px-3 py-2">
+              <code className="min-w-0 flex-1 overflow-x-auto font-mono text-sm whitespace-nowrap">
+                {createdApiKey}
+              </code>
+              <Button type="button" variant="ghost" size="icon" onClick={handleCopyKey} className="h-8 w-8 shrink-0">
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-muted-foreground text-xs">
-              Click the copy button to copy your API key to the clipboard.
-            </p>
+            <p className="text-muted-foreground truncate text-xs">Click copy to save to clipboard.</p>
           </div>
         </div>
       ) : (
@@ -542,12 +484,10 @@ function ApiKeyModalContent({
             )}
           />
 
-          <div className="bg-muted/50 border-border rounded-lg border p-4">
-            <p className="text-muted-foreground text-sm">
-              <strong className="text-foreground">Note:</strong> API keys have full API access. Make sure to keep your
-              secret keys secure and never expose them in client-side code.
-            </p>
-          </div>
+          <p className="text-muted-foreground flex items-center gap-2 text-sm">
+            <Info className="text-muted-foreground h-4 w-4 shrink-0" />
+            <span className="truncate">Full API access. Keep keys secure; never expose in client-side code.</span>
+          </p>
         </form>
       )}
       {footer}

@@ -187,14 +187,16 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
                 fill
                 className={cn("object-cover", shape == "circle" && "rounded-full")}
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-200 group-hover:bg-black/40">
-                <div className="flex flex-col items-center gap-2 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  <div className="rounded-full bg-white/20 p-3 backdrop-blur-sm">
-                    <Pencil className={cn(shape == "circle" ? "size-4" : "size-6")} />
+              {(!disabled || !isLoading) && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-200 group-hover:bg-black/40">
+                  <div className="flex flex-col items-center gap-2 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    <div className="rounded-full bg-white/20 p-3 backdrop-blur-sm">
+                      <Pencil className={cn(shape == "circle" ? "size-4" : "size-6")} />
+                    </div>
+                    {shape == "square" && <p className="text-sm font-medium">Change image</p>}
                   </div>
-                  {shape == "square" && <p className="text-sm font-medium">Change image</p>}
                 </div>
-              </div>
+              )}
             </>
           ) : hasFile ? (
             <div className="flex flex-col items-center gap-3 px-6 text-center">

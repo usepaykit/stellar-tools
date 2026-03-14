@@ -6,6 +6,7 @@ import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/or
 import {
   Checkout,
   Network,
+  accounts,
   assets,
   checkouts,
   customers,
@@ -158,6 +159,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
       END`.as("merchant_public_key"),
       organizationName: organizations.name,
       organizationLogo: organizations.logoUrl,
+      merchantEmail: accounts.email,
     })
     .from(checkouts)
     .leftJoin(customers, eq(checkouts.customerId, customers.id))
@@ -165,6 +167,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     .leftJoin(products, eq(checkouts.productId, products.id))
     .leftJoin(assets, or(eq(products.assetId, assets.id), eq(checkouts.assetCode, assets.id)))
     .leftJoin(organizations, eq(checkouts.organizationId, organizations.id))
+    .leftJoin(accounts, eq(organizations.accountId, accounts.id))
     .where(eq(checkouts.id, id));
 
   const {
@@ -176,6 +179,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     assets: assets$1,
     organizationName,
     organizationLogo,
+    merchantEmail,
   } = result;
 
   return {
@@ -194,6 +198,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     customerImage: customer?.image ?? null,
     organizationName,
     organizationLogo,
+    merchantEmail,
   };
 };
 

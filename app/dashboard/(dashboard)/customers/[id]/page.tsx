@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { retrieveAssets } from "@/actions/asset";
 import { retrieveCustomers } from "@/actions/customers";
 import { retrieveEvents } from "@/actions/event";
 import { getCurrentOrganization } from "@/actions/organization";
@@ -38,8 +39,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { Payment } from "@/db";
+import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useCopy } from "@/hooks/use-copy";
-import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Checkout } from "@stellartools/core";
@@ -47,6 +49,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import _ from "lodash";
 import {
+  Check,
   CheckCircle2,
   ChevronRight,
   Clock,
@@ -68,8 +71,10 @@ import { z } from "zod";
 
 // --- Helpers ---
 
-const formatXLM = (amt: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "XLM" }).format(amt);
-const formatUSD = (amt: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amt);
+const formatCurrency = (amt: number, assetCode: string) => {
+  const code = assetCode?.trim()?.toUpperCase();
+  return `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amt)} ${code}`;
+};
 
 // --- Reusable Internal Components ---
 
@@ -127,7 +132,11 @@ const paymentColumns: ColumnDef<Payment>[] = [
   {
     accessorKey: "amount",
     header: "Amount",
-    cell: ({ row }) => <span className="font-medium">{formatXLM(row.original.amount)}</span>,
+    cell: ({ row }) => (
+      <span className="font-medium">
+        {formatCurrency(row.original.amount, row.original.metadata?.assetCode as string)}
+      </span>
+    ),
   },
   {
     accessorKey: "checkoutId",
@@ -154,8 +163,14 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const { id: customerId } = useParams() as { id: string };
   const [hiddenWallets, setHiddenWallets] = React.useState<Set<string>>(new Set());
-
+  const checkoutModalSubmitRef = React.useRef<(() => void) | null>(null);
+  const [checkoutModalFooterProps, setCheckoutModalFooterProps] = React.useState({
+    isPending: false,
+    createdUrl: null as string | null,
+  });
+  const isCheckoutModalOpenRef = React.useRef(false);
   const invalidate = useInvalidateOrgQuery();
+  const { data: orgContext } = useOrgContext();
   const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
     retrievePayments(undefined, { customerId: customerId }, undefined)
   );
@@ -191,15 +206,50 @@ export default function CustomerDetailPage() {
   );
 
   const openCheckoutModal = React.useCallback(() => {
+    isCheckoutModalOpenRef.current = true;
+    setCheckoutModalFooterProps({ isPending: false, createdUrl: null });
     AppModal.open({
       title: "Create Checkout",
       description: "Create a new checkout session for this customer.",
-      content: <CheckoutModalContent customerId={customerId} onClose={AppModal.close} />,
-      footer: null,
+      content: (
+        <CheckoutModalContent
+          customerId={customerId}
+          onClose={AppModal.close}
+          setSubmitRef={checkoutModalSubmitRef}
+          onFooterChange={(props) => setCheckoutModalFooterProps((prev) => ({ ...prev, ...props }))}
+        />
+      ),
+      footer: (
+        <CheckoutModalFooter
+          onClose={AppModal.close}
+          submitRef={checkoutModalSubmitRef}
+          isPending={false}
+          createdUrl={null}
+          onDone={AppModal.close}
+        />
+      ),
       size: "small",
       showCloseButton: true,
+      onClose: () => {
+        isCheckoutModalOpenRef.current = false;
+      },
     });
   }, [customerId]);
+
+  React.useEffect(() => {
+    if (!isCheckoutModalOpenRef.current) return;
+    AppModal.updateConfig({
+      footer: (
+        <CheckoutModalFooter
+          onClose={AppModal.close}
+          submitRef={checkoutModalSubmitRef}
+          isPending={checkoutModalFooterProps.isPending}
+          createdUrl={checkoutModalFooterProps.createdUrl}
+          onDone={AppModal.close}
+        />
+      ),
+    });
+  }, [checkoutModalFooterProps.isPending, checkoutModalFooterProps.createdUrl]);
 
   const openEditModal = React.useCallback(() => {
     if (!customer) return;
@@ -234,9 +284,24 @@ export default function CustomerDetailPage() {
     });
   }, [customerId]);
 
-  const totalSpent = React.useMemo(
-    () => payments?.filter((p) => p.status === "confirmed").reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0,
-    [payments]
+  const confirmedPayments = React.useMemo(() => payments?.filter((p) => p.status === "confirmed") ?? [], [payments]);
+
+  const uniqueAssetCodes = React.useMemo(
+    () => [...new Set(confirmedPayments.map((p) => p.metadata?.assetCode as string).filter(Boolean))],
+    [confirmedPayments]
+  );
+
+  const { data: orgAssets } = useOrgQuery(
+    ["assets", orgContext?.environment, ...uniqueAssetCodes],
+    () => retrieveAssets(orgContext!.environment, { assetCodes: uniqueAssetCodes as any[] }),
+    { enabled: !!orgContext && uniqueAssetCodes.length > 0 }
+  );
+
+  const { toLocal, formatLocal } = useAssetRates((orgAssets ?? []).map((a) => ({ code: a.code, issuer: a.issuer! })));
+
+  const totalSpentLocal = React.useMemo(
+    () => confirmedPayments.reduce((sum, p) => sum + toLocal(p.amount ?? 0, p.metadata?.assetCode as string), 0),
+    [confirmedPayments, toLocal]
   );
 
   if (customerLoading) return <CustomerDetailSkeleton />;
@@ -394,7 +459,7 @@ export default function CustomerDetailPage() {
             <aside className="space-y-8">
               <div>
                 <h3 className="mb-2 text-lg font-semibold">Insights</h3>
-                <p className="text-xl font-bold">{formatUSD(totalSpent)}</p>
+                <p className="text-xl font-bold">{formatLocal(totalSpentLocal)}</p>
                 <p className="text-muted-foreground text-xs">Total spent</p>
               </div>
 
@@ -435,22 +500,62 @@ export default function CustomerDetailPage() {
 const checkoutSchema = z.object({
   productId: z.string().min(1, "Product required"),
   description: z.string().optional(),
-  successUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
-  successMessage: z.string().optional(),
+  redirectUrl: z.url("Invalid URL").optional().or(z.literal("")),
 });
 
-function CheckoutModalContent({ customerId, onClose }: { customerId: string; onClose: () => void }) {
+function CheckoutModalFooter({
+  onClose,
+  submitRef,
+  isPending,
+  createdUrl,
+  onDone,
+}: {
+  onClose: () => void;
+  submitRef: React.MutableRefObject<(() => void) | null>;
+  isPending: boolean;
+  createdUrl: string | null;
+  onDone: () => void;
+}) {
+  if (createdUrl) {
+    return (
+      <div className="flex w-full justify-end gap-2">
+        <Button onClick={onDone}>Done</Button>
+      </div>
+    );
+  }
+  return (
+    <div className="flex w-full justify-end gap-2">
+      <Button variant="ghost" type="button" onClick={onClose} disabled={isPending}>
+        Cancel
+      </Button>
+      <Button onClick={() => submitRef.current?.()} disabled={isPending} isLoading={isPending}>
+        Create Checkout
+      </Button>
+    </div>
+  );
+}
+
+function CheckoutModalContent({
+  customerId,
+  onClose,
+  setSubmitRef,
+  onFooterChange,
+}: {
+  customerId: string;
+  onClose: () => void;
+  setSubmitRef?: React.MutableRefObject<(() => void) | null>;
+  onFooterChange?: (props: { isPending: boolean; createdUrl: string | null }) => void;
+}) {
   const invalidate = useInvalidateOrgQuery();
   const [createdUrl, setCreatedUrl] = React.useState<string | null>(null);
-  const { handleCopy } = useCopy();
+  const { copied, handleCopy } = useCopy();
 
   const form = RHF.useForm<z.infer<typeof checkoutSchema>>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
       productId: "",
       description: "",
-      successUrl: "",
-      successMessage: "",
+      redirectUrl: "",
     },
   });
 
@@ -526,8 +631,7 @@ function CheckoutModalContent({ customerId, onClose }: { customerId: string; onC
         customerPhone: undefined,
         productId: data.productId,
         description: data.description,
-        successUrl: data.successUrl,
-        successMessage: data.successMessage,
+        redirectUrl: data.redirectUrl || undefined,
         subscriptionData,
         metadata: null,
       });
@@ -541,33 +645,64 @@ function CheckoutModalContent({ customerId, onClose }: { customerId: string; onC
     onSuccess: async (data) => {
       invalidate(["payments", customerId]);
       toast.success("Checkout created");
-      const url = `${process.env.NEXT_PUBLIC_CHECKOUT_URL}/${data.id}`;
+      const baseUrl =
+        (typeof process.env.NEXT_PUBLIC_CHECKOUT_URL === "string" && process.env.NEXT_PUBLIC_CHECKOUT_URL.trim()) ||
+        (typeof window !== "undefined" ? window.location.origin : "");
+      const url = baseUrl ? `${baseUrl.replace(/\/$/, "")}/${data.id}` : data.id;
       setCreatedUrl(url);
     },
   });
 
+  const submitForm = React.useCallback(() => {
+    form.handleSubmit((d) => mutation.mutate(d))();
+  }, [form, mutation]);
+
+  React.useEffect(() => {
+    if (!setSubmitRef) return;
+    setSubmitRef.current = submitForm;
+    return () => {
+      setSubmitRef.current = null;
+    };
+  }, [setSubmitRef, submitForm]);
+
+  React.useEffect(() => {
+    onFooterChange?.({ isPending: mutation.isPending, createdUrl });
+  }, [mutation.isPending, createdUrl, onFooterChange]);
+
+  const showInlineFooter = !setSubmitRef;
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex w-full justify-end gap-2 border-b pb-4">
-        {createdUrl ? (
-          <Button onClick={handleClose}>Done</Button>
-        ) : (
-          <>
-            <Button variant="ghost" type="button" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button onClick={form.handleSubmit((d) => mutation.mutate(d))} isLoading={mutation.isPending}>
-              Create Checkout
-            </Button>
-          </>
-        )}
-      </div>
+      {showInlineFooter && (
+        <div className="flex w-full justify-end gap-2 border-b pb-4">
+          {createdUrl ? (
+            <Button onClick={handleClose}>Done</Button>
+          ) : (
+            <>
+              <Button variant="ghost" type="button" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button onClick={submitForm} isLoading={mutation.isPending}>
+                Create Checkout
+              </Button>
+            </>
+          )}
+        </div>
+      )}
       {createdUrl ? (
         <div className="space-y-6 py-4">
-          <div className="bg-muted/50 flex items-center justify-between gap-4 rounded-xl border p-4">
-            <code className="text-muted-foreground flex-1 truncate text-sm">{createdUrl}</code>
-            <Button variant="outline" size="sm" onClick={() => handleCopy({ text: createdUrl, message: "Copied" })}>
-              Copy Link
+          <div className="flex items-center gap-2">
+            <div className="bg-muted border-border flex-1 rounded-md border px-3 py-1.5 shadow-none">
+              <code className="text-muted-foreground font-mono text-sm break-all">{createdUrl}</code>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => handleCopy({ text: createdUrl, message: "Copied" })}
+              className="shrink-0 shadow-none"
+            >
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
         </div>
@@ -603,27 +738,12 @@ function CheckoutModalContent({ customerId, onClose }: { customerId: string; onC
 
           <RHF.Controller
             control={form.control}
-            name="successUrl"
+            name="redirectUrl"
             render={({ field, fieldState: { error } }) => (
               <TextField
-                id="successUrl"
-                label="Success URL"
-                placeholder="https://example.com/success"
-                {...field}
-                value={field.value || ""}
-                error={error?.message}
-              />
-            )}
-          />
-
-          <RHF.Controller
-            control={form.control}
-            name="successMessage"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                id="successMessage"
-                label="Success Message"
-                placeholder="Thanks for your purchase!"
+                id="redirectUrl"
+                label="Redirect URL"
+                placeholder="https://example.com/thank-you"
                 {...field}
                 value={field.value || ""}
                 error={error?.message}

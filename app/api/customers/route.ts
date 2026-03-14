@@ -5,7 +5,7 @@ import { Result, createCustomerSchema } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { body: createCustomerSchema },
   handler: async ({ body, auth: { organizationId, environment }, req }) => {
     const arrayBody = Array.isArray(body) ? body : [body];
@@ -28,7 +28,7 @@ export const POST = apiHandler({
 });
 
 export const GET = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: {},
   handler: async ({ auth: { organizationId, environment } }) => {
     const customers = await retrieveCustomers(undefined, { withWallets: true }, organizationId, environment);

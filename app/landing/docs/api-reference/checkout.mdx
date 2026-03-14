@@ -24,8 +24,7 @@ const checkout = await stellar.checkouts.create({
   customerEmail: "buyer@example.com",
   customerPhone: "+1234567890",
   description: "Order #1234",
-  successUrl: "https://yoursite.com/success",
-  successMessage: "Payment received!",
+  redirectUrl: "https://yoursite.com/thank-you",
   metadata: {},
 });
 
@@ -35,7 +34,7 @@ const directCheckout = await stellar.checkouts.createDirect({
   assetCode: "XLM",
   customerEmail: "buyer@example.com",
   description: "Donation",
-  successUrl: "https://yoursite.com/thanks",
+  redirectUrl: "https://yoursite.com/thanks",
 });
 ```
 
@@ -49,8 +48,7 @@ curl -X POST "https://stellartools.dev/api/checkout?type=product" \
     "customerEmail": "buyer@example.com",
     "customerPhone": "+1234567890",
     "description": "Order #1234",
-    "successUrl": "https://yoursite.com/success",
-    "successMessage": "Payment received!",
+    "redirectUrl": "https://yoursite.com/thank-you",
     "metadata": {}
   }'
 
@@ -63,7 +61,7 @@ curl -X POST "https://stellartools.dev/api/checkout?type=direct" \
     "assetCode": "XLM",
     "customerEmail": "buyer@example.com",
     "description": "Donation",
-    "successUrl": "https://yoursite.com/thanks"
+    "redirectUrl": "https://yoursite.com/thanks"
   }'
 ```
 

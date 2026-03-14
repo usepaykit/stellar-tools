@@ -13,7 +13,7 @@ import { waitUntil } from "@vercel/functions";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: {
     body: Schema.object({
       amount: Schema.number(),
@@ -53,7 +53,7 @@ export const POST = apiHandler({
       const api = new StellarCoreApi(environment);
       const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
-      const asset = await retrieveAsset(body.assetId);
+      const asset = await retrieveAsset({ id: body.assetId }, environment);
 
       const keeperKey = process.env.KEEPER_PUBLIC_KEY;
 

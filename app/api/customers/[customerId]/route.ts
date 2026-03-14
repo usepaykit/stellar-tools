@@ -8,7 +8,7 @@ export const OPTIONS = createOptionsHandler();
 const paramsSchema = Schema.object({ customerId: Schema.string() });
 
 export const GET = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: paramsSchema },
   handler: async ({ params, auth }) => {
     const [customer] = await retrieveCustomers(
@@ -22,7 +22,7 @@ export const GET = apiHandler({
 });
 
 export const PUT = apiHandler({
-  auth: { allowPortal: true },
+  auth: ["session", "apikey", "portal"],
   schema: {
     params: paramsSchema,
     body: updateCustomerSchema,
@@ -37,7 +37,7 @@ export const PUT = apiHandler({
 });
 
 export const DELETE = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: paramsSchema },
   handler: async ({ params, auth }) => {
     await deleteCustomer(params.customerId, auth.organizationId, auth.environment);

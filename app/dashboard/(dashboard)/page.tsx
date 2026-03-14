@@ -2,9 +2,8 @@
 
 import React from "react";
 
-import { getCurrentOrganization, retrieveOverviewStats } from "@/actions/organization";
+import { retrieveOverviewStats } from "@/actions/organization";
 import { AppModal } from "@/components/app-modal";
-import { CircularProgress } from "@/components/circular-progress";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import {
@@ -21,11 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useCookieState } from "@/hooks/use-cookie-state";
 import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { ApiClient } from "@stellartools/core";
-import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, ChevronsUpDown, Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -46,7 +44,6 @@ function getCurrencySymbol(code: string): string {
   }
 }
 
-/** Convert USD cents (from stats) to selected fiat currency for display */
 function usdCentsToDisplay(
   usdCents: number,
   item: CurrencyItem | null,
@@ -72,35 +69,14 @@ export default function DashboardPage() {
     { staleTime: 60 * 1000 }
   );
 
-  const { data: ratesData, isLoading: isRatesLoading } = useQuery({
-    queryKey: ["rates", "XLM"],
-    queryFn: async () => {
-      const organization = await getCurrentOrganization();
-      const api = new ApiClient({
-        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
-      });
-
-      const result = await api.get<{ data: { assetUsd: number; fiatRates: Record<string, number> } }>(
-        "/rates?asset=XLM&issuer=native"
-      );
-
-      if (result.isErr()) throw new Error(result.error.message);
-
-      return result.value.data;
-    },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-  });
+  const { fiatRates, isLoading: isRatesLoading } = useAssetRates([{ code: "XLM", issuer: "native" }]);
 
   const currencyItems = React.useMemo<CurrencyItem[]>(() => {
-    if (!ratesData) return [];
-    return Object.keys(ratesData.fiatRates)
+    if (!fiatRates) return [];
+    return Object.keys(fiatRates)
       .map((code) => ({ code, name: currencyNames.of(code) ?? code, symbol: getCurrencySymbol(code) }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [ratesData]);
-
-  const fiatRates = ratesData?.fiatRates ?? null;
+  }, [fiatRates]);
 
   const selectedItem = currencyItems.find((c) => c.code === selectedCode) ?? null;
 
@@ -302,7 +278,6 @@ function StatCard({
 }) {
   const hasSpark = sparkData.length > 0;
   const chartData = hasSpark ? sparkData : Array.from({ length: 7 }, (_, i) => ({ i: `d${i}`, value: 0 }));
-  const showProgress = typeof max === "number" && max > 0 && typeof usage === "number";
 
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -338,7 +313,6 @@ function StatCard({
               <p className="text-foreground text-2xl font-bold tracking-tight tabular-nums sm:text-3xl">
                 {typeof value === "number" ? value.toLocaleString() : value}
               </p>
-              {showProgress && <CircularProgress value={Math.min(usage!, max)} max={max} size={20} />}
             </div>
             <div className="flex items-center gap-1.5">
               <Info className="text-muted-foreground/50 size-3 shrink-0" aria-hidden />

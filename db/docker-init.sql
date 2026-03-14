@@ -20,7 +20,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO root;
 INSERT INTO public.asset (id, code, issuer, network, metadata) VALUES
   ('ast_1', 'XLM', 'native', 'testnet',  '{"coingeckoId":"stellar","decimals":7}'::jsonb),
   ('ast_2', 'XLM', 'native', 'mainnet',  '{"coingeckoId":"stellar","decimals":7}'::jsonb),
-  ('ast_3', 'USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'testnet', '{"decimals":7,"usdPeg":true}'::jsonb),
+  ('ast_3', 'USDC', 'GAHPYWLK6YRN7CVYZOO4H3VDRZ7PVF5UJGLZCSPAEIKJE2XSWF5LAGER', 'testnet', '{"decimals":7,"usdPeg":true}'::jsonb),
   ('ast_4', 'USDC', 'GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN', 'mainnet', '{"decimals":7,"usdPeg":true}'::jsonb);
 
 INSERT INTO public.plan

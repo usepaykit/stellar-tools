@@ -2,12 +2,14 @@
 
 import * as React from "react";
 
+import { retrieveCustomerWallets } from "@/actions/customers";
 import { getCurrentOrganization } from "@/actions/organization";
 import { retrievePayment, retrievePaymentsWithDetails } from "@/actions/payment";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
+import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +20,7 @@ import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Copy, Download, Plus, Settings, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
@@ -189,11 +191,35 @@ const columns: ColumnDef<Transaction>[] = [
 
 const refundSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required"),
-  walletAddress: z.string().min(1, "Wallet Address is required"),
-  reason: z.string().min(1, "Reason is required"),
+  walletAddress: z.string().optional(),
+  customerWalletId: z.string().optional(),
+  reason: z.string().optional(),
 });
 
 type RefundFormData = z.infer<typeof refundSchema>;
+
+// --- Refund Modal Footer ---
+
+export function RefundModalFooter({
+  onClose,
+  submitRef,
+  isPending,
+}: {
+  onClose: () => void;
+  submitRef: React.MutableRefObject<(() => void) | null>;
+  isPending: boolean;
+}) {
+  return (
+    <div className="flex w-full justify-end gap-2">
+      <Button variant="ghost" type="button" onClick={onClose} disabled={isPending}>
+        Cancel
+      </Button>
+      <Button onClick={() => submitRef.current?.()} disabled={isPending} isLoading={isPending}>
+        Create refund
+      </Button>
+    </div>
+  );
+}
 
 // --- Refund Modal Component ---
 
@@ -201,18 +227,41 @@ export function RefundModalContent({
   initialPaymentId,
   onClose,
   onSuccess,
+  setSubmitRef,
+  onFooterChange,
 }: {
   initialPaymentId?: string;
   onClose: () => void;
   onSuccess: () => void;
+  setSubmitRef?: React.MutableRefObject<(() => void) | null>;
+  onFooterChange?: (props: { isPending: boolean }) => void;
 }) {
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
     defaultValues: {
-      paymentId: initialPaymentId,
+      paymentId: initialPaymentId ?? "",
       walletAddress: "",
+      customerWalletId: "",
       reason: "",
     },
+  });
+
+  const paymentId = form.watch("paymentId");
+
+  const { data: payment } = useQuery({
+    queryKey: ["refund-payment", paymentId?.trim()],
+    queryFn: () => retrievePayment(paymentId!.trim()),
+    enabled: !!paymentId?.trim(),
+  });
+
+  const showWalletField = !!payment && !payment.customerWalletId;
+  const showWalletSelect = showWalletField && !!payment?.customerId;
+  const showWalletText = showWalletField && !payment?.customerId;
+
+  const { data: customerWalletsList = [], isLoading: isLoadingWallets } = useQuery({
+    queryKey: ["refund-customer-wallets", payment?.customerId],
+    queryFn: () => retrieveCustomerWallets(payment!.customerId!),
+    enabled: !!payment?.customerId && showWalletField,
   });
 
   React.useEffect(() => {
@@ -222,7 +271,23 @@ export function RefundModalContent({
   const createRefundMutation = useMutation({
     mutationFn: async (data: RefundFormData) => {
       const organization = await getCurrentOrganization();
-      const payment = await retrievePayment(data.paymentId);
+      const paymentRow = await retrievePayment(data.paymentId);
+
+      let receiverPublicKey: string;
+      if (paymentRow.customerWalletId && paymentRow.customerId) {
+        const wallets = await retrieveCustomerWallets(paymentRow.customerId, { id: paymentRow.customerWalletId });
+        const wallet = Array.isArray(wallets) ? wallets[0] : wallets;
+        if (!wallet?.address) throw new Error("Customer wallet not found");
+        receiverPublicKey = wallet.address;
+      } else if (paymentRow.customerId && data.customerWalletId?.trim()) {
+        const wallets = await retrieveCustomerWallets(paymentRow.customerId, { id: data.customerWalletId.trim() });
+        const wallet = Array.isArray(wallets) ? wallets[0] : wallets;
+        if (!wallet?.address) throw new Error("Customer wallet not found");
+        receiverPublicKey = wallet.address;
+      } else {
+        if (!data.walletAddress?.trim()) throw new Error("Wallet address is required");
+        receiverPublicKey = data.walletAddress.trim();
+      }
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
@@ -232,9 +297,11 @@ export function RefundModalContent({
       const result = await api.post<{ id: string; success: boolean }>("/api/refunds", {
         body: JSON.stringify({
           paymentId: data.paymentId,
-          customerId: payment.customerId,
-          receiverPublicKey: data.walletAddress,
-          reason: data.reason,
+          customerId: paymentRow.customerId,
+          assetId: paymentRow.assetId,
+          amount: paymentRow.amount,
+          receiverPublicKey,
+          reason: data.reason ?? null,
           metadata: null,
         }),
       });
@@ -251,12 +318,94 @@ export function RefundModalContent({
     onError: () => toast.error("Failed to create refund"),
   });
 
-  const onSubmit = (data: RefundFormData) => createRefundMutation.mutate(data);
+  const onSubmit = (data: RefundFormData) => {
+    if (showWalletField && payment?.customerId && !data.customerWalletId?.trim()) {
+      form.setError("customerWalletId", { message: "Select a wallet to refund to" });
+      return;
+    }
+    if (showWalletField && !payment?.customerId && !data.walletAddress?.trim()) {
+      form.setError("walletAddress", { message: "Wallet address is required" });
+      return;
+    }
+    createRefundMutation.mutate(data);
+  };
+
+  const submitForm = React.useCallback(() => {
+    form.handleSubmit(onSubmit)();
+  }, [form, onSubmit]);
+
+  React.useEffect(() => {
+    if (!setSubmitRef) return;
+    setSubmitRef.current = submitForm;
+    return () => {
+      setSubmitRef.current = null;
+    };
+  }, [setSubmitRef, submitForm]);
+
+  React.useEffect(() => {
+    onFooterChange?.({ isPending: createRefundMutation.isPending });
+  }, [createRefundMutation.isPending, onFooterChange]);
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-end gap-3 border-b pb-4">
-        <Button variant="outline" onClick={onClose} disabled={createRefundMutation.isPending}>
+      <div className="space-y-6">
+        {showWalletSelect && (
+          <RHF.Controller
+            control={form.control}
+            name="customerWalletId"
+            render={({ field, fieldState: { error } }) => (
+              <SelectField
+                id="customerWalletId"
+                label="Refund to wallet"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                items={customerWalletsList.map((w: { id: string; address: string }) => ({
+                  value: w.id,
+                  label: truncate(w.address, { start: 6, end: 6 }),
+                }))}
+                placeholder="Select wallet"
+                error={error?.message}
+                isLoading={isLoadingWallets}
+              />
+            )}
+          />
+        )}
+        {showWalletText && (
+          <RHF.Controller
+            control={form.control}
+            name="walletAddress"
+            render={({ field, fieldState: { error } }) => (
+              <TextField
+                {...field}
+                value={field.value ?? ""}
+                id="walletAddress"
+                label="Wallet Address"
+                error={error?.message}
+                placeholder="Enter wallet address"
+                className="shadow-none"
+              />
+            )}
+          />
+        )}
+
+        <RHF.Controller
+          control={form.control}
+          name="reason"
+          render={({ field, fieldState: { error } }) => (
+            <TextAreaField
+              {...field}
+              value={field.value ?? ""}
+              id="reason"
+              label="Reason"
+              error={error?.message}
+              placeholder="Enter reason for refund (optional)"
+              className="min-h-[120px] shadow-none"
+            />
+          )}
+        />
+      </div>
+      <div className="flex shrink-0 justify-end gap-2 border-t pt-4">
+        <Button variant="outline" type="button" onClick={onClose} disabled={createRefundMutation.isPending}>
           Cancel
         </Button>
         <Button
@@ -266,54 +415,6 @@ export function RefundModalContent({
         >
           {createRefundMutation.isPending ? "Creating..." : "Create refund"}
         </Button>
-      </div>
-      <div className="space-y-6">
-        <RHF.Controller
-          control={form.control}
-          name="paymentId"
-          render={({ field, fieldState: { error } }) => (
-            <TextField
-              {...field}
-              id="paymentId"
-              label="Payment ID"
-              error={error?.message}
-              placeholder="Enter payment ID"
-              className="shadow-none"
-              disabled={!!initialPaymentId}
-            />
-          )}
-        />
-
-        <RHF.Controller
-          control={form.control}
-          name="walletAddress"
-          render={({ field, fieldState: { error } }) => (
-            <TextField
-              {...field}
-              id="walletAddress"
-              label="Wallet Address"
-              error={error?.message}
-              placeholder="Enter wallet address"
-              className="shadow-none"
-            />
-          )}
-        />
-
-        <RHF.Controller
-          control={form.control}
-          name="reason"
-          render={({ field, fieldState: { error } }) => (
-            <TextAreaField
-              {...field}
-              value={field.value}
-              id="reason"
-              label="Reason"
-              error={error?.message}
-              placeholder="Enter reason for refund"
-              className="min-h-[120px] shadow-none"
-            />
-          )}
-        />
       </div>
     </div>
   );
@@ -331,22 +432,49 @@ function TransactionsPageContent() {
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
   const invalidate = useInvalidateOrgQuery();
 
+  const refundModalSubmitRef = React.useRef<(() => void) | null>(null);
+  const [refundModalFooterProps, setRefundModalFooterProps] = React.useState({
+    isPending: false,
+  });
+  const isRefundModalOpenRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!isRefundModalOpenRef.current) return;
+    AppModal.updateConfig({
+      footer: (
+        <RefundModalFooter
+          onClose={AppModal.close}
+          submitRef={refundModalSubmitRef}
+          isPending={refundModalFooterProps.isPending}
+        />
+      ),
+    });
+  }, [refundModalFooterProps.isPending]);
+
   const openRefundModal = React.useCallback(
     (initialPaymentId?: string) => {
+      isRefundModalOpenRef.current = true;
+      setRefundModalFooterProps({ isPending: false });
       AppModal.open({
         title: "Create Refund",
         description: "Process a refund for a transaction by providing the payment details.",
         content: (
           <RefundModalContent
             initialPaymentId={initialPaymentId}
-            onClose={AppModal.close}
-            onSuccess={() => {
-              invalidate(["refunds"]);
+            onClose={() => {
+              isRefundModalOpenRef.current = false;
               AppModal.close();
             }}
+            onSuccess={() => {
+              invalidate(["refunds"]);
+              isRefundModalOpenRef.current = false;
+              AppModal.close();
+            }}
+            setSubmitRef={refundModalSubmitRef}
+            onFooterChange={(props) => setRefundModalFooterProps(props)}
           />
         ),
-        footer: null,
+        footer: <RefundModalFooter onClose={AppModal.close} submitRef={refundModalSubmitRef} isPending={false} />,
         size: "small",
         showCloseButton: true,
       });

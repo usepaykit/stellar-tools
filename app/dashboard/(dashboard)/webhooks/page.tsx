@@ -45,7 +45,7 @@ import z from "zod";
 
 const formatEventLabel = (event: string) =>
   event
-    .split(".")
+    .split(/[._]/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
@@ -269,10 +269,51 @@ const api = new ApiClient({
   headers: {},
 });
 
+function WebhooksModalFooter({
+  onClose,
+  submitRef,
+  isPending,
+  isEditMode,
+}: {
+  onClose: () => void;
+  submitRef: React.MutableRefObject<(() => void) | null>;
+  isPending: boolean;
+  isEditMode: boolean;
+}) {
+  return (
+    <div className="flex w-full justify-between border-t pt-4">
+      <Button type="button" variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
+        Cancel
+      </Button>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" onClick={onClose} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+        <Button
+          type="button"
+          onClick={() => submitRef.current?.()}
+          className="gap-2"
+          disabled={isPending}
+          isLoading={isPending}
+        >
+          {isEditMode ? "Save changes" : "Create destination"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const invalidateOrgQuery = useInvalidateOrgQuery();
+  const webhookModalSubmitRef = React.useRef<(() => void) | null>(null);
+  const [webhookModalFooterProps, setWebhookModalFooterProps] = React.useState({
+    isPending: false,
+    isEditMode: false,
+  });
+  const isWebhookModalOpenRef = React.useRef(false);
   const { data: webhooks = [], isLoading } = useOrgQuery(["webhooks"], () => getWebhooksWithAnalytics(), {
     select: (data) => {
       return data.map((webhook) => ({
@@ -287,6 +328,8 @@ function WebhooksPageContent() {
   });
 
   const openCreateModal = React.useCallback(() => {
+    isWebhookModalOpenRef.current = true;
+    setWebhookModalFooterProps({ isPending: false, isEditMode: false });
     AppModal.open({
       title: "Configure destination",
       description: "Tell StellarTools where to send events and give your destination a helpful description.",
@@ -298,16 +341,30 @@ function WebhooksPageContent() {
             invalidateOrgQuery(["webhooks"]);
             AppModal.close();
           }}
+          setSubmitRef={webhookModalSubmitRef}
+          onFooterChange={setWebhookModalFooterProps}
         />
       ),
-      footer: null,
+      footer: (
+        <WebhooksModalFooter
+          onClose={AppModal.close}
+          submitRef={webhookModalSubmitRef}
+          isPending={false}
+          isEditMode={false}
+        />
+      ),
       size: "full",
       showCloseButton: true,
+      onClose: () => {
+        isWebhookModalOpenRef.current = false;
+      },
     });
   }, [invalidateOrgQuery]);
 
   const openEditModal = React.useCallback(
     (webhook: WebhookDestination) => {
+      isWebhookModalOpenRef.current = true;
+      setWebhookModalFooterProps({ isPending: false, isEditMode: true });
       AppModal.open({
         title: "Edit destination",
         description: "Update where StellarTools sends events for this destination.",
@@ -319,15 +376,41 @@ function WebhooksPageContent() {
               invalidateOrgQuery(["webhooks"]);
               AppModal.close();
             }}
+            setSubmitRef={webhookModalSubmitRef}
+            onFooterChange={setWebhookModalFooterProps}
           />
         ),
-        footer: null,
+        footer: (
+          <WebhooksModalFooter
+            onClose={AppModal.close}
+            submitRef={webhookModalSubmitRef}
+            isPending={false}
+            isEditMode
+          />
+        ),
         size: "full",
         showCloseButton: true,
+        onClose: () => {
+          isWebhookModalOpenRef.current = false;
+        },
       });
     },
     [invalidateOrgQuery]
   );
+
+  React.useEffect(() => {
+    if (!isWebhookModalOpenRef.current) return;
+    AppModal.updateConfig({
+      footer: (
+        <WebhooksModalFooter
+          onClose={AppModal.close}
+          submitRef={webhookModalSubmitRef}
+          isPending={webhookModalFooterProps.isPending}
+          isEditMode={webhookModalFooterProps.isEditMode}
+        />
+      ),
+    });
+  }, [webhookModalFooterProps.isPending, webhookModalFooterProps.isEditMode]);
 
   const openDeleteModal = React.useCallback(
     (webhook: WebhookDestination) => {
@@ -491,9 +574,17 @@ interface WebhooksModalContentProps {
   editingWebhook?: WebhookDestination | null;
   onClose: () => void;
   onSuccess: () => void;
+  setSubmitRef?: React.MutableRefObject<(() => void) | null>;
+  onFooterChange?: (props: { isPending: boolean; isEditMode: boolean }) => void;
 }
 
-function WebhooksModalContent({ editingWebhook = null, onClose, onSuccess }: WebhooksModalContentProps) {
+function WebhooksModalContent({
+  editingWebhook = null,
+  onClose,
+  onSuccess,
+  setSubmitRef,
+  onFooterChange,
+}: WebhooksModalContentProps) {
   const formRef = React.useRef<HTMLFormElement>(null);
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const { data: organization, isLoading } = useOrgContext();
@@ -619,7 +710,20 @@ function WebhooksModalContent({ editingWebhook = null, onClose, onSuccess }: Web
 
   const isPending = createWebhookMutation.isPending || updateWebhookMutation.isPending;
 
-  const footer = (
+  React.useEffect(() => {
+    if (!setSubmitRef) return;
+    setSubmitRef.current = () => form.handleSubmit(onSubmit)();
+    return () => {
+      setSubmitRef.current = null;
+    };
+  }, [form, setSubmitRef, onSubmit]);
+
+  React.useEffect(() => {
+    onFooterChange?.({ isPending, isEditMode });
+  }, [isPending, isEditMode, onFooterChange]);
+
+  const showInlineFooter = !setSubmitRef;
+  const footer = showInlineFooter ? (
     <div className="flex w-full justify-between border-t pt-4">
       <Button type="button" variant="ghost" onClick={onClose} className="text-muted-foreground hover:text-foreground">
         Cancel
@@ -640,7 +744,7 @@ function WebhooksModalContent({ editingWebhook = null, onClose, onSuccess }: Web
         </Button>
       </div>
     </div>
-  );
+  ) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -744,7 +848,7 @@ function WebhooksModalContent({ editingWebhook = null, onClose, onSuccess }: Web
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <div className="bg-muted border-border flex-1 rounded-md border p-3 shadow-none">
+                  <div className="bg-muted border-border flex-1 rounded-md border px-3 py-1.5 shadow-none">
                     <code className="font-mono text-sm break-all">{secret}</code>
                   </div>
                   <Button
@@ -765,7 +869,7 @@ function WebhooksModalContent({ editingWebhook = null, onClose, onSuccess }: Web
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-sm font-bold tracking-tight">Implementation Guide</h4>
+            <Label>Implementation Guide</Label>
             <Tabs defaultValue="ts">
               <TabsList className="bg-muted/50 border-none p-1">
                 <TabsTrigger value="ts" className="gap-2 px-4 py-1.5">

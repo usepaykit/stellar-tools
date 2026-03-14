@@ -7,7 +7,7 @@ export const OPTIONS = createOptionsHandler();
 const paramsSchema = Schema.object({ id: Schema.string() });
 
 export const GET = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     return await retrieveWebhook(id, organizationId, environment).then(Result.ok);
@@ -15,7 +15,7 @@ export const GET = apiHandler({
 });
 
 export const PUT = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: paramsSchema, body: updateWebhookSchema },
   handler: async ({ params: { id }, body, auth: { organizationId, environment } }) => {
     return await putWebhook(id, body, organizationId, environment).then(Result.ok);
@@ -23,7 +23,7 @@ export const PUT = apiHandler({
 });
 
 export const DELETE = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     return await deleteWebhook(id, organizationId, environment).then(Result.ok);

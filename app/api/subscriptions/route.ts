@@ -9,7 +9,7 @@ import { Result, z as Schema } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { body: createSubscriptionSchema },
   handler: async ({ body, auth: { organizationId, environment }, authToken }) => {
     const [customers, product] = await Promise.all([
@@ -78,7 +78,7 @@ export const POST = apiHandler({
 });
 
 export const GET = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { query: Schema.object({ customerId: Schema.string() }) },
   handler: async ({ query: { customerId }, auth: { environment } }) => {
     return await listSubscriptions(customerId, environment).then(Result.ok);

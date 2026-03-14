@@ -11,7 +11,7 @@ const paramsSchema = Schema.object({ id: Schema.string() });
 export const OPTIONS = createOptionsHandler();
 
 export const GET = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { environment, organizationId } }) => {
     const { paymentUri, ...details } = await getCheckoutPaymentDetails(id, organizationId, environment);

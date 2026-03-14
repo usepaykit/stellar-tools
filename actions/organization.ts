@@ -118,6 +118,25 @@ export const retrieveOrganizationIdAndSecret = async (id: string, environment: N
   return result;
 };
 
+export const setupMerchantTrustline = async (
+  organizationId: string,
+  environment: Network,
+  assetCode: string,
+  assetIssuer: string
+) => {
+  const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
+
+  if (!secret?.encrypted) throw new Error("Merchant wallet not configured for this environment");
+
+  const secretKey = new EncryptionApi().decrypt(secret.encrypted);
+  const stellar = new StellarCoreApi(environment);
+  const result = await stellar.addTrustline(secretKey, assetCode, assetIssuer);
+
+  if (result.isErr()) throw result.error;
+
+  return { success: true, assetCode, assetIssuer };
+};
+
 export const putOrganization = async (
   id: string,
   params: Partial<Organization>,

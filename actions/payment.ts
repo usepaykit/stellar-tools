@@ -3,16 +3,16 @@
 import { applyPaymentFee } from "@/actions/billing";
 import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
+import { createCustomerWallet, retrieveCustomerWallets } from "@/actions/customers";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { Customer, Network, Payment, Refund, assets, customers, db, payments, refunds } from "@/db";
+import { Customer, Network, Payment, Refund, assets, customers, db, payments, products, refunds } from "@/db";
+import { sendEmailEvent } from "@/integrations/email-handler";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { ApiClient, Result } from "@stellartools/core";
-import { and, desc, eq } from "drizzle-orm";
-
-import { createCustomerWallet, retrieveCustomerWallet } from "./customers";
+import { and, count, desc, eq } from "drizzle-orm";
 
 const paymentActionHandler = async (call: () => Promise<Payment>, organizationId: string, environment: Network) => {
   const payment = await withEvent(call, (payment) => {
@@ -88,13 +88,13 @@ export const postPayment = async (
 
   if (params?.customerId && options?.customerWalletAddress) {
     customerWalletId = (
-      await retrieveCustomerWallet(
+      await retrieveCustomerWallets(
         params.customerId,
         { walletAddress: options.customerWalletAddress },
         organizationId,
         environment
       )
-    )?.id;
+    )?.[0]?.id;
   }
 
   return paymentActionHandler(
@@ -366,18 +366,125 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
     { assetId, assetCode: assetCode ?? undefined }
   );
 
+  let customerWalletId: string | null = null;
+
+  if (customerId) {
+    customerWalletId = (
+      await createCustomerWallet(organizationId, environment, {
+        customerId,
+        address: payerAddress,
+        metadata: null,
+      })
+    )?.id;
+  }
+
   await Promise.all([
     putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment),
-    applyPaymentFee(confirmedPayment.id, organizationId, Number(amount), assetCode ?? "XLM", assetIssuer),
-    customerId
-      ? await createCustomerWallet(organizationId, environment, {
-          customerId,
-          address: payerAddress,
-          metadata: null,
-        })
-      : Promise.resolve(),
+    applyPaymentFee(
+      confirmedPayment.id,
+      organizationId,
+      Number(amount),
+      assetCode ?? "XLM",
+      assetIssuer,
+      customerWalletId
+    ),
     ...(productType === "subscription" ? [createSubscriptionHandler()] : []),
   ]);
 
+  dispatchPaymentEmails({ checkout, amount }).catch(() => {});
+
   return checkout;
 };
+
+async function dispatchPaymentEmails({
+  checkout,
+  amount,
+}: {
+  checkout: Awaited<ReturnType<typeof retrieveCheckoutAndCustomer>>;
+  amount: string;
+}) {
+  if (!checkout) return;
+
+  const merchantEmail = checkout.merchantEmail;
+  if (!merchantEmail) return;
+
+  const customerEmail = checkout.customerEmail ?? undefined;
+  const organizationName = checkout.organizationName ?? "Merchant";
+  const productName = checkout.productName ?? "Payment";
+  const assetCode = checkout.assetCode ?? "XLM";
+  const { customerId, organizationId, productType } = checkout;
+
+  const eventsToSend = [];
+
+  if (customerId) {
+    const [{ value: confirmedCount }] = await db
+      .select({ value: count() })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.customerId, customerId),
+          eq(payments.status, "confirmed"),
+          eq(payments.organizationId, organizationId)
+        )
+      );
+
+    if (Number(confirmedCount) === 1) {
+      eventsToSend.push({
+        type: "payment.first_purchase",
+        payload: { merchantEmail, customerEmail, productName, amount, assetCode, organizationName },
+      });
+    }
+
+    if (productType === "metered" && checkout.productId) {
+      const [product] = await db
+        .select({ creditsGranted: products.creditsGranted, creditExpiryDays: products.creditExpiryDays })
+        .from(products)
+        .where(eq(products.id, checkout.productId))
+        .limit(1);
+
+      const [{ value: meteredCount }] = await db
+        .select({ value: count() })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.customerId, customerId),
+            eq(payments.status, "confirmed"),
+            eq(payments.organizationId, organizationId),
+            eq(payments.checkoutId, checkout.id ?? "")
+          )
+        );
+
+      if (Number(meteredCount) === 1 && product?.creditsGranted) {
+        eventsToSend.push({
+          type: "metered.first_purchase",
+          payload: {
+            merchantEmail,
+            customerEmail,
+            productName,
+            organizationName,
+            creditsGranted: product.creditsGranted,
+            creditExpiryDays: product.creditExpiryDays ?? 30,
+          },
+        });
+      }
+    }
+  }
+
+  if (productType === "subscription" && checkout.subscriptionData) {
+    const sd = checkout.subscriptionData;
+    eventsToSend.push({
+      type: "subscription.started",
+      payload: {
+        merchantEmail,
+        customerEmail,
+        productName,
+        amount,
+        assetCode,
+        organizationName,
+        currentPeriodEnd: sd.periodEnd ? new Date(sd.periodEnd).toLocaleDateString() : "—",
+      },
+    });
+  }
+
+  await Promise.allSettled(eventsToSend.map((e) => sendEmailEvent(e)));
+}

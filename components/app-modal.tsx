@@ -57,8 +57,8 @@ const AppModalUI = ({
   showCloseButton = true,
 }: AppModalProps) => {
   const sizeStyles = {
-    small: "m-4 h-auto max-h-[90vh] w-full max-w-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-    medium: "m-4 h-auto max-h-[90vh] w-full max-w-4xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+    small: "m-4 max-h-[90vh] w-full max-w-2xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col",
+    medium: "m-4 max-h-[90vh] w-full max-w-4xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col",
     full: "!inset-0 !top-0 !left-0 !right-0 !bottom-0 !translate-x-0 !translate-y-0 !m-0 !h-screen !w-screen !max-w-none sm:!max-w-none rounded-none",
   };
 
@@ -76,8 +76,9 @@ const AppModalUI = ({
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className={cn(
-                "bg-background flex w-full flex-col overflow-hidden rounded-lg border shadow-lg",
-                size === "full" ? "h-full min-h-screen w-full rounded-none" : "h-auto"
+                "bg-background flex min-w-0 flex-col overflow-hidden rounded-lg border shadow-lg",
+                size === "full" && "h-full min-h-screen w-full rounded-none",
+                size !== "full" && "h-auto max-h-[90vh] w-full"
               )}
             >
               <DialogHeader className="shrink-0 border-b px-6 py-6 sm:py-8">
@@ -85,8 +86,14 @@ const AppModalUI = ({
                 {description && <DialogDescription className="text-base">{description}</DialogDescription>}
               </DialogHeader>
 
-              <div className={cn("flex min-h-0 flex-1 flex-col overflow-hidden", size !== "full" && "max-h-[60vh]")}>
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 py-6">{content}</div>
+              <div
+                className={cn(
+                  "min-h-0 min-w-0 overflow-auto px-6 py-6",
+                  size === "full" && "flex-1",
+                  size !== "full" && "min-h-0 flex-1"
+                )}
+              >
+                {content}
               </div>
 
               {footer && <DialogFooter className="bg-muted/30 shrink-0 border-t px-6 py-4">{footer}</DialogFooter>}

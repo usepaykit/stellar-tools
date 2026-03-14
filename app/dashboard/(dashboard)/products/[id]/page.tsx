@@ -2,12 +2,13 @@
 
 import * as React from "react";
 
+import { getCurrentOrganization } from "@/actions/organization";
 import { retrieveProductsWithAsset } from "@/actions/product";
 import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { LogDetailItem, LogDetailSection } from "@/components/log";
+import { LogDetailItem } from "@/components/log";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -28,9 +29,11 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { Product as ProductDb } from "@/db";
+import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { ApiClient } from "@stellartools/core";
+import { useMutation } from "@tanstack/react-query";
 import {
   CheckCircle2,
   ChevronRight,
@@ -45,9 +48,9 @@ import {
 import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-import { type Product, ProductsModalContent } from "../page";
+import { type Product, ProductsModalContent, ProductsModalFooter } from "../page";
 
 const productTypeLabels: Record<string, string> = {
   one_time: "One-off",
@@ -156,9 +159,16 @@ function ProductDetailSkeleton() {
 }
 
 export default function ProductDetailPage() {
+  const router = useRouter();
   const { id } = useParams() as { id: string };
   const invalidate = useInvalidateOrgQuery();
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
+  const productModalSubmitRef = React.useRef<(() => void) | null>(null);
+  const [productModalFooterProps, setProductModalFooterProps] = React.useState({
+    isPending: false,
+    isEditMode: true,
+  });
+  const isProductModalOpenRef = React.useRef(false);
 
   const { data: product, isLoading } = useOrgQuery(
     ["products", id],
@@ -210,8 +220,11 @@ export default function ProductDetailPage() {
       unitDivisor: product.unitDivisor ?? null,
       unitsPerCredit: product.unitsPerCredit ?? null,
       creditsGranted: product.creditsGranted ?? null,
+      assetId: product.assetId ?? null,
     };
 
+    isProductModalOpenRef.current = true;
+    setProductModalFooterProps({ isPending: false, isEditMode: true });
     AppModal.open({
       title: "Edit product",
       content: (
@@ -223,13 +236,74 @@ export default function ProductDetailPage() {
             invalidate(["products"]);
             AppModal.close();
           }}
+          setSubmitRef={productModalSubmitRef}
+          onFooterChange={(props) => setProductModalFooterProps((prev) => ({ ...prev, ...props }))}
         />
       ),
-      footer: null,
+      footer: (
+        <ProductsModalFooter onClose={AppModal.close} submitRef={productModalSubmitRef} isPending={false} isEditMode />
+      ),
       size: "full",
       showCloseButton: true,
+      onClose: () => {
+        isProductModalOpenRef.current = false;
+      },
     });
   }, [product, id, invalidate]);
+
+  React.useEffect(() => {
+    if (!isProductModalOpenRef.current) return;
+    AppModal.updateConfig({
+      footer: (
+        <ProductsModalFooter
+          onClose={AppModal.close}
+          submitRef={productModalSubmitRef}
+          isPending={productModalFooterProps.isPending}
+          isEditMode={productModalFooterProps.isEditMode}
+        />
+      ),
+    });
+  }, [productModalFooterProps.isPending, productModalFooterProps.isEditMode]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const organization = await getCurrentOrganization();
+      if (!organization) throw new Error("Organization not found");
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-auth-token": organization?.token! },
+      });
+      if (!product?.organizationId) throw new Error("Product not found");
+      const response = await api.delete<null>(`/product/${id}`);
+      if (response.isErr()) throw new Error(response.error.message);
+      return response.value;
+    },
+    onSuccess: () => {
+      invalidate(["products"]);
+      toast.success("Product deleted");
+      router.push("/products");
+      AppModal.close();
+    },
+    onError: (e: Error) => toast.error(e.message ?? "Failed to delete product"),
+  });
+
+  const openDeleteModal = React.useCallback(() => {
+    if (!product) return;
+    AppModal.open({
+      title: "Delete product",
+      description: "This product will be permanently removed. This action cannot be undone.",
+      content: null,
+      size: "medium",
+      showCloseButton: true,
+      primaryButton: {
+        children: deleteMutation.isPending ? "Deleting…" : "Delete",
+        variant: "destructive",
+        onClick: () => deleteMutation.mutate(),
+        disabled: deleteMutation.isPending,
+      },
+      secondaryButton: { children: "Cancel" },
+    });
+  }, [product, deleteMutation]);
 
   if (isLoading) {
     return (
@@ -359,7 +433,9 @@ export default function ProductDetailPage() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>Archive product</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => openDeleteModal()}>
+                      Delete
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

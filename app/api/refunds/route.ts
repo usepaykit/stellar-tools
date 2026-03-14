@@ -12,7 +12,7 @@ import { Result } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { body: createRefundSchema },
   handler: async ({ body, auth: { organizationId, environment } }) => {
     const [payment, asset] = await Promise.all([

@@ -1,4 +1,4 @@
-import { retrieveCustomerWallet } from "@/actions/customers";
+import { retrieveCustomerWallets } from "@/actions/customers";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
@@ -7,12 +7,14 @@ import { Result, z as Schema } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { params: Schema.object({ id: Schema.string() }) },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     const subscription = await retrieveSubscription(id);
 
-    const customerWallet = await retrieveCustomerWallet(subscription.customerId, { id: subscription.customerWalletId });
+    const [customerWallet] = await retrieveCustomerWallets(subscription.customerId, {
+      id: subscription.customerWalletId,
+    });
 
     if (!customerWallet?.address) throw new Error("Customer wallet not found");
 

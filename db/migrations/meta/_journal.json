@@ -29,6 +29,13 @@
       "when": 1773482427242,
       "tag": "0003_bent_gertrude_yorkes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773510564662,
+      "tag": "0004_colossal_hex",
+      "breakpoints": true
     }
   ]
 }

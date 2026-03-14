@@ -1,4 +1,4 @@
-import { putProduct } from "@/actions/product";
+import { deleteProduct, putProduct } from "@/actions/product";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { Result, z as Schema, updateProductSchema } from "@stellartools/core";
 
@@ -7,10 +7,19 @@ export const OPTIONS = createOptionsHandler();
 const paramsSchema = Schema.object({ id: Schema.string() });
 
 export const PUT = apiHandler({
-  auth: true,
+  auth: ["session", "apikey"],
   schema: { body: updateProductSchema, params: paramsSchema },
   handler: async ({ body, auth: { organizationId }, params: { id } }) => {
     const product = await putProduct(id, organizationId, body);
+    return Result.ok(product);
+  },
+});
+
+export const DELETE = apiHandler({
+  auth: ["session", "apikey"],
+  schema: { params: paramsSchema },
+  handler: async ({ params: { id }, auth: { organizationId } }) => {
+    const product = await deleteProduct(id, organizationId);
     return Result.ok(product);
   },
 });
