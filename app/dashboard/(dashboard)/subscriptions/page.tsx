@@ -18,14 +18,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn } from "@/lib/utils";
+import { cn, STROOPS_PER_XLM } from "@/lib/utils";
 import { ApiClient, z as Schema } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { Calendar, CheckCircle2, Clock, Pause, Plus, ShieldCheck, XCircle } from "lucide-react";
 import moment from "moment";
 import { toast } from "sonner";
 
-const STROOPS_PER_XLM = 10_000_000;
 const formatXLM = (stroops: number) =>
   (stroops / STROOPS_PER_XLM).toLocaleString(undefined, { minimumFractionDigits: 2 });
 const formatDate = (date: Date) => moment(date).format("MMM D, YYYY");

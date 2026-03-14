@@ -389,6 +389,7 @@ export async function getCustomerPortalData(token: string) {
     payments: customerPayments,
     credits: customerCredits,
     wallets: customerWalletList,
+    environment,
   };
 }
 

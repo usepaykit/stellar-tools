@@ -137,6 +137,13 @@ export const apiKeys = pgTable("api_key", {
   environment: networkEnum("network").notNull(),
 });
 
+export type AssetMetadata = {
+  coingeckoId?: string; // CoinGecko coin ID — drives live crypto price lookup
+  decimals?: number; // Token decimal places (Stellar default: 7 = stroops)
+  usdPeg?: true; // Pegged 1:1 to USD (e.g. USDC, USDT)
+  fiatPeg?: string; // Pegged to a fiat currency, ISO 4217 (e.g. "EUR" for EURC)
+};
+
 export const assets = pgTable(
   "asset",
   {
@@ -146,7 +153,7 @@ export const assets = pgTable(
     environment: networkEnum("network").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+    metadata: jsonb("metadata").$type<AssetMetadata | null>(),
   },
   (table) => ({
     uniqueCodeIssuerEnvironment: unique().on(table.code, table.issuer, table.environment),
@@ -268,7 +275,7 @@ export const checkouts = pgTable(
     customerPhone: text("customer_phone"),
     subscriptionData: jsonb("subscription_data").$type<SubscriptionData | null>(),
     initialPagingToken: text("initial_paging_token"),
-    asset: text("asset").references(() => assets.id),
+    assetCode: text("asset_code").$type<AssetCode>(),
   },
   (table) => ({
     amountOrProductCheck: check(
@@ -325,15 +332,10 @@ export const payments = pgTable("payment", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   environment: networkEnum("network").notNull(),
   platformFeeUsd: integer("platform_fee_usd"),
-  /**
-   * The org's cumulative confirmed payment volume (USD cents) for the
-   * billing month at the time this payment was confirmed.
-   * Acts as a running index: the latest confirmed payment for an org/month
-   * is the authoritative source for the current monthly volume.
-   * null on pending/failed payments.
-   */
   orgMonthlyVolumeUsd: integer("org_monthly_volume_usd"),
   customerWalletId: text("customer_wallet_id").references(() => customerWallets.id),
+  assetId: text("asset_id").references(() => assets.id),
+  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
 });
 
 export const payoutStatusEnum = pgEnum("payout_status", payoutStatusEnum$1);

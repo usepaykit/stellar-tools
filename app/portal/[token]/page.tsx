@@ -19,11 +19,11 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/toast";
-import { fileFromUrl, stroopsToXlm, truncate } from "@/lib/utils";
+import { fileFromUrl, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Customer } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Info, Trash2, X } from "lucide-react";
 import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
@@ -52,6 +52,7 @@ type PortalFormData = Schema.infer<typeof portalFormSchema>;
 export default function PortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = React.use(params);
   const [imageLoading, setImageLoading] = React.useState(false);
+  const [showBanner, setShowBanner] = React.useState(true);
 
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
@@ -290,6 +291,12 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
 
   return (
     <div className="bg-background min-h-screen">
+      {showBanner && data.environment === "testnet" && (
+        <div className="bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-1 relative flex items-center justify-center gap-2 p-1.5 text-center text-xs font-medium">
+          <Info className="text-muted h-4 w-4" />
+          You are in Test mode
+        </div>
+      )}
       <header className="border-border border-b">
         <div className="mx-auto flex max-w-2xl items-center px-4 py-4">
           <Link
@@ -579,7 +586,7 @@ function InvoiceRow({ payment }: { payment: Payment }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <div className="space-y-0.5">
-        <p className="text-foreground text-sm font-medium">{stroopsToXlm(payment.amount)} XLM</p>
+        <p className="text-foreground text-sm font-medium">{payment.amount} XLM</p>
         <p className="text-muted-foreground text-xs">{moment(payment.createdAt).format("MMM D, YYYY")}</p>
       </div>
       <div className="flex items-center gap-3">

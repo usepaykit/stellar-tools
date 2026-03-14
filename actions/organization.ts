@@ -6,6 +6,7 @@ import {
   Organization,
   OrganizationSecret,
   SecretAccessLog,
+  assets,
   customers,
   db,
   organizationSecrets,
@@ -19,9 +20,10 @@ import { CookieManager } from "@/integrations/cookie-manager";
 import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWTApi } from "@/integrations/jwt";
+import { PriceFeedApi } from "@/integrations/price-feed";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { TIER_FEE_TOKENS } from "@/lib/pricing.server";
-import { generateResourceId, normalizeTimeSeries, stroopsToXlm } from "@/lib/utils";
+import { generateResourceId, normalizeTimeSeries } from "@/lib/utils";
 import { and, eq, gte, lt, or, sql } from "drizzle-orm";
 
 export const postOrganizationAndSecret = async (
@@ -390,13 +392,29 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     .select({
       activeSubscriptions: sql<number>`count(*) FILTER (WHERE ${subscriptions.status} = 'active')`,
       activeTrials: sql<number>`count(*) FILTER (WHERE ${subscriptions.status} = 'trialing')`,
-      mrr: sql<number>`coalesce(sum(${products.priceAmount}) FILTER (WHERE ${subscriptions.status} = 'active'), 0)`,
       totalCustomers: sql<number>`(SELECT count(*) FROM ${customers} WHERE ${customers.organizationId} = ${organizationId} AND ${customers.environment} = ${environment})`,
     })
     .from(subscriptions)
     .innerJoin(products, eq(subscriptions.productId, products.id))
     .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptions.environment, environment)))
     .then((r) => r[0]);
+
+  const mrrByAssetQuery = db
+    .select({
+      assetMetadata: assets.metadata,
+      totalAmount: sql<number>`coalesce(sum(${products.priceAmount}), 0)::bigint`,
+    })
+    .from(subscriptions)
+    .innerJoin(products, eq(subscriptions.productId, products.id))
+    .innerJoin(assets, eq(products.assetId, assets.id))
+    .where(
+      and(
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment),
+        eq(subscriptions.status, "active")
+      )
+    )
+    .groupBy(assets.id);
 
   const revenueChartQuery = db
     .select({
@@ -414,6 +432,24 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     )
     .groupBy(sql`1`)
     .orderBy(sql`1`);
+
+  // Revenue grouped by asset — direct join now that payments.assetId exists
+  const revenueByAssetQuery = db
+    .select({
+      assetMetadata: assets.metadata,
+      totalAmount: sql<number>`sum(${payments.amount})::bigint`,
+    })
+    .from(payments)
+    .leftJoin(assets, eq(payments.assetId, assets.id))
+    .where(
+      and(
+        eq(payments.organizationId, organizationId),
+        eq(payments.environment, environment),
+        eq(payments.status, "confirmed"),
+        gte(payments.createdAt, since)
+      )
+    )
+    .groupBy(assets.id);
 
   const customersChartQuery = db
     .select({
@@ -464,75 +500,77 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
-  const [metrics, revenueChart, customersChart, subscriptionsChart, trialsChart, periodRevenue, periodFeesUsdCents] =
-    await Promise.all([
-      metricsPromise,
-      revenueChartQuery,
-      customersChartQuery,
-      subscriptionsChartQuery,
-      trialsChartQuery,
-      db
-        .select({ sum: sql<number>`coalesce(sum(${payments.amount}), 0)::bigint` })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.organizationId, organizationId),
-            eq(payments.environment, environment),
-            eq(payments.status, "confirmed"),
-            gte(payments.createdAt, since)
-          )
-        )
-        .then((r) => Number(r[0]?.sum ?? 0)),
-      db
-        .select({ sum: sql<number>`coalesce(sum(${payments.platformFeeUsd}), 0)::bigint` })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.organizationId, organizationId),
-            eq(payments.environment, environment),
-            eq(payments.status, "confirmed"),
-            gte(payments.createdAt, since)
-          )
-        )
-        .then((r) => Number(r[0]?.sum ?? 0)),
-    ]);
-
-  const result = {
+  const [
     metrics,
     revenueChart,
     customersChart,
-    periodRevenue,
-    periodFeesUsdCents,
     subscriptionsChart,
     trialsChart,
+    revenueByAsset,
+    mrrByAsset,
+    periodFeesUsdCents,
+  ] = await Promise.all([
+    metricsPromise,
+    revenueChartQuery,
+    customersChartQuery,
+    subscriptionsChartQuery,
+    trialsChartQuery,
+    revenueByAssetQuery,
+    mrrByAssetQuery,
+    db
+      .select({ sum: sql<number>`coalesce(sum(${payments.platformFeeUsd}), 0)::bigint` })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.organizationId, organizationId),
+          eq(payments.environment, environment),
+          eq(payments.status, "confirmed"),
+          gte(payments.createdAt, since)
+        )
+      )
+      .then((r) => Number(r[0]?.sum ?? 0)),
+  ]);
+
+  const feed = new PriceFeedApi();
+
+  const toUsdCents = async (amount: number, metadata: typeof assets.$inferSelect.metadata) => {
+    const usdPrice = await feed.getAssetUsdPrice(metadata ?? {});
+    return amount * usdPrice * 100;
   };
 
+  const sumUsdCents = (rows: { totalAmount: number; assetMetadata: typeof assets.$inferSelect.metadata }[]) =>
+    Promise.all(rows.map((r) => toUsdCents(Number(r.totalAmount), r.assetMetadata))).then((vals) =>
+      vals.reduce((a, b) => a + b, 0)
+    );
+
+  const [revenueUsdCents, mrrUsdCents] = await Promise.all([sumUsdCents(revenueByAsset), sumUsdCents(mrrByAsset)]);
+
   return {
-    activeTrials: Number(result.metrics.activeTrials),
-    activeSubscriptions: Number(result.metrics.activeSubscriptions),
-    mrr: Number(result.metrics.mrr),
-    revenue: Number(result.periodRevenue),
-    platformFeesUsd: Number(result.periodFeesUsdCents) / 100,
-    totalCustomers: Number(result.metrics.totalCustomers),
-    newCustomers: result.customersChart.reduce((acc, curr) => acc + curr.count, 0),
+    activeTrials: Number(metrics.activeTrials),
+    activeSubscriptions: Number(metrics.activeSubscriptions),
+    mrr: Math.round(mrrUsdCents),
+    revenue: Math.round(revenueUsdCents),
+    platformFeesUsd: Number(periodFeesUsdCents) / 100,
+    totalCustomers: Number(metrics.totalCustomers),
+    newCustomers: customersChart.reduce((acc, curr) => acc + curr.count, 0),
     charts: {
       revenue: normalizeTimeSeries(
-        result.revenueChart.map((r) => ({ date: r.date.split(" ")[0], value: stroopsToXlm(r.amount) })),
+        revenueChart.map((r) => ({ date: r.date.split(" ")[0], value: r.amount })),
         28,
         "day"
       ),
       subscriptions: normalizeTimeSeries(
-        result.subscriptionsChart.map((s) => ({ date: s.date.split(" ")[0], count: s.count })),
+        subscriptionsChart.map((s) => ({ date: s.date.split(" ")[0], count: s.count })),
         28,
         "day"
       ),
       trials: normalizeTimeSeries(
-        result.trialsChart.map((t) => ({ date: t.date.split(" ")[0], count: t.count })),
+        trialsChart.map((t) => ({ date: t.date.split(" ")[0], count: t.count })),
         28,
         "day"
       ),
       customers: normalizeTimeSeries(
-        result.customersChart.map((c) => ({ date: c.date.split(" ")[0], count: c.count })),
+        customersChart.map((c) => ({ date: c.date.split(" ")[0], count: c.count })),
         28,
         "day"
       ),

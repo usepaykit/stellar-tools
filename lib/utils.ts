@@ -165,4 +165,3 @@ export function normalizeTimeSeries<T extends RawDataPoint>(
 }
 
 export const STROOPS_PER_XLM = 10_000_000;
-export const stroopsToXlm = (stroops: number | string) => Number(stroops) / STROOPS_PER_XLM;

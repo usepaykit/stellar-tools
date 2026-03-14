@@ -1,6 +1,6 @@
 "use server";
 
-import { retrieveAssets } from "@/actions/asset";
+import { retrieveAsset, retrieveAssets } from "@/actions/asset";
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import {
@@ -17,7 +17,7 @@ import {
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { CheckoutStatus } from "@/packages/stellartools/dist/schema/checkout";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 
 export const postCheckout = async (
   params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "initialPagingToken">,
@@ -42,18 +42,18 @@ export const postCheckout = async (
 
   const initialPagingToken = $pagingTokenResult.value;
 
-  if (params.asset) {
+  if (params.assetCode) {
     const assetsList = await retrieveAssets(environment);
 
-    const asset = assetsList.find((asset) => asset.code === params.asset);
+    const asset = assetsList.find((asset) => asset.code === params.assetCode);
 
     if (!asset) {
       throw new Error(
-        `Invalid asset code, Only ${assetsList.map((a) => a.code).join(", ")} are supported. Got ${params.asset}`
+        `Invalid asset code, Only ${assetsList.map((a) => a.code).join(", ")} are supported. Got ${params.assetCode}`
       );
     }
 
-    params.asset = asset.id;
+    params.assetCode = asset.code;
   }
 
   return withEvent(
@@ -149,7 +149,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
         recurringPeriod: products.recurringPeriod,
         images: products.images,
       },
-      assets: { code: assets.code, issuer: assets.issuer },
+      assets: { id: assets.id, code: assets.code, issuer: assets.issuer },
       finalAmount: sql<number>`COALESCE(${checkouts.amount}, ${products.priceAmount})`.as("final_amount"),
       merchantPublicKey: sql<string>`
       CASE 
@@ -163,7 +163,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     .leftJoin(customers, eq(checkouts.customerId, customers.id))
     .leftJoin(organizationSecrets, eq(checkouts.organizationId, organizationSecrets.organizationId))
     .leftJoin(products, eq(checkouts.productId, products.id))
-    .leftJoin(assets, eq(products.assetId, assets.id))
+    .leftJoin(assets, or(eq(products.assetId, assets.id), eq(checkouts.assetCode, assets.id)))
     .leftJoin(organizations, eq(checkouts.organizationId, organizations.id))
     .where(eq(checkouts.id, id));
 
@@ -187,6 +187,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     recurringPeriod: product?.recurringPeriod ?? "month",
     customerEmail: customer?.email || checkout.customerEmail,
     customerPhone: customer?.phone || checkout.customerPhone,
+    assetId: assets$1?.id ?? null,
     assetCode: assets$1?.code ?? null,
     assetIssuer: assets$1?.issuer ?? null,
     productImage: product?.images?.[0] ?? null,
@@ -277,9 +278,6 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
   const rawAmount = product?.priceAmount ?? checkout.amount ?? 0;
   const assetCode = asset!.code!;
 
-  // Normalize units (Stellar uses 7 decimal places)
-  const amountNormalized = (rawAmount / 10_000_000).toFixed(7);
-
   const stellar = new StellarCoreApi(result.checkout.environment);
 
   const paymentUri = stellar.makeCheckoutURI({
@@ -291,7 +289,6 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
     id: checkout.id,
     merchantAddress: secret.publicKey,
     amount: rawAmount, // Stroops
-    amountFormatted: amountNormalized, // Lumens
     assetCode,
     paymentUri,
     expiresAt: checkout.expiresAt,

@@ -27,13 +27,18 @@ export interface AppModalOptions {
   secondaryButton?: ModalButtonProps;
   size?: "small" | "medium" | "full";
   showCloseButton?: boolean;
+  onClose?: () => void;
 }
 
-let setGlobalState: (state: { open: boolean; config: AppModalOptions | null }) => void;
+type SetModalState = React.Dispatch<React.SetStateAction<{ open: boolean; config: AppModalOptions | null }>>;
+
+let setGlobalState: SetModalState | null = null;
 
 export const AppModal = {
   open: (options: AppModalOptions) => setGlobalState?.({ open: true, config: options }),
-  close: () => setGlobalState?.({ open: false, config: null }),
+  close: () => setGlobalState?.((prev) => ({ ...prev, open: false, config: null })),
+  updateConfig: (partial: Partial<AppModalOptions>) =>
+    setGlobalState?.((prev) => (prev.config ? { ...prev, config: { ...prev.config, ...partial } } : prev)),
 };
 
 interface AppModalProps extends AppModalOptions {
@@ -106,7 +111,12 @@ export function AppModalProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const close = useCallback(() => setState({ open: false, config: null }), []);
+  const close = useCallback(() => {
+    setState((prev) => {
+      prev.config?.onClose?.();
+      return { open: false, config: null };
+    });
+  }, []);
 
   const generatedFooter =
     state.config?.footer ||

@@ -1,3 +1,7 @@
+import { STROOPS_PER_XLM } from "./utils";
+
+export { STROOPS_PER_XLM };
+
 export const FREE_THRESHOLD_USD = 10_000;
 export const BPS_DENOMINATOR = 10_000; // 1 bps = 1/10_000 (100 bps = 1%)
 
@@ -57,13 +61,15 @@ export function effectivePct(monthlyVolumeUsd: number, fee: number): number {
   return (fee / monthlyVolumeUsd) * 100;
 }
 
-export const STROOPS_PER_XLM = 10_000_000;
-export const XLM_USD_RATE = 0.12; // approximate — swap for a live oracle in production
+/** Fallback rate used when PriceFeedApi is unavailable (e.g. in tests). Do not use in production logic. */
+export const XLM_USD_RATE = 0.12;
 
+/** @deprecated Use PriceFeedApi.getAssetUsdPrice() + STROOPS_PER_XLM for accurate live rates. */
 export function stroopsToUsd(stroops: number): number {
   return (stroops / STROOPS_PER_XLM) * XLM_USD_RATE;
 }
 
+/** @deprecated Use PriceFeedApi.getAssetUsdPrice() + STROOPS_PER_XLM for accurate live rates. */
 export function stroopsToUsdCents(stroops: number): number {
   return Math.round(stroopsToUsd(stroops) * 100);
 }

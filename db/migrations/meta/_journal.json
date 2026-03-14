@@ -15,6 +15,20 @@
       "when": 1773424309129,
       "tag": "0001_outgoing_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773476861233,
+      "tag": "0002_purple_pandemic",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773482427242,
+      "tag": "0003_bent_gertrude_yorkes",
+      "breakpoints": true
     }
   ]
 }

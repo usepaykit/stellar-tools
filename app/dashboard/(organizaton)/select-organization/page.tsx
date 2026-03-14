@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { retrieveAccount } from "@/actions/account";
 import { postOrganizationAndSecret, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
@@ -40,8 +39,13 @@ export default function SelectOrganizationPage() {
   });
 
   const hasOrganizations = !!(organizations && organizations.length > 0);
+  const createModalSubmitRef = React.useRef<(() => void) | null>(null);
+  const [createModalFooterProps, setCreateModalFooterProps] = React.useState({ isPending: false });
+  const isCreateModalOpenRef = React.useRef(false);
 
   const openCreateModal = React.useCallback(() => {
+    isCreateModalOpenRef.current = true;
+    setCreateModalFooterProps({ isPending: false });
     AppModal.open({
       title: "Create Organization",
       description: "Set up your workspace to get started",
@@ -53,13 +57,40 @@ export default function SelectOrganizationPage() {
             AppModal.close();
             router.push("/");
           }}
+          setSubmitRef={createModalSubmitRef}
+          onFooterChange={setCreateModalFooterProps}
         />
       ),
-      footer: null,
+      footer: (
+        <CreateOrganizationModalFooter
+          hasOrganizations={hasOrganizations}
+          onClose={AppModal.close}
+          submitRef={createModalSubmitRef}
+          isPending={createModalFooterProps.isPending}
+        />
+      ),
       size: "full",
       showCloseButton: hasOrganizations,
+      onClose: () => {
+        isCreateModalOpenRef.current = false;
+      },
     });
   }, [hasOrganizations, router]);
+
+  React.useEffect(() => {
+    if (isCreateModalOpenRef.current) {
+      AppModal.updateConfig({
+        footer: (
+          <CreateOrganizationModalFooter
+            hasOrganizations={hasOrganizations}
+            onClose={AppModal.close}
+            submitRef={createModalSubmitRef}
+            isPending={createModalFooterProps.isPending}
+          />
+        ),
+      });
+    }
+  }, [createModalFooterProps.isPending, hasOrganizations]);
 
   React.useEffect(() => {
     if (searchParams?.get("create") === "true") openCreateModal();
@@ -161,6 +192,37 @@ const LoadingSkeleton = () => {
 
 // -- CREATE ORGANIZATION  --
 
+function CreateOrganizationModalFooter({
+  hasOrganizations,
+  onClose,
+  submitRef,
+  isPending,
+}: {
+  hasOrganizations: boolean;
+  onClose: () => void;
+  submitRef: React.RefObject<(() => void) | null>;
+  isPending: boolean;
+}) {
+  return (
+    <div className="flex w-full justify-end gap-3">
+      {hasOrganizations && (
+        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+          Cancel
+        </Button>
+      )}
+      <Button
+        type="button"
+        onClick={() => submitRef.current?.()}
+        disabled={isPending}
+        isLoading={isPending}
+        className="gap-2"
+      >
+        {isPending ? "Creating..." : "Create Organization"}
+      </Button>
+    </div>
+  );
+}
+
 const createOrganizationSchema = z.object({
   name: z.string().min(1, "Name is required"),
   phoneNumber: phoneNumberSchema,
@@ -185,10 +247,14 @@ const CreateOrganizationModalContent = ({
   hasOrganizations,
   onClose,
   onSuccess,
+  setSubmitRef,
+  onFooterChange,
 }: {
   hasOrganizations: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  setSubmitRef: React.MutableRefObject<(() => void) | null>;
+  onFooterChange: (props: { isPending: boolean }) => void;
 }) => {
   const form = RHF.useForm({
     resolver: zodResolver(createOrganizationSchema),
@@ -243,43 +309,38 @@ const CreateOrganizationModalContent = ({
     }
   };
 
+  const handleSubmit = form.handleSubmit((data) => createOrgMutation.mutateAsync(data));
+  const submitForm = React.useCallback(async () => {
+    const isValid = await form.trigger();
+    if (isValid) handleSubmit();
+  }, [form, handleSubmit]);
+
+  React.useEffect(() => {
+    setSubmitRef.current = submitForm;
+    return () => {
+      setSubmitRef.current = null;
+    };
+  }, [setSubmitRef, submitForm]);
+
+  React.useEffect(() => {
+    onFooterChange({ isPending: createOrgMutation.isPending });
+  }, [createOrgMutation.isPending, onFooterChange]);
+
   useHotkeys(
     "mod+enter",
     (e) => {
       e.preventDefault();
-      form.handleSubmit((data) => createOrgMutation.mutateAsync(data))();
+      submitForm();
     },
     {
       enabled: !createOrgMutation.isPending,
       enableOnFormTags: ["input", "textarea"],
     },
-    [createOrgMutation.isPending, form]
+    [createOrgMutation.isPending, submitForm]
   );
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex w-full items-center justify-between border-b pb-4">
-        <div />
-        <div className="flex gap-2">
-          {hasOrganizations && (
-            <Button type="button" variant="ghost" onClick={onClose} disabled={createOrgMutation.isPending}>
-              Cancel
-            </Button>
-          )}
-          <Button
-            type="button"
-            onClick={async () => {
-              const isValid = await form.trigger();
-              if (isValid) createOrgMutation.mutateAsync(form.getValues() as CreateOrganizationFormData);
-            }}
-            disabled={createOrgMutation.isPending}
-            isLoading={createOrgMutation.isPending}
-            className="gap-2"
-          >
-            {createOrgMutation.isPending ? "Creating..." : "Create Organization"}
-          </Button>
-        </div>
-      </div>
       <form
         onSubmit={form.handleSubmit((data) => createOrgMutation.mutateAsync(data))}
         className="grid h-full w-full gap-8 lg:grid-cols-2"

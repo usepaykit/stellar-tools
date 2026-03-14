@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { retrieveOverviewStats } from "@/actions/organization";
+import { getCurrentOrganization, retrieveOverviewStats } from "@/actions/organization";
 import { AppModal } from "@/components/app-modal";
 import { CircularProgress } from "@/components/circular-progress";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -23,83 +23,37 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { TCountryCode, countries } from "countries-list";
-import { ArrowUpRight, ChevronsUpDown, Info } from "lucide-react";
+import { ApiClient } from "@stellartools/core";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowUpRight, ChevronsUpDown, Info, Loader2 } from "lucide-react";
 import Link from "next/link";
 
-const STROOPS_PER_XLM = 10_000_000;
-const XLM_USD_RATE = 0.12;
+type CurrencyItem = { code: string; name: string; symbol: string };
 
-const CURRENCY_RATES: Record<string, number> = {
-  USD: XLM_USD_RATE,
-  EUR: XLM_USD_RATE * 0.92,
-  GBP: XLM_USD_RATE * 0.79,
-  NGN: XLM_USD_RATE * 1600,
-  CAD: XLM_USD_RATE * 1.36,
-  AUD: XLM_USD_RATE * 1.52,
-  CHF: XLM_USD_RATE * 0.88,
-  JPY: XLM_USD_RATE * 149,
-  INR: XLM_USD_RATE * 83,
-  BRL: XLM_USD_RATE * 5.0,
-  MXN: XLM_USD_RATE * 17,
-  ZAR: XLM_USD_RATE * 18,
-};
+const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" });
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: "$",
-  EUR: "€",
-  GBP: "£",
-  NGN: "₦",
-  CAD: "C$",
-  AUD: "A$",
-  CHF: "CHF",
-  JPY: "¥",
-  INR: "₹",
-  BRL: "R$",
-  MXN: "MX$",
-  ZAR: "R",
-};
+function getCurrencySymbol(code: string): string {
+  try {
+    const parts = new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: 0,
+    }).formatToParts(0);
+    return parts.find((p) => p.type === "currency")?.value ?? code;
+  } catch {
+    return code;
+  }
+}
 
-const COUNTRY_ITEMS = (() => {
-  const countryEntries = Object.entries(countries).map(([code, data]) => {
-    const currency = data.currency?.[0] ?? "USD";
-    const rate = CURRENCY_RATES[currency] ?? XLM_USD_RATE;
-    const symbol = CURRENCY_SYMBOLS[currency] ?? currency + " ";
-    return {
-      countryCode: code as TCountryCode,
-      name: data.name,
-      currency,
-      rate,
-      symbol,
-      label: `${data.name} (${currency})`,
-      searchKey: `${data.name} ${data.native} ${currency}`.toLowerCase(),
-    };
-  });
-  countryEntries.sort((a, b) => a.name.localeCompare(b.name));
-  return [
-    {
-      countryCode: "XLM" as const,
-      name: "XLM",
-      currency: "XLM",
-      rate: 1,
-      symbol: "",
-      label: "XLM",
-      searchKey: "xlm stellar",
-    },
-    ...countryEntries,
-  ];
-})();
-
-function stroopsToDisplay(stroops: number, countryCode: string): { value: number; formatted: string } {
-  const xlm = stroops / STROOPS_PER_XLM;
-  const item =
-    COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
-  const useXlm = countryCode === "XLM";
-  const value = useXlm ? xlm : xlm * item.rate;
-  const formatted = useXlm
-    ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " XLM"
-    : item.symbol + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return { value, formatted };
+/** Convert USD cents (from stats) to selected fiat currency for display */
+function usdCentsToDisplay(
+  usdCents: number,
+  item: CurrencyItem | null,
+  fiatRates: Record<string, number> | null
+): string {
+  if (!item || !fiatRates) return "—";
+  const value = (usdCents / 100) * (fiatRates[item.code] ?? 1);
+  return item.symbol + value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 const SPARKLINE_CONFIG = {
@@ -107,19 +61,49 @@ const SPARKLINE_CONFIG = {
 };
 
 export default function DashboardPage() {
-  const [countryCode, setCountryCode] = React.useState<string>("US");
+  const [selectedCode, setSelectedCode] = React.useState<string>("USD");
   const [countryOpen, setCountryOpen] = React.useState(false);
   const { data: orgContext } = useOrgContext();
 
-  const { data: stats, isLoading } = useOrgQuery(
+  const { data: stats, isLoading: isStatsLoading } = useOrgQuery(
     ["overview-stats", orgContext?.id, orgContext?.environment],
     () => retrieveOverviewStats(),
     { staleTime: 60 * 1000 }
   );
 
-  const displayStats = stats;
+  const { data: ratesData, isLoading: isRatesLoading } = useQuery({
+    queryKey: ["rates", "XLM"],
+    queryFn: async () => {
+      const organization = await getCurrentOrganization();
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
+        headers: { "x-auth-token": organization?.token! },
+      });
 
-  if (isLoading || !displayStats) {
+      const result = await api.get<{ data: { assetUsd: number; fiatRates: Record<string, number> } }>(
+        "/rates?asset=XLM&issuer=native"
+      );
+
+      if (result.isErr()) throw new Error(result.error.message);
+
+      return result.value.data;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
+
+  const currencyItems = React.useMemo<CurrencyItem[]>(() => {
+    if (!ratesData) return [];
+    return Object.keys(ratesData.fiatRates)
+      .map((code) => ({ code, name: currencyNames.of(code) ?? code, symbol: getCurrencySymbol(code) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [ratesData]);
+
+  const fiatRates = ratesData?.fiatRates ?? null;
+
+  const selectedItem = currencyItems.find((c) => c.code === selectedCode) ?? null;
+
+  if (isStatsLoading || !stats) {
     return (
       <div className="w-full">
         <DashboardSidebar>
@@ -131,10 +115,10 @@ export default function DashboardPage() {
     );
   }
 
-  const revenue28 = stroopsToDisplay(displayStats.revenue, countryCode);
-  const mrrDisplay = stroopsToDisplay(displayStats.mrr, countryCode);
-  const selectedCountry =
-    COUNTRY_ITEMS.find((c) => c.countryCode === countryCode) ?? COUNTRY_ITEMS.find((c) => c.countryCode === "US")!;
+  const revenue28 = usdCentsToDisplay(stats.revenue, selectedItem, fiatRates);
+  const mrrDisplay = usdCentsToDisplay(stats.mrr, selectedItem, fiatRates);
+
+  console.log({ mrrDisplay, revenue28 });
 
   return (
     <div className="w-full">
@@ -147,33 +131,39 @@ export default function DashboardPage() {
               </div>
               <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={countryOpen}
-                    className="border-border/80 h-9 w-[200px] justify-between rounded-lg font-normal shadow-xs"
-                  >
-                    <span className="truncate">{selectedCountry.label}</span>
-                    <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                  </Button>
+                  {isRatesLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={countryOpen}
+                      className="border-border/80 h-9 w-[200px] justify-between rounded-lg font-normal shadow-xs"
+                    >
+                      <span className="truncate">
+                        {selectedItem ? `${selectedItem.name} (${selectedItem.code})` : "Select currency"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                    </Button>
+                  )}
                 </PopoverTrigger>
                 <PopoverContent className="w-[280px] p-0" align="end" onWheel={(e) => e.stopPropagation()}>
                   <Command>
-                    <CommandInput placeholder="Search country or currency..." />
+                    <CommandInput placeholder="Search currency..." />
                     <CommandList className="max-h-[280px]">
-                      <CommandEmpty>No country found.</CommandEmpty>
+                      <CommandEmpty>No currency found.</CommandEmpty>
                       <CommandGroup>
-                        {COUNTRY_ITEMS.map((item) => (
+                        {currencyItems.map((item) => (
                           <CommandItem
-                            key={item.countryCode}
-                            value={item.searchKey}
+                            key={item.code}
+                            value={`${item.name} ${item.code}`.toLowerCase()}
                             onSelect={() => {
-                              setCountryCode(item.countryCode);
+                              setSelectedCode(item.code);
                               setCountryOpen(false);
                             }}
                           >
-                            <span className={cn("flex-1 truncate", countryCode === item.countryCode && "font-medium")}>
-                              {item.label}
+                            <span className={cn("flex-1 truncate", selectedCode === item.code && "font-medium")}>
+                              {item.name} ({item.code})
                             </span>
                           </CommandItem>
                         ))}
@@ -187,25 +177,25 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
               <StatCard
                 title="Active Trials"
-                value={displayStats.activeTrials}
+                value={stats.activeTrials}
                 subtitle="In total"
                 icon={<HourglassIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.trials}
                 color="var(--chart-1)"
-                usage={displayStats.activeTrials}
+                usage={stats.activeTrials}
               />
               <StatCard
                 title="Active Subscriptions"
-                value={displayStats.activeSubscriptions}
+                value={stats.activeSubscriptions}
                 subtitle="In total"
                 icon={<SubscriptionIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.subscriptions}
                 color="var(--chart-2)"
-                usage={displayStats.activeSubscriptions}
+                usage={stats.activeSubscriptions}
               />
               <StatCard
                 title="MRR"
-                value={mrrDisplay.formatted}
+                value={mrrDisplay}
                 subtitle="Monthly Recurring Revenue"
                 icon={<LoopIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.revenue}
@@ -213,7 +203,7 @@ export default function DashboardPage() {
               />
               <StatCard
                 title="Revenue"
-                value={revenue28.formatted}
+                value={revenue28}
                 subtitle="Last 4 months"
                 icon={<DollarIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.revenue}
@@ -221,7 +211,7 @@ export default function DashboardPage() {
               />
               <StatCard
                 title="New Customers"
-                value={displayStats.newCustomers}
+                value={stats.newCustomers}
                 subtitle="Last 4 months"
                 icon={<AddUserIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.customers}
@@ -230,24 +220,13 @@ export default function DashboardPage() {
               />
               <StatCard
                 title="Active Customers"
-                value={displayStats.totalCustomers}
+                value={stats.totalCustomers}
                 subtitle="In total"
                 icon={<GroupedUsersIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.customers}
                 color="var(--chart-3)"
-                usage={displayStats.totalCustomers}
+                usage={stats.totalCustomers}
               />
-            </div>
-
-            <div className="flex justify-center pt-2">
-              <Link
-                href="https://docs.stellartools.dev"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary hover:bg-muted/50 inline-flex items-center gap-2 rounded-lg border border-transparent px-4 py-2 text-sm font-medium transition-colors"
-              >
-                Explore our integrations
-              </Link>
             </div>
           </div>
         </DashboardSidebarInset>

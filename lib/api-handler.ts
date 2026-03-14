@@ -20,6 +20,7 @@ type HandlerConfig<TBody, TParams, TQuery> = {
     req: NextRequest;
     authToken?: string | null;
   }) => Promise<Result<any, Error>>;
+  headers?: Record<string, string>;
 };
 
 export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: HandlerConfig<TBody, TParams, TQuery>) => {
@@ -85,7 +86,10 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
           return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
         }
 
-        return NextResponse.json({ data: result.value }, { status: 200, headers: corsHeaders });
+        return NextResponse.json(
+          { data: result.value },
+          { status: 200, headers: { ...corsHeaders, ...(config.headers ?? {}) } }
+        );
       }
     } catch (error: any) {
       console.error("[API_ERROR]", error);

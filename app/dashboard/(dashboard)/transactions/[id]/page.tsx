@@ -324,7 +324,6 @@ export default function TransactionDetailPage() {
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <div className="space-y-6 lg:col-span-2">
-                {/* Transaction Information */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold sm:text-xl">Transaction Information</h3>
                   <div className="bg-card space-y-4 rounded-lg border p-4">
@@ -332,7 +331,7 @@ export default function TransactionDetailPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-muted-foreground mb-1 text-xs">Amount</div>
                         <div className="text-2xl font-bold">
-                          {((payment.amount ?? 0) / 1000000).toLocaleString("en-US", {
+                          {(payment.amount ?? 0).toLocaleString("en-US", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 7,
                           })}{" "}
@@ -400,7 +399,6 @@ export default function TransactionDetailPage() {
                   </div>
                 </div>
 
-                {/* Refund Information */}
                 {hasRefund && latestRefund && (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold sm:text-xl">Refund Information</h3>
@@ -526,16 +524,15 @@ export default function TransactionDetailPage() {
                     {customer && (
                       <>
                         <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
+                          <div>
                             <div className="text-muted-foreground mb-1 text-xs">Customer</div>
                             <div className="text-sm font-medium">{customer.name ?? customer.email ?? "—"}</div>
                             {customer.email && <div className="text-muted-foreground text-xs">{customer.email}</div>}
                           </div>
-                          <Button variant="ghost" size="icon-sm" className="h-8 w-8" asChild>
-                            <Link href={`/customers/${customer.id}`}>
-                              <ExternalLink className="h-4 w-4" />
-                            </Link>
-                          </Button>
+
+                          <Link href={`/customers/${customer.id}`}>
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
                         </div>
 
                         <Separator />

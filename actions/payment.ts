@@ -5,20 +5,7 @@ import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import {
-  Customer,
-  Network,
-  Payment,
-  Refund,
-  assets,
-  checkouts,
-  customerWallets,
-  customers,
-  db,
-  payments,
-  products,
-  refunds,
-} from "@/db";
+import { Customer, Network, Payment, Refund, assets, customers, db, payments, refunds } from "@/db";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
@@ -35,9 +22,13 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
     if (payment.status == "confirmed") {
       events.push({
         type: "payment::completed",
-        map: ({ checkoutId, amount, customerId, id: paymentId }) => ({
+        map: ({ checkoutId, amount, customerId, id: paymentId, metadata }) => ({
           customerId: customerId ?? undefined,
-          data: { amount, checkoutId, paymentId },
+          data: {
+            amount: `${amount} ${metadata?.assetCode}`,
+            checkoutId,
+            paymentId,
+          },
         }),
       });
       webhooksTriggers.push({
@@ -49,9 +40,14 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
     if (payment.status == "failed") {
       events.push({
         type: "payment::failed",
-        map: ({ checkoutId, amount, customerId, id: paymentId }) => ({
+        map: ({ checkoutId, amount, customerId, id: paymentId, metadata }) => ({
           customerId: customerId ?? undefined,
-          data: { customerId, amount, checkoutId, paymentId },
+          data: {
+            customerId,
+            amount: `${amount} ${metadata?.assetCode}`,
+            checkoutId,
+            paymentId,
+          },
         }),
       });
       webhooksTriggers.push({
@@ -84,7 +80,7 @@ export const postPayment = async (
   >,
   orgId?: string,
   env?: Network,
-  options?: { customerWalletAddress?: string }
+  options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
@@ -111,6 +107,8 @@ export const postPayment = async (
           organizationId,
           environment,
           customerWalletId,
+          assetId: options?.assetId ?? null,
+          metadata: { ...(params.metadata ?? {}), assetCode: options?.assetCode },
         })
         .returning();
       return payment;
@@ -210,9 +208,7 @@ export const retrievePaymentsWithDetails = async (orgId?: string, env?: Network)
     })
     .from(payments)
     .leftJoin(customers, eq(payments.customerId, customers.id))
-    .leftJoin(checkouts, eq(payments.checkoutId, checkouts.id))
-    .leftJoin(products, eq(checkouts.productId, products.id))
-    .leftJoin(assets, eq(products.assetId, assets.id))
+    .leftJoin(assets, eq(payments.assetId, assets.id))
     .leftJoin(refunds, eq(payments.id, refunds.paymentId))
     .where(and(eq(payments.organizationId, organizationId), eq(payments.environment, environment)))
     .orderBy(desc(payments.createdAt));
@@ -275,7 +271,17 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   if (!checkout || checkout.status !== "open") return checkout;
 
-  const { organizationId, environment, initialPagingToken, merchantPublicKey, productType, customerId } = checkout;
+  const {
+    organizationId,
+    environment,
+    initialPagingToken,
+    merchantPublicKey,
+    productType,
+    customerId,
+    assetId,
+    assetCode,
+    assetIssuer,
+  } = checkout;
 
   const stellar = new StellarCoreApi(environment);
 
@@ -328,23 +334,41 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
     await Promise.all([
       putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
       postPayment(
-        { checkoutId, customerId, amount: parseInt(amount), transactionHash: hash, status: "failed" },
+        {
+          checkoutId,
+          customerId,
+          amount: Number(amount),
+          transactionHash: hash,
+          status: "failed",
+          metadata: null,
+          assetId,
+        },
         organizationId,
-        environment
+        environment,
+        { assetId, assetCode: assetCode ?? undefined }
       ),
     ]);
     return checkout;
   }
 
   const confirmedPayment = await postPayment(
-    { customerId, checkoutId, amount: parseInt(amount), transactionHash: hash, status: "confirmed" },
+    {
+      customerId,
+      checkoutId,
+      amount: Number(amount),
+      transactionHash: hash,
+      status: "confirmed",
+      metadata: null,
+      assetId,
+    },
     organizationId,
-    environment
+    environment,
+    { assetId, assetCode: assetCode ?? undefined }
   );
 
   await Promise.all([
     putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment),
-    applyPaymentFee(confirmedPayment.id, organizationId, parseInt(amount)),
+    applyPaymentFee(confirmedPayment.id, organizationId, Number(amount), assetCode ?? "XLM", assetIssuer),
     customerId
       ? await createCustomerWallet(organizationId, environment, {
           customerId,

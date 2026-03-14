@@ -1,8 +1,10 @@
 "use server";
 
-import { db, organizations, payments } from "@/db";
-import { calculatePaymentFee, stroopsToUsdCents } from "@/lib/pricing";
-import { TIER_FEE_TOKENS, decodeFeeToken, tokenForRateBps } from "@/lib/pricing.server";
+import { assets, db, organizations, payments } from "@/db";
+import type { AssetMetadata } from "@/db/schema";
+import { PriceFeedApi } from "@/integrations/price-feed";
+import { TIER_RATE_BPS, calculatePaymentFee } from "@/lib/pricing";
+import { decodeFeeToken, tokenForRateBps } from "@/lib/pricing.server";
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import moment from "moment";
 
@@ -25,13 +27,27 @@ async function getPrevMonthlyVolumeUsdCents(orgId: string, excludePaymentId?: st
   return prev?.orgMonthlyVolumeUsd ?? 0;
 }
 
-export async function applyPaymentFee(paymentId: string, orgId: string, amountStroops: number): Promise<void> {
-  const prevMonthlyUsdCents = await getPrevMonthlyVolumeUsdCents(orgId, paymentId);
+export async function applyPaymentFee(
+  paymentId: string,
+  orgId: string,
+  amount: string | number, // XLM amount from Horizon (e.g. "1.0000000") or numeric units
+  assetCode = "XLM",
+  assetIssuer?: string | null
+): Promise<void> {
+  const [[assetRow], prevMonthlyUsdCents] = await Promise.all([
+    db
+      .select({ metadata: assets.metadata })
+      .from(assets)
+      .where(and(eq(assets.code, assetCode.toUpperCase()), eq(assets.issuer, assetIssuer ?? "native")))
+      .limit(1),
+    getPrevMonthlyVolumeUsdCents(orgId, paymentId),
+  ]);
 
-  const { feeUsd, rateBps, newMonthlyUsd } = calculatePaymentFee(
-    stroopsToUsdCents(amountStroops) / 100,
-    prevMonthlyUsdCents / 100
-  );
+  const feed = new PriceFeedApi();
+  const assetUsd = await feed.getAssetUsdPrice((assetRow?.metadata ?? {}) as AssetMetadata);
+  const paymentUsd = parseFloat(String(amount)) * assetUsd;
+
+  const { feeUsd, rateBps, newMonthlyUsd } = calculatePaymentFee(paymentUsd, prevMonthlyUsdCents / 100);
 
   await db
     .update(payments)
@@ -50,7 +66,8 @@ export async function applyPaymentFee(paymentId: string, orgId: string, amountSt
     .where(eq(organizations.id, orgId))
     .limit(1);
 
-  const isCustom = org?.feeToken && !Object.values(TIER_FEE_TOKENS).includes(org.feeToken);
+  const currentRateBps = decodeFeeToken(org?.feeToken);
+  const isCustom = !(Object.values(TIER_RATE_BPS) as number[]).includes(currentRateBps);
 
   if (!isCustom && org?.feeToken !== newToken) {
     await db

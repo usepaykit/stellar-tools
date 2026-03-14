@@ -197,11 +197,6 @@ export interface CheckoutEmbedDetails {
   amount: number;
 
   /**
-   * The formatted amount of the checkout.
-   */
-  amountFormatted: string;
-
-  /**
    * The asset code of the checkout.
    */
   assetCode: string;

@@ -364,7 +364,7 @@ const Checkout = {
       <div className="w-full max-w-lg space-y-8 text-center">
         <AnimatedCheckmark />
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Thank you!</h1>
+          <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">Thank you!</h1>
           <p className="text-muted-foreground text-lg">
             {checkout.successMessage || "Your payment was processed successfully."}
           </p>
@@ -397,7 +397,7 @@ const Checkout = {
           <AlertCircle className="text-destructive size-10" />
         </div>
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Payment Failed</h1>
+          <b className="text-3xl font-bold tracking-tight sm:text-4xl">Payment Failed</b>
           <p className="text-muted-foreground">We couldn&apos;t verify your transaction on the ledger.</p>
         </div>
         <div className="rounded-2xl border border-red-100 bg-red-50/50 p-6 text-left sm:p-8">

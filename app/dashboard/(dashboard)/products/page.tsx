@@ -189,13 +189,49 @@ const columns: ColumnDef<Product>[] = [
   },
 ];
 
+function ProductsModalFooter({
+  onClose,
+  submitRef,
+  isPending,
+  isEditMode,
+}: {
+  onClose: () => void;
+  submitRef: React.MutableRefObject<(() => void) | null>;
+  isPending: boolean;
+  isEditMode: boolean;
+}) {
+  return (
+    <div className="flex w-full justify-end gap-3">
+      <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
+        Cancel
+      </Button>
+      <Button
+        type="button"
+        onClick={() => submitRef.current?.()}
+        disabled={isPending}
+        isLoading={isPending}
+      >
+        {isEditMode ? "Update product" : "Add product"}
+      </Button>
+    </div>
+  );
+}
+
 function ProductsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const invalidate = useInvalidateOrgQuery();
   const [selectedStatus, setSelectedStatus] = React.useState<string | null>(null);
+  const productModalSubmitRef = React.useRef<(() => void) | null>(null);
+  const [productModalFooterProps, setProductModalFooterProps] = React.useState({
+    isPending: false,
+    isEditMode: false,
+  });
+  const isProductModalOpenRef = React.useRef(false);
 
   const openCreateModal = React.useCallback(() => {
+    isProductModalOpenRef.current = true;
+    setProductModalFooterProps({ isPending: false, isEditMode: false });
     AppModal.open({
       title: "Add a product",
       description: undefined,
@@ -206,16 +242,30 @@ function ProductsPageContent() {
             invalidate(["products"]);
             AppModal.close();
           }}
+          setSubmitRef={productModalSubmitRef}
+          onFooterChange={(props) => setProductModalFooterProps((prev) => ({ ...prev, ...props }))}
         />
       ),
-      footer: null,
+      footer: (
+        <ProductsModalFooter
+          onClose={AppModal.close}
+          submitRef={productModalSubmitRef}
+          isPending={productModalFooterProps.isPending}
+          isEditMode={productModalFooterProps.isEditMode}
+        />
+      ),
       size: "full",
       showCloseButton: true,
+      onClose: () => {
+        isProductModalOpenRef.current = false;
+      },
     });
   }, [invalidate]);
 
   const openEditModal = React.useCallback(
     (product: Product) => {
+      isProductModalOpenRef.current = true;
+      setProductModalFooterProps({ isPending: false, isEditMode: true });
       AppModal.open({
         title: "Edit product",
         description: undefined,
@@ -227,15 +277,42 @@ function ProductsPageContent() {
               invalidate(["products"]);
               AppModal.close();
             }}
+            setSubmitRef={productModalSubmitRef}
+            onFooterChange={(props) => setProductModalFooterProps((prev) => ({ ...prev, ...props }))}
           />
         ),
-        footer: null,
+        footer: (
+          <ProductsModalFooter
+            onClose={AppModal.close}
+            submitRef={productModalSubmitRef}
+            isPending={productModalFooterProps.isPending}
+            isEditMode={productModalFooterProps.isEditMode}
+          />
+        ),
         size: "full",
         showCloseButton: true,
+        onClose: () => {
+          isProductModalOpenRef.current = false;
+        },
       });
     },
     [invalidate]
   );
+
+  React.useEffect(() => {
+    if (isProductModalOpenRef.current) {
+      AppModal.updateConfig({
+        footer: (
+          <ProductsModalFooter
+            onClose={AppModal.close}
+            submitRef={productModalSubmitRef}
+            isPending={productModalFooterProps.isPending}
+            isEditMode={productModalFooterProps.isEditMode}
+          />
+        ),
+      });
+    }
+  }, [productModalFooterProps.isPending]);
 
   React.useEffect(() => {
     if (searchParams?.get("mode") === "create") openCreateModal();
@@ -413,10 +490,14 @@ export function ProductsModalContent({
   onClose,
   onSuccess,
   editingProduct,
+  setSubmitRef,
+  onFooterChange,
 }: {
   onClose: () => void;
   onSuccess: () => void;
   editingProduct?: Product | null;
+  setSubmitRef?: React.MutableRefObject<(() => void) | null>;
+  onFooterChange?: (props: { isPending: boolean }) => void;
 }) {
   const isEditMode = !!editingProduct;
   const invalidateOrgQuery = useInvalidateOrgQuery();
@@ -608,20 +689,41 @@ export function ProductsModalContent({
     });
   };
 
+  const submitForm = React.useCallback(() => {
+    form.handleSubmit(onSubmit)();
+  }, [form, onSubmit]);
+
+  React.useEffect(() => {
+    if (setSubmitRef) {
+      setSubmitRef.current = submitForm;
+      return () => {
+        setSubmitRef.current = null;
+      };
+    }
+  }, [setSubmitRef, submitForm]);
+
+  React.useEffect(() => {
+    onFooterChange?.({ isPending: putProductMutation.isPending });
+  }, [putProductMutation.isPending, onFooterChange]);
+
+  const showInlineActions = !setSubmitRef;
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-end gap-3 border-b pb-4">
-        <Button variant="outline" onClick={onClose} disabled={putProductMutation.isPending}>
-          Cancel
-        </Button>
-        <Button
-          onClick={form.handleSubmit(onSubmit)}
-          disabled={putProductMutation.isPending}
-          isLoading={putProductMutation.isPending}
-        >
-          {isEditMode ? "Update product" : "Add product"}
-        </Button>
-      </div>
+      {showInlineActions && (
+        <div className="flex justify-end gap-3 border-b pb-4">
+          <Button variant="outline" onClick={onClose} disabled={putProductMutation.isPending}>
+            Cancel
+          </Button>
+          <Button
+            onClick={submitForm}
+            disabled={putProductMutation.isPending}
+            isLoading={putProductMutation.isPending}
+          >
+            {isEditMode ? "Update product" : "Add product"}
+          </Button>
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div className="space-y-6">
           <RHF.Controller

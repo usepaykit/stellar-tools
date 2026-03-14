@@ -17,7 +17,7 @@ export const POST = apiHandler({
   handler: async ({ body, auth: { organizationId, environment } }) => {
     const [payment, asset] = await Promise.all([
       retrievePayment(body.paymentId, organizationId, environment),
-      retrieveAsset(body.assetId),
+      retrieveAsset({ id: body.assetId }, environment),
     ]);
 
     if (!payment) throw new Error("Payment not found");
@@ -41,8 +41,8 @@ export const POST = apiHandler({
           secretKey,
           body.receiverPublicKey,
           asset.code,
-          asset.issuer || "",
-          (body.amount / 10_000_000).toString(), // Convert stroops to XLM,
+          asset.issuer!,
+          String(body.amount),
           txMemo
         );
 

@@ -128,11 +128,11 @@ export default function SignIn() {
             priority
           />
 
-          <h1 className="text-background text-4xl font-bold">
-            Payment infrastructure
+          <h1 className="text-background mb-6 text-4xl leading-[1.1] font-extrabold tracking-normal">
+            The financial infrastructure
             <br />
             for the
-            <em className="text-primary ml-1 italic">blockchain era.</em>
+            <span className="text-primary ml-2">Stellar economy.</span>
           </h1>
 
           <div className="text-background/70 max-w-xs text-sm">

@@ -16,14 +16,13 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { cn, STROOPS_PER_XLM } from "@/lib/utils";
 import { CheckCircle2, ChevronRight, Clock, Copy, ExternalLink, Pause, Play, RefreshCw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 // --- Helpers ---
-const STROOPS_PER_XLM = 10_000_000;
 const formatXLM = (stroops: number) =>
   (stroops / STROOPS_PER_XLM).toLocaleString(undefined, { minimumFractionDigits: 2 });
 const formatDate = (date: Date | string) =>

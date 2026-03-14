@@ -69,7 +69,6 @@ export const POST = async (req: NextRequest) => {
         productId: checkoutType === "product" ? data.productId : null,
         amount: checkoutType === "direct" ? data.amount : null,
         assetCode: checkoutType === "direct" ? data.assetCode : null,
-        asset: checkoutType === "direct" ? data.assetCode : null,
       } as Parameters<typeof postCheckout>[0];
 
       const checkout = await postCheckout(payload as any, auth.organizationId, auth.environment);
