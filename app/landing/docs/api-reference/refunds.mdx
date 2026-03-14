@@ -7,28 +7,39 @@ Refunds send assets back to a receiver address (e.g. customer wallet) for a give
 
 ## Create refund
 
-```http POST /api/refunds
-POST /api/refunds
-x-api-key: your_api_key
-Content-Type: application/json
-
-{
-  "paymentId": "pay_xxx",
-  "assetId": "asset_xxx",
-  "amount": 10000000,
-  "receiverPublicKey": "G...",
-  "customerId": "cust_xxx",
-  "reason": "Customer request",
-  "metadata": {}
-}
-```
-
-- Required: `paymentId`, `assetId`, `amount`, `receiverPublicKey`, `customerId`. Optional: `reason`, `metadata`.
-- `amount` is in stroops (1 XLM = 10,000,000 stroops). For other assets, use the asset’s smallest unit.
-- `receiverPublicKey` is the Stellar account that receives the refund.
-
-**Response** `200`: `{ "data": { refund object } }` or error with validation/state message.
+Required: `paymentId`, `assetId`, `amount`, `receiverPublicKey`, `customerId`. Optional: `reason`, `metadata`. Amount is in stroops (1 XLM = 10,000,000 stroops). For other assets, use the asset's smallest unit. `receiverPublicKey` is the Stellar account that receives the refund. Response `200`: `{ "data": { refund object } }` or error with validation/state message.
 
 <Note>
   Refunds trigger `refund.succeeded` or `refund.failed` webhook events.
 </Note>
+
+<CodeGroup>
+
+```typescript SDK
+const refund = await stellar.refunds.create({
+  paymentId: "pay_xxx",
+  assetId: "asset_xxx",
+  amount: 10000000,
+  receiverPublicKey: "G...",
+  customerId: "cust_xxx",
+  reason: "Customer request",
+  metadata: {},
+});
+```
+
+```bash cURL
+curl -X POST "https://stellartools.dev/api/refunds" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "paymentId": "pay_xxx",
+    "assetId": "asset_xxx",
+    "amount": 10000000,
+    "receiverPublicKey": "G...",
+    "customerId": "cust_xxx",
+    "reason": "Customer request",
+    "metadata": {}
+  }'
+```
+
+</CodeGroup>

@@ -3,7 +3,7 @@ title: 'LangChain Adapter'
 description: 'Meter LangChain model usage with Stellar Tools'
 ---
 
-The LangChain adapter wraps a LangChain **language model** and meters usage (tokens or similar) via Stellar Tools credits. It uses [@stellartools/plugin-sdk](https://github.com/usepaykit/stellar-tools) for preflight, charge, and refund.
+The LangChain adapter wraps a LangChain language model and meters usage (tokens) via Stellar Tools credits. It uses `createMeteredPlugin` from `@stellartools/plugin-sdk` for preflight, charge, and refund.
 
 ## Install
 
@@ -13,7 +13,7 @@ pnpm add langchain-adapter @stellartools/plugin-sdk @langchain/core langchain
 
 ## Usage
 
-Use `createMeteredModel` with your plugin config and a base LangChain model. The returned model supports the same interface (e.g. `invoke`, `stream`, `batch`, `streamEvents`) but charges the given `customerId` for usage.
+Use `createMeteredModel(config, baseModel)` to get a metered model. Pass `customerId` as the first argument to each method; remaining arguments match the base model’s `invoke`, `stream`, `batch`, and `streamEvents`.
 
 ```ts
 import { createMeteredModel } from "langchain-adapter";
@@ -27,26 +27,30 @@ const config = {
 const baseModel = new ChatOpenAI({ model: "gpt-4o", temperature: 0 });
 const meteredModel = createMeteredModel(config, baseModel);
 
-// Use like any LangChain model; pass customerId in options
-const result = await meteredModel.invoke(
-  [{ role: "user", content: "Hello" }],
-  { customerId: "cust_xxx" }
-);
+// customerId is the first argument; then the same args as the base model
+const result = await meteredModel.invoke("cust_xxx", [{ role: "user", content: "Hello" }]);
+
+// Streaming: customerId first, then messages and options
+for await (const chunk of meteredModel.stream("cust_xxx", [messages])) {
+  process.stdout.write(chunk.content);
+}
+
+// Batch and streamEvents also take customerId as first argument
+const results = await meteredModel.batch("cust_xxx", [messages]);
 ```
 
-The adapter:
+Methods:
 
-- Runs a **preflight** check (e.g. balance) before the call.
-- **Charges** the customer based on reported usage (e.g. token count) after the call.
-- On failure, can **refund** so the customer is not charged for failed requests.
-
-Supported operations include **stream**, **batch**, and **streamEvents**; each is metered and tied to the same `customerId` in the run options.
+- `invoke(customerId, input, options?)` — preflight, run, then charge by token usage.
+- `stream(customerId, input, options?)` — preflight, stream, then charge by usage from chunks.
+- `batch(customerId, inputs, options?)` — preflight, batch run, then charge by total usage.
+- `streamEvents(customerId, input, options?)` — preflight, stream events, then charge by usage from `on_chat_model_end` / `on_llm_end`.
 
 ## Config
 
 `createMeteredModel(config, baseModel)` expects:
 
-- **config**: `MeteredPluginConfig` from `@stellartools/plugin-sdk` (`apiKey`, `productId`, etc.).
-- **baseModel**: Any LangChain `BaseLanguageModel` (e.g. `ChatOpenAI`, `ChatAnthropic`).
+- `config`: `MeteredPluginConfig` from `@stellartools/plugin-sdk` (`apiKey`, `productId`).
+- `baseModel`: Any LangChain `BaseLanguageModel` (e.g. `ChatOpenAI`, `ChatAnthropic`).
 
-Ensure your Stellar Tools product is a **credit product** and that customers have sufficient balance; otherwise preflight will fail and the call will not be made.
+Use a Stellar Tools credit product; if the customer has insufficient balance, preflight fails and the call is not made.

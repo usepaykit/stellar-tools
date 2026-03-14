@@ -17,8 +17,8 @@ Stellar Tools adapters plug Stellar payments and metering into your existing sta
 
 ## Core packages
 
-- **@stellartools/core** — REST client for [Checkout](/docs/api-reference/checkout), [Customers](/docs/api-reference/customers), [Webhooks](/docs/api-reference/webhooks), [Subscriptions](/docs/api-reference/subscriptions), [Payments](/docs/api-reference/payments), [Refunds](/docs/api-reference/refunds), [Products](/docs/api-reference/products).
-- **@stellartools/plugin-sdk** — Build metered integrations (preflight, charge, refund, meter). Used by Uploadthing, LangChain, and AI SDK adapters.
+- @stellartools/core — REST client and SDK for [Checkout](/api-reference/checkout), [Customers](/api-reference/customers), [Webhooks](/api-reference/webhooks), [Subscriptions](/api-reference/subscriptions), [Payments](/api-reference/payments), [Refunds](/api-reference/refunds), [Products](/api-reference/products), [Credits](/api-reference/credits).
+- @stellartools/plugin-sdk — `createMeteredPlugin(config)` returns a MeteredPlugin with `preflight`, `charge`, `refund`, `meter`, `gate`. Used by Uploadthing, LangChain, and AI SDK adapters.
 
 ## Quick links
 

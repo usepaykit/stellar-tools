@@ -13,7 +13,7 @@ Get your first checkout working with the Stellar Tools API.
 
 ## Step 1: Create a product (optional)
 
-For a **product-based checkout**, create a product first. For a **direct amount** checkout (e.g. donation), skip to Step 2.
+For a product-based checkout, create a product first. For a direct amount checkout (e.g. donation), skip to Step 2.
 
 ```bash
 curl -X POST https://your-api.com/api/product \
@@ -33,7 +33,7 @@ Use the returned `id` (e.g. `prod_xxx`) as `productId` when creating a checkout.
 
 ## Step 2: Create a checkout
 
-**Product checkout** (use the product ID from Step 1):
+Product checkout (use the product ID from Step 1):
 
 ```bash
 curl -X POST https://your-api.com/api/checkout \
@@ -46,7 +46,7 @@ curl -X POST https://your-api.com/api/checkout \
   }'
 ```
 
-**Direct amount checkout** (no product):
+Direct amount checkout (no product):
 
 ```bash
 curl -X POST https://your-api.com/api/checkout \

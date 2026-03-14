@@ -7,77 +7,121 @@ Customers represent payers. Create a customer to associate checkouts and subscri
 
 ## Create customer
 
-```http POST /api/customers
-POST /api/customers
-x-api-key: your_api_key
-Content-Type: application/json
+Name and email are required; phone, image, and metadata are optional. Image should be a public HTTPS URL. Response `200`: `{ "data": { "id", "name", "email", "phone", "metadata", "createdAt", "wallets": [] } }`
 
-{
-  "name": "Jane Doe",
-  "email": "jane@example.com",
-  "phone": "+1234567890",
-  "image": "https://example.com/jane.png",
-  "metadata": { "source": "web" }
-}
+<CodeGroup>
+
+```typescript SDK
+const customer = await stellar.customers.create({
+  name: "Jane Doe",
+  email: "jane@example.com",
+  phone: "+1234567890",
+  image: "https://example.com/jane.png",
+  metadata: { source: "web" },
+});
 ```
 
-- `name` and `email` are required; `phone`, `image`, and `metadata` are optional. The `image` field should be a public HTTPS URL to the customer's avatar.
+```bash cURL
+curl -X POST "https://stellartools.dev/api/customers" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "phone": "+1234567890",
+    "image": "https://example.com/jane.png",
+    "metadata": { "source": "web" }
+  }'
+```
 
-**Response** `200`: `{ "data": { "id", "name", "email", "phone", "metadata", "createdAt", "wallets": [] } }`
+</CodeGroup>
 
 ---
 
 ## List customers
 
-Returns all customers for the organization. Optionally includes wallet addresses.
+Returns all customers for the organization. Optionally includes wallet addresses. Response `200`: `{ "data": [ { "id", "name", "email", "wallets", ... }, ... ] }`
 
-```http GET /api/customers
-GET /api/customers
-x-api-key: your_api_key
+<CodeGroup>
+
+```typescript SDK
+const customers = await stellar.customers.list({});
 ```
 
-**Response** `200`: `{ "data": [ { "id", "name", "email", "wallets", ... }, ... ] }`
+```bash cURL
+curl -X GET "https://stellartools.dev/api/customers" \
+  -H "x-api-key: your_api_key"
+```
+
+</CodeGroup>
 
 ---
 
 ## Get customer
 
-```http GET /api/customers/:customerId
-GET /api/customers/cust_xxx
-x-api-key: your_api_key
+Response `200`: `{ "data": { customer object } }`
+
+<CodeGroup>
+
+```typescript SDK
+const customer = await stellar.customers.retrieve("cust_xxx");
 ```
 
-**Response** `200`: `{ "data": { customer object } }`
+```bash cURL
+curl -X GET "https://stellartools.dev/api/customers/cust_xxx" \
+  -H "x-api-key: your_api_key"
+```
+
+</CodeGroup>
 
 ---
 
 ## Update customer
 
-```http PUT /api/customers/:customerId
-PUT /api/customers/cust_xxx
-x-api-key: your_api_key
-Content-Type: application/json
+All fields are optional; only include the ones you want to update. Response `200`: `{ "data": { updated customer } }`
 
-{
-  "name": "Jane Smith",
-  "email": "jane.smith@example.com",
-  "phone": "+1234567890",
-  "image": "https://example.com/jane-smith.png",
-  "metadata": {}
-}
+<CodeGroup>
+
+```typescript SDK
+const updated = await stellar.customers.update("cust_xxx", {
+  name: "Jane Smith",
+  email: "jane.smith@example.com",
+  phone: "+1234567890",
+  image: "https://example.com/jane-smith.png",
+  metadata: {},
+});
 ```
 
-All fields are optional; only include the ones you want to update.
+```bash cURL
+curl -X PUT "https://stellartools.dev/api/customers/cust_xxx" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Smith",
+    "email": "jane.smith@example.com",
+    "phone": "+1234567890",
+    "image": "https://example.com/jane-smith.png",
+    "metadata": {}
+  }'
+```
 
-**Response** `200`: `{ "data": { updated customer } }`
+</CodeGroup>
 
 ---
 
 ## Delete customer
 
-```http DELETE /api/customers/:customerId
-DELETE /api/customers/cust_xxx
-x-api-key: your_api_key
+Response `200`: `{ "data": null }`
+
+<CodeGroup>
+
+```typescript SDK
+await stellar.customers.delete("cust_xxx");
 ```
 
-**Response** `200`: `{ "data": null }`
+```bash cURL
+curl -X DELETE "https://stellartools.dev/api/customers/cust_xxx" \
+  -H "x-api-key: your_api_key"
+```
+
+</CodeGroup>

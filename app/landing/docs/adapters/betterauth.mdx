@@ -3,7 +3,7 @@ title: 'Better Auth Adapter'
 description: 'Billing plugin for Better Auth: customers, subscriptions, refunds, credits'
 ---
 
-The Better Auth adapter adds a **billing plugin** to [Better Auth](https://www.better-auth.com): it links users to Stellar customers and exposes session-protected endpoints for customers, subscriptions, refunds, and credits.
+The Better Auth adapter adds a billing plugin to [Better Auth](https://www.better-auth.com): it links users to Stellar customers and exposes session-protected endpoints for customers, subscriptions, refunds, and credits.
 
 ## Install
 
@@ -11,20 +11,20 @@ The Better Auth adapter adds a **billing plugin** to [Better Auth](https://www.b
 pnpm add @stellartools/betterauth-adapter
 ```
 
-## Database schema
+## Configure
 
-Add the plugin’s user field so Better Auth can store the Stellar customer ID:
+Use `stellarTools(config)` and add it to your Better Auth plugins. The plugin adds `user.stellarCustomerId` to the schema (string, optional, unique). Run migrations so your `user` table has a `stellarCustomerId` column.
 
 ```ts
 import { betterAuth } from "better-auth";
-import { createBilling } from "@stellartools/betterauth-adapter";
+import { stellarTools } from "@stellartools/betterauth-adapter";
 
 export const auth = betterAuth({
   database: { ... },
   plugins: [
-    createBilling({
+    stellarTools({
       apiKey: process.env.STELLAR_TOOLS_API_KEY!,
-      createCustomerOnSignUp: true, // optional: create Stellar customer on sign up
+      createCustomerOnSignUp: true,
       creditLowThreshold: 10,
       onCustomerCreated: async (customer) => { /* optional */ },
       onCreditsLow: async (data) => { /* optional */ },
@@ -34,26 +34,23 @@ export const auth = betterAuth({
 });
 ```
 
-The plugin schema adds:
-
-- `user.stellarCustomerId` (string, optional, unique)
-
-Run migrations so your `user` table has a `stellarCustomerId` column.
-
-## Plugin options
+## Plugin options (BillingConfig)
 
 | Option | Type | Description |
 |--------|------|-------------|
 | `apiKey` | `string` | Stellar Tools API key (required). |
-| `createCustomerOnSignUp` | `boolean` | Create a Stellar customer when a user signs up (default: `false`). |
-| `creditLowThreshold` | `number` | Trigger `onCreditsLow` when balance is at or below this (default: `10`). |
+| `createCustomerOnSignUp` | `boolean` | Create a Stellar customer when a user signs up (default: false). |
+| `creditLowThreshold` | `number` | Trigger `onCreditsLow` when balance is at or below this (default: 10). |
 | `onCustomerCreated` | `(customer: Customer) => Promise<void>` | Called when a Stellar customer is created/linked. |
+| `onCheckoutComplete` | `(data: Checkout) => Promise<void>` | Optional. |
 | `onCreditsLow` | `(data: CreditBalance) => Promise<void>` | Called when credits are low after a consume. |
-| `onSubscriptionCreated` | `(data: Subscription) => Promise<void>` | Called when a subscription is created. |
+| `onSubscriptionCreated` | `(data: Subscription) => Promise<void>` | Optional. |
+| `onSubscriptionCanceled` | `(data: Subscription) => Promise<void>` | Optional. |
+| `onSubscriptionUpdated` | `(data: Subscription) => Promise<void>` | Optional. |
 
 ## Endpoints
 
-All endpoints require a **session** (Better Auth session middleware). The plugin creates or retrieves a Stellar customer per user and stores `stellarCustomerId` on the user.
+All endpoints require a session (Better Auth session middleware). The plugin creates or retrieves a Stellar customer per user and stores `stellarCustomerId` on the user.
 
 ### Customers
 
@@ -67,7 +64,7 @@ All endpoints require a **session** (Better Auth session middleware). The plugin
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/stellar/subscription/create` | Create subscription (body: `productId`, `period`, `cancelAtPeriodEnd`, optional `metadata`). |
+| `POST` | `/stellar/subscription/create` | Create subscription (body: `productId`, `period` (from, to), `cancelAtPeriodEnd`, optional `metadata`). |
 | `GET` | `/stellar/subscription/list` | List subscriptions for the current user’s customer. |
 
 ### Credits

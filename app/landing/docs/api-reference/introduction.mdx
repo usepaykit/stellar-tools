@@ -6,23 +6,16 @@ description: "Stellar Tools REST API for checkouts, customers, payments, webhook
 ## Base URL
 
 ```
-https://your-domain.com/api
+https://stellartools.dev/api
 ```
 
 For local development: `http://localhost:3000/api`
 
 ## Authentication
 
-Authenticate using one of the following headers:
+Send your API key in the `x-api-key` header. If auth is missing, endpoints return `400` with `{ "error": "API key or session token is required" }`.
 
-| Header         | Use case                                     |
-| -------------- | -------------------------------------------- |
-| `x-api-key`    | Server-side or dashboard API key             |
-| `x-auth-token` | User session (e.g. dashboard logged-in user) |
-
-All endpoints that require auth return `400` with `{ "error": "API key or session token is required" }` when missing.
-
-<Note>Get your API key from your Stellar Tools dashboard (Settings → API Keys).</Note>
+<Note>Get your API key from the StellarTools dashboard (Settings → API Keys).</Note>
 
 ## API resources
 
@@ -36,15 +29,6 @@ All endpoints that require auth return `400` with `{ "error": "API key or sessio
 | [Refunds](/api-reference/refunds)             | Create refunds for payments                                    |
 | [Products](/api-reference/products)           | Create products (one-time, subscription, or metered)           |
 | [Credits](/api-reference/credits)             | Manage credit balances and usage for metered billing           |
-| [Payout](/api-reference/payout)               | Send payouts to a Stellar address (session only)               |
-
-## Stellar discovery (SEP-1)
-
-For wallet and client discovery, the API exposes:
-
-- **Organization stellar.toml** — `GET https://{orgId}.stellartools.io/.well-known/stellar.toml` (or your org subdomain). Query `?mode=testnet` or `?mode=mainnet` for network. Returns TOML with `CURRENCIES`, `ACCOUNTS`, `WEB_AUTH_ENDPOINT`, and org info.
-- **Platform stellar.toml** — `GET /api/.well-known/stellar.toml?mode=mainnet|testnet` returns network passphrase and `URI_REQUEST_SIGNING_KEY` for SEP-7.
-- **SEP-1 org info** — `GET /api/sep1?mode=mainnet|testnet` (host-based org) returns TOML for the requesting organization.
 
 ## Response format
 

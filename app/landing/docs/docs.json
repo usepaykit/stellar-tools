@@ -56,8 +56,7 @@
               "api-reference/payments",
               "api-reference/refunds",
               "api-reference/products",
-              "api-reference/credits",
-              "api-reference/payout"
+              "api-reference/credits"
             ]
           }
         ]

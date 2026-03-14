@@ -7,120 +7,172 @@ Subscriptions are recurring payments tied to a product of type `subscription` an
 
 ## Create subscriptions (bulk)
 
-Creates subscriptions for multiple customers on a subscription product. Each customer must have a Stellar wallet.
+Creates subscriptions for multiple customers on a subscription product. Each customer must have a Stellar wallet. Response `200`: `{ "data": { "count": 2, "failed": [] } }`. The `failed` array lists any customers that could not be subscribed (e.g. missing wallet).
 
-```http POST /api/subscriptions
-POST /api/subscriptions
-x-api-key: your_api_key
-Content-Type: application/json
+<CodeGroup>
 
-{
-  "productId": "prod_sub_xxx",
-  "customerIds": ["cust_1", "cust_2"],
-  "period": {
-    "from": "2025-01-01T00:00:00.000Z",
-    "to": "2025-02-01T00:00:00.000Z"
+```typescript SDK
+const result = await stellar.subscriptions.create({
+  productId: "prod_sub_xxx",
+  customerIds: ["cust_1", "cust_2"],
+  period: {
+    from: "2025-01-01T00:00:00.000Z",
+    to: "2025-02-01T00:00:00.000Z",
   },
-  "cancelAtPeriodEnd": false
-}
+  cancelAtPeriodEnd: false,
+});
 ```
 
-**Response** `200`: `{ "data": { "count": 2, "failed": [] } }` — `failed` lists any customers that could not be subscribed (e.g. missing wallet).
+```bash cURL
+curl -X POST "https://stellartools.dev/api/subscriptions" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "prod_sub_xxx",
+    "customerIds": ["cust_1", "cust_2"],
+    "period": {
+      "from": "2025-01-01T00:00:00.000Z",
+      "to": "2025-02-01T00:00:00.000Z"
+    },
+    "cancelAtPeriodEnd": false
+  }'
+```
+
+</CodeGroup>
 
 ---
 
 ## List subscriptions
 
-```http GET /api/subscriptions
-GET /api/subscriptions?customerId=cust_xxx
-x-api-key: your_api_key
+Response `200`: `{ "data": [ { subscription objects } ] }`
+
+<CodeGroup>
+
+```typescript SDK
+const subscriptions = await stellar.subscriptions.list("cust_xxx");
 ```
 
-**Response** `200`: `{ "data": [ { subscription objects } ] }`
+```bash cURL
+curl -X GET "https://stellartools.dev/api/subscriptions?customerId=cust_xxx" \
+  -H "x-api-key: your_api_key"
+```
+
+</CodeGroup>
 
 ---
 
 ## Get subscription
 
-```http GET /api/subscriptions/:id
-GET /api/subscriptions/sub_xxx
-x-api-key: your_api_key
+Response `200`: `{ "data": { subscription object } }`
+
+<CodeGroup>
+
+```typescript SDK
+const subscription = await stellar.subscriptions.retrieve("sub_xxx");
 ```
 
-**Response** `200`: `{ "data": { subscription object } }`
+```bash cURL
+curl -X GET "https://stellartools.dev/api/subscriptions/sub_xxx" \
+  -H "x-api-key: your_api_key"
+```
+
+</CodeGroup>
 
 ---
 
 ## Update subscription
 
-Update metadata or set `cancelAtPeriodEnd`.
+Update metadata or set `cancelAtPeriodEnd`. Response `200`: `{ "data": { updated subscription } }`
 
-```http PUT /api/subscriptions/:id
-PUT /api/subscriptions/sub_xxx
-x-api-key: your_api_key
-Content-Type: application/json
+<CodeGroup>
 
-{
-  "metadata": { "plan": "pro" },
-  "cancelAtPeriodEnd": true
-}
+```typescript SDK
+const updated = await stellar.subscriptions.update("sub_xxx", {
+  metadata: { plan: "pro" },
+  cancelAtPeriodEnd: true,
+});
 ```
 
-**Response** `200`: `{ "data": { updated subscription } }`
+```bash cURL
+curl -X PUT "https://stellartools.dev/api/subscriptions/sub_xxx" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metadata": { "plan": "pro" },
+    "cancelAtPeriodEnd": true
+  }'
+```
+
+</CodeGroup>
 
 ---
 
 ## Pause subscription
 
-Pauses the subscription on-chain. Requires `customerAddress` (Stellar public key) and `productId`.
+Pauses the subscription on-chain. The REST API may require `customerAddress` (Stellar public key) and `productId` in the body. Response `200`: `{ "data": { subscription } }`
 
-```http POST /api/subscriptions/:id/pause
-POST /api/subscriptions/sub_xxx/pause
-x-api-key: your_api_key
-Content-Type: application/json
+<CodeGroup>
 
-{
-  "customerAddress": "G...",
-  "productId": "prod_xxx"
-}
+```typescript SDK
+const subscription = await stellar.subscriptions.pause("sub_xxx");
 ```
 
-**Response** `200`: `{ "data": { subscription } }`
+```bash cURL
+curl -X POST "https://stellartools.dev/api/subscriptions/sub_xxx/pause" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerAddress": "G...",
+    "productId": "prod_xxx"
+  }'
+```
+
+</CodeGroup>
 
 ---
 
 ## Resume subscription
 
-Resumes a paused subscription. Body must include `customerAddress` and `productId`.
+Resumes a paused subscription. REST body must include `customerAddress` and `productId`. Response `200`: `{ "data": { updated subscription } }`
 
-```http POST /api/subscriptions/:id/resume
-POST /api/subscriptions/sub_xxx/resume
-x-api-key: your_api_key
-Content-Type: application/json
+<CodeGroup>
 
-{
-  "customerAddress": "G...",
-  "productId": "prod_xxx"
-}
+```typescript SDK
+const subscription = await stellar.subscriptions.resume("sub_xxx");
 ```
 
-**Response** `200`: `{ "data": { updated subscription } }`
+```bash cURL
+curl -X POST "https://stellartools.dev/api/subscriptions/sub_xxx/resume" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerAddress": "G...",
+    "productId": "prod_xxx"
+  }'
+```
+
+</CodeGroup>
 
 ---
 
 ## Cancel subscription
 
-Cancels the subscription on-chain and updates status. Body must include `customerAddress` and `productId`.
+Cancels the subscription on-chain and updates status. REST body must include `customerAddress` and `productId`. Response `200`: `{ "data": { subscription } }`
 
-```http POST /api/subscriptions/:id/cancel
-POST /api/subscriptions/sub_xxx/cancel
-x-api-key: your_api_key
-Content-Type: application/json
+<CodeGroup>
 
-{
-  "customerAddress": "G...",
-  "productId": "prod_xxx"
-}
+```typescript SDK
+const subscription = await stellar.subscriptions.cancel("sub_xxx");
 ```
 
-**Response** `200`: `{ "data": { subscription } }`
+```bash cURL
+curl -X POST "https://stellartools.dev/api/subscriptions/sub_xxx/cancel" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customerAddress": "G...",
+    "productId": "prod_xxx"
+  }'
+```
+
+</CodeGroup>

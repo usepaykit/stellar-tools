@@ -24,62 +24,102 @@ Webhooks send HTTP POST requests to your URL when events occur (e.g. `payment.co
 
 ## Create webhook
 
-```http POST /api/webhooks
-POST /api/webhooks
-x-api-key: your_api_key
-Content-Type: application/json
+If `secret` is omitted and you use a session token, a secret is auto-generated. Use the returned `secret` to verify signatures. Response `200`: `{ "data": { "id", "url", "events", "secret", "name", "description", "isDisabled", ... } }`
 
-{
-  "name": "Production webhooks",
-  "url": "https://yoursite.com/webhooks/stellar",
-  "events": ["payment.confirmed", "subscription.canceled"],
-  "description": "Optional description",
-  "secret": "optional_custom_secret"
-}
+<CodeGroup>
+
+```typescript SDK
+const webhook = await stellar.webhooks.create({
+  name: "Production webhooks",
+  url: "https://yoursite.com/webhooks/stellar",
+  events: ["payment.confirmed", "subscription.canceled"],
+  description: "Optional description",
+  secret: "optional_custom_secret",
+});
 ```
 
-If `secret` is omitted and you use session token, a secret is auto-generated. Use the returned `secret` to verify signatures.
+```bash cURL
+curl -X POST "https://stellartools.dev/api/webhooks" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production webhooks",
+    "url": "https://yoursite.com/webhooks/stellar",
+    "events": ["payment.confirmed", "subscription.canceled"],
+    "description": "Optional description",
+    "secret": "optional_custom_secret"
+  }'
+```
 
-**Response** `200`: `{ "data": { "id", "url", "events", "secret", "name", "description", "isDisabled", ... } }`
+</CodeGroup>
 
 ---
 
 ## Get webhook
 
-```http GET /api/webhooks/:id
-GET /api/webhooks/whsec_xxx
-x-api-key: your_api_key
+Response `200`: `{ "data": { webhook object } }`
+
+<CodeGroup>
+
+```typescript SDK
+const webhook = await stellar.webhooks.retrieve("whsec_xxx");
 ```
 
-**Response** `200`: `{ "data": { webhook object } }`
+```bash cURL
+curl -X GET "https://stellartools.dev/api/webhooks/whsec_xxx" \
+  -H "x-api-key: your_api_key"
+```
+
+</CodeGroup>
 
 ---
 
 ## Update webhook
 
-```http PUT /api/webhooks/:id
-PUT /api/webhooks/whsec_xxx
-x-api-key: your_api_key
-Content-Type: application/json
+Response `200`: `{ "data": { updated webhook } }`
 
-{
-  "name": "Updated name",
-  "url": "https://yoursite.com/webhooks/new",
-  "events": ["payment.confirmed", "refund.succeeded"],
-  "description": "Optional",
-  "isDisabled": false
-}
+<CodeGroup>
+
+```typescript SDK
+const updated = await stellar.webhooks.update("whsec_xxx", {
+  name: "Updated name",
+  url: "https://yoursite.com/webhooks/new",
+  events: ["payment.confirmed", "refund.succeeded"],
+  description: "Optional",
+  isDisabled: false,
+});
 ```
 
-**Response** `200`: `{ "data": { updated webhook } }`
+```bash cURL
+curl -X PUT "https://stellartools.dev/api/webhooks/whsec_xxx" \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated name",
+    "url": "https://yoursite.com/webhooks/new",
+    "events": ["payment.confirmed", "refund.succeeded"],
+    "description": "Optional",
+    "isDisabled": false
+  }'
+```
+
+</CodeGroup>
 
 ---
 
 ## Delete webhook
 
-```http DELETE /api/webhooks/:id
-DELETE /api/webhooks/whsec_xxx
-x-api-key: your_api_key
+Response `200`: `{ "data": { "success": true } }`
+
+<CodeGroup>
+
+```typescript SDK
+await stellar.webhooks.delete("whsec_xxx");
 ```
 
-**Response** `200`: `{ "data": { "success": true } }`
+```bash cURL
+curl -X DELETE "https://stellartools.dev/api/webhooks/whsec_xxx" \
+  -H "x-api-key: your_api_key"
+```
+
+</CodeGroup>
