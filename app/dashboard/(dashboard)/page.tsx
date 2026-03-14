@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useCookieState } from "@/hooks/use-cookie-state";
 import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { ApiClient } from "@stellartools/core";
@@ -61,7 +62,7 @@ const SPARKLINE_CONFIG = {
 };
 
 export default function DashboardPage() {
-  const [selectedCode, setSelectedCode] = React.useState<string>("USD");
+  const [selectedCode, setSelectedCode] = useCookieState("dashboard_currency", "USD");
   const [countryOpen, setCountryOpen] = React.useState(false);
   const { data: orgContext } = useOrgContext();
 
