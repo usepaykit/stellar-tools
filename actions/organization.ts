@@ -438,12 +438,15 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
 
   const excludeRefundedPayments = sql`${payments.id} NOT IN (SELECT ${refunds.paymentId} FROM ${refunds} WHERE ${refunds.organizationId} = ${organizationId} AND ${refunds.environment} = ${environment} AND ${refunds.status} = 'succeeded')`;
 
-  const revenueChartQuery = db
+  // Revenue chart: by day and asset so we can convert to USD cents (same as total revenue)
+  const revenueChartByAssetQuery = db
     .select({
       date: sql<string>`date_trunc('day', ${payments.createdAt})::text`,
+      assetMetadata: assets.metadata,
       amount: sql<number>`sum(${payments.amount})::bigint`,
     })
     .from(payments)
+    .leftJoin(assets, eq(payments.assetId, assets.id))
     .where(
       and(
         eq(payments.organizationId, organizationId),
@@ -453,7 +456,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
         excludeRefundedPayments
       )
     )
-    .groupBy(sql`1`)
+    .groupBy(sql`date_trunc('day', ${payments.createdAt})`, assets.id)
     .orderBy(sql`1`);
 
   // Revenue grouped by asset — direct join now that payments.assetId exists
@@ -526,7 +529,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
 
   const [
     metrics,
-    revenueChart,
+    revenueChartByAsset,
     customersChart,
     subscriptionsChart,
     trialsChart,
@@ -535,7 +538,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     periodFeesUsdCents,
   ] = await Promise.all([
     metricsPromise,
-    revenueChartQuery,
+    revenueChartByAssetQuery,
     customersChartQuery,
     subscriptionsChartQuery,
     trialsChartQuery,
@@ -567,7 +570,23 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
       vals.reduce((a, b) => a + b, 0)
     );
 
-  const [revenueUsdCents, mrrUsdCents] = await Promise.all([sumUsdCents(revenueByAsset), sumUsdCents(mrrByAsset)]);
+  const [revenueUsdCents, mrrUsdCents, revenueChartUsdCentsByDate] = await Promise.all([
+    sumUsdCents(revenueByAsset),
+    sumUsdCents(mrrByAsset),
+    (async () => {
+      const withCents = await Promise.all(
+        revenueChartByAsset.map(async (r) => ({
+          date: r.date.split(" ")[0],
+          cents: await toUsdCents(Number(r.amount), r.assetMetadata),
+        }))
+      );
+      const byDate = new Map<string, number>();
+      for (const { date, cents } of withCents) {
+        byDate.set(date, Math.round((byDate.get(date) ?? 0) + cents));
+      }
+      return Array.from(byDate.entries(), ([date, value]) => ({ date, value }));
+    })(),
+  ]);
 
   return {
     activeTrials: Number(metrics.activeTrials),
@@ -578,11 +597,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     totalCustomers: Number(metrics.totalCustomers),
     newCustomers: customersChart.reduce((acc, curr) => acc + curr.count, 0),
     charts: {
-      revenue: normalizeTimeSeries(
-        revenueChart.map((r) => ({ date: r.date.split(" ")[0], value: r.amount })),
-        28,
-        "day"
-      ),
+      revenue: normalizeTimeSeries(revenueChartUsdCentsByDate, 28, "day"),
       subscriptions: normalizeTimeSeries(
         subscriptionsChart.map((s) => ({ date: s.date.split(" ")[0], count: s.count })),
         28,

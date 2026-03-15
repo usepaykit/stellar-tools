@@ -108,7 +108,7 @@ export const PayoutReceipt = ({
           <View style={styles.rowLast}>
             <Text style={styles.label}>Wallet Address</Text>
             <Text style={[styles.value, styles.addressText]}>
-              {truncate(payout.walletAddress, { start: 20, end: 10 })}
+              {truncate(payout.walletAddress ?? "", { start: 20, end: 10 })}
             </Text>
           </View>
 
