@@ -1,7 +1,8 @@
 "use server";
 
+import { resolveOrgContext } from "@/actions/organization";
 import { AssetCode } from "@/constant/schema.client";
-import { Asset, Network, assets, db } from "@/db";
+import { Asset, Network, assets, db, products } from "@/db";
 import { SQL, and, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -50,6 +51,21 @@ export const retrieveAssets = async (env: Network, filters?: { assetCodes?: Asse
     .where(
       and(eq(assets.environment, env), ...(filters?.assetCodes ? [inArray(assets.code, filters.assetCodes)] : []))
     );
+};
+
+export const retrieveAssetsFromProducts = async (orgId?: string, env?: Network): Promise<Asset[]> => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const rows = await db
+    .select({ assetId: products.assetId })
+    .from(products)
+    .where(and(eq(products.organizationId, organizationId), eq(products.environment, environment)));
+
+  const ids = [...new Set(rows.map((r) => r.assetId).filter(Boolean))] as string[];
+
+  if (ids.length === 0) return [];
+
+  return await db.select().from(assets).where(inArray(assets.id, ids));
 };
 
 export const putAsset = async (id: string, asset: Partial<Asset>) => {

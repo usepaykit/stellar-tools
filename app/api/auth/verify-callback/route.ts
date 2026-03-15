@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
       { ...stateData }
     );
 
-    return NextResponse.redirect(new URL(`/select-organization`, process.env.NEXT_PUBLIC_DASHBOARD_URL!));
+    return NextResponse.redirect(new URL(`/`, process.env.NEXT_PUBLIC_DASHBOARD_URL!));
   } catch (error) {
     console.error("OAuth callback error:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");

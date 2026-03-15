@@ -335,22 +335,37 @@ export const payments = pgTable("payment", {
 
 export const payoutStatusEnum = pgEnum("payout_status", payoutStatusEnum$1);
 
-export const payouts = pgTable("payout", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id),
-  amount: integer("amount").notNull(),
-  status: payoutStatusEnum("status").notNull(),
-  walletAddress: text("wallet_address").notNull(),
-  asset: text("asset").references(() => assets.id),
-  memo: text("memo"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  completedAt: timestamp("completed_at"),
-  metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-  environment: networkEnum("network").notNull(),
-  transactionHash: text("transaction_hash").notNull().unique(),
-});
+export const payouts = pgTable(
+  "payout",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    amount: integer("amount").notNull(),
+    status: payoutStatusEnum("status").notNull(),
+    walletAddress: text("wallet_address"),
+    asset: text("asset").references(() => assets.id),
+    memo: text("memo"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+    metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+    environment: networkEnum("network").notNull(),
+    transactionHash: text("transaction_hash").unique(),
+    stringifiedBankAccount: text("stringified_bank_account"),
+    withdrawalReceiptUrl: text("withdrawal_receipt_url"),
+  },
+  (table) => ({
+    assetOrStringifiedBankAccountCheck: check(
+      "asset_or_stringified_bank_account_check",
+      sql`${table.asset} IS NOT NULL OR ${table.stringifiedBankAccount} IS NOT NULL`
+    ),
+    transactionHashOrWithdrawalReceiptUrlCheck: check(
+      "transaction_hash_or_withdrawal_receipt_url_check",
+      sql`${table.transactionHash} IS NOT NULL OR ${table.withdrawalReceiptUrl} IS NOT NULL`
+    ),
+  })
+);
 
 export const webhooks = pgTable("webhook", {
   id: text("id").primaryKey(),

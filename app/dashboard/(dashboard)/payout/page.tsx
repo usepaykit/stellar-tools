@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrieveAssets } from "@/actions/asset";
+import { retrieveAssetsFromProducts } from "@/actions/asset";
 import { retrievePayouts } from "@/actions/payout";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -10,38 +10,27 @@ import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
 import { NumberField } from "@/components/number-field";
 import { SelectInput } from "@/components/select+input";
+import { SelectNumberField } from "@/components/select+number-field";
 import { TextField } from "@/components/text-field";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "@/components/ui/toast";
+import {
+  UnderlineTabs,
+  UnderlineTabsContent,
+  UnderlineTabsList,
+  UnderlineTabsTrigger,
+} from "@/components/underline-tabs";
 import { PayoutStatus } from "@/constant/schema.client";
-import { Asset, Payout } from "@/db";
+import { Payout } from "@/db";
 import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import {
-  ArrowRight,
-  Banknote,
-  Building2,
-  Calendar,
-  CheckCircle2,
-  ChevronsUpDown,
-  Circle,
-  Clock,
-  Coins,
-  ExternalLink,
-  Info,
-  Loader2,
-  Plus,
-  Wallet,
-  XCircle,
-} from "lucide-react";
+import { ArrowRight, Banknote, CheckCircle2, Clock, ExternalLink, Loader2, Plus, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
 import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
@@ -49,51 +38,27 @@ import { z } from "zod";
 
 import { generateAndDownloadReceipt } from "./[id]/page";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type StellarBalance = {
-  balance: string;
-  asset_type: string;
-  asset_code?: string;
-  asset_issuer?: string;
-};
-
-type AnchorTransaction = {
-  id: string;
-  status: string;
-  amount_in?: string;
-  amount_out?: string;
-  amount_out_asset?: string;
-  amount_fee?: string;
-  withdraw_anchor_account?: string;
-  withdraw_memo?: string;
-  withdraw_memo_type?: string;
-  message?: string;
-  more_info_url?: string;
-};
-
-type AnchorSession = {
-  url: string;
-  id: string;
-  transferServer: string;
-  anchorJwt: string;
-};
-
-type BankStep = "select" | "interactive" | "sending" | "tracking" | "complete";
+// --- Constants & Types ---
 
 const SUPPORTED_PAYOUT_COUNTRIES = ["NGN", "GHS"] as const;
 
-type CurrencyItem = { code: string; name: string };
-const currencyNames = new Intl.DisplayNames(["en"], { type: "currency" });
+type StellarBalance = { balance: string; asset_type: string; asset_code?: string; asset_issuer?: string };
+type AnchorTransaction = {
+  id: string;
+  status: string;
+  amount_out?: string;
+  amount_out_asset?: string;
+  message?: string;
+  withdraw_anchor_account?: string;
+  withdraw_memo?: string;
+};
+type AnchorSession = { url: string; id: string; transferServer: string; anchorJwt: string };
+type BankStep = "select" | "interactive" | "sending" | "tracking" | "complete";
 
-// ---------------------------------------------------------------------------
-// Status badge
-// ---------------------------------------------------------------------------
+// --- Components ---
 
 const StatusBadge = ({ status }: { status: PayoutStatus }) => {
-  const variants = {
+  const config = {
     pending: {
       className: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
       icon: Clock,
@@ -109,538 +74,264 @@ const StatusBadge = ({ status }: { status: PayoutStatus }) => {
       icon: XCircle,
       label: "Failed",
     },
-  };
-
-  const variant = variants[status];
-  const Icon = variant.icon;
+  }[status];
 
   return (
-    <Badge variant="outline" className={cn("gap-1.5 border", variant.className)}>
-      <Icon className="h-3 w-3" />
-      {variant.label}
+    <Badge variant="outline" className={cn("gap-1.5 border", config.className)}>
+      <config.icon className="h-3 w-3" />
+      {config.label}
     </Badge>
   );
 };
 
-const PayoutMethodDisplay = ({ method }: { method: Payout["walletAddress"] }) => (
-  <div className="flex items-center gap-2">
-    <Wallet className="text-muted-foreground h-4 w-4" />
-    <span className="font-mono text-sm">
-      {method.slice(0, 8)}...{method.slice(-4)}
+const AnchorStatusRow = ({ done, active, label }: { done: boolean; active: boolean; label: string }) => (
+  <div className="flex items-center gap-3">
+    <div
+      className={cn(
+        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
+        done ? "border-green-500 bg-green-500/10" : active ? "border-primary bg-primary/10" : "border-border bg-muted"
+      )}
+    >
+      {done ? (
+        <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+      ) : active ? (
+        <Loader2 className="text-primary h-3 w-3 animate-spin" />
+      ) : (
+        <div className="bg-muted-foreground/30 h-2 w-2 rounded-full" />
+      )}
+    </div>
+    <span className={cn("text-sm", done || active ? "text-foreground font-medium" : "text-muted-foreground")}>
+      {label}
     </span>
   </div>
 );
 
-// ---------------------------------------------------------------------------
-// Table columns
-// ---------------------------------------------------------------------------
+// --- Helpers ---
 
-const columns: ColumnDef<Payout>[] = [
-  {
-    accessorKey: "date",
-    header: () => (
-      <div className="flex items-center gap-2">
-        <Calendar className="text-muted-foreground h-4 w-4" />
-        <span>Date</span>
-      </div>
-    ),
-    cell: ({ row }) => <div className="text-sm">{moment(row.original.createdAt).format("DD MMM YYYY")}</div>,
-  },
-  {
-    accessorKey: "walletAddress",
-    header: () => (
-      <div className="flex items-center gap-2">
-        <Wallet className="text-muted-foreground h-4 w-4" />
-        <span>Payout method</span>
-      </div>
-    ),
-    cell: ({ row }) => <PayoutMethodDisplay method={row.original.walletAddress} />,
-  },
-  {
-    accessorKey: "status",
-    header: () => (
-      <div className="flex items-center gap-2">
-        <Circle className="text-muted-foreground h-4 w-4" />
-        <span>Status</span>
-      </div>
-    ),
-    cell: ({ row }) => <StatusBadge status={row.original.status as PayoutStatus} />,
-  },
-  {
-    accessorKey: "amount",
-    header: () => (
-      <div className="flex items-center gap-2">
-        <Coins className="text-muted-foreground h-4 w-4" />
-        <span>Amount</span>
-      </div>
-    ),
-    cell: ({ row }) => <div className="text-sm font-medium">{row.original.amount} XLM</div>,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Bank / Anchor payout flow
-// ---------------------------------------------------------------------------
-
-function AnchorStatusRow({ done, active, label }: { done: boolean; active: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        className={cn(
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border",
-          done && "border-green-500 bg-green-500/10",
-          active && !done && "border-primary bg-primary/10",
-          !done && !active && "border-border bg-muted"
-        )}
-      >
-        {done ? (
-          <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-        ) : active ? (
-          <Loader2 className="text-primary h-3 w-3 animate-spin" />
-        ) : (
-          <div className="bg-muted-foreground/30 h-2 w-2 rounded-full" />
-        )}
-      </div>
-      <span
-        className={cn(
-          "text-sm",
-          done && "text-foreground font-medium",
-          active && !done && "text-foreground",
-          !done && !active && "text-muted-foreground"
-        )}
-      >
-        {label}
-      </span>
-    </div>
-  );
-}
-
-/** Parse a fetch response safely — handles HTML error pages from Next.js */
-async function safeJson(resp: Response) {
+const safeJson = async (resp: Response) => {
   const text = await resp.text();
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(`Server error (${resp.status}). Please restart the dev server if this persists.`);
+    throw new Error(`Server error (${resp.status}).`);
   }
-}
+};
 
-function BankPayoutFlow({
-  onClose,
-  onSuccess,
-  initialCurrencyCode,
-}: {
-  onClose: () => void;
-  onSuccess: () => void;
-  initialCurrencyCode?: string;
-}) {
+// --- Flow Logic ---
+
+function BankPayoutFlow({ onClose, onSuccess, initialCurrencyCode, initialAmount, skipSelectStep }: any) {
   const { data: org } = useOrgContext();
-
-  const { data: orgAssets = [] } = useQuery<Asset[]>({
-    queryKey: ["assets", org?.id, org?.environment],
-    queryFn: () => retrieveAssets(org!.environment),
+  const { data: productAssets = [] } = useQuery({
+    queryKey: ["assets-from-products", org?.id, org?.environment],
+    queryFn: () => retrieveAssetsFromProducts(org!.id, org!.environment),
     enabled: !!org?.id,
   });
 
-  // Auto-pick best stablecoin — merchant never sees this choice
-  const selectedAsset = React.useMemo(() => {
-    if (orgAssets.length === 0) return undefined;
-    return orgAssets.find((a) => a.code === "USDC") ?? orgAssets.find((a) => a.code === "USDT") ?? orgAssets[0];
-  }, [orgAssets]);
+  const selectedAsset = productAssets[0];
 
-  const { rateMap, fiatRates, isLoading: isRatesLoading, selectedCurrency: cookieCurrencyCode } = useAssetRates(
-    selectedAsset ? [{ code: selectedAsset.code, issuer: selectedAsset.issuer ?? "native" }] : []
-  );
-  const currencyCode = initialCurrencyCode ?? cookieCurrencyCode;
+  const {
+    rateMap,
+    fiatRates,
+    isLoading: isRatesLoading,
+    selectedCurrency,
+  } = useAssetRates(selectedAsset ? [{ code: selectedAsset.code, issuer: selectedAsset.issuer ?? "native" }] : []);
 
-  // Amount as a string to feed SelectInput; stored separately as a number for calculations
-  const [inputValue, setInputValue] = React.useState({ amount: "", option: currencyCode });
-
-  const [step, setStep] = React.useState<BankStep>("select");
+  const currencyCode = initialCurrencyCode ?? selectedCurrency;
+  const [inputValue, setInputValue] = React.useState({ amount: initialAmount ?? "", option: currencyCode });
+  const [step, setStep] = React.useState<BankStep>(skipSelectStep && !!initialAmount ? "interactive" : "select");
   const [session, setSession] = React.useState<AnchorSession | null>(null);
   const [anchorTx, setAnchorTx] = React.useState<AnchorTransaction | null>(null);
   const [error, setError] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [isPolling, setIsPolling] = React.useState(false);
 
-  const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const sessionRef = React.useRef<AnchorSession | null>(null);
 
-  React.useEffect(() => {
-    return () => {
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    };
-  }, []);
+  const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: { "x-auth-token": org!.token } });
 
-  // Keep option in sync when initialCurrencyCode or cookie changes
-  React.useEffect(() => {
-    setInputValue((v) => ({ ...v, option: currencyCode }));
-  }, [currencyCode]);
-
-  // Fetch org's on-chain balances
-  const { data: stellarBalances = [] } = useQuery<StellarBalance[]>({
-    queryKey: ["balance", org?.id, org?.environment, org?.token],
-    queryFn: async () => {
-      const resp = await fetch("/api/balance", { headers: { "x-auth-token": org!.token } });
-      const json = await safeJson(resp);
-      return json.data as StellarBalance[];
-    },
-    enabled: !!org?.token,
-    staleTime: 60 * 1000,
-  });
-
-  // Balance in asset units for the auto-selected asset
-  const assetBalance = React.useMemo(() => {
-    if (!selectedAsset || stellarBalances.length === 0) return null;
-    const match = selectedAsset.issuer
-      ? stellarBalances.find((b) => b.asset_code === selectedAsset.code && b.asset_issuer === selectedAsset.issuer)
-      : stellarBalances.find((b) => b.asset_type === "native");
-    return match ? parseFloat(match.balance) : 0;
-  }, [selectedAsset, stellarBalances]);
-
-  // localAmount → asset units:  assetAmount = localAmount / rateMap[assetCode]
-  const localAmount = parseFloat(inputValue.amount) || 0;
-  const assetCode = selectedAsset?.code;
   const assetAmount = React.useMemo(() => {
-    if (!localAmount || !assetCode) return null;
-    const rate = rateMap[assetCode] ?? 0;
-    if (rate <= 0) return null;
-    return parseFloat((localAmount / rate).toFixed(7));
-  }, [localAmount, assetCode, rateMap]);
+    const val = parseFloat(inputValue.amount);
+    const rate = rateMap[selectedAsset?.code ?? ""] || 0;
+    return val && rate > 0 ? parseFloat((val / rate).toFixed(7)) : null;
+  }, [inputValue.amount, selectedAsset, rateMap]);
 
-  // Max withdrawable in local currency & validation error
-  const maxLocalAmount = React.useMemo(() => {
-    if (assetBalance === null || !assetCode) return null;
-    const rate = rateMap[assetCode] ?? 0;
-    if (rate <= 0) return null;
-    return parseFloat((assetBalance * rate).toFixed(2));
-  }, [assetBalance, assetCode, rateMap]);
-
-  const amountError =
-    localAmount > 0 && maxLocalAmount !== null && localAmount > maxLocalAmount
-      ? `Exceeds balance. Max: ${maxLocalAmount.toLocaleString()} ${currencyCode}`
-      : undefined;
-
-  // -- Step 1: Initiate via SEP-10 + SEP-24 (server picks the anchor) --
   const initiateWithdrawal = async () => {
-    if (!assetAmount || !selectedAsset || !org?.token) return;
+    if (!assetAmount || !selectedAsset) return;
     setIsLoading(true);
     setError("");
     try {
-      const resp = await fetch("/api/anchor/initiate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-auth-token": org.token },
-        body: JSON.stringify({ assetCode: selectedAsset.code, amount: assetAmount.toString() }),
+      const response = await api.post<AnchorSession>("/api/anchor/initiate", {
+        assetCode: selectedAsset.code,
+        amount: assetAmount.toString(),
       });
-      const data = await safeJson(resp);
-      if (!resp.ok) throw new Error(data.error || "Failed to connect to payout provider");
-      const s = data.data as AnchorSession;
-      setSession(s);
-      sessionRef.current = s;
+
+      if (response.isErr()) {
+        throw new Error(response.error.message);
+      }
+
+      const data = response.value;
+
+      setSession(data);
+      sessionRef.current = data;
       setStep("interactive");
     } catch (e: any) {
-      setError(e.message || "Failed to connect to payout provider");
+      setError(e.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // -- Step 2: Open anchor popup where user enters their bank / mobile money details --
-  const openAnchorPopup = () => {
-    if (!sessionRef.current) return;
-    window.open(sessionRef.current.url, "anchor_popup", "width=600,height=700,left=200,top=100");
-
-    // Anchor fires postMessage when user completes the form in the popup
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.transaction) {
-        window.removeEventListener("message", handleMessage);
-        startPolling();
-      }
-    };
-    window.addEventListener("message", handleMessage);
-
-    // Also poll regardless — covers anchors that don't fire postMessage
-    startPolling();
-  };
-
-  // -- Polling --
-  const startPolling = () => {
-    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    setIsPolling(true);
-    pollIntervalRef.current = setInterval(pollOnce, 5000);
-  };
-
   const pollOnce = async () => {
     const s = sessionRef.current;
-    if (!s || !org?.token) return;
+    if (!s) return;
     try {
-      const resp = await fetch("/api/anchor/poll", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-auth-token": org.token },
-        body: JSON.stringify({ transferServer: s.transferServer, id: s.id, anchorJwt: s.anchorJwt }),
+      const response = await api.get<AnchorTransaction>("/api/anchor/poll", {
+        transferServer: s.transferServer,
+        id: s.id,
+        anchorJwt: s.anchorJwt,
       });
-      const data = await safeJson(resp);
-      const tx: AnchorTransaction = data.data;
-      setAnchorTx(tx);
 
+      if (response.isErr()) {
+        throw new Error(response.error.message);
+      }
+
+      const tx = response.value;
+
+      setAnchorTx(tx);
       if (tx.status === "pending_user_transfer_start") {
-        clearInterval(pollIntervalRef.current!);
-        setIsPolling(false);
+        stopPolling();
         setStep("sending");
-        await sendPaymentToAnchor(tx);
+
+        await api.post<Payout>("/api/payout", {
+          amount: assetAmount,
+          walletAddress: tx.withdraw_anchor_account,
+          memo: tx.withdraw_memo,
+          assetId: selectedAsset.id,
+        });
+
+        setStep("tracking");
+        startPolling();
       } else if (tx.status === "completed") {
-        clearInterval(pollIntervalRef.current!);
-        setIsPolling(false);
+        stopPolling();
         setStep("complete");
-      } else if (["error", "refunded", "expired", "no_market", "too_small", "too_large"].includes(tx.status)) {
-        clearInterval(pollIntervalRef.current!);
-        setIsPolling(false);
+      } else if (["error", "refunded", "expired"].some((st) => tx.status.includes(st))) {
+        stopPolling();
         setError(`Payout failed: ${tx.message ?? tx.status}`);
       }
     } catch {
-      // Silent – retry on next tick
+      /* retry */
     }
   };
 
-  // -- Step 3: Send the on-chain Stellar payment to the anchor's account --
-  const sendPaymentToAnchor = async (tx: AnchorTransaction) => {
-    if (!tx.withdraw_anchor_account || !selectedAsset?.id || !assetAmount || !org?.token) {
-      setError("Missing payment details from provider. Please try again.");
-      return;
-    }
-    try {
-      const resp = await fetch("/api/payout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-auth-token": org.token },
-        body: JSON.stringify({
-          amount: assetAmount,
-          walletAddress: tx.withdraw_anchor_account,
-          memo: tx.withdraw_memo ?? undefined,
-          assetId: selectedAsset.id,
-        }),
-      });
-      const data = await safeJson(resp);
-      if (!resp.ok) throw new Error(data.error || "Failed to send payment");
-      setStep("tracking");
-      startPolling();
-    } catch (e: any) {
-      setError(e.message || "Failed to send payment");
-    }
+  const startPolling = () => {
+    stopPolling();
+    setIsPolling(true);
+    pollIntervalRef.current = setInterval(pollOnce, 5000);
+  };
+  const stopPolling = () => {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    setIsPolling(false);
   };
 
-  // ---- Render ----
+  const openAnchorPopup = () => {
+    if (!sessionRef.current) return;
+    window.open(sessionRef.current.url, "anchor_popup", "width=600,height=700");
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data?.transaction) startPolling();
+    };
+    window.addEventListener("message", handleMsg, { once: true });
+    startPolling();
+  };
 
-  const currencyOptions = React.useMemo(
-    () => (fiatRates ? Object.keys(fiatRates).sort() : [currencyCode]),
-    [fiatRates, currencyCode]
-  );
+  React.useEffect(() => () => stopPolling(), []);
+  React.useEffect(() => {
+    if (skipSelectStep && !session && !isLoading) initiateWithdrawal();
+  }, []);
 
-  if (step === "select") {
+  // UI Views (Select, Interactive, Sending, Tracking, Complete)
+  if (step === "select")
     return (
       <div className="space-y-5">
-        <SelectInput
-          id="bankAmount"
+        <SelectNumberField
+          id="amount"
           label="How much do you want to withdraw?"
           value={inputValue}
           onChange={setInputValue}
-          options={currencyOptions}
-          isLoading={isRatesLoading || !selectedAsset}
-          disabled={isRatesLoading || !selectedAsset}
-          placeholder={isRatesLoading ? "Loading rate…" : "0.00"}
-          optionsDisabled={!!initialCurrencyCode}
-          error={amountError}
+          options={fiatRates ? Object.keys(fiatRates).sort() : []}
+          isLoading={isRatesLoading}
         />
-
-        {assetAmount && !isRatesLoading && !amountError && (
-          <p className="text-muted-foreground -mt-2 text-xs">
-            ≈ {assetAmount} {selectedAsset?.code}
-          </p>
-        )}
-
-        {error && (
-          <div className="border-destructive/30 bg-destructive/10 rounded-md border px-4 py-3">
-            <p className="text-destructive text-sm">{error}</p>
-          </div>
-        )}
-
         <div className="flex justify-end gap-2 border-t pt-4">
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={initiateWithdrawal} disabled={isLoading || !assetAmount || isRatesLoading || !!amountError}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting…
-              </>
-            ) : (
-              <>
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
+          <Button onClick={initiateWithdrawal} isLoading={isLoading} disabled={!assetAmount}>
+            Continue <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
     );
-  }
 
-  if (step === "interactive") {
+  if (step === "interactive")
     return (
       <div className="space-y-5">
-        <div className="bg-primary/5 rounded-lg border p-4">
-          <div className="flex items-start gap-3">
-            <ExternalLink className="text-primary mt-0.5 h-4 w-4 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">Enter your bank details</p>
-              <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-                A secure portal will open. Enter your bank account or mobile money number there, then return here. The
-                payment will be sent automatically once you&apos;re done.
-              </p>
-            </div>
+        <div className="bg-primary/5 flex items-start gap-3 rounded-lg border p-4">
+          <ExternalLink className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+          <div className="text-xs">
+            <p className="text-sm font-semibold">Enter your bank details</p>
+            <p className="text-muted-foreground mt-0.5">
+              A secure portal will open. Follow the instructions to continue.
+            </p>
           </div>
         </div>
-
         <div className="space-y-3">
-          <AnchorStatusRow done active={false} label="Connected to payout provider" />
-          <AnchorStatusRow done={false} active={!isPolling} label="Open portal to enter bank details" />
-          <AnchorStatusRow done={false} active={isPolling} label="Waiting for bank details…" />
-          <AnchorStatusRow done={false} active={false} label="Send funds" />
-          <AnchorStatusRow done={false} active={false} label="Payout processed" />
+          <AnchorStatusRow done active={false} label="Connected" />
+          <AnchorStatusRow done={false} active={!isPolling} label="Waiting for details..." />
         </div>
-
-        {anchorTx?.message && (
-          <p className="text-muted-foreground text-xs">
-            Provider says: <span className="font-medium">{anchorTx.message}</span>
-          </p>
-        )}
-
-        {error && (
-          <div className="border-destructive/30 bg-destructive/10 rounded-md border px-4 py-3">
-            <p className="text-destructive text-sm">{error}</p>
-            <Button
-              variant="link"
-              size="sm"
-              className="text-destructive mt-1 h-auto p-0 text-xs"
-              onClick={() => {
-                setError("");
-                setStep("select");
-              }}
-            >
-              Go back
-            </Button>
-          </div>
-        )}
-
+        {error && <p className="text-destructive text-sm">{error}</p>}
         <div className="flex justify-end gap-2 border-t pt-4">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={openAnchorPopup}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Open Payout Portal
+            <ExternalLink className="mr-2 h-4 w-4" /> Open Payout Portal
           </Button>
         </div>
       </div>
     );
-  }
 
-  if (step === "sending") {
+  if (step === "tracking")
     return (
       <div className="space-y-5">
         <div className="space-y-3">
-          <AnchorStatusRow done active={false} label="Connected to payout provider" />
-          <AnchorStatusRow done active={false} label="Bank details submitted" />
-          <AnchorStatusRow done={false} active label={`Sending funds…`} />
-          <AnchorStatusRow done={false} active={false} label="Payout processed" />
-        </div>
-        {error && (
-          <div className="border-destructive/30 bg-destructive/10 rounded-md border px-4 py-3">
-            <p className="text-destructive text-sm">{error}</p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (step === "tracking") {
-    const statusLabel: Record<string, string> = {
-      pending_external: "Processing your fiat payout…",
-      pending_anchor: "Preparing your payout…",
-      pending_stellar: "Confirming on Stellar…",
-      pending_trust: "Awaiting trust line…",
-    };
-
-    return (
-      <div className="space-y-5">
-        <div className="space-y-3">
-          <AnchorStatusRow done active={false} label="Connected to payout provider" />
-          <AnchorStatusRow done active={false} label="Bank details submitted" />
           <AnchorStatusRow done active={false} label="Funds sent" />
-          <AnchorStatusRow
-            done={false}
-            active
-            label={anchorTx ? (statusLabel[anchorTx.status] ?? `Processing…`) : "Processing…"}
-          />
+          <AnchorStatusRow done={false} active label={anchorTx?.status || "Processing..."} />
         </div>
-
-        {anchorTx?.amount_out && anchorTx.amount_out_asset && (
-          <div className="bg-primary/5 rounded-lg border p-4">
-            <p className="text-muted-foreground text-xs">Expected payout</p>
-            <p className="text-foreground mt-1 text-xl font-bold">
-              {anchorTx.amount_out}{" "}
-              <span className="text-muted-foreground text-sm font-normal">
-                {anchorTx.amount_out_asset.replace("iso4217:", "")}
-              </span>
-            </p>
-          </div>
-        )}
-
-        <p className="text-muted-foreground text-xs">
-          You can safely close this modal — the payout will continue in the background.
-        </p>
-
-        <div className="flex justify-end border-t pt-4">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
+        <Button variant="outline" className="w-full" onClick={onClose}>
+          Close & Track in Background
+        </Button>
       </div>
     );
-  }
 
-  if (step === "complete") {
+  if (step === "complete")
     return (
-      <div className="space-y-5">
-        <div className="flex flex-col items-center gap-4 py-6 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-green-500 bg-green-500/10">
-            <CheckCircle2 className="h-7 w-7 text-green-600 dark:text-green-400" />
-          </div>
-          <div>
-            <p className="text-foreground text-base font-semibold">Payout complete!</p>
-            {anchorTx?.amount_out && anchorTx.amount_out_asset && (
-              <p className="text-muted-foreground mt-1 text-sm">
-                <span className="text-foreground font-medium">
-                  {anchorTx.amount_out} {anchorTx.amount_out_asset.replace("iso4217:", "")}
-                </span>{" "}
-                has been sent to your bank account.
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex justify-end border-t pt-4">
-          <Button onClick={onSuccess}>Done</Button>
-        </div>
+      <div className="space-y-5 py-6 text-center">
+        <CheckCircle2 className="mx-auto h-14 w-14 text-green-500" />
+        <p className="font-semibold">Payout complete!</p>
+        <Button className="w-full" onClick={onSuccess}>
+          Done
+        </Button>
       </div>
     );
-  }
 
-  return null;
+  return (
+    <div className="flex justify-center py-10">
+      <Loader2 className="animate-spin" />
+    </div>
+  );
 }
 
-// ---------------------------------------------------------------------------
-// Wallet payout modal content
-// ---------------------------------------------------------------------------
+// --- Modals ---
 
 const requestPayoutSchema = z
   .object({
@@ -648,279 +339,186 @@ const requestPayoutSchema = z
     amount: z.number().optional(),
     walletAddress: z.string(),
     memo: z.string().optional(),
+    bankAmount: z.string(),
+    bankCountry: z.string(),
   })
-  .refine(
-    (data) => {
-      if (data.paymentMethod === "wallet") {
-        return data.amount !== undefined && !isNaN(data.amount) && data.amount > 0;
-      }
-      return true;
-    },
-    { message: "Amount must be greater than 0", path: ["amount"] }
-  );
-
-type RequestPayoutFormData = z.infer<typeof requestPayoutSchema>;
-
-function RequestPayoutModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
-  const form = RHF.useForm<RequestPayoutFormData>({
-    resolver: zodResolver(requestPayoutSchema),
-    defaultValues: { paymentMethod: "wallet", amount: undefined, walletAddress: "", memo: "" },
+  .refine((d) => (d.paymentMethod === "bank" ? parseFloat(d.bankAmount) > 0 : (d.amount ?? 0) > 0), {
+    message: "Required",
+    path: ["amount"],
   });
 
-  const [bankCountryOpen, setBankCountryOpen] = React.useState(false);
-  const [selectedBankCountry, setSelectedBankCountry] = React.useState<string>("");
+function RequestPayoutModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const form = RHF.useForm<z.infer<typeof requestPayoutSchema>>({
+    resolver: zodResolver(requestPayoutSchema),
+    defaultValues: { paymentMethod: "wallet", bankCountry: "USD" },
+  });
 
-  const { fiatRates, isLoading: isRatesLoading } = useAssetRates([{ code: "XLM", issuer: "native" }]);
+  const { data: org } = useOrgContext();
+  const method = form.watch("paymentMethod");
+  const bankCountry = form.watch("bankCountry");
+  const bankAmountStr = form.watch("bankAmount");
 
-  const currencyItems = React.useMemo<CurrencyItem[]>(() => {
-    if (!fiatRates) return [];
-    return Object.keys(fiatRates)
-      .map((code) => ({ code, name: currencyNames.of(code) ?? code }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [fiatRates]);
+  const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: { "x-auth-token": org!.token } });
 
-  const isBankCountrySupported =
-    !!selectedBankCountry && SUPPORTED_PAYOUT_COUNTRIES.includes(selectedBankCountry as (typeof SUPPORTED_PAYOUT_COUNTRIES)[number]);
+  const { data: balances = [] } = useQuery({
+    queryKey: ["balance", org?.id],
+    queryFn: async () => {
+      const response = await api.get<StellarBalance[]>("/api/balance");
+      if (response.isErr()) throw new Error(response.error.message);
+      return response.value;
+    },
+    enabled: !!org && method === "bank",
+  });
 
-  React.useEffect(() => {
-    form.reset({ paymentMethod: "wallet", amount: undefined, walletAddress: "", memo: "" });
-  }, [form]);
+  const assetsForRates = balances.map((b) =>
+    b.asset_type === "native" ? { code: "XLM", issuer: "native" } : { code: b.asset_code!, issuer: b.asset_issuer! }
+  );
+  const { fiatRates, isLoading: isRatesLoading } = useAssetRates(assetsForRates);
 
-  const requestPayoutMutation = useMutation({
-    mutationFn: async (data: RequestPayoutFormData) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  const isBankSupported = SUPPORTED_PAYOUT_COUNTRIES.includes(bankCountry as any);
+  const mutation = useMutation({
+    mutationFn: async (data: any) => {
+      await new Promise((r) => setTimeout(r, 1000));
       return data;
     },
     onSuccess: () => {
-      toast.success("Payout request submitted successfully!");
-      form.reset();
+      toast.success("Payout requested!");
       onSuccess();
-    },
-    onError: () => {
-      toast.error("Failed to submit payout request");
     },
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <Tabs
-        value={form.watch("paymentMethod")}
-        onValueChange={(v) => {
-          form.setValue("paymentMethod", v as "wallet" | "bank");
-          form.clearErrors();
-          if (v === "bank") setSelectedBankCountry("");
-        }}
-      >
-        <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="wallet" className="gap-2">
-            <Wallet className="h-4 w-4" />
-            Wallet Address
-          </TabsTrigger>
-          <TabsTrigger value="bank" className="gap-2">
-            <Banknote className="h-4 w-4" />
-            Local Bank / Mobile Money
-          </TabsTrigger>
-        </TabsList>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <UnderlineTabs value={method} onValueChange={(v) => form.setValue("paymentMethod", v as any)}>
+        <UnderlineTabsList className="w-full">
+          <UnderlineTabsTrigger value="wallet" className="flex-1">
+            <Wallet className="mr-2 h-4 w-4" /> Wallet
+          </UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="bank" className="flex-1">
+            <Banknote className="mr-2 h-4 w-4" /> Bank
+          </UnderlineTabsTrigger>
+        </UnderlineTabsList>
 
-        <TabsContent value="wallet" className="mt-6 space-y-5">
-          <RHF.Controller
-            control={form.control}
-            name="amount"
-            render={({ field, fieldState: { error } }) => (
-              <NumberField
-                id="amount"
-                value={field.value}
-                onChange={field.onChange}
-                label="Amount"
-                allowDecimal
-                error={error?.message}
-                placeholder="0.00"
-                className="shadow-none"
-              />
-            )}
-          />
-          <RHF.Controller
-            control={form.control}
-            name="walletAddress"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                id="walletAddress"
-                label="Wallet Address"
-                error={error?.message}
-                placeholder="GABCDEF1234567890..."
-                className="shadow-none"
-              />
-            )}
-          />
-          <RHF.Controller
-            control={form.control}
-            name="memo"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                id={field.name}
-                value={field.value as string}
-                label="Memo (Optional)"
-                error={error?.message}
-                placeholder="Add a memo for this payout"
-                className="shadow-none"
-              />
-            )}
-          />
+        <UnderlineTabsContent value="wallet" className="mt-6 flex flex-1 flex-col data-[state=inactive]:hidden">
+          <div className="flex-1 space-y-5">
+            <RHF.Controller
+              name="amount"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <NumberField
+                  id="amount"
+                  label="Amount"
+                  value={field.value}
+                  onChange={field.onChange}
+                  allowDecimal
+                  error={fieldState.error?.message}
+                />
+              )}
+            />
+            <TextField
+              value={form.watch("walletAddress")}
+              onChange={(value) => form.setValue("walletAddress", value)}
+              error={form.formState.errors.walletAddress?.message}
+              id="walletAddress"
+              label="Wallet Address"
+              placeholder="G..."
+            />
+            <TextField
+              error={form.formState.errors.memo?.message}
+              id="memo"
+              value={form.watch("memo") ?? ""}
+              onChange={(value) => form.setValue("memo", value)}
+              label="Memo (Optional)"
+            />
+          </div>
           <div className="flex justify-end gap-2 border-t pt-4">
-            <Button variant="outline" onClick={onClose} disabled={requestPayoutMutation.isPending}>
+            <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              onClick={form.handleSubmit((data) => requestPayoutMutation.mutate(data))}
-              disabled={requestPayoutMutation.isPending}
-            >
-              {requestPayoutMutation.isPending ? "Submitting..." : "Request Payout"}
+            <Button onClick={form.handleSubmit((d) => mutation.mutate(d))} isLoading={mutation.isPending}>
+              Request Payout
             </Button>
           </div>
-        </TabsContent>
+        </UnderlineTabsContent>
 
-        <TabsContent value="bank" className="mt-6">
+        <UnderlineTabsContent value="bank" className="mt-6 flex flex-1 flex-col data-[state=inactive]:hidden">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-muted-foreground text-xs font-medium">Country (currency)</label>
-              <Popover open={bankCountryOpen} onOpenChange={setBankCountryOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={bankCountryOpen}
-                    className="border-input h-9 w-full justify-between font-normal"
-                  >
-                    {isRatesLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : selectedBankCountry ? (
-                      <span className="truncate">
-                        {currencyItems.find((c) => c.code === selectedBankCountry)?.name ?? selectedBankCountry} (
-                        {selectedBankCountry})
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Select country</span>
-                    )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[280px] p-0" align="start" onWheel={(e) => e.stopPropagation()}>
-                  <Command>
-                    <CommandInput placeholder="Search currency..." />
-                    <CommandList className="max-h-[240px]">
-                      <CommandEmpty>No currency found.</CommandEmpty>
-                      <CommandGroup>
-                        {currencyItems.map((item) => (
-                          <CommandItem
-                            key={item.code}
-                            value={`${item.name} ${item.code}`.toLowerCase()}
-                            onSelect={() => {
-                              setSelectedBankCountry(item.code);
-                              setBankCountryOpen(false);
-                            }}
-                          >
-                            <span
-                              className={cn(
-                                "flex-1 truncate text-sm",
-                                selectedBankCountry === item.code && "font-medium"
-                              )}
-                            >
-                              {item.name} ({item.code})
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <p className="text-muted-foreground text-xs">
-              Available for payout: {SUPPORTED_PAYOUT_COUNTRIES.join(", ")}
-            </p>
-            {selectedBankCountry && !isBankCountrySupported && (
-              <div className="bg-muted/50 flex gap-2 rounded-md border px-3 py-2">
-                <Info className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  Your country is not available yet. We&apos;re working hard to support more countries.
-                </p>
-              </div>
+            <SelectInput
+              id="bankAmount"
+              label="Withdraw amount"
+              value={{ amount: bankAmountStr, option: bankCountry }}
+              onChange={(v) => {
+                form.setValue("bankAmount", v.amount);
+                form.setValue("bankCountry", v.option || "USD");
+              }}
+              options={fiatRates ? Object.keys(fiatRates).sort() : []}
+              isLoading={isRatesLoading}
+            />
+            {!isBankSupported && (
+              <p className="text-muted-foreground text-xs">
+                Only {SUPPORTED_PAYOUT_COUNTRIES.join(", ")} are currently supported.
+              </p>
             )}
           </div>
-          {isBankCountrySupported ? (
-            <div className="mt-6 border-t pt-6">
+          {isBankSupported && parseFloat(bankAmountStr) > 0 ? (
+            <div className="mt-6 flex-1 border-t pt-6">
               <BankPayoutFlow
                 onClose={onClose}
                 onSuccess={onSuccess}
-                initialCurrencyCode={selectedBankCountry}
+                initialCurrencyCode={bankCountry}
+                initialAmount={bankAmountStr}
+                skipSelectStep
               />
             </div>
           ) : (
-            <div className="space-y-4 border-t pt-4">
-              {selectedBankCountry && !isBankCountrySupported && (
-                <p className="text-muted-foreground text-xs">
-                  <Button
-                    variant="link"
-                    className="h-auto p-0 text-xs font-medium"
-                    asChild
-                  >
-                    <a href="mailto:support@stellartools.dev?subject=Request%20payout%20country%20support" target="_blank" rel="noopener noreferrer">
-                      Reach out to request support for your country
-                    </a>
-                  </Button>
-                </p>
-              )}
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button disabled>
-                  Request Payout
-                </Button>
-              </div>
+            <div className="mt-auto flex justify-end gap-2 border-t pt-4">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button disabled>Continue</Button>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </UnderlineTabsContent>
+      </UnderlineTabs>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main page
-// ---------------------------------------------------------------------------
+// --- Main Page ---
 
 export default function PayoutPage() {
   const router = useRouter();
-
   const { data: payoutList = [], isLoading } = useOrgQuery(["payouts"], () => retrievePayouts());
 
-  const openRequestModal = () => {
-    AppModal.open({
-      title: "Request Payout",
-      content: <RequestPayoutModalContent onClose={AppModal.close} onSuccess={AppModal.close} />,
-      footer: null,
-      size: "medium",
-      showCloseButton: true,
-    });
-  };
+  const columns: ColumnDef<Payout>[] = [
+    {
+      header: "Date",
+      cell: ({ row }) => <div className="text-sm">{moment(row.original.createdAt).format("DD MMM YYYY")}</div>,
+    },
+    {
+      header: "Method",
+      cell: ({
+        row: {
+          original: { walletAddress, stringifiedBankAccount },
+        },
+      }) => (
+        <div className="flex items-center gap-2 font-mono text-sm">
+          <Wallet className="h-4 w-4" />{" "}
+          {walletAddress ? walletAddress.slice(0, 8) : stringifiedBankAccount ? "Bank Account" : "N/A"}
+        </div>
+      ),
+    },
+    { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status as PayoutStatus} /> },
+    { header: "Amount", cell: ({ row }) => <div className="font-medium">{row.original.amount} XLM</div> },
+  ];
 
   const tableActions: TableAction<Payout>[] = [
-    {
-      label: "View Details",
-      onClick: (row) => router.push(`/payout/${row.id}`),
-    },
+    { label: "View Details", onClick: (row) => router.push(`/payout/${row.id}`) },
     {
       label: "Download Receipt",
       onClick: async (row) => {
-        const downloadPromise = generateAndDownloadReceipt(row, "StellarTools");
-        toast.promise(downloadPromise, {
-          loading: "Generating receipt...",
-          success: "Receipt downloaded successfully",
-          error: "Failed to download receipt",
-        });
+        const promise = generateAndDownloadReceipt(row, "StellarTools");
+        toast.promise(promise, { loading: "Preparing receipt...", success: "Downloaded", error: "Failed" });
       },
     },
   ];
@@ -932,26 +530,28 @@ export default function PayoutPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">Payout history</h1>
-              <p className="text-muted-foreground mt-1 text-sm">See the payout history for this store</p>
+              <p className="text-muted-foreground text-sm">Manage store withdrawals</p>
             </div>
-            <Button onClick={openRequestModal}>
-              <Plus className="mr-2 h-4 w-4" />
-              Request Payout
+            <Button
+              onClick={() =>
+                AppModal.open({
+                  title: "Request Payout",
+                  size: "full",
+                  showCloseButton: true,
+                  content: <RequestPayoutModalContent onClose={AppModal.close} onSuccess={AppModal.close} />,
+                })
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" /> Request Payout
             </Button>
           </div>
-
           <DataTable
-            className="border-x-0"
             columns={columns}
             data={payoutList}
             actions={tableActions}
-            onRowClick={(row) => router.push(`/payout/${row.id}`)}
             isLoading={isLoading}
+            onRowClick={(r) => router.push(`/payout/${r.id}`)}
           />
-
-          <div className="text-muted-foreground text-sm">
-            {payoutList.length} result{payoutList.length !== 1 ? "s" : ""}
-          </div>
         </div>
       </DashboardSidebarInset>
     </DashboardSidebar>

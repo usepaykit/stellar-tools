@@ -1,10 +1,11 @@
+"use client";
+
 import React from "react";
 
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
@@ -18,7 +19,7 @@ export interface NumberFieldProps
     MixinProps<"helpText", Omit<HelpTextProps, "children">> {
   id: string;
   value: number | string | undefined;
-  onChange: (value: number | undefined) => void;
+  onChange: (value: number | string | undefined) => void;
   label?: React.ReactNode;
   error?: React.ReactNode;
   helpText?: React.ReactNode;
@@ -35,36 +36,59 @@ export const NumberField = React.forwardRef<HTMLInputElement, NumberFieldProps>(
     rest,
   } = splitProps(mixProps, "label", "error", "helpText");
 
-  const [displayValue, setDisplayValue] = React.useState<string>(() => (value !== undefined ? String(value) : ""));
+  // Helper to format string with commas
+  const formatNumberWithCommas = (val: string) => {
+    if (!val) return "";
+    const parts = val.split(".");
+    // Remove all non-digits from the integer part for formatting
+    parts[0] = parts[0].replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    // Join back with decimal part if it exists
+    return parts.length > 1 ? `${parts[0]}.${parts[1].replace(/\D/g, "")}` : parts[0];
+  };
 
+  const [displayValue, setDisplayValue] = React.useState<string>(() =>
+    value !== undefined ? formatNumberWithCommas(String(value)) : ""
+  );
+
+  // Sync internal display state with external value changes
   React.useEffect(() => {
     if (value !== undefined) {
-      setDisplayValue(String(value));
-    } else if (value === undefined && displayValue !== "") {
+      const formatted = formatNumberWithCommas(String(value));
+      // Only update if the numeric value actually differs to avoid cursor jumps
+      if (formatted.replace(/,/g, "") !== displayValue.replace(/,/g, "")) {
+        setDisplayValue(formatted);
+      }
+    } else if (displayValue !== "") {
       setDisplayValue("");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
+  }, [value, displayValue]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
+    const rawInput = e.target.value;
 
-    if (inputValue === "") {
+    // 1. Remove commas to get the raw string for validation/parsing
+    const cleanValue = rawInput.replace(/,/g, "");
+
+    if (cleanValue === "") {
       setDisplayValue("");
       onChange(undefined);
       return;
     }
 
-    // Regex: Allow positive decimal numbers, including trailing decimal point
+    // 2. Validate raw string (allow digits and one decimal point)
     const regex = allowDecimal ? /^\d*\.?\d*$/ : /^\d*$/;
 
-    if (regex.test(inputValue)) {
-      setDisplayValue(inputValue);
+    if (regex.test(cleanValue)) {
+      // 3. Update the visible input with commas
+      setDisplayValue(formatNumberWithCommas(cleanValue));
 
-      const parsed = parseFloat(inputValue);
+      // 4. Update the parent with the actual number
+      const parsed = parseFloat(cleanValue);
       if (!isNaN(parsed)) {
+        // If the string is just "10." we don't want to parse yet or we lose the dot
+        // but the parent usually wants the number 10 in the meantime.
         onChange(parsed);
-      } else if (inputValue === "." || inputValue.endsWith(".")) {
+      } else {
         onChange(undefined);
       }
     }
@@ -95,7 +119,6 @@ export const NumberField = React.forwardRef<HTMLInputElement, NumberFieldProps>(
         onChange={handleAmountChange}
         className={cn(
           "w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-
           rest.className
         )}
       />

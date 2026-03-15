@@ -79,9 +79,10 @@ const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   );
 };
 
-const CopyBtn = ({ text }: { text: string }) => {
+const CopyBtn = ({ text }: { text: string | null }) => {
   const { copied, handleCopy } = useCopy();
-  return (
+
+  return text ? (
     <button
       onClick={() => handleCopy({ text, message: "Copied" })}
       className="hover:bg-muted rounded-md p-1 transition-colors"
@@ -92,7 +93,7 @@ const CopyBtn = ({ text }: { text: string }) => {
         <Copy className="text-muted-foreground h-4 w-4" />
       )}
     </button>
-  );
+  ) : null;
 };
 
 const DetailRow = ({ label, value, icon: Icon, action, mono = false }: any) => (

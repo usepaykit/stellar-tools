@@ -13,13 +13,15 @@ import { waitUntil } from "@vercel/functions";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session"],
   schema: {
     body: Schema.object({
       amount: Schema.number(),
-      walletAddress: Schema.string(),
+      walletAddress: Schema.string().nullable(),
+      stringifiedBankAccount: Schema.string().nullable(),
       memo: Schema.string().optional(),
       assetId: Schema.string(),
+      txHash: Schema.string().nullable(),
     }),
   },
   handler: async ({ body, auth: { organizationId, environment } }) => {
@@ -27,11 +29,47 @@ export const POST = apiHandler({
 
     if (!secret) throw new Error("Invalid stellar secret");
 
+    const api = new StellarCoreApi(environment);
+    const secretKey = new EncryptionApi().decrypt(secret.encrypted);
+
+    const asset = await retrieveAsset({ id: body.assetId }, environment);
+
+    const keeperKey = process.env.KEEPER_PUBLIC_KEY;
+
     const rateBps = await getOrgFeeRateBps(organizationId);
     const feeAmount = Math.round((body.amount * rateBps) / BPS_DENOMINATOR);
     const netAmount = body.amount - feeAmount;
 
     const payoutId = generateResourceId("pay", organizationId, 25);
+
+    const [payoutResult, feeResult] = await Promise.all([
+      body.walletAddress
+        ? api.sendAssetPayment(
+            secretKey,
+            body.walletAddress,
+            asset.code,
+            asset.issuer!,
+            body.amount.toString(),
+            body.memo
+          )
+        : Promise.resolve(Result.ok(null)),
+      feeAmount > 0 && keeperKey
+        ? api.sendAssetPayment(secretKey, keeperKey, asset.code, asset.issuer!, feeAmount.toString())
+        : Promise.resolve(Result.ok(null)),
+    ]);
+
+    if (payoutResult.isErr()) {
+      await putPayout(payoutId, { status: "failed", completedAt: new Date() });
+      return Result.err(payoutResult.error);
+    }
+
+    await putPayout(payoutId, {
+      status: "succeeded",
+      transactionHash: payoutResult.value?.hash,
+      completedAt: new Date(),
+    });
+
+    console.dir({ feeResult }, { depth: 100 });
 
     const payout = await postPayout(
       {
@@ -41,42 +79,17 @@ export const POST = apiHandler({
         walletAddress: body.walletAddress,
         memo: body.memo ?? null,
         metadata: null,
-        transactionHash: "---",
+        transactionHash: body.txHash,
+        withdrawalReceiptUrl: null,
         completedAt: null,
         asset: body.assetId,
+        stringifiedBankAccount: body.stringifiedBankAccount,
       },
       organizationId,
       environment
     );
 
-    const runSideEffects = async () => {
-      const api = new StellarCoreApi(environment);
-      const secretKey = new EncryptionApi().decrypt(secret.encrypted);
-
-      const asset = await retrieveAsset({ id: body.assetId }, environment);
-
-      const keeperKey = process.env.KEEPER_PUBLIC_KEY;
-
-      const [payoutResult, feeResult] = await Promise.all([
-        api.sendAssetPayment(secretKey, body.walletAddress, asset.code, asset.issuer!, netAmount.toString(), body.memo),
-        feeAmount > 0 && keeperKey
-          ? api.sendAssetPayment(secretKey, keeperKey, asset.code, asset.issuer!, feeAmount.toString())
-          : Promise.resolve(Result.ok(null)),
-      ]);
-
-      if (payoutResult.isErr()) {
-        await putPayout(payoutId, { status: "failed", completedAt: new Date() });
-        return Result.err(payoutResult.error);
-      }
-
-      await putPayout(payoutId, {
-        status: "succeeded",
-        transactionHash: payoutResult.value?.hash,
-        completedAt: new Date(),
-      });
-
-      return feeResult;
-    };
+    const runSideEffects = async () => {};
 
     waitUntil(runSideEffects());
 
