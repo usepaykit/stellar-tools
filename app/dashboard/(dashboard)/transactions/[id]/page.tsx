@@ -29,7 +29,7 @@ import { toast } from "@/components/ui/toast";
 import { type Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency, truncate } from "@/lib/utils";
 import {
   CheckCircle2,
   ChevronRight,
@@ -224,7 +224,7 @@ export default function TransactionDetailPage() {
 
   const payment = data?.payment ?? null;
   const customer = data?.customer ?? null;
-  const refunds = data?.refunds ?? [];
+  const refund = data?.refund;
 
   const handleRefreshStatus = React.useCallback(async () => {
     if (!paymentId) return;
@@ -269,9 +269,6 @@ export default function TransactionDetailPage() {
       </DashboardSidebar>
     );
   }
-
-  const hasRefund = refunds && refunds.length > 0;
-  const latestRefund = hasRefund ? refunds[0] : null;
 
   return (
     <div className="w-full">
@@ -329,7 +326,7 @@ export default function TransactionDetailPage() {
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View on Stellar Explorer
                       </DropdownMenuItem>
-                      {payment.status === "confirmed" && (
+                      {payment.status === "confirmed" && !refund && (
                         <DropdownMenuItem onClick={openRefundModal}>Process Refund</DropdownMenuItem>
                       )}
                       <DropdownMenuItem
@@ -355,12 +352,9 @@ export default function TransactionDetailPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="text-muted-foreground mb-1 text-xs">Amount</div>
+
                         <div className="text-2xl font-bold">
-                          {(payment.amount ?? 0).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 7,
-                          })}{" "}
-                          XLM
+                          {formatCurrency(Number(payment.amount), payment.metadata?.assetCode as unknown as string)}
                         </div>
                       </div>
                     </div>
@@ -424,7 +418,7 @@ export default function TransactionDetailPage() {
                   </div>
                 </div>
 
-                {hasRefund && latestRefund && (
+                {refund && (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold sm:text-xl">Refund Information</h3>
                     <div className="bg-card space-y-4 rounded-lg border p-4">
@@ -435,21 +429,17 @@ export default function TransactionDetailPage() {
                             variant="outline"
                             className={cn(
                               "gap-1.5 border",
-                              latestRefund.status === "succeeded"
+                              refund.status === "succeeded"
                                 ? "border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
-                                : latestRefund.status === "pending"
-                                  ? "border-yellow-500/20 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-                                  : "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
+                                : "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-400"
                             )}
                           >
-                            {latestRefund.status === "succeeded" ? (
+                            {refund.status === "succeeded" ? (
                               <CheckCircle2 className="h-3 w-3" />
-                            ) : latestRefund.status === "pending" ? (
-                              <Clock className="h-3 w-3" />
                             ) : (
                               <XCircle className="h-3 w-3" />
                             )}
-                            <span className="capitalize">{latestRefund.status}</span>
+                            <span className="capitalize">{refund.status}</span>
                           </Badge>
                         </div>
                       </div>
@@ -460,28 +450,24 @@ export default function TransactionDetailPage() {
                         <div className="min-w-0 flex-1">
                           <div className="text-muted-foreground mb-1 text-xs">Refund Amount</div>
                           <div className="text-lg font-semibold">
-                            {((latestRefund.amount ?? 0) / 1000000).toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 7,
-                            })}{" "}
-                            XLM
+                            {formatCurrency(refund.amount, refund.assetCode!)}
                           </div>
                         </div>
                       </div>
 
-                      {latestRefund.reason && (
+                      {refund?.reason && (
                         <>
                           <Separator />
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0 flex-1">
                               <div className="text-muted-foreground mb-1 text-xs">Reason</div>
-                              <div className="text-sm">{latestRefund.reason}</div>
+                              <div className="text-sm">{refund.reason}</div>
                             </div>
                           </div>
                         </>
                       )}
 
-                      {latestRefund.receiverPublicKey && (
+                      {refund.receiverPublicKey && (
                         <>
                           <Separator />
                           <div className="flex items-start justify-between gap-2">
@@ -490,12 +476,11 @@ export default function TransactionDetailPage() {
                               <div className="flex items-center gap-2">
                                 <Wallet className="text-muted-foreground h-4 w-4" />
                                 <span className="font-mono text-sm break-all">
-                                  {latestRefund.receiverPublicKey.slice(0, 8)}...
-                                  {latestRefund.receiverPublicKey.slice(-4)}
+                                  {truncate(refund.receiverPublicKey, { start: 6, end: 6 })}
                                 </span>
                               </div>
                             </div>
-                            <CopyButton text={latestRefund.receiverPublicKey} label="Copy wallet address" />
+                            <CopyButton text={refund.receiverPublicKey} label="Copy wallet address" />
                           </div>
                         </>
                       )}
@@ -505,9 +490,7 @@ export default function TransactionDetailPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="text-muted-foreground mb-1 text-xs">Refunded At</div>
-                          <div className="text-sm">
-                            {moment(latestRefund.createdAt).format("MMMM DD, YYYY [at] h:mm A")}
-                          </div>
+                          <div className="text-sm">{moment(refund.createdAt).format("MMMM DD, YYYY [at] h:mm A")}</div>
                         </div>
                         <Clock className="text-muted-foreground h-4 w-4 shrink-0" />
                       </div>
@@ -516,9 +499,7 @@ export default function TransactionDetailPage() {
                 )}
               </div>
 
-              {/* Right Column - Sidebar */}
               <div className="space-y-6">
-                {/* Details Section */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold sm:text-xl">Details</h3>
                   <div className="space-y-3">
@@ -573,7 +554,6 @@ export default function TransactionDetailPage() {
                   </div>
                 </div>
 
-                {/* Actions Section */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold sm:text-xl">Actions</h3>
                   <div className="space-y-2">
@@ -587,7 +567,7 @@ export default function TransactionDetailPage() {
                       <ExternalLink className="h-4 w-4 shrink-0" />
                       <span className="text-sm font-medium">View on Stellar Explorer</span>
                     </Button>
-                    {payment.status === "confirmed" && (
+                    {payment.status === "confirmed" && !refund && (
                       <Button
                         variant="outline"
                         className="hover:bg-muted/50 h-auto w-full justify-start gap-2.5 px-3 py-2.5 shadow-none transition-colors"

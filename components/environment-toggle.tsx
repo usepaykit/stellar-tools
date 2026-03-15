@@ -47,7 +47,7 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
         checked={isTestMode}
         onCheckedChange={handleToggle}
         disabled={isSwitching}
-        className="h-5 w-9 [&>span]:size-4"
+        className="h-5 w-9 cursor-pointer [&>span]:size-4"
       />
 
       <span className="text-muted-foreground text-xs">Sandbox data</span>

@@ -6,7 +6,19 @@ import { putCheckout } from "@/actions/checkout";
 import { createCustomerWallet, retrieveCustomerWallets } from "@/actions/customers";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
-import { Customer, Network, Payment, Refund, assets, customers, db, payments, products, refunds } from "@/db";
+import {
+  Customer,
+  Network,
+  Payment,
+  Refund,
+  ResolvedPayment,
+  assets,
+  customers,
+  db,
+  payments,
+  products,
+  refunds,
+} from "@/db";
 import { sendEmailEvent } from "@/integrations/email-handler";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
@@ -118,19 +130,29 @@ export const postPayment = async (
   );
 };
 
-export const retrievePayments = async (orgId?: string, params?: { customerId?: string }, env?: Network) => {
+export const retrievePayments = async (
+  orgId?: string,
+  params?: { customerId?: string },
+  env?: Network
+): Promise<ResolvedPayment[]> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const conditions = [eq(payments.organizationId, organizationId), eq(payments.environment, environment)];
-
-  if (params?.customerId) {
-    conditions.push(eq(payments.customerId, params.customerId));
-  }
-
-  return await db
-    .select()
+  const rows = await db
+    .select({
+      payment: payments,
+      hasRefund: refunds.id,
+    })
     .from(payments)
-    .where(and(...conditions));
+    .leftJoin(refunds, and(eq(payments.id, refunds.paymentId), eq(refunds.status, "succeeded")))
+    .where(
+      and(
+        eq(payments.organizationId, organizationId),
+        eq(payments.environment, environment),
+        params?.customerId ? eq(payments.customerId, params.customerId) : undefined
+      )
+    );
+
+  return rows.map(({ payment, hasRefund }) => ({ ...payment, refunded: !!hasRefund }));
 };
 
 export const retrievePayment = async (id: string, orgId?: string, env?: Network) => {
@@ -152,42 +174,28 @@ export const retrievePaymentWithDetails = async (
   id: string,
   orgId?: string,
   env?: Network
-): Promise<{ payment: Payment; customer: Customer | null; refunds: Refund[] } | null> => {
+): Promise<{ payment: Payment; customer: Customer | null; refund: Refund | null } | null> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [payment] = await db
-    .select()
+  const rows = await db
+    .select({
+      payment: payments,
+      customer: customers,
+      refund: refunds,
+    })
     .from(payments)
-    .where(
-      and(eq(payments.id, id), eq(payments.organizationId, organizationId), eq(payments.environment, environment))
-    );
-
-  if (!payment) return null;
-
-  let customer: Customer | null = null;
-  if (payment.customerId) {
-    const [c] = await db
-      .select()
-      .from(customers)
-      .where(
-        and(
-          eq(customers.id, payment.customerId),
-          eq(customers.organizationId, organizationId),
-          eq(customers.environment, environment)
-        )
-      );
-    customer = c ?? null;
-  }
-
-  const refundsList = await db
-    .select()
-    .from(refunds)
-    .where(
-      and(eq(refunds.paymentId, id), eq(refunds.organizationId, organizationId), eq(refunds.environment, environment))
-    )
+    .leftJoin(customers, eq(payments.customerId, customers.id))
+    .leftJoin(refunds, and(eq(payments.id, refunds.paymentId), eq(refunds.status, "succeeded")))
+    .where(and(eq(payments.id, id), eq(payments.organizationId, organizationId), eq(payments.environment, environment)))
     .orderBy(desc(refunds.createdAt));
 
-  return { payment, customer, refunds: refundsList };
+  if (rows.length === 0) return null;
+
+  return {
+    payment: rows[0].payment,
+    customer: rows[0].customer,
+    refund: rows[0].refund,
+  };
 };
 
 export const retrievePaymentsWithDetails = async (orgId?: string, env?: Network) => {

@@ -38,10 +38,33 @@ export class ApiClient {
   }
 
   private request = async <T>(call: () => Promise<T>): Promise<Result<T, Error>> => {
-    return Result.tryPromise({
-      try: call,
-      catch: (e) => (e instanceof Error ? e : new Error(String(e))),
-    });
+    try {
+      const data = await call();
+      return Result.ok(data);
+    } catch (e) {
+      if (e instanceof HTTPError) {
+        try {
+          const body = (await e.response.json()) as { error?: string | { message?: string; [k: string]: unknown } };
+          const raw = body?.error;
+          if (typeof raw === "string") {
+            return Result.err(new Error(raw));
+          }
+          if (
+            raw &&
+            typeof raw === "object" &&
+            "message" in raw &&
+            typeof (raw as { message?: string }).message === "string"
+          ) {
+            return Result.err(new Error((raw as { message: string }).message));
+          }
+          if (raw && typeof raw === "object") {
+            return Result.err(new Error(JSON.stringify(raw)));
+          }
+        } catch (_) {}
+      }
+      const err = e instanceof Error ? e : new Error(String(e));
+      return Result.err(err);
+    }
   };
 
   get = <T>(url: string, searchParams?: any, headers?: HeadersInit) =>

@@ -14,8 +14,8 @@ type EventDataDiff = { $changes?: ReturnType<typeof computeDiff> };
 
 interface EmitParams {
   type: EventType;
-  customerId?: string; // for customer operations
-  merchantId?: string; // for merchant operations
+  customerId?: string | null; // for customer operations
+  merchantId?: string | null; // for merchant operations
   data?: Record<
     string,
     string | number | boolean | null | undefined | Date | EventDataDiff | ReturnType<typeof computeDiff>

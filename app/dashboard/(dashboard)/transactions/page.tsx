@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { retrieveCustomerWallets } from "@/actions/customers";
-import { getCurrentOrganization } from "@/actions/organization";
 import { retrievePayment, retrievePaymentsWithDetails } from "@/actions/payment";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -15,22 +14,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
+import { PaymentStatus } from "@/constant/schema.client";
 import { useCopy } from "@/hooks/use-copy";
-import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn, truncate } from "@/lib/utils";
+import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { cn, formatCurrency, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { CheckCircle2, Copy, Download, Plus, Settings, Wallet, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, Copy, Download, Plus, Settings, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
 // --- Types ---
-
-type TransactionStatus = "succeeded" | "refunded" | "failed";
 
 type Transaction = {
   id: string;
@@ -47,17 +45,17 @@ type Transaction = {
   };
   date: Date;
   refundedDate?: Date;
-  status: TransactionStatus;
+  status: PaymentStatus;
 };
 
 // --- Status Badge Component ---
 
-const StatusBadge = ({ status }: { status: TransactionStatus }) => {
+const StatusBadge = ({ status }: { status: PaymentStatus | "refunded" }) => {
   const variants = {
-    succeeded: {
+    confirmed: {
       className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
       icon: CheckCircle2,
-      label: "Succeeded",
+      label: "Confirmed",
     },
     refunded: {
       className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
@@ -68,6 +66,11 @@ const StatusBadge = ({ status }: { status: TransactionStatus }) => {
       className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
       icon: XCircle,
       label: "Failed",
+    },
+    pending: {
+      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+      icon: Clock,
+      label: "Pending",
     },
   };
 
@@ -124,16 +127,7 @@ const columns: ColumnDef<Transaction>[] = [
     header: "Amount",
     cell: ({ row }) => {
       const transaction = row.original;
-      return (
-        <div className="font-semibold">
-          {transaction.asset === "USD" ? "$" : "₹"}
-          {parseFloat(transaction.amount).toLocaleString("en-US", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}{" "}
-          {transaction.asset}
-        </div>
-      );
+      return <div className="font-semibold">{formatCurrency(Number(transaction.amount), transaction.asset)}</div>;
     },
   },
   {
@@ -236,6 +230,7 @@ export function RefundModalContent({
   setSubmitRef?: React.MutableRefObject<(() => void) | null>;
   onFooterChange?: (props: { isPending: boolean }) => void;
 }) {
+  const { data: orgContext } = useOrgContext();
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
     defaultValues: {
@@ -270,7 +265,8 @@ export function RefundModalContent({
 
   const createRefundMutation = useMutation({
     mutationFn: async (data: RefundFormData) => {
-      const organization = await getCurrentOrganization();
+      if (!orgContext) throw new Error("No organization context found");
+
       const paymentRow = await retrievePayment(data.paymentId);
 
       let receiverPublicKey: string;
@@ -291,19 +287,17 @@ export function RefundModalContent({
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
+        headers: { "x-auth-token": orgContext?.token! },
       });
 
-      const result = await api.post<{ id: string; success: boolean }>("/api/refunds", {
-        body: JSON.stringify({
-          paymentId: data.paymentId,
-          customerId: paymentRow.customerId,
-          assetId: paymentRow.assetId,
-          amount: paymentRow.amount,
-          receiverPublicKey,
-          reason: data.reason ?? null,
-          metadata: null,
-        }),
+      const result = await api.post<{ id: string }>("/refunds", {
+        paymentId: data.paymentId,
+        customerId: paymentRow.customerId,
+        assetId: paymentRow.assetId,
+        amount: paymentRow.amount,
+        receiverPublicKey,
+        reason: data.reason ?? null,
+        metadata: null,
       });
 
       if (result.isErr()) throw new Error(result.error.message);
@@ -422,13 +416,13 @@ export function RefundModalContent({
 
 // --- Main Component ---
 
-type TabType = "all" | TransactionStatus;
+type TabType = "all" | "refunded" | PaymentStatus;
 
 function TransactionsPageContent() {
   const searchParams = useSearchParams();
   const customerId = searchParams?.get("customer");
   const paymentId = searchParams?.get("paymentId");
-
+  const router = useRouter();
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
   const invalidate = useInvalidateOrgQuery();
 
@@ -512,31 +506,37 @@ function TransactionsPageContent() {
         if (!matchesId) return false;
       }
 
+      console.log({ p, activeTab });
+
       if (activeTab === "all") return true;
       if (activeTab === "refunded") return p.refundStatus === "succeeded";
       return p.status === activeTab;
     });
   }, [payments, activeTab, customerId, paymentId]);
 
-  const tableActions: TableAction<Transaction>[] = [
-    {
-      label: "View details",
-      onClick: (transaction) => console.log(transaction),
-    },
-    {
-      label: "Refund",
-      onClick: (transaction) => openRefundModal(transaction.description),
-    },
-    {
-      label: "Delete",
-      onClick: (transaction) => console.log("Delete", transaction),
-      variant: "destructive",
-    },
-  ];
+  const tableActions = (row: Transaction): TableAction<Transaction>[] => {
+    const actions: Array<TableAction<Transaction>> = [
+      {
+        label: "View details",
+        onClick: (transaction) => router.push(`/transactions/${transaction.id}`),
+      },
+      {
+        label: "Delete",
+        onClick: (transaction) => console.log("Delete", transaction),
+        variant: "destructive",
+      },
+    ];
+
+    if (row.status === "confirmed") {
+      actions.push({ label: "Refund", onClick: (transaction) => openRefundModal(transaction.description) });
+    }
+
+    return actions;
+  };
 
   const tabs = [
     { id: "all" as TabType, label: "All", count: stats.all },
-    { id: "succeeded" as TabType, label: "Succeeded", count: stats.succeeded },
+    { id: "confirmed" as TabType, label: "Succeeded", count: stats.succeeded },
     { id: "refunded" as TabType, label: "Refunded", count: stats.refunded },
     { id: "failed" as TabType, label: "Failed", count: stats.failed },
   ];
@@ -623,11 +623,7 @@ function TransactionsPageContent() {
                     email: it.customerEmail!,
                   },
                   date: it.createdAt,
-                  status: (it.refundStatus === "succeeded"
-                    ? "refunded"
-                    : it.status === "confirmed"
-                      ? "succeeded"
-                      : it.status) as TransactionStatus,
+                  status: (it.refundStatus === "succeeded" ? "refunded" : it.status) as PaymentStatus,
                   refundedDate: it.refundedAt ?? undefined,
                 }))}
                 enableBulkSelect={true}

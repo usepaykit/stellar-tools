@@ -5,7 +5,6 @@ import * as React from "react";
 import { retrieveAssets } from "@/actions/asset";
 import { retrieveCustomers } from "@/actions/customers";
 import { retrieveEvents } from "@/actions/event";
-import { getCurrentOrganization } from "@/actions/organization";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
 import { CustomerModalContent } from "@/app/dashboard/(dashboard)/customers/page";
@@ -14,7 +13,7 @@ import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { DataTable } from "@/components/data-table";
+import { DataTable, TableAction } from "@/components/data-table";
 import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
@@ -38,11 +37,11 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { Payment } from "@/db";
+import { Payment, ResolvedPayment } from "@/db";
 import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Checkout } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
@@ -69,30 +68,33 @@ import { useParams, useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-// --- Helpers ---
-
-const formatCurrency = (amt: number, assetCode: string) => {
-  const code = assetCode?.trim()?.toUpperCase();
-  return `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amt)} ${code}`;
-};
-
 // --- Reusable Internal Components ---
 
-const StatusBadge = ({ status }: { status: Payment["status"] }) => {
-  const variants = {
-    confirmed: {
-      cls: "bg-green-500/10 text-green-700 border-green-500/20",
-      icon: CheckCircle2,
-      label: "Confirmed",
-    },
-    pending: {
-      cls: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
-      icon: Clock,
-      label: "Pending",
-    },
-    failed: { cls: "bg-red-500/10 text-red-700 border-red-500/20", icon: XCircle, label: "Failed" },
-  };
-  const { cls, icon: Icon, label } = variants[status as keyof typeof variants] || variants.pending;
+const paymentStatusVariants = {
+  confirmed: {
+    cls: "bg-green-500/10 text-green-700 border-green-500/20",
+    icon: CheckCircle2,
+    label: "Confirmed",
+  },
+  pending: {
+    cls: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20",
+    icon: Clock,
+    label: "Pending",
+  },
+  failed: { cls: "bg-red-500/10 text-red-700 border-red-500/20", icon: XCircle, label: "Failed" },
+  refunded: {
+    cls: "bg-muted text-muted-foreground border-border",
+    icon: XCircle,
+    label: "Refunded",
+  },
+};
+
+const StatusBadge = ({ status }: { status: Payment["status"] | "refunded" }) => {
+  const {
+    cls,
+    icon: Icon,
+    label,
+  } = paymentStatusVariants[status as keyof typeof paymentStatusVariants] ?? paymentStatusVariants.pending;
   return (
     <Badge variant="outline" className={cn("gap-1.5 border", cls)}>
       <Icon className="h-3 w-3" /> {label}
@@ -128,7 +130,7 @@ const DetailRow = ({ label, value, action, mono }: any) => (
 
 // --- Table Config ---
 
-const paymentColumns: ColumnDef<Payment>[] = [
+const paymentColumns: ColumnDef<ResolvedPayment>[] = [
   {
     accessorKey: "amount",
     header: "Amount",
@@ -146,7 +148,7 @@ const paymentColumns: ColumnDef<Payment>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => <StatusBadge status={row.original.status as any} />,
+    cell: ({ row }) => <StatusBadge status={row.original.refunded ? "refunded" : row.original.status} />,
   },
   {
     accessorKey: "createdAt",
@@ -284,7 +286,10 @@ export default function CustomerDetailPage() {
     });
   }, [customerId]);
 
-  const confirmedPayments = React.useMemo(() => payments?.filter((p) => p.status === "confirmed") ?? [], [payments]);
+  const confirmedPayments = React.useMemo(
+    () => payments?.filter((p) => p.status === "confirmed" && !p.refunded) ?? [],
+    [payments]
+  );
 
   const uniqueAssetCodes = React.useMemo(
     () => [...new Set(confirmedPayments.map((p) => p.metadata?.assetCode as string).filter(Boolean))],
@@ -383,19 +388,23 @@ export default function CustomerDetailPage() {
                   columns={paymentColumns}
                   data={payments ?? []}
                   isLoading={isLoadingPayments}
-                  actions={[
-                    {
-                      label: "Refund payment",
-                      onClick: (p) => openRefundModal(p.id),
-                    },
-                    {
-                      label: "Copy ID",
-                      onClick: (p) => {
-                        navigator.clipboard.writeText(p.id);
-                        toast.success("Copied");
+                  actions={(row) => {
+                    const actions: Array<TableAction<ResolvedPayment>> = [
+                      {
+                        label: "Copy ID",
+                        onClick: (p) => {
+                          navigator.clipboard.writeText(p.id);
+                          toast.success("Copied");
+                        },
                       },
-                    },
-                  ]}
+                    ];
+
+                    if (!row.refunded) {
+                      actions.push({ label: "Refund payment", onClick: (p) => openRefundModal(p.id) });
+                    }
+
+                    return actions;
+                  }}
                 />
               </section>
 
@@ -417,9 +426,6 @@ export default function CustomerDetailPage() {
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">Wallet Addresses</h3>
-                  <Button variant="ghost" size="icon-sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
                 </div>
                 <div className="space-y-3">
                   {customer.wallets?.map(({ address }) => (
@@ -546,6 +552,7 @@ function CheckoutModalContent({
   setSubmitRef?: React.MutableRefObject<(() => void) | null>;
   onFooterChange?: (props: { isPending: boolean; createdUrl: string | null }) => void;
 }) {
+  const { data: orgContext } = useOrgContext();
   const invalidate = useInvalidateOrgQuery();
   const [createdUrl, setCreatedUrl] = React.useState<string | null>(null);
   const { copied, handleCopy } = useCopy();
@@ -588,10 +595,10 @@ function CheckoutModalContent({
 
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof checkoutSchema>) => {
-      const organization = await getCurrentOrganization();
+      if (!orgContext) throw new Error("No organization context found");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
+        headers: { "x-auth-token": orgContext.token! },
       });
 
       const expiresAt = new Date();
@@ -757,16 +764,17 @@ function CheckoutModalContent({
 }
 
 function PortalLinkModalContent({ customerId, onClose }: { customerId: string; onClose: () => void }) {
+  const { data: orgContext } = useOrgContext();
   const [url, setUrl] = React.useState<string | null>(null);
 
   const { handleCopy } = useCopy();
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const organization = await getCurrentOrganization();
+      if (!orgContext) throw new Error("Organization context not found");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
+        headers: { "x-auth-token": orgContext?.token! },
       });
 
       const response = await api.post<{ url: string; token: string; expiresAt: Date }>(

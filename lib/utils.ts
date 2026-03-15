@@ -165,3 +165,25 @@ export function normalizeTimeSeries<T extends RawDataPoint>(
 }
 
 export const STROOPS_PER_XLM = 10_000_000;
+
+export const formatCurrency = (amt: number, assetCode: string) => {
+  const code = assetCode?.trim()?.toUpperCase();
+  return `${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amt)} ${code}`;
+};
+
+export const mergeWithNullDeletes = (
+  base: Record<string, unknown> | null | undefined,
+  patch: Record<string, unknown> | null | undefined
+): Record<string, unknown> => {
+  const result = { ...(base ?? {}) };
+  if (!patch || typeof patch !== "object") return result;
+  for (const key of Object.keys(patch)) {
+    const v = patch[key];
+    if (v === null || v === undefined) {
+      delete result[key];
+    } else {
+      result[key] = v;
+    }
+  }
+  return result;
+};

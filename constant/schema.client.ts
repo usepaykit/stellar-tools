@@ -18,6 +18,7 @@ export const eventTypeEnum = [
   "checkout::created",
   "checkout::updated",
   "refund::created",
+  "refund::failed",
   "subscription::created",
   "subscription::updated",
   "subscription::deleted",
@@ -42,3 +43,7 @@ export type SubscriptionStatus = (typeof subscriptionStatusEnum)[number];
 export type AssetCode = SuggestedString<"XLM" | "USDC">;
 
 export type AssetIssuer = SuggestedString<"native">;
+
+export const paymentStatusEnum = ["pending", "confirmed", "failed"] as const;
+
+export type PaymentStatus = (typeof paymentStatusEnum)[number];

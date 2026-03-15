@@ -6,7 +6,7 @@ import { Result } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const GET = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session"],
   handler: async ({ auth: { organizationId, environment } }) => {
     const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
 

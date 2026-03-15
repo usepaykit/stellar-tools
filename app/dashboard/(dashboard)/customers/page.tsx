@@ -31,12 +31,13 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer, ResolvedCustomer } from "@/db";
-import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, fileFromUrl, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import type { Column, ColumnDef } from "@tanstack/react-table";
+import _ from "lodash";
 import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, CloudUpload, Plus, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Papa from "papaparse";
@@ -396,9 +397,7 @@ export function CustomerModalContent({
         return response.value;
       }
 
-      const response = await api.post<Customer>("/customers", {
-        ...payload,
-      });
+      const response = await api.post<Customer>("/customers", [payload]);
 
       if (response.isErr()) throw new Error(response.error.message);
 
@@ -640,6 +639,7 @@ const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) =>
 };
 
 export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const { data: orgContext } = useOrgContext();
   const [csvFile, setCsvFile] = React.useState<FileWithPreview | null>(null);
   const [rawRows, setRawRows] = React.useState<Record<string, string>[]>([]);
   const [headers, setHeaders] = React.useState<string[]>([]);
@@ -671,7 +671,7 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
                   : h.toLowerCase().includes("image")
                     ? "image"
                     : "metadata",
-            metadataKey: h,
+            metadataKey: _.snakeCase(h),
           }))
         );
       },
@@ -726,12 +726,13 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
 
   const importCustomersMutation = useMutation({
     mutationFn: async () => {
-      const organization = await getCurrentOrganization();
+      if (!orgContext) throw new Error("Organization context not found.");
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token!, "x-source": "CSV Import" },
+        headers: { "x-auth-token": orgContext.token!, "x-source": "CSV Import" },
       });
+
       const result = await api.post<Array<Customer>>(
         "/customers",
         previewData.map((row) => ({
@@ -743,6 +744,8 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
         }))
       );
 
+      console.log({ result, error: result.isErr() ? result.error : null });
+
       if (result.isErr()) throw new Error(result.error.message);
 
       return result.value;
@@ -751,119 +754,129 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
       toast.success(`${previewData.length} customers imported successfully`);
       onSuccess();
     },
+    onError: (error) => {
+      console.log({ error });
+      toast.error(error.message);
+    },
   });
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex w-full items-center justify-between border-b pb-4">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="shrink-0 border-b pb-4">
         <p className="text-muted-foreground/60 text-[10px] font-black tracking-widest uppercase">
           {rawRows.length} Rows Detected
         </p>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            disabled={!rawRows.length}
-            isLoading={importCustomersMutation.isPending}
-            onClick={() => importCustomersMutation.mutate()}
-          >
-            {importCustomersMutation.isPending ? "Importing..." : "Import Data"}
-          </Button>
-        </div>
       </div>
-      <div className="grid h-full grid-cols-1 gap-10 pb-10 lg:grid-cols-2">
-        <div className="space-y-10">
-          <CsvImportSection label="1. Data Source">
-            <FileUpload
-              value={csvFile ? [csvFile] : []}
-              onFilesChange={onUpload}
-              dropzoneMultiple={false}
-              placeholder="Drag & drop a CSV here or click to select"
-              dropzoneAccept={{ "text/csv": [".csv"] }}
-            />
-          </CsvImportSection>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="grid grid-cols-1 gap-10 py-6 lg:grid-cols-2">
+          <div className="space-y-10">
+            <CsvImportSection label="1. Data Source">
+              <FileUpload
+                value={csvFile ? [csvFile] : []}
+                onFilesChange={onUpload}
+                dropzoneMultiple={false}
+                placeholder="Drag & drop a CSV here or click to select"
+                dropzoneAccept={{ "text/csv": [".csv"] }}
+              />
+            </CsvImportSection>
 
-          {headers.length > 0 && (
-            <CsvImportSection label="2. Field Mapping">
-              <div className="bg-card divide-border/50 divide-y overflow-hidden rounded-xl border shadow-xs">
-                {mappings.map((m, i) => (
-                  <div
-                    key={m.csvHeader}
-                    className="hover:bg-muted/10 flex items-center gap-6 px-5 py-3 transition-colors"
-                  >
-                    <span className="text-foreground/80 flex-1 truncate text-sm font-medium">{m.csvHeader}</span>
-                    <ArrowRight className="text-muted-foreground/30 size-3" />
-                    <div className="flex flex-2 items-center gap-3">
-                      <SelectField
-                        id={`mapping-target-${i}`}
-                        value={m.target}
-                        triggerClassName="w-40 h-9 bg-background shadow-none"
-                        onChange={(val) => updateMapping(i, { target: val as any })}
-                        items={[
-                          { label: "Name", value: "name" },
-                          { label: "Email", value: "email" },
-                          { label: "Phone", value: "phone" },
-                          { label: "Image", value: "image" },
-                          { label: "Metadata", value: "metadata" },
-                          { label: "Ignore", value: "none" },
-                        ]}
-                      />
-                      {m.target === "metadata" ? (
-                        <InputGroup className="bg-background h-9 w-44 shadow-none">
-                          <InputGroupInput
-                            value={m.metadataKey}
-                            placeholder="Key..."
-                            className="font-mono text-xs"
-                            onChange={(e) => updateMapping(i, { metadataKey: e.target.value })}
-                          />
-                        </InputGroup>
-                      ) : (
-                        m.target !== "none" && (
-                          <Badge
-                            variant="secondary"
-                            className="text-muted-foreground/60 h-9 border-none px-4 text-[10px] font-bold tracking-tight uppercase"
-                          >
-                            System Field
-                          </Badge>
-                        )
-                      )}
+            {headers.length > 0 && (
+              <CsvImportSection label="2. Field Mapping">
+                <div className="bg-card divide-border/50 divide-y overflow-hidden rounded-xl border shadow-xs">
+                  {mappings.map((m, i) => (
+                    <div
+                      key={m.csvHeader}
+                      className="hover:bg-muted/10 flex items-center gap-6 px-5 py-3 transition-colors"
+                    >
+                      <span className="text-foreground/80 flex-1 truncate text-sm font-medium">{m.csvHeader}</span>
+                      <ArrowRight className="text-muted-foreground/30 size-3" />
+                      <div className="flex flex-2 items-center gap-3">
+                        <SelectField
+                          id={`mapping-target-${i}`}
+                          value={m.target}
+                          triggerClassName="w-40 h-9 bg-background shadow-none"
+                          onChange={(val) => updateMapping(i, { target: val as any })}
+                          items={[
+                            { label: "Name", value: "name" },
+                            { label: "Email", value: "email" },
+                            { label: "Phone", value: "phone" },
+                            { label: "Image", value: "image" },
+                            { label: "Metadata", value: "metadata" },
+                            { label: "Ignore", value: "none" },
+                          ]}
+                        />
+                        {m.target === "metadata" ? (
+                          <InputGroup className="bg-background h-9 w-44 shadow-none">
+                            <InputGroupInput
+                              value={m.metadataKey}
+                              placeholder="Key..."
+                              className="font-mono text-xs"
+                              onChange={(e) => updateMapping(i, { metadataKey: e.target.value })}
+                            />
+                          </InputGroup>
+                        ) : (
+                          m.target !== "none" && (
+                            <Badge
+                              variant="secondary"
+                              className="text-muted-foreground/60 h-9 border-none px-4 text-[10px] font-bold tracking-tight uppercase"
+                            >
+                              System Field
+                            </Badge>
+                          )
+                        )}
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </CsvImportSection>
+            )}
+          </div>
+
+          <div className="space-y-10">
+            <CsvImportSection label="3. System Preview">
+              <div className="bg-background overflow-hidden rounded-xl border shadow-xs">
+                <ScrollArea className="h-[280px] w-full">
+                  <div className="**:table:min-w-full!">
+                    <DataTable
+                      columns={PREVIEW_COLS}
+                      data={previewData}
+                      isLoading={false}
+                      className="border-0 shadow-none"
+                    />
                   </div>
-                ))}
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
               </div>
             </CsvImportSection>
-          )}
-        </div>
 
-        <div className="space-y-10">
-          <CsvImportSection label="3. System Preview">
-            <div className="bg-background overflow-hidden rounded-xl border shadow-xs">
-              <ScrollArea className="h-[280px] w-full">
-                <div className="**:table:min-w-full!">
-                  <DataTable
-                    columns={PREVIEW_COLS}
-                    data={previewData}
-                    isLoading={false}
-                    className="border-0 shadow-none"
-                  />
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </div>
-          </CsvImportSection>
-
-          <CsvImportSection label="4. Logic Validation">
-            <div className="bg-muted/10 min-h-[160px] rounded-xl border p-6">
-              <Timeline
-                items={Object.keys(schemaLogic).length ? [1] : []}
-                renderItem={() => ({ title: "Schema Transformation", date: "Rules", data: { $changes: schemaLogic } })}
-                emptyMessage="Mappings are 1:1. No transformations needed."
-              />
-            </div>
-          </CsvImportSection>
+            <CsvImportSection label="4. Logic Validation">
+              <div className="bg-muted/10 min-h-[160px] rounded-xl border p-6">
+                <Timeline
+                  items={Object.keys(schemaLogic).length ? [1] : []}
+                  renderItem={() => ({
+                    title: "Schema Transformation",
+                    date: "Rules",
+                    data: { $changes: schemaLogic },
+                  })}
+                  emptyMessage="Mappings are 1:1. No transformations needed."
+                />
+              </div>
+            </CsvImportSection>
+          </div>
         </div>
+      </div>
+
+      <div className="flex shrink-0 justify-end gap-2 border-t pt-4">
+        <Button variant="outline" onClick={onClose} disabled={importCustomersMutation.isPending}>
+          Cancel
+        </Button>
+        <Button
+          disabled={!rawRows.length}
+          isLoading={importCustomersMutation.isPending}
+          onClick={() => importCustomersMutation.mutate()}
+        >
+          {importCustomersMutation.isPending ? "Importing..." : "Import Data"}
+        </Button>
       </div>
 
       <Dialog open={!!viewMetadata} onOpenChange={() => setViewMetadata(null)} modal>

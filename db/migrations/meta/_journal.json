@@ -36,6 +36,20 @@
       "when": 1773510564662,
       "tag": "0004_colossal_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773600070523,
+      "tag": "0005_useful_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773603304024,
+      "tag": "0006_ambitious_norrin_radd",
+      "breakpoints": true
     }
   ]
 }

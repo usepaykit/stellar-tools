@@ -26,7 +26,7 @@ export class CustomerApi {
   async create(params: CreateCustomer) {
     return unwrap(
       await Result.andThenAsync(validateSchema(createCustomerSchema, params), async (data) => {
-        return await this.apiClient.post<Customer>("/customers", data);
+        return await this.apiClient.post<Customer>("/customers", [data]);
       })
     );
   }

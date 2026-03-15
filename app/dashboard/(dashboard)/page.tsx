@@ -177,6 +177,7 @@ export default function DashboardPage() {
                 icon={<LoopIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.revenue}
                 color="var(--chart-2)"
+                tooltipValueFormatter={(v) => usdCentsToDisplay(v, selectedItem, fiatRates)}
               />
               <StatCard
                 title="Revenue"
@@ -185,6 +186,7 @@ export default function DashboardPage() {
                 icon={<DollarIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.revenue}
                 color="var(--chart-2)"
+                tooltipValueFormatter={(v) => usdCentsToDisplay(v, selectedItem, fiatRates)}
               />
               <StatCard
                 title="New Customers"
@@ -265,6 +267,7 @@ function StatCard({
   usage,
   max,
   href,
+  tooltipValueFormatter,
 }: {
   title: string;
   value: string | number;
@@ -275,6 +278,7 @@ function StatCard({
   usage?: number;
   max?: number;
   href?: string;
+  tooltipValueFormatter?: (value: number) => string;
 }) {
   const hasSpark = sparkData.length > 0;
   const chartData = hasSpark ? sparkData : Array.from({ length: 7 }, (_, i) => ({ i: `d${i}`, value: 0 }));
@@ -338,6 +342,9 @@ function StatCard({
             showXAxis={false}
             showTooltip={true}
             showGrid={false}
+            tooltipFormatter={
+              tooltipValueFormatter ? (value: unknown) => tooltipValueFormatter(Number(value)) : undefined
+            }
           />
         </div>
       </CardContent>

@@ -5,6 +5,7 @@ import {
   authProviderEnum as authProviderEnum$1,
   eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
+  paymentStatusEnum as paymentStatusEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
@@ -19,7 +20,19 @@ import {
   recurringPeriodEnum as recurringPeriodEnum$1,
 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const networkEnum = pgEnum("network", networkEnum$1);
 
@@ -311,7 +324,7 @@ export const subscriptions = pgTable("subscription", {
   customerWalletId: text("customer_wallet_id").references(() => customerWallets.id),
 });
 
-export const paymentStatusEnum = pgEnum("payment_status", ["pending", "confirmed", "failed"]);
+export const paymentStatusEnum = pgEnum("payment_status", paymentStatusEnum$1);
 
 export const payments = pgTable("payment", {
   id: text("id").primaryKey(),
@@ -405,7 +418,7 @@ export const webhookLogs = pgTable("webhook_log", {
   description: text("description").notNull(),
 });
 
-export const refundStatusEnum = pgEnum("refund_status", ["pending", "succeeded", "failed"]);
+export const refundStatusEnum = pgEnum("refund_status", ["succeeded", "failed"]);
 
 export const refunds = pgTable(
   "refund",
@@ -426,9 +439,12 @@ export const refunds = pgTable(
     environment: networkEnum("network").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
     receiverPublicKey: text("receiver_public_key").notNull(),
+    assetCode: text("asset_code").$type<AssetCode>(),
   },
   (table) => ({
-    uniquePaymentCustomer: unique().on(table.paymentId, table.customerId),
+    uniqueSucceededRefund: uniqueIndex("unique_succeeded_refund")
+      .on(table.paymentId, table.customerId)
+      .where(sql`status = 'succeeded'`),
   })
 );
 
@@ -570,3 +586,4 @@ export type CustomerPortalSession = InferSelectModel<typeof customerPortalSessio
 export type { ProductStatus, ProductType };
 
 export type ResolvedCustomer = Customer & { wallets?: Array<CustomerWallet> };
+export type ResolvedPayment = Payment & { refunded: boolean };

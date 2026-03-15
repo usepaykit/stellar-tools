@@ -13,6 +13,7 @@ import {
   organizations,
   payments,
   products,
+  refunds,
   secretAccessLog,
   subscriptions,
 } from "@/db";
@@ -435,6 +436,8 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     )
     .groupBy(assets.id);
 
+  const excludeRefundedPayments = sql`${payments.id} NOT IN (SELECT ${refunds.paymentId} FROM ${refunds} WHERE ${refunds.organizationId} = ${organizationId} AND ${refunds.environment} = ${environment} AND ${refunds.status} = 'succeeded')`;
+
   const revenueChartQuery = db
     .select({
       date: sql<string>`date_trunc('day', ${payments.createdAt})::text`,
@@ -446,7 +449,8 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
         eq(payments.organizationId, organizationId),
         eq(payments.environment, environment),
         eq(payments.status, "confirmed"),
-        gte(payments.createdAt, since)
+        gte(payments.createdAt, since),
+        excludeRefundedPayments
       )
     )
     .groupBy(sql`1`)
@@ -465,7 +469,8 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
         eq(payments.organizationId, organizationId),
         eq(payments.environment, environment),
         eq(payments.status, "confirmed"),
-        gte(payments.createdAt, since)
+        gte(payments.createdAt, since),
+        excludeRefundedPayments
       )
     )
     .groupBy(assets.id);

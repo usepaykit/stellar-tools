@@ -2,7 +2,14 @@
 
 import * as React from "react";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MixinProps, splitProps } from "@/lib/mixin";
@@ -18,9 +25,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { MoreHorizontal } from "lucide-react";
-
-import { Button } from "./ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 export interface TableAction<TData> {
   label: string | ((row: TData) => string);
@@ -40,7 +44,7 @@ interface DataTableProps<TData, TValue>
   data: TData[];
   onRowClick?: (row: TData) => void;
   enableBulkSelect?: boolean;
-  actions?: TableAction<TData>[];
+  actions?: ((row: TData) => TableAction<TData>[]) | TableAction<TData>[];
   isLoading?: boolean;
   skeletonRowCount?: number;
   emptyMessage?: string;
@@ -51,7 +55,7 @@ export const DataTable = <TData, TValue>({
   data,
   onRowClick,
   enableBulkSelect = false,
-  actions,
+  actions: _Actions,
   isLoading = false,
   skeletonRowCount = 5,
   emptyMessage = "No results found.",
@@ -63,7 +67,7 @@ export const DataTable = <TData, TValue>({
   const { row, checkbox, body, cell, rest } = splitProps(mixProps, "row", "checkbox", "body", "head", "cell");
 
   const tableColumns = React.useMemo(() => {
-    let cols = columns;
+    let cols = [...columns];
 
     if (enableBulkSelect) {
       const selectColumn: ColumnDef<TData, TValue> = {
@@ -99,30 +103,35 @@ export const DataTable = <TData, TValue>({
       cols = [selectColumn, ...cols];
     }
 
-    if (actions && actions.length > 0) {
+    if (_Actions) {
       const actionsColumn: ColumnDef<TData, TValue> = {
         id: "actions",
         header: () => <div />,
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-8"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
-                  <MoreHorizontal className="size-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {actions
-                  .filter((action) => action.when === undefined || action.when(row.original))
-                  .map((action, index) => (
+        cell: ({ row }) => {
+          const rowActions = typeof _Actions === "function" ? _Actions(row.original) : _Actions;
+
+          const filteredActions = rowActions.filter((action) => action.when === undefined || action.when(row.original));
+
+          if (filteredActions.length === 0) return null;
+
+          return (
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <MoreHorizontal className="size-4" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {filteredActions.map((action, index) => (
                     <DropdownMenuItem
                       key={index}
                       onClick={(e) => {
@@ -137,10 +146,11 @@ export const DataTable = <TData, TValue>({
                       {typeof action.label === "function" ? action.label(row.original) : action.label}
                     </DropdownMenuItem>
                   ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ),
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        },
         enableSorting: false,
         enableHiding: false,
         size: 50,
@@ -150,7 +160,7 @@ export const DataTable = <TData, TValue>({
 
     return cols;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columns, enableBulkSelect, actions]);
+  }, [columns, enableBulkSelect, _Actions]);
 
   const reactTable = useReactTable({
     data,
@@ -169,7 +179,7 @@ export const DataTable = <TData, TValue>({
   if (isLoading) {
     return (
       <DataTableSkeleton
-        actions={actions}
+        actions={_Actions}
         columns={columns}
         enableBulkSelect={enableBulkSelect}
         skeletonRowCount={skeletonRowCount}

@@ -85,10 +85,8 @@ export const customerWalletSchema = schemaFor<CustomerWallet>()(
   z.object({
     id: z.string(),
     address: z.string(),
-    name: z.string().optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     createdAt: z.string(),
-    lastUsedAt: z.string().optional(),
   })
 );
 

@@ -1,12 +1,12 @@
 import { postCustomers, retrieveCustomers } from "@/actions/customers";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
-import { Result, createCustomerSchema } from "@stellartools/core";
+import { Result, z as Schema, createCustomerSchema } from "@stellartools/core";
 
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
   auth: ["session", "apikey"],
-  schema: { body: createCustomerSchema },
+  schema: { body: Schema.array(createCustomerSchema) },
   handler: async ({ body, auth: { organizationId, environment }, req }) => {
     const arrayBody = Array.isArray(body) ? body : [body];
     const source = req.headers.get("x-source") ?? "API";
@@ -18,7 +18,7 @@ export const POST = apiHandler({
         phone: customer.phone ?? null,
         image: customer.image ?? null,
         metadata: customer.metadata ?? null,
-        wallets: customer.wallets ?? [],
+        wallets: [],
       })),
       organizationId,
       environment,

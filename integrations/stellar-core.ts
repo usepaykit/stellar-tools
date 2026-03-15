@@ -294,7 +294,7 @@ export class StellarCoreApi {
       const account = await server.loadAccount(keypair.publicKey());
 
       const asset = assetCode === "XLM" ? StellarSDK.Asset.native() : new StellarSDK.Asset(assetCode, assetIssuer);
-
+      console.log({ asset });
       const txBuilder = new StellarSDK.TransactionBuilder(account, {
         fee: StellarSDK.BASE_FEE,
         networkPassphrase,
@@ -310,10 +310,12 @@ export class StellarCoreApi {
         txBuilder.addMemo(StellarSDK.Memo.text(memo));
       }
 
+      console.log({ memo });
+
       const transaction = txBuilder.setTimeout(30).build();
       transaction.sign(keypair);
       const result = await server.submitTransaction(transaction);
-
+      console.log({ result });
       return Result.ok(result);
     } catch (error) {
       console.error(error);

@@ -19,6 +19,7 @@ import {
 import { CustomerWallet as CustomerWalletSchema } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { computeDiff, generateResourceId } from "@/lib/utils";
+import { mergeWithNullDeletes } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
 import crypto from "crypto";
 import { SQL, and, desc, eq, gt, inArray, or } from "drizzle-orm";
@@ -164,8 +165,11 @@ export const putCustomer = async (
         .set({
           ...retUpdate,
           updatedAt: new Date(),
-          ...(retUpdate.metadata
-            ? { metadata: { ...(oldCustomer?.metadata ?? {}), ...(retUpdate.metadata ?? {}) } }
+
+          ...(retUpdate.metadata !== undefined
+            ? {
+                metadata: mergeWithNullDeletes(oldCustomer?.metadata, retUpdate.metadata) as CustomerMetadata,
+              }
             : {}),
         })
         .where(
