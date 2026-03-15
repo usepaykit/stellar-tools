@@ -398,7 +398,6 @@ export function CustomerModalContent({
 
       const response = await api.post<Customer>("/customers", {
         ...payload,
-        wallets: [],
       });
 
       if (response.isErr()) throw new Error(response.error.message);
@@ -731,7 +730,7 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
+        headers: { "x-auth-token": organization?.token!, "x-source": "CSV Import" },
       });
       const result = await api.post<Array<Customer>>(
         "/customers",
@@ -741,8 +740,6 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
           phone: row.phone,
           image: row.image,
           metadata: row.metadata,
-          wallets: [],
-          source: "CSV Import",
         }))
       );
 

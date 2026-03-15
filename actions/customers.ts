@@ -88,33 +88,48 @@ export const retrieveCustomers = async (
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
-  const ids = lookupArray.filter((p): p is { id: string } => "id" in p && p.id != null).map((p) => p.id);
-  const emails = lookupArray.filter((p): p is { email: string } => "email" in p && p.email != null).map((p) => p.email);
-  const phones = lookupArray.filter((p): p is { phone: string } => "phone" in p && p.phone != null).map((p) => p.phone);
+  const ids: string[] = [];
+  const emails: string[] = [];
+  const phones: string[] = [];
 
-  const orFilters: (SQL | undefined)[] = [];
-  if (ids.length) orFilters.push(inArray(customersSchema.id, ids));
-  if (emails.length) orFilters.push(inArray(customersSchema.email, emails));
-  if (phones.length) orFilters.push(inArray(customersSchema.phone, phones));
+  lookupArray.forEach((p) => {
+    if ("id" in p && p.id) ids.push(p.id);
+    if ("email" in p && p.email) emails.push(p.email);
+    if ("phone" in p && p.phone) phones.push(p.phone);
+  });
 
-  const rows = await db
+  const orFilters = [
+    ids.length ? inArray(customersSchema.id, ids) : null,
+    emails.length ? inArray(customersSchema.email, emails) : null,
+    phones.length ? inArray(customersSchema.phone, phones) : null,
+  ].filter(Boolean) as SQL[];
+
+  const query = db
     .select({
       customer: customersSchema,
-      wallet: customerWallets,
+      ...(options?.withWallets && { wallet: customerWallets }),
     })
     .from(customersSchema)
-    .leftJoin(customerWallets, eq(customersSchema.id, customerWallets.customerId))
     .where(
       and(
-        orFilters.length ? or(...orFilters.filter((f): f is SQL => !!f)) : undefined,
+        orFilters.length ? or(...orFilters) : undefined,
         eq(customersSchema.organizationId, organizationId),
         eq(customersSchema.environment, environment)
       )
     );
 
+  if (options?.withWallets) {
+    query.leftJoin(customerWallets, eq(customersSchema.id, customerWallets.customerId));
+  }
+
+  const rows = await query;
+
   const customerMap = new Map<string, ResolvedCustomer>();
 
-  for (const { customer, wallet } of rows) {
+  for (const row of rows) {
+    const { customer } = row;
+    const wallet = "wallet" in row ? row.wallet : null;
+
     if (!customerMap.has(customer.id)) {
       customerMap.set(customer.id, {
         ...customer,
@@ -122,9 +137,8 @@ export const retrieveCustomers = async (
       });
     }
 
-    if (options?.withWallets && wallet) {
-      const entry = customerMap.get(customer.id);
-      entry?.wallets?.push(wallet);
+    if (wallet) {
+      customerMap.get(customer.id)!.wallets!.push(wallet);
     }
   }
 

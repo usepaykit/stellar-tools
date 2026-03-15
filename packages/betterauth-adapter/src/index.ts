@@ -10,19 +10,18 @@ async function syncUserWithStellar(user: User, ctx: GenericEndpointContext<Bette
   const client = new StellarTools({ apiKey: options.apiKey });
 
   const existing = await client.customers.list({ email: user.email });
-  let customerId = existing.length > 0 && existing[0]?.id;
-  let customerData = existing.length > 0 ? existing[0] : null;
+  let customerId = existing?.[0]?.id ?? null;
+  let customerData = existing?.[0] ?? null;
 
   if (!customerId) {
     const created = await client.customers.create({
       email: user.email,
       name: user.name,
+      image: user.image,
       metadata: {
-        ...(user.image ? { image: user.image } : {}),
         ...(ctx.context.session?.session?.id ? { initialSessionId: ctx.context?.session?.session?.id } : {}),
         source: "BetterAuth Adapter",
       },
-      wallets: [],
     });
 
     customerId = created.id;

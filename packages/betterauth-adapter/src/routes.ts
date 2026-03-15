@@ -19,12 +19,11 @@ const retrieveOrCreateCustomer = async (ctx: GenericEndpointContext): Promise<st
   const customer = await stellar.customers.create({
     email: user.email,
     name: user.name,
-    wallets: [],
     metadata: {
-      ...(user.image ? { image: user.image } : {}),
+      source: "BetterAuth Adapter",
       ...(ctx.context.session?.session?.id ? { initialSessionId: ctx.context?.session?.session?.id } : {}),
     },
-    source: "BetterAuth Adapter",
+    image: user.image,
   });
 
   await adapter.update({
