@@ -44,12 +44,15 @@ export const retrieveAsset = async (
   return asset as Asset;
 };
 
-export const retrieveAssets = async (env: Network, filters?: { assetCodes?: AssetCode[] }) => {
+export const retrieveAssets = async (env?: Network, filters?: { assetCodes?: AssetCode[] }) => {
   return await db
     .select()
     .from(assets)
     .where(
-      and(eq(assets.environment, env), ...(filters?.assetCodes ? [inArray(assets.code, filters.assetCodes)] : []))
+      and(
+        env ? eq(assets.environment, env) : undefined,
+        ...(filters?.assetCodes ? [inArray(assets.code, filters.assetCodes)] : [])
+      )
     );
 };
 

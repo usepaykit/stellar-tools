@@ -10,7 +10,7 @@ import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Networks } from "@stellar/stellar-sdk";
 import { ApiClient } from "@stellartools/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as RHF from "react-hook-form";
 import { z as Schema } from "zod";
 
@@ -35,6 +35,8 @@ export const useCheckout = (checkoutId: string) => {
   const { data: checkout, isLoading } = useQuery({
     queryKey: ["checkout", checkoutId],
     queryFn: () => retrieveCheckoutAndCustomer(checkoutId),
+    refetchInterval: 10 * 1000,
+    placeholderData: keepPreviousData,
   });
 
   const form = RHF.useForm({

@@ -23,7 +23,8 @@ export const eventTypeEnum = [
   "subscription::updated",
   "subscription::deleted",
   "subscription::canceled",
-  "customer_wallet::created",
+  "customer_wallet::linked",
+  "customer_portal_session::created",
 ] as const;
 
 export const accountBillingCycleEnum = ["monthly", "yearly"] as const;

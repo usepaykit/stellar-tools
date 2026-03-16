@@ -415,6 +415,28 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   const { hash, amount, successful, from: payerAddress } = result.value;
 
+  if (!successful) {
+    await Promise.all([
+      putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
+      postPayment(
+        {
+          subscriptionId: null,
+          checkoutId,
+          customerId,
+          amount: Number(amount),
+          transactionHash: hash,
+          status: "failed",
+          metadata: null,
+          assetId,
+        },
+        organizationId,
+        environment,
+        { assetId, assetCode: assetCode ?? undefined }
+      ),
+    ]);
+    return checkout;
+  }
+
   const createSubscriptionHandler = async () => {
     if (!checkout.productId) return Result.err(new Error("Product ID is required for subscription"));
 
@@ -449,30 +471,10 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       }),
     });
 
+    console.dir({ result }, { depth: 100 });
+
     return Result.ok(result);
   };
-
-  if (!successful) {
-    await Promise.all([
-      putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
-      postPayment(
-        {
-          subscriptionId: null,
-          checkoutId,
-          customerId,
-          amount: Number(amount),
-          transactionHash: hash,
-          status: "failed",
-          metadata: null,
-          assetId,
-        },
-        organizationId,
-        environment,
-        { assetId, assetCode: assetCode ?? undefined }
-      ),
-    ]);
-    return checkout;
-  }
 
   const confirmedPayment = await postPayment(
     {
@@ -501,6 +503,8 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       })
     )?.id;
   }
+
+  console.log("customerWalletId", customerWalletId);
 
   await Promise.all([
     putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment),

@@ -1,5 +1,4 @@
 import { retrieveAssets } from "@/actions/asset";
-import { Network } from "@/db";
 import TOML from "@iarna/toml";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,8 +8,7 @@ const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
 
 export const GET = async (request: NextRequest) => {
-  const searchParams = new URL(request.url).searchParams;
-  const environment = (searchParams.get("mode") as Network) ?? "mainnet";
+  const environment = "testnet";
 
   const assets = await retrieveAssets(environment);
 

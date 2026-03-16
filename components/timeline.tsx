@@ -12,6 +12,7 @@ const ROUTE_MAP = {
   customerId: (id: string) => `/customers/${id}`,
   productId: (id: string) => `/products/${id}`,
   paymentId: (id: string) => `/transactions/${id}`,
+  portalUrl: (url: string) => url,
 } as Record<string, (id: string) => string>;
 
 export interface TimelineEntry {
@@ -49,7 +50,12 @@ function TimelineSummary({ data, manualContent }: { data?: any; manualContent?: 
             <span key={key} className="inline-flex items-center">
               <span className="text-muted-foreground mr-1 font-medium">{formatLabel(key)}:</span>
               {href ? (
-                <Link href={href} className="text-primary font-mono text-[13px] underline">
+                <Link
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  href={href}
+                  className="text-primary font-mono text-[13px] underline"
+                >
                   {String(val)}
                 </Link>
               ) : (

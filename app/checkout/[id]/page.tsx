@@ -49,11 +49,10 @@ export default function CheckoutPage() {
     <div className="bg-background flex min-h-screen flex-col">
       {banner.showBanner && checkout.environment === "testnet" && (
         <div className="bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-1 relative py-1.5 text-center text-xs font-medium">
-          <Info className="text-muted h-4 w-4" />
-          Note: Please use a Testnet-compatible wallet like Solar or xBull.
-          <button onClick={() => banner.setShowBanner(false)} className="absolute top-1/2 right-4 -translate-y-1/2">
-            <X className="size-4" />
-          </button>
+          <div className="flex items-center justify-center gap-2">
+            <Info className="text-muted h-4 w-4" />
+            <span>Test mode</span>
+          </div>
         </div>
       )}
 

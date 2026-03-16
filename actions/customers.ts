@@ -283,23 +283,40 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
 export async function createCustomerPortalSession(customerId: string, orgId?: string, env?: Network) {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const token = crypto.randomBytes(32).toString("base64url");
+  const portalId = generateResourceId("cps", organizationId, 20);
+  const portalToken = crypto.randomBytes(32).toString("base64url");
 
-  const [session] = await db
-    .insert(customerPortalSessions)
-    .values({
-      id: generateResourceId("cps", organizationId, 20),
-      token,
-      customerId,
-      organizationId,
-      environment,
-      expiresAt: moment().add(24, "hours").toDate(),
-    })
-    .returning();
+  return withEvent(
+    async () => {
+      const [session] = await db
+        .insert(customerPortalSessions)
+        .values({
+          id: portalId,
+          token: portalToken,
+          customerId,
+          organizationId,
+          environment,
+          expiresAt: moment().add(24, "hours").toDate(),
+        })
+        .returning();
 
-  const url = `${process.env.NEXT_PUBLIC_PORTAL_URL!}/${token}`;
+      const url = `${process.env.NEXT_PUBLIC_PORTAL_URL!}/${portalToken}`;
 
-  return { session, url };
+      return { session, url };
+    },
+    {
+      events: [
+        {
+          type: "customer_portal_session::created",
+          map: ({ session, url }) => ({
+            customerId,
+            data: { id: session.id, portalUrl: url, expiresAt: session.expiresAt },
+          }),
+        },
+      ],
+      webhooks: { organizationId, environment, triggers: [] },
+    }
+  );
 }
 
 export async function retrieveCustomerPortalSession(token: string) {
@@ -437,7 +454,7 @@ export const createCustomerWallet = async (
     {
       events: [
         {
-          type: "customer_wallet::created",
+          type: "customer_wallet::linked",
           map: (wallet) => ({
             customerId: wallet.customerId,
             data: { id: wallet.id, walletAddress: wallet.address },

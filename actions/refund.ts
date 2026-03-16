@@ -56,19 +56,20 @@ export const postRefund = async (
       if (refund.status == "succeeded") {
         events.push({
           type: "refund::created",
-          map: ({ id: refundId, paymentId, amount, customerId, assetCode }) => ({
+          map: ({ id: refundId, paymentId, amount, customerId, assetCode, reason }) => ({
             customerId,
-            data: { paymentId, refundId, amount: `${amount} ${assetCode}` },
+            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, reason },
           }),
         });
 
         webhooksTriggers.push({
           event: "refund.succeeded",
-          map: ({ id: refundId, paymentId, amount, customerId, assetCode }) => ({
+          map: ({ id: refundId, paymentId, amount, customerId, assetCode, reason }) => ({
             amount: `${amount} ${assetCode}`,
             paymentId,
             customerId,
             refundId,
+            reason,
           }),
         });
       }

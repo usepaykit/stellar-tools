@@ -8,7 +8,7 @@ const features = [
     icon: QrCode,
     title: "QR code that just works",
     description:
-      "Deep-links into Solar or xBull wallet with amount, memo, and destination pre-filled. One scan, one tap.",
+      "Deep-links into Lobstr, xBull or other Stellar wallet with amount, memo, and destination pre-filled. One scan, one tap.",
   },
   {
     icon: Link2,
@@ -17,7 +17,7 @@ const features = [
   },
   {
     icon: Zap,
-    title: "3–5 second settlement",
+    title: "3-5 second settlement",
     description: "Stellar's consensus means payments are final in seconds — not minutes, not days.",
   },
   {
@@ -77,7 +77,7 @@ export default function CheckoutSection() {
                 />
               </div>
 
-              <p className="text-muted-foreground mb-4 text-center text-[12px]">Scan with Solar or xBull wallet</p>
+              <p className="text-muted-foreground mb-4 text-center text-[12px]">Scan with your camera app</p>
 
               <div className="relative my-4 text-center">
                 <div className="bg-border absolute top-1/2 left-0 h-px w-[calc(50%-50px)]" />
@@ -88,10 +88,6 @@ export default function CheckoutSection() {
               <button className="bg-primary text-primary-foreground w-full rounded-[10px] py-3.5 text-sm font-semibold">
                 Pay as GBWY…OQCH →
               </button>
-
-              <p className="text-muted-foreground mt-3 text-center text-[11px]">
-                Powered by Stellar · 3s settlement · $0.001 fee
-              </p>
             </div>
           </div>
         </div>
