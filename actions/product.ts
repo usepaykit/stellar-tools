@@ -49,7 +49,7 @@ export const postProduct = async (
   return product;
 };
 
-export const retrieveProducts = async (orgId?: string, env?: Network) => {
+export const retrieveProducts = async (orgId?: string, env?: Network, productId?: string) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const productsList = await db
@@ -58,7 +58,13 @@ export const retrieveProducts = async (orgId?: string, env?: Network) => {
       asset: assets,
     })
     .from(products)
-    .where(and(eq(products.organizationId, organizationId), eq(products.environment, environment)))
+    .where(
+      and(
+        eq(products.organizationId, organizationId),
+        eq(products.environment, environment),
+        ...(productId ? [eq(products.id, productId)] : [])
+      )
+    )
     .innerJoin(assets, eq(products.assetId, assets.id));
 
   return productsList;
@@ -78,44 +84,12 @@ export const retrieveProductsWithAsset = async (orgId?: string, env?: Network, p
       and(
         eq(products.organizationId, organizationId),
         eq(products.environment, environment),
+        eq(products.status, "active"),
         ...(productId ? [eq(products.id, productId)] : [])
       )
     );
 
   return result;
-};
-
-export const retrieveActiveProductsWithAsset = async (orgId?: string, env?: Network) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const result = await db
-    .select({
-      product: products,
-      asset: assets,
-    })
-    .from(products)
-    .innerJoin(assets, eq(products.assetId, assets.id))
-    .where(
-      and(
-        eq(products.organizationId, organizationId),
-        eq(products.environment, environment),
-        eq(products.status, "active")
-      )
-    );
-
-  return result;
-};
-
-export const retrieveProduct = async (id: string, organizationId: string) => {
-  const [product] = await db
-    .select()
-    .from(products)
-    .where(and(eq(products.id, id), eq(products.organizationId, organizationId)))
-    .limit(1);
-
-  if (!product) throw new Error("Product not found");
-
-  return product;
 };
 
 export const putProduct = async (id: string, organizationId: string, retUpdate: Partial<Product>) => {

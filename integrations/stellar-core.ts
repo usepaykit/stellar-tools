@@ -398,35 +398,38 @@ export class StellarCoreApi {
 
       if (subscriptionData) {
         const amountBigInt = BigInt(Math.round(Number(params.amount) * 1e7));
-        const contractId = await this.retrieveAssetContractId(params.assetCode!, params.assetIssuer!);
+        // tokenContractId = the asset's Stellar Asset Contract (SAC)
+        const tokenContractId = await this.retrieveAssetContractId(params.assetCode!, params.assetIssuer!);
+        // engineContractId = the subscription engine contract (the spender for approve)
+        const engineContractId = subscriptionData.contractId;
 
-        const tokenContract = new StellarSDK.Contract(contractId);
-        const engineContract = new StellarSDK.Contract(subscriptionData.contractId);
+        const tokenContract = new StellarSDK.Contract(tokenContractId);
+        const engineContract = new StellarSDK.Contract(engineContractId);
+
+        // Duration in seconds = time from now until currentPeriodEnd
+        const durationSeconds = BigInt(
+          Math.max(0, Math.floor((subscriptionData.currentPeriodEnd.getTime() - Date.now()) / 1000))
+        );
 
         tx.addOperation(
           tokenContract.call(
             "approve",
             StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }), // from
-            StellarSDK.nativeToScVal(contractId, { type: "address" }), // spender
-            StellarSDK.nativeToScVal(amountBigInt * BigInt(120), { type: "i128" }), // amount (10 years)
-            StellarSDK.nativeToScVal(9999999, { type: "u32" }) // valid forever
+            StellarSDK.nativeToScVal(engineContractId, { type: "address" }), // spender = engine contract
+            StellarSDK.nativeToScVal(amountBigInt * BigInt(120), { type: "i128" }), // 120 periods of allowance
+            StellarSDK.nativeToScVal(9999999, { type: "u32" }) // expiration ledger
           )
         )
-          /**
-           * OPERATION 2: Talk to your SUBSCRIPTION ENGINE (The Merchant)
-           * Action: "Register me and take the first month's payment"
-           */
           .addOperation(
             engineContract.call(
               "start",
               StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
               StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
-              StellarSDK.nativeToScVal(contractId, { type: "address" }),
+              StellarSDK.nativeToScVal(tokenContractId, { type: "address" }),
               StellarSDK.nativeToScVal(subscriptionData.productId, { type: "symbol" }),
               StellarSDK.nativeToScVal(amountBigInt, { type: "i128" }),
-              StellarSDK.nativeToScVal(Math.floor(subscriptionData.currentPeriodEnd.getTime() / 1000), {
-                type: "u64",
-              })
+              StellarSDK.nativeToScVal(durationSeconds, { type: "u64" }), // duration in seconds
+              StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }) // caller = customer
             )
           );
       }

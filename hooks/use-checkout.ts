@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { sweepAndProcessPayment } from "@/actions/payment";
+import { finalizeSubscriptionCheckout, prepareSubscriptionApproval } from "@/actions/subscription-checkout";
 import { phoneNumberFromString, phoneNumberSchema, phoneNumberToString } from "@/components/phone-number-field";
 import { toast } from "@/components/ui/toast";
 import { StellarCoreApi } from "@/integrations/stellar-core";
@@ -94,7 +95,9 @@ export const useCheckout = (checkoutId: string) => {
   }, [checkout]);
 
   React.useEffect(() => {
+    // Subscription checkouts require wallet interaction — QR/SEP-7 is not supported
     if (isPaid || isFailed || !hasDetails || !checkout?.merchantPublicKey) return;
+    if (checkout.productType === "subscription") return;
 
     const fetchURI = async () => {
       setPaymentURI({ status: "loading", uri: null });
@@ -118,21 +121,37 @@ export const useCheckout = (checkoutId: string) => {
     setIsProcessing(true);
     try {
       const address = stellarWalletsKit.getAddressSync()!;
-      const stellar = new StellarCoreApi(checkout!.environment);
-      const result = await stellar.processWalletPayment(
-        {
-          sourcePublicKey: address,
-          destination: checkout!.merchantPublicKey,
-          amount: checkout!.finalAmount.toString(),
-          memo: checkoutId,
-          assetCode: checkout!.assetCode ?? undefined,
-          assetIssuer: checkout!.assetIssuer ?? undefined,
-        },
-        async (xdr) => (await stellarWalletsKit.signTransaction(xdr, { address })).signedTxXdr
-      );
 
-      if (result.isErr()) throw new Error(result.error.message);
-      await sweepAndProcessPayment(checkoutId);
+      if (checkout!.productType === "subscription") {
+        // Step 1: Server builds a Soroban `approve` tx (engine contract as spender)
+        const prepared = await prepareSubscriptionApproval(checkoutId, address);
+        if ("error" in prepared) throw new Error(prepared.error);
+
+        // Step 2: Customer signs the approval with their wallet
+        const { signedTxXdr } = await stellarWalletsKit.signTransaction(prepared.xdr, { address });
+
+        // Step 3: Server submits approval + calls `start` on the engine (first payment via transfer_from)
+        const result = await finalizeSubscriptionCheckout(checkoutId, signedTxXdr);
+        if (!result.success) throw new Error(result.error ?? "Subscription setup failed");
+      } else {
+        // One-time payment: classic Stellar payment via Horizon
+        const stellar = new StellarCoreApi(checkout!.environment);
+        const result = await stellar.processWalletPayment(
+          {
+            sourcePublicKey: address,
+            destination: checkout!.merchantPublicKey,
+            amount: checkout!.finalAmount.toString(),
+            memo: checkoutId,
+            assetCode: checkout!.assetCode ?? undefined,
+            assetIssuer: checkout!.assetIssuer ?? undefined,
+          },
+          async (xdr) => (await stellarWalletsKit.signTransaction(xdr, { address })).signedTxXdr
+        );
+
+        if (result.isErr()) throw new Error(result.error.message);
+        await sweepAndProcessPayment(checkoutId);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
     } catch (e: any) {
       toast.error(e.message || "Payment failed");

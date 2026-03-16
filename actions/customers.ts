@@ -78,7 +78,7 @@ export const postCustomers = async (
   );
 };
 
-type CustomerLookup = { id?: string } | { email?: string } | { phone?: string };
+type CustomerLookup = { id?: string | null } | { email?: string | null } | { phone?: string | null };
 
 export const retrieveCustomers = async (
   params?: MaybeArray<CustomerLookup>,

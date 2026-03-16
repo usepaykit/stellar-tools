@@ -1,5 +1,5 @@
 import { retrieveOrganization, retrieveOrganizationIdAndSecret } from "@/actions/organization";
-import { retrieveActiveProductsWithAsset } from "@/actions/product";
+import { retrieveProducts } from "@/actions/product";
 import { Network } from "@/db";
 import TOML from "@iarna/toml";
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const org = await retrieveOrganization(orgId);
     const { secret } = await retrieveOrganizationIdAndSecret(orgId, environment);
 
-    const productsWithAssets = await retrieveActiveProductsWithAsset(org.id, environment);
+    const productsWithAssets = await retrieveProducts(org.id, environment);
 
     const networkPassphrase = environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE;
 

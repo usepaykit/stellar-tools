@@ -16,7 +16,7 @@ export default function PricingPage() {
             Pay for what you process
           </h1>
           <p className="text-muted-foreground mx-auto mt-4 max-w-xl text-lg leading-relaxed">
-            No seat fees, no monthly plans. A small percentage of payment volume — with the first $10k free every month.
+            No seat fees, no monthly plans. A small percentage of payment volume, with the first $10k free.
           </p>
         </div>
 

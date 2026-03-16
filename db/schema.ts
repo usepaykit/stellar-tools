@@ -92,6 +92,7 @@ export const organizations = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
     feeToken: text("fee_token"),
+    supportEmail: text("support_email"),
   },
   (table) => ({
     idxOrgCreatedAt: index("idx_org_created_at").on(table.accountId, table.createdAt),
@@ -343,6 +344,7 @@ export const payments = pgTable("payment", {
   orgMonthlyVolumeUsd: integer("org_monthly_volume_usd"),
   customerWalletId: text("customer_wallet_id").references(() => customerWallets.id),
   assetId: text("asset_id").references(() => assets.id),
+  subscriptionId: text("subscription_id").references(() => subscriptions.id),
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
 });
 

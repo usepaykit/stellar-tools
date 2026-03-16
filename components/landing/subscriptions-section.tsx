@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, RefreshCw } from "lucide-react";
+import { CheckList } from "@/components/checklist";
+import { RefreshCw } from "lucide-react";
 
 const features = [
   "Free trials with automatic conversion",
@@ -34,13 +35,7 @@ export default function SubscriptionsSection() {
             Our Soroban smart contracts handle subscription state, renewals, cancellations, upgrades transparently and
             automatically. You set the rules once. The blockchain enforces them forever.
           </p>
-          <ul className="text-muted-foreground flex list-none flex-col gap-3.5 text-[15px]">
-            {features.map((feature, index) => (
-              <li key={index} className="flex items-center gap-2.5">
-                <span className="text-lg text-[#00c48c]">✓</span> {feature}
-              </li>
-            ))}
-          </ul>
+          <CheckList items={features} className="text-[15px]" />
         </div>
       </div>
     </section>

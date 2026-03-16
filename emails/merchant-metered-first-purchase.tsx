@@ -4,7 +4,7 @@ import { Column, Heading, Row, Section, Text } from "@react-email/components";
 
 import { EmailLayout } from "./components/email-layout";
 
-export interface MeteredFirstPurchaseEmailProps {
+export interface MerchantMeteredFirstPurchaseEmailProps {
   organizationName: string;
   organizationLogo?: string | null;
   productName: string;
@@ -13,14 +13,14 @@ export interface MeteredFirstPurchaseEmailProps {
   customerEmail?: string;
 }
 
-export function MeteredFirstPurchaseEmail({
+export const MerchantMeteredFirstPurchaseEmail = ({
   organizationName,
   organizationLogo,
   productName,
   creditsGranted,
   creditExpiryDays,
   customerEmail,
-}: MeteredFirstPurchaseEmailProps) {
+}: MerchantMeteredFirstPurchaseEmailProps) => {
   return (
     <EmailLayout
       preview={`Whops! You just made a metered sale 🎉`}
@@ -65,6 +65,4 @@ export function MeteredFirstPurchaseEmail({
       <Text className="text-muted-foreground m-0 text-sm">Keep it up — every credit sold counts.</Text>
     </EmailLayout>
   );
-}
-
-export default MeteredFirstPurchaseEmail;
+};

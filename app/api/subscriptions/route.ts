@@ -1,17 +1,19 @@
 import { retrieveCustomers } from "@/actions/customers";
-import { retrieveProduct } from "@/actions/product";
+import { retrieveProducts } from "@/actions/product";
 import { listSubscriptions, postSubscriptionsBulk } from "@/actions/subscription";
-import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { generateResourceId } from "@/lib/utils";
 import { createSubscriptionSchema } from "@stellartools/core";
 import { Result, z as Schema } from "@stellartools/core";
 
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session"],
   schema: { body: createSubscriptionSchema },
-  handler: async ({ body, auth: { organizationId, environment }, authToken }) => {
+  handler: async ({ body, auth: { organizationId, environment } }) => {
+    const subscriptionId = generateResourceId("sub", organizationId, 20);
+
     const [customers, product] = await Promise.all([
       retrieveCustomers(
         body.customerIds.map((id) => ({ id })),
@@ -19,57 +21,36 @@ export const POST = apiHandler({
         organizationId,
         environment
       ),
-      retrieveProduct(body.productId, organizationId),
+      retrieveProducts(organizationId, environment, body.productId).then(([{ product }]) => product),
     ]);
 
     if (product.type !== "subscription") throw new Error("Product must be a subscription type");
 
-    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-    const successfulCustomerIds: string[] = [];
-    const failedLogs: string[] = [];
+    // For subscriptions created via classic Stellar payment (SEP-7/QR flow),
+    // on-chain state is managed through the checkout wallet-pay flow (approve → start).
+    // Here we only create the database subscription records after the payment is confirmed.
+    const customerIds = customers.filter((c) => c.wallets?.[0]?.address).map((c) => c.id);
 
-    for (const customer of customers) {
-      const wallet = customer.wallets?.[0];
-      const customerAddress = wallet?.address;
-
-      if (!customerAddress) {
-        failedLogs.push(`Customer ${customer.id}: Missing wallet.`);
-        continue;
-      }
-
-      const onChainResult = await api.createSubscription({
-        customerAddress,
-        productId: body.productId,
-        amount: product.priceAmount,
-        periodStart: Math.floor(body.period.from.getTime() / 1000),
-        periodEnd: Math.floor(body.period.to.getTime() / 1000),
-      });
-
-      if (onChainResult.isOk()) {
-        successfulCustomerIds.push(customer.id);
-      } else {
-        failedLogs.push(`Customer ${customer.id}: ${onChainResult.error.message}`);
-      }
-    }
-
-    if (successfulCustomerIds.length === 0) {
-      throw new Error(`All transactions failed: ${failedLogs.join(" | ")}`);
+    if (customerIds.length === 0) {
+      throw new Error("No customers with wallets found");
     }
 
     await postSubscriptionsBulk(
       {
-        customerIds: successfulCustomerIds,
+        id: subscriptionId,
+        customerIds,
         productId: body.productId,
         period: body.period,
         cancelAtPeriodEnd: body.cancelAtPeriodEnd ?? false,
+        metadata: null,
       },
       organizationId,
       environment
     );
 
     return Result.ok({
-      success: successfulCustomerIds,
-      failed: failedLogs,
+      success: customerIds,
+      failed: [],
       productId: body.productId,
       period: body.period,
       totalRequested: body.customerIds?.length,

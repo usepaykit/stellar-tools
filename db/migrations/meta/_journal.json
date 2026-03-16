@@ -50,6 +50,20 @@
       "when": 1773603304024,
       "tag": "0006_ambitious_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773617424831,
+      "tag": "0007_vengeful_sasquatch",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1773662991973,
+      "tag": "0008_easy_blob",
+      "breakpoints": true
     }
   ]
 }

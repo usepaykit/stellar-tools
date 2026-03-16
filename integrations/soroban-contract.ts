@@ -20,19 +20,93 @@ export class SorobanContractApi {
     this.contract = new StellarSDK.Contract(this.CONTRACT_ID);
   }
 
-  async createSubscription(params: {
+  /**
+   * Builds and simulates a token allowance approval transaction for the customer to sign.
+   * The customer must approve the subscription engine as a spender before `startSubscription` can be called.
+   * Returns a prepared (simulated + resource-assembled) XDR ready for wallet signing.
+   */
+  async buildApprovalXdr(params: {
     customerAddress: string;
-    productId: string;
-    amount: number;
-    periodStart: number;
-    periodEnd: number;
+    tokenContractId: string;
+    /** Total allowance in stroops (base units). Should cover many billing periods. */
+    amount: bigint;
   }): Promise<Result<string, Error>> {
+    try {
+      const latestLedger = await this.server.getLatestLedger();
+      // ~6 months worth of ledgers at 5s/ledger
+      const expirationLedger = latestLedger.sequence + 2_628_000;
+
+      const tokenContract = new StellarSDK.Contract(params.tokenContractId);
+      const operation = tokenContract.call(
+        "approve",
+        StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
+        StellarSDK.nativeToScVal(this.CONTRACT_ID, { type: "address" }),
+        StellarSDK.nativeToScVal(params.amount, { type: "i128" }),
+        StellarSDK.nativeToScVal(expirationLedger, { type: "u32" })
+      );
+
+      const source = await this.server.getAccount(params.customerAddress);
+      const tx = new StellarSDK.TransactionBuilder(source, {
+        fee: StellarSDK.BASE_FEE,
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation)
+        .setTimeout(300)
+        .build();
+
+      const simulation = await this.server.simulateTransaction(tx);
+      if (StellarSDK.rpc.Api.isSimulationError(simulation)) {
+        return Result.err(new Error(`Approval simulation failed: ${simulation.error}`));
+      }
+
+      const prepared = StellarSDK.rpc.assembleTransaction(tx, simulation).build();
+      return Result.ok(prepared.toXDR());
+    } catch (e) {
+      return Result.err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
+  /**
+   * Submits a wallet-signed Soroban transaction to the RPC and polls for the result.
+   */
+  async submitSignedSorobanTransaction(signedXDR: string): Promise<Result<{ hash: string }, Error>> {
+    try {
+      const tx = StellarSDK.TransactionBuilder.fromXDR(signedXDR, this.networkPassphrase);
+      const response = await this.server.sendTransaction(tx);
+      if (response.status !== "PENDING") {
+        return Result.err(new Error(`Soroban tx submission failed: ${response.status}`));
+      }
+      const result = await this.pollForTransaction(response.hash);
+      if (result instanceof Error) return Result.err(result);
+      return Result.ok({ hash: response.hash });
+    } catch (e) {
+      return Result.err(e instanceof Error ? e : new Error(String(e)));
+    }
+  }
+
+  /**
+   * Registers a subscription on-chain and executes the first payment via transfer_from.
+   * Customer must have already approved the engine contract as a spender.
+   * The backend keypair (sourceSecret) acts as the caller.
+   */
+  async startSubscription(params: {
+    customerAddress: string;
+    merchantAddress: string;
+    tokenContractId: string;
+    productId: string;
+    /** Amount in stroops */
+    amountStroops: bigint;
+    /** Period duration in seconds */
+    durationSeconds: number;
+  }): Promise<Result<{ hash: string; events: any[] }, Error>> {
     const operation = this.contract.call(
-      "create_subscription",
+      "start",
       StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(params.productId, { type: "symbol" }),
-      StellarSDK.nativeToScVal(params.amount * 100000000, { type: "i128" }),
-      StellarSDK.nativeToScVal(params.periodEnd, { type: "u64" }),
+      StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
+      StellarSDK.nativeToScVal(params.tokenContractId, { type: "address" }),
+      StellarSDK.nativeToScVal(this.toSymbol(params.productId), { type: "symbol" }),
+      StellarSDK.nativeToScVal(params.amountStroops, { type: "i128" }),
+      StellarSDK.nativeToScVal(BigInt(params.durationSeconds), { type: "u64" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
 
@@ -41,9 +115,9 @@ export class SorobanContractApi {
 
   async pauseSubscription(customerAddress: string, productId: string): Promise<void> {
     const operation = this.contract.call(
-      "pause_subscription",
+      "pause",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
+      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     const result = await this.invoke(operation);
@@ -53,9 +127,9 @@ export class SorobanContractApi {
 
   async resumeSubscription(customerAddress: string, productId: string): Promise<void> {
     const operation = this.contract.call(
-      "resume_subscription",
+      "resume",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
+      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     const result = await this.invoke(operation);
@@ -65,9 +139,9 @@ export class SorobanContractApi {
 
   async cancelSubscription(customerAddress: string, productId: string) {
     const operation = this.contract.call(
-      "cancel_subscription",
+      "cancel",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
+      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
 
@@ -78,7 +152,7 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "get_subscription",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" })
+      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" })
     );
 
     return await this.invoke(operation, { readOnly: true });
@@ -92,10 +166,10 @@ export class SorobanContractApi {
     periodEnd: number | null
   ): Promise<Result<string, Error>> {
     const operation = this.contract.call(
-      "update_subscription",
+      "update",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
-      StellarSDK.nativeToScVal(status, { type: "status" }),
+      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
+      StellarSDK.nativeToScVal(status, { type: "u32" }),
       StellarSDK.nativeToScVal(periodDuration, { type: "u64" }),
       StellarSDK.nativeToScVal(periodEnd, { type: "u64" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
@@ -122,13 +196,22 @@ export class SorobanContractApi {
       Error
     >
   > {
+    // NOTE: the contract's `charge` function does NOT take a caller argument
     const operation = this.contract.call(
       "charge",
       StellarSDK.nativeToScVal(customer, { type: "address" }),
-      StellarSDK.nativeToScVal(productId, { type: "symbol" }),
-      StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
+      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" })
     );
     return await this.invoke(operation);
+  }
+
+  /**
+   * Soroban Symbol type is capped at 32 characters.
+   * Product IDs are generated as 34 chars (prod_ + 4 org sig + 25 entropy).
+   * We take the last 32 chars which preserves the full unique entropy tail.
+   */
+  private toSymbol(productId: string): string {
+    return productId.slice(-32);
   }
 
   private async invoke(

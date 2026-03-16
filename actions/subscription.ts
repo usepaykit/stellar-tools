@@ -3,11 +3,18 @@
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
-import { computeDiff, generateResourceId } from "@/lib/utils";
+import { computeDiff } from "@/lib/utils";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 export const postSubscriptionsBulk = async (
-  params: { customerIds: string[]; productId: string; period: { from: Date; to: Date }; cancelAtPeriodEnd: boolean },
+  params: {
+    id: string;
+    customerIds: string[];
+    productId: string;
+    period: { from: Date; to: Date };
+    cancelAtPeriodEnd: boolean;
+    metadata: Record<string, unknown> | null;
+  },
   orgId?: string,
   env?: Network
 ) => {
@@ -16,7 +23,7 @@ export const postSubscriptionsBulk = async (
   return withEvent(
     async () => {
       const values = params.customerIds.map((cid) => ({
-        id: generateResourceId("sub", organizationId, 20),
+        id: params.id,
         customerId: cid,
         productId: params.productId,
         status: "active" as const,

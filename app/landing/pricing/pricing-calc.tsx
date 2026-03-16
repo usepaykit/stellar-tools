@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { CheckList } from "@/components/checklist";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { FREE_THRESHOLD_USD, calculateMonthlyFee, effectivePct, getVolumeTierRateBps } from "@/lib/pricing";
@@ -70,14 +71,24 @@ export function PricingCalc() {
       </div>
 
       {isEnterprise ? (
-        <div className="flex flex-col items-center gap-4 text-center">
-          <p className="text-foreground text-2xl font-semibold">Let&apos;s talk</p>
-          <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-            At this scale, rates are negotiated directly. We&apos;ll build a custom agreement that works for your
-            business.
-          </p>
-          <div className="inline-flex">
-            <Button size="lg" className="w-fit items-center justify-center">
+        <div className="mx-auto grid max-w-3xl gap-8 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <div className="space-y-3">
+            <p className="text-foreground text-2xl font-semibold">Let&apos;s talk</p>
+            <p className="text-muted-foreground text-sm leading-relaxed md:text-base">
+              At this scale, rates are negotiated directly. We&apos;ll design a custom solution around how your business
+              operates.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-5">
+            <CheckList
+              items={[
+                "Dedicated email infrastructure and delivery tuning",
+                "Flexible data and reporting setup (warehouse, lake, or both)",
+                "Deeper integration support and roadmap input",
+              ]}
+            />
+            <Button size="lg" className="mt-1 w-full">
               <Link className="w-full text-center" href="/book-call">
                 Contact sales
               </Link>
@@ -109,7 +120,7 @@ export function PricingCalc() {
                 />
               )
             }
-            note={isFree ? "First $10K/month" : undefined}
+            note={isFree ? "First $10K" : undefined}
           />
           <Stat
             label="Effective rate"

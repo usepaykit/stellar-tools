@@ -1,6 +1,6 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCreditTransaction, putCreditBalance, retrieveCreditBalance } from "@/actions/credit";
-import { retrieveProduct } from "@/actions/product";
+import { retrieveProducts } from "@/actions/product";
 import { calculateCredits } from "@/lib/credit-calculator";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
@@ -29,8 +29,8 @@ export const POST = async (
     async ({ amount, type, reason, metadata, dryRun }): Promise<Result<{ isSufficient: boolean }, Error>> => {
       const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
-      const [product, creditBalance] = await Promise.all([
-        retrieveProduct(productId, organizationId),
+      const [{ product }, creditBalance] = await Promise.all([
+        retrieveProducts(organizationId, environment, productId).then(([product]) => product),
         retrieveCreditBalance(customerId, productId, organizationId),
       ]);
 

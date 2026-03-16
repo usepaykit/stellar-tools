@@ -1,81 +1,180 @@
 "use server";
 
 import { applyPaymentFee } from "@/actions/billing";
-import { retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
-import { createCustomerWallet, retrieveCustomerWallets } from "@/actions/customers";
+import { createCustomerWallet, retrieveCustomerWallets, retrieveCustomers } from "@/actions/customers";
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
-import { resolveOrgContext } from "@/actions/organization";
+import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
+import { retrieveProducts } from "@/actions/product";
 import {
+  Checkout,
   Customer,
   Network,
+  Organization,
   Payment,
+  Product,
   Refund,
   ResolvedPayment,
   assets,
   customers,
   db,
   payments,
-  products,
   refunds,
 } from "@/db";
-import { sendEmailEvent } from "@/integrations/email-handler";
+import { CustomerPaymentReceiptEmail } from "@/emails/customer-payment-receipt-email";
+import { MerchantFirstPaymentConfirmedEmail } from "@/emails/merchant-first-payment-confirmed";
+import { MerchantMeteredFirstPurchaseEmail } from "@/emails/merchant-metered-first-purchase";
+import { MerchantSubscriptionStartedEmail } from "@/emails/merchant-subscription-started";
+import { EmailApi } from "@/integrations/email";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { ApiClient, Result } from "@stellartools/core";
 import { and, count, desc, eq } from "drizzle-orm";
+import moment from "moment";
+
+type PaymentContext = {
+  org: Organization;
+  customer?: Customer;
+  product?: Product;
+  checkout?: Checkout;
+};
+
+async function loadPaymentContext(
+  payment: Payment,
+  organizationId: string,
+  environment: Network
+): Promise<PaymentContext> {
+  const [org, customer, checkout] = await Promise.all([
+    retrieveOrganization(organizationId),
+    payment.customerId
+      ? retrieveCustomers({ id: payment.customerId }, undefined, organizationId, environment).then((res) => res[0])
+      : undefined,
+    payment.checkoutId ? retrieveCheckout(payment.checkoutId) : undefined,
+  ]);
+
+  const product = checkout?.productId
+    ? await retrieveProducts(organizationId, environment, checkout.productId).then((res) => res[0]?.product)
+    : undefined;
+
+  return { org, customer, product, checkout };
+}
+
+const MERCHANT_EMAIL_TEMPLATES = {
+  one_time: (ctx: Required<PaymentContext>, p: Payment) => ({
+    subject: "Whops! You just got paid 💸",
+    component: MerchantFirstPaymentConfirmedEmail({
+      organizationName: ctx.org.name,
+      organizationLogo: ctx.org.logoUrl,
+      productName: ctx.product.name || ctx.checkout.description || "Payment",
+      amount: `${p.amount} ${p.metadata?.assetCode}`,
+      assetCode: p.metadata?.assetCode as string,
+      transactionHash: p.transactionHash,
+    }),
+  }),
+  metered: (ctx: Required<PaymentContext>, _: Payment) => ({
+    subject: "Whops! You just got a new metered sale 💸",
+    component: MerchantMeteredFirstPurchaseEmail({
+      organizationName: ctx.org.name,
+      organizationLogo: ctx.org.logoUrl,
+      productName: ctx.product.name || ctx.checkout.description || "Payment",
+      creditsGranted: ctx.product.creditsGranted ?? 0,
+      creditExpiryDays: ctx.product.creditExpiryDays ?? 30,
+      customerEmail: ctx.customer.email ?? ctx.checkout.customerEmail ?? undefined,
+    }),
+  }),
+  subscription: (ctx: Required<PaymentContext>, p: Payment) => ({
+    subject: "Whops! You just got a new subscription 🎉",
+    component: MerchantSubscriptionStartedEmail({
+      organizationName: ctx.org.name,
+      organizationLogo: ctx.org.logoUrl,
+      amount: `${p.amount} ${p.metadata?.assetCode}`,
+      assetCode: p.metadata?.assetCode as string,
+      currentPeriodEnd: moment(ctx.checkout.subscriptionData?.periodEnd).format("MMMM DD, YYYY [at] h:mm A"),
+      productName: ctx.product.name || ctx.checkout.description || "Payment",
+    }),
+  }),
+};
 
 const paymentActionHandler = async (call: () => Promise<Payment>, organizationId: string, environment: Network) => {
-  const payment = await withEvent(call, (payment) => {
-    let events: EventTrigger<typeof payment>[] = [];
-    const webhooksTriggers: WebhookTrigger<typeof payment>[] = [];
+  return withEvent(call, async (payment) => {
+    const events: EventTrigger<typeof payment>[] = [];
+    const webhooks: WebhookTrigger<typeof payment>[] = [];
+    const sideEffects: Promise<any>[] = [];
 
-    if (payment.status == "confirmed") {
+    const assetLabel = `${payment.amount} ${payment.metadata?.assetCode}`;
+    const basePayload = {
+      customerId: payment.customerId,
+      checkoutId: payment.checkoutId,
+      amount: payment.amount,
+      paymentId: payment.id,
+      subscriptionId: payment.subscriptionId,
+    };
+
+    if (payment.status === "confirmed") {
+      // Platform Logic
+      sideEffects.push(applyPaymentFee(payment.id, organizationId, payment.amount));
+
       events.push({
         type: "payment::completed",
-        map: ({ checkoutId, amount, customerId, id: paymentId, metadata }) => ({
-          customerId: customerId ?? undefined,
-          data: {
-            amount: `${amount} ${metadata?.assetCode}`,
-            checkoutId,
-            paymentId,
-          },
-        }),
+        map: (p) => ({ customerId: p.customerId, data: { ...basePayload, amount: assetLabel } }),
       });
-      webhooksTriggers.push({
-        event: "payment.confirmed",
-        map: ({ amount, checkoutId, customerId, id: paymentId }) => ({ customerId, checkoutId, amount, paymentId }),
-      });
+      webhooks.push({ event: "payment.confirmed", map: () => basePayload });
+
+      // Load all data once
+      const ctx = await loadPaymentContext(payment, organizationId, environment);
+      const emailApi = new EmailApi();
+
+      // Customer Receipt
+      if (ctx.customer?.email) {
+        sideEffects.push(
+          emailApi.sendEmail(
+            ctx.customer.email,
+            "Payment Confirmed",
+            CustomerPaymentReceiptEmail({
+              customerName: ctx.customer.name,
+              amount: assetLabel,
+              reference: payment.id,
+              date: moment().format("MMMM DD, YYYY [at] h:mm A"),
+              organizationName: ctx.org.name,
+              organizationLogo: ctx.org.logoUrl,
+            })
+          )
+        );
+      }
+
+      // Merchant "First Payout" logic
+      const paymentCount = await retrievePaymentCount(organizationId);
+      if (
+        paymentCount === 1 &&
+        ctx.org.supportEmail &&
+        ctx.product &&
+        ctx.checkout &&
+        MERCHANT_EMAIL_TEMPLATES[ctx.product.type]
+      ) {
+        const { subject, component } = MERCHANT_EMAIL_TEMPLATES[ctx.product.type](
+          ctx as Required<PaymentContext>,
+          payment
+        );
+        sideEffects.push(emailApi.sendEmail(ctx.org.supportEmail, subject, component));
+      }
     }
 
-    if (payment.status == "failed") {
+    if (payment.status === "failed") {
       events.push({
         type: "payment::failed",
-        map: ({ checkoutId, amount, customerId, id: paymentId, metadata }) => ({
-          customerId: customerId ?? undefined,
-          data: {
-            customerId,
-            amount: `${amount} ${metadata?.assetCode}`,
-            checkoutId,
-            paymentId,
-          },
-        }),
+        map: (p) => ({ customerId: p.customerId, data: { ...basePayload, amount: assetLabel } }),
       });
-      webhooksTriggers.push({
-        event: "payment.failed",
-        map: ({ customerId, amount, checkoutId, id: paymentId }) => ({ customerId, amount, checkoutId, paymentId }),
-      });
+
+      webhooks.push({ event: "payment.failed", map: () => basePayload });
     }
 
-    return { events, webhooks: { organizationId, environment, triggers: webhooksTriggers } };
+    // Fire side effects in parallel, don't block the response
+    sideEffects.forEach((p) => p.catch((err) => console.error(`[Side-Effect Error]:`, err)));
+
+    return { events, webhooks: { organizationId, environment, triggers: webhooks } };
   });
-
-  if (payment.status === "confirmed") {
-    await applyPaymentFee(payment.id, organizationId, payment.amount);
-  }
-
-  return payment;
 };
 
 export const postPayment = async (
@@ -244,6 +343,21 @@ export const putPayment = async (
   );
 };
 
+export const retrievePaymentCount = async (organizationId: string, customerId?: string) => {
+  const [{ value: confirmedCount }] = await db
+    .select({ value: count() })
+    .from(payments)
+    .where(
+      and(
+        eq(payments.organizationId, organizationId),
+        customerId ? eq(payments.customerId, customerId) : undefined,
+        eq(payments.status, "confirmed")
+      )
+    );
+
+  return Number(confirmedCount);
+};
+
 export const deletePayment = async (id: string, organizationId: string) => {
   await db
     .delete(payments)
@@ -343,6 +457,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
       postPayment(
         {
+          subscriptionId: null,
           checkoutId,
           customerId,
           amount: Number(amount),
@@ -361,6 +476,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   const confirmedPayment = await postPayment(
     {
+      subscriptionId: null,
       customerId,
       checkoutId,
       amount: Number(amount),
@@ -399,100 +515,5 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
     ...(productType === "subscription" ? [createSubscriptionHandler()] : []),
   ]);
 
-  dispatchPaymentEmails({ checkout, amount }).catch(() => {});
-
   return checkout;
 };
-
-async function dispatchPaymentEmails({
-  checkout,
-  amount,
-}: {
-  checkout: Awaited<ReturnType<typeof retrieveCheckoutAndCustomer>>;
-  amount: string;
-}) {
-  if (!checkout) return;
-
-  const merchantEmail = checkout.merchantEmail;
-  if (!merchantEmail) return;
-
-  const customerEmail = checkout.customerEmail ?? undefined;
-  const organizationName = checkout.organizationName ?? "Merchant";
-  const productName = checkout.productName ?? "Payment";
-  const assetCode = checkout.assetCode ?? "XLM";
-  const { customerId, organizationId, productType } = checkout;
-
-  const eventsToSend = [];
-
-  if (customerId) {
-    const [{ value: confirmedCount }] = await db
-      .select({ value: count() })
-      .from(payments)
-      .where(
-        and(
-          eq(payments.customerId, customerId),
-          eq(payments.status, "confirmed"),
-          eq(payments.organizationId, organizationId)
-        )
-      );
-
-    if (Number(confirmedCount) === 1) {
-      eventsToSend.push({
-        type: "payment.first_purchase",
-        payload: { merchantEmail, customerEmail, productName, amount, assetCode, organizationName },
-      });
-    }
-
-    if (productType === "metered" && checkout.productId) {
-      const [product] = await db
-        .select({ creditsGranted: products.creditsGranted, creditExpiryDays: products.creditExpiryDays })
-        .from(products)
-        .where(eq(products.id, checkout.productId))
-        .limit(1);
-
-      const [{ value: meteredCount }] = await db
-        .select({ value: count() })
-        .from(payments)
-        .where(
-          and(
-            eq(payments.customerId, customerId),
-            eq(payments.status, "confirmed"),
-            eq(payments.organizationId, organizationId),
-            eq(payments.checkoutId, checkout.id ?? "")
-          )
-        );
-
-      if (Number(meteredCount) === 1 && product?.creditsGranted) {
-        eventsToSend.push({
-          type: "metered.first_purchase",
-          payload: {
-            merchantEmail,
-            customerEmail,
-            productName,
-            organizationName,
-            creditsGranted: product.creditsGranted,
-            creditExpiryDays: product.creditExpiryDays ?? 30,
-          },
-        });
-      }
-    }
-  }
-
-  if (productType === "subscription" && checkout.subscriptionData) {
-    const sd = checkout.subscriptionData;
-    eventsToSend.push({
-      type: "subscription.started",
-      payload: {
-        merchantEmail,
-        customerEmail,
-        productName,
-        amount,
-        assetCode,
-        organizationName,
-        currentPeriodEnd: sd.periodEnd ? new Date(sd.periodEnd).toLocaleDateString() : "—",
-      },
-    });
-  }
-
-  await Promise.allSettled(eventsToSend.map((e) => sendEmailEvent(e)));
-}

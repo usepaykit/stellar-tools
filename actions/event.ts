@@ -5,7 +5,7 @@ import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
-import { MaybeArray, SuggestedString, WebhookEvent } from "@stellartools/core";
+import { MaybeArray, MaybePromise, SuggestedString, WebhookEvent } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
@@ -43,13 +43,13 @@ export interface EventConfig<T> {
 
 export async function withEvent<T>(
   action: () => Promise<T>,
-  configs?: EventConfig<T> | ((result: T) => EventConfig<T> | undefined)
+  configs?: EventConfig<T> | ((result: T) => MaybePromise<EventConfig<T> | undefined>)
 ): Promise<T> {
   const result = await action();
 
   const runSideEffects = async () => {
     try {
-      const resolved = typeof configs === "function" ? configs(result) : configs;
+      const resolved = await (typeof configs === "function" ? configs(result) : configs);
 
       if (!resolved) return;
 

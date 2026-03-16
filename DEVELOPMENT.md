@@ -77,3 +77,22 @@ This runs three things concurrently:
 | Web app (Next.js)  | http://localhost:3000 |
 | Docs (Mintlify)    | http://localhost:3333 |
 | Inngest dev server | http://localhost:8000 |
+
+Subscription Engine.
+Setting up the subscription engine requires two step.
+
+- Build the contract from `soroban/` directory, there already exists a makefile to make this process seamless, you only need to run the following command:
+  ```bash
+  make release
+  ```
+- Deploy the contract to testnet
+
+```bash
+stellar contract deploy \
+  --wasm target/wasm32-unknown-unknown/release/subscription_engine.wasm \
+  --source <your-key> \
+  --network testnet \
+  -- --owner <OWNER_ADDRESS> --cap 1000000
+```
+
+Ensure the source account is funded on testnet (e.g. via [Friendbot](https://friendbot.stellar.org)).
