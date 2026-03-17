@@ -17,6 +17,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ModeToggle from "@/components/ui/mode-toggle";
 import {
   Sidebar,
   SidebarContent,
@@ -218,8 +219,10 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton tooltip={item.title} isActive={active || subActive}>
-                            {item.icon && <item.icon className={cn((active || subActive) && "text-primary-foreground")} />}
-                            <span className={cn((active || subActive) && "text-primary-foreground font-medium")}>
+                            {item.icon && (
+                              <item.icon className={cn((active || subActive) && "text-muted-foreground")} />
+                            )}
+                            <span className={cn((active || subActive) && "text-muted-foreground font-medium")}>
                               {item.title}
                             </span>
                             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -249,8 +252,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={item.title} isActive={active}>
                       <Link href={item.url}>
-                        {item.icon && <item.icon className={cn(active && "text-primary-foreground")} />}
-                        <span className={cn(active && "text-primary-foreground font-medium")}>{item.title}</span>
+                        {item.icon && <item.icon className={cn(active && "text-muted-foreground")} />}
+                        <span className={cn(active && "text-muted-foreground font-medium")}>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -262,6 +265,11 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
         <SidebarFooter>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <div className="px-1">
+                <ModeToggle />
+              </div>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

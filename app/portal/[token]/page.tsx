@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-
+import {  TestModeBanner } from "@/components/environment-toggle";
 import { createCustomerImage, deleteCustomerPortalWallet, getCustomerPortalData } from "@/actions/customers";
 import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
@@ -292,10 +292,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   return (
     <div className="bg-background min-h-screen">
       {showBanner && data.environment === "testnet" && (
-        <div className="bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-1 relative flex items-center justify-center gap-2 p-1.5 text-center text-xs font-medium">
-          <Info className=" h-4 w-4" />
-          You are in Test mode
-        </div>
+     <TestModeBanner />
       )}
       <header className="border-border border-b">
         <div className="mx-auto flex max-w-2xl items-center px-4 py-4">
