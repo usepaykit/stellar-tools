@@ -218,8 +218,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton tooltip={item.title} isActive={active || subActive}>
-                            {item.icon && <item.icon className={cn((active || subActive) && "text-primary")} />}
-                            <span className={cn((active || subActive) && "text-primary font-medium")}>
+                            {item.icon && <item.icon className={cn((active || subActive) && "text-primary-foreground")} />}
+                            <span className={cn((active || subActive) && "text-primary-foreground font-medium")}>
                               {item.title}
                             </span>
                             <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
@@ -231,7 +231,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                               <SidebarMenuSubItem key={sub.title}>
                                 <SidebarMenuSubButton asChild isActive={isActive(sub.url)}>
                                   <Link href={sub.url}>
-                                    <span className={cn(isActive(sub.url) && "text-primary font-medium")}>
+                                    <span className={cn(isActive(sub.url) && "text-primary-foreground font-medium")}>
                                       {sub.title}
                                     </span>
                                   </Link>
@@ -249,8 +249,8 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild tooltip={item.title} isActive={active}>
                       <Link href={item.url}>
-                        {item.icon && <item.icon className={cn(active && "text-primary")} />}
-                        <span className={cn(active && "text-primary font-medium")}>{item.title}</span>
+                        {item.icon && <item.icon className={cn(active && "text-primary-foreground")} />}
+                        <span className={cn(active && "text-primary-foreground font-medium")}>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

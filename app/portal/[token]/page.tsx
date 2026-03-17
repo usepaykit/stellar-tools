@@ -293,7 +293,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
     <div className="bg-background min-h-screen">
       {showBanner && data.environment === "testnet" && (
         <div className="bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-1 relative flex items-center justify-center gap-2 p-1.5 text-center text-xs font-medium">
-          <Info className="text-muted h-4 w-4" />
+          <Info className=" h-4 w-4" />
           You are in Test mode
         </div>
       )}

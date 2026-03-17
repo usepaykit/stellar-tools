@@ -17,8 +17,8 @@ export default function DashboardHeader() {
           <div className="container flex items-center justify-between">
             <div />
             <div className="flex items-center gap-2">
-              <Info className="text-muted h-4 w-4" />
-              <span className="text-accent text-sm">
+              <Info className="text-primary-foreground h-4 w-4" />
+              <span className="text-primary-foreground text-sm">
                 You are in <span className="font-medium">Test mode</span>
               </span>
             </div>
