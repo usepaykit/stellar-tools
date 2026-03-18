@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
+import Logo from "@/components/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -168,20 +169,7 @@ export default function RadialOrbitalTimeline({ timelineData }: RadialOrbitalTim
               style={{ animationDelay: "0.5s" }}
             ></div>
             <div className="relative h-12 w-12 overflow-hidden rounded-lg">
-              <Image
-                src="/images/logo-light.png"
-                alt="Stellar Tools"
-                width={48}
-                height={48}
-                className="h-full w-full object-contain dark:hidden"
-              />
-              <Image
-                src="/images/logo-dark.png"
-                alt="Stellar Tools"
-                width={48}
-                height={48}
-                className="hidden h-full w-full object-contain dark:block"
-              />
+              <Logo width={48} height={48} className="h-full w-full object-contain" />
             </div>
           </div>
 

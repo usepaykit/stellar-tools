@@ -4,6 +4,7 @@ import React from "react";
 
 import { accountValidator } from "@/actions/auth";
 import { Google } from "@/components/icon";
+import Logo from "@/components/logo";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -100,8 +101,8 @@ export default function SignUp() {
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       <div className="bg-foreground hidden flex-col justify-between overflow-hidden p-16 lg:flex">
         <div className="space-y-8">
-          <Image
-            src="/images/logo-dark.png"
+          <Logo
+            darkSrc="/images/logo-dark.png"
             alt="Stellar Tools"
             width={150}
             height={40}

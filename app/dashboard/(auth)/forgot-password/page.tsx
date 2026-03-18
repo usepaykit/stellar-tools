@@ -3,6 +3,7 @@
 import React from "react";
 
 import { forgotPassword } from "@/actions/auth";
+import Logo from "@/components/logo";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -77,9 +78,9 @@ export default function ForgotPassword() {
               <div className="relative inline-block">
                 {/* Subtle glow - not overpowering */}
                 <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
-                <Image
-                  src="/images/logo-dark.png"
+                <Logo
                   alt="Stellar Tools"
+                  darkSrc="/images/logo-dark.png"
                   width={150}
                   height={1}
                   className="object-contain p-5"

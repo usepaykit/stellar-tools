@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getCurrentUser, signOut } from "@/actions/auth";
 import { AppModal } from "@/components/app-modal";
+import Logo from "@/components/logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -81,13 +82,7 @@ export function Header() {
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-7" />
             <span className="text-muted-foreground text-sm">/</span>
-            <Image
-              src="/images/logo-light.png"
-              alt="Stellar Tools logo"
-              width={28}
-              height={28}
-              className="size-7 rounded-md object-contain"
-            />
+            <Logo width={28} height={28} className="size-7 rounded-md object-contain" />
             <span className="font-rosemary text-base font-semibold">StellarTools</span>
           </Link>
 
@@ -163,13 +158,7 @@ export function Header() {
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-8" />
             <span className="text-muted-foreground">/</span>
-            <Image
-              src="/images/logo-light.png"
-              alt="Stellar Tools logo"
-              width={32}
-              height={32}
-              className="size-8 rounded-md object-contain"
-            />
+            <Logo width={32} height={32} className="size-8 rounded-md object-contain" />
             <span className="font-rosemary text-lg font-semibold">StellarTools</span>
           </Link>
 

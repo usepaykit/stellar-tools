@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import {  TestModeBanner } from "@/components/environment-toggle";
+
 import { createCustomerImage, deleteCustomerPortalWallet, getCustomerPortalData } from "@/actions/customers";
 import { AppModal } from "@/components/app-modal";
+import { TestModeBanner } from "@/components/environment-toggle";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
 import {
   PhoneNumber,
@@ -25,7 +26,7 @@ import { ApiClient, Customer } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Trash2, X } from "lucide-react";
 import moment from "moment";
-import Image from "next/image";
+import Logo from "@/components/logo";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z as Schema } from "zod";
@@ -259,13 +260,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
               href={process.env.NEXT_PUBLIC_APP_URL!}
               className="text-foreground flex items-center gap-2.5 font-semibold transition-opacity hover:opacity-80"
             >
-              <Image
-                src="/images/logo-light.png"
-                alt="StellarTools"
-                width={28}
-                height={28}
-                className="object-contain"
-              />
+              <Logo width={28} height={28} className="object-contain" />
               <span>StellarTools</span>
             </Link>
           </div>
@@ -291,16 +286,14 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
 
   return (
     <div className="bg-background min-h-screen">
-      {showBanner && data.environment === "testnet" && (
-     <TestModeBanner />
-      )}
+      {showBanner && data.environment === "testnet" && <TestModeBanner />}
       <header className="border-border border-b">
         <div className="mx-auto flex max-w-2xl items-center px-4 py-4">
           <Link
             href={process.env.NEXT_PUBLIC_APP_URL!}
             className="text-foreground flex items-center gap-2.5 font-semibold transition-opacity hover:opacity-80"
           >
-            <Image src="/images/logo-light.png" alt="StellarTools" width={28} height={28} className="object-contain" />
+            <Logo width={28} height={28} className="object-contain" />
             <span>StellarTools</span>
           </Link>
         </div>
@@ -603,7 +596,7 @@ function PortalSkeleton() {
             href={process.env.NEXT_PUBLIC_APP_URL!}
             className="text-foreground flex items-center gap-2.5 font-semibold transition-opacity hover:opacity-80"
           >
-            <Image src="/images/logo-light.png" alt="StellarTools" width={28} height={28} className="object-contain" />
+            <Logo width={28} height={28} className="object-contain" />
             <span>StellarTools</span>
           </Link>
         </div>

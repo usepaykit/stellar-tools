@@ -3,6 +3,7 @@
 import React from "react";
 
 import { resetPassword } from "@/actions/auth";
+import Logo from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
@@ -86,9 +87,9 @@ export default function UpdatePassword() {
             <div className="space-y-6">
               <div className="relative inline-block">
                 <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
-                <Image
-                  src="/images/logo-dark.png"
+                <Logo
                   alt="Stellar Tools"
+                  darkSrc="/images/logo-dark.png"
                   width={150}
                   height={1}
                   className="object-contain p-5"
