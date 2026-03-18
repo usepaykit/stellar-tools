@@ -285,6 +285,7 @@ const CreateOrganizationModalContent = ({
           metadata: null,
           address: null,
           socialLinks: null,
+          supportEmail: null
         },
         defaultEnvironment,
         { formDataWithFiles: formData }

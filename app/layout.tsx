@@ -1,8 +1,10 @@
+import ThemeProvider from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 import { Providers } from "@/providers";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
-import { DM_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { DM_Sans, Instrument_Serif, JetBrains_Mono , Lora, Inter,} from "next/font/google";
+
 
 import "./globals.css";
 
@@ -52,10 +54,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${jetBrainsMono.variable} ${instrumentSerif.variable} antialiased`}>
-        <Providers>
-          {children}
-          <Toaster position="bottom-right" />
-        </Providers>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <Providers>
+            {children}
+            <Toaster position="bottom-right" />
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

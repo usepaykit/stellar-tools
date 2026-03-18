@@ -387,6 +387,7 @@ export function CustomerModalContent({
         phone: phoneString,
         metadata: metadataRecord,
         ...(imageUrl !== undefined && { image: imageUrl }),
+        wallets: [],
       };
 
       if (isEditMode) {

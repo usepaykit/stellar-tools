@@ -22,7 +22,9 @@ import { notFound, useParams } from "next/navigation";
 import * as RHF from "react-hook-form";
 
 export default function CheckoutPage() {
-  const { id: checkoutId } = useParams<{ id: string }>();
+  const params = useParams<{ id: string }>();
+  if (!params?.id) return notFound();
+  const { id: checkoutId } = params;
   const {
     checkout,
     isLoading,

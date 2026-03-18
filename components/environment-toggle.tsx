@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { Network } from "@/db";
 import { useQueryClient } from "@tanstack/react-query";
+import { Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface EnvironmentToggleProps {
@@ -51,6 +52,24 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
       />
 
       <span className="text-muted-foreground text-xs">Sandbox data</span>
+    </div>
+  );
+}
+
+export function TestModeBanner() {
+  return (
+    <div className="bg-primary border-border border-b px-6 py-1">
+      <div className="container flex items-center justify-between">
+        <div />
+        <div className="flex items-center gap-2">
+          <Info className="text-secondary-foreground h-4 w-4" />
+          <span className="text-secondary-foreground text-sm">
+            You are in <span className="font-medium">Test mode</span>
+          </span>
+        </div>
+
+        <div />
+      </div>
     </div>
   );
 }

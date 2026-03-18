@@ -111,7 +111,7 @@ const DetailRow = ({ label, value, icon: Icon, action, mono = false }: any) => (
 
 export default function PayoutDetailPage() {
   const router = useRouter();
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams()! as { id: string };
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   const { data: payout, isLoading: isLoadingPayout } = useOrgQuery(["payout", id], () => retrievePayoutById(id));

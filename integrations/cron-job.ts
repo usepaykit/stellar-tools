@@ -115,7 +115,7 @@ export class CronJobApi {
               continue;
             }
 
-            const paymentEvent = result.value.events.find((e) => e.topic === "sub_pay");
+            const paymentEvent = result.value.events.find((e: { topic: string; }) => e.topic === "sub_pay");
             if (!paymentEvent) {
               failed += 1;
               continue;
@@ -131,6 +131,7 @@ export class CronJobApi {
                   status: "failed",
                   metadata: null,
                   assetId: sub.subscription.assetId,
+                  subscriptionId: null
                 },
                 sub.subscription.organizationId,
                 sub.subscription.environment,
@@ -159,6 +160,7 @@ export class CronJobApi {
                   status: "confirmed",
                   metadata: null,
                   assetId: sub.subscription.assetId,
+                  subscriptionId: null
                 },
                 sub.subscription.organizationId,
                 sub.subscription.environment,

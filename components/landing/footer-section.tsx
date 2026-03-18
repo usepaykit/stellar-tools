@@ -1,5 +1,6 @@
 import React from "react";
 
+import Logo from "@/components/logo";
 import { Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,9 +39,7 @@ export const FooterSection = () => {
         <div className="col-span-2 md:col-span-1">
           <Link href="/" className="mb-4 flex items-center gap-2.5 text-[17px] font-semibold text-white">
             <div className="relative h-8 w-8">
-              <Image
-                src="/images/logo-dark.png"
-                alt="StellarTools"
+              <Logo
                 width={32}
                 height={32}
                 className="h-full w-full object-contain"

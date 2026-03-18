@@ -3,6 +3,7 @@
 import React from "react";
 
 import { forgotPassword } from "@/actions/auth";
+import Logo from "@/components/logo";
 import { TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
@@ -26,11 +27,11 @@ export default function ForgotPassword() {
   const [dismissedError, setDismissedError] = React.useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const error = searchParams.get("error");
+  const error = searchParams?.get("error");
 
   React.useEffect(() => {
     if (dismissedError && error) {
-      const newSearchParams = new URLSearchParams(searchParams.toString());
+      const newSearchParams = new URLSearchParams(searchParams?.toString());
       newSearchParams.delete("error");
       router.replace(`/forgot-password?${newSearchParams.toString()}`);
       setDismissedError(false);
@@ -77,9 +78,7 @@ export default function ForgotPassword() {
               <div className="relative inline-block">
                 {/* Subtle glow - not overpowering */}
                 <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
-                <Image
-                  src="/images/logo-dark.png"
-                  alt="Stellar Tools"
+                <Logo
                   width={150}
                   height={1}
                   className="object-contain p-5"
