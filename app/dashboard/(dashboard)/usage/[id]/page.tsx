@@ -269,7 +269,7 @@ const columns: ColumnDef<UsageRecord>[] = [
 ];
 
 export default function UsageDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams()! as { id: string };
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
 
   const { data: balance } = useOrgQuery(["credit-balance", id], () => retrieveCreditBalanceById(id));

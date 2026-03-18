@@ -35,13 +35,13 @@ export default function UpdatePassword() {
   const [dismissedError, setDismissedError] = React.useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-  const error = searchParams.get("error");
-  const errorDescription = searchParams.get("error_description");
+  const token = searchParams?.get("token");
+  const error = searchParams?.get("error");
+  const errorDescription = searchParams?.get("error_description");
 
   React.useEffect(() => {
     if (dismissedError && error) {
-      const newSearchParams = new URLSearchParams(searchParams.toString());
+      const newSearchParams = new URLSearchParams(searchParams?.toString());
       newSearchParams.delete("error");
       newSearchParams.delete("error_description");
       router.replace(`/reset-password?${newSearchParams.toString()}`);
@@ -88,8 +88,6 @@ export default function UpdatePassword() {
               <div className="relative inline-block">
                 <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
                 <Logo
-                  alt="Stellar Tools"
-                  darkSrc="/images/logo-dark.png"
                   width={150}
                   height={1}
                   className="object-contain p-5"

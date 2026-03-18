@@ -121,8 +121,6 @@ export default function SignIn() {
       <div className="bg-foreground hidden flex-col justify-between overflow-hidden p-16 lg:flex">
         <div className="space-y-8">
           <Logo
-            darkSrc="/images/logo-dark.png"
-            alt="Stellar Tools"
             width={150}
             height={40}
             className="object-contain"

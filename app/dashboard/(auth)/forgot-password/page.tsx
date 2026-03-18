@@ -27,11 +27,11 @@ export default function ForgotPassword() {
   const [dismissedError, setDismissedError] = React.useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const error = searchParams.get("error");
+  const error = searchParams?.get("error");
 
   React.useEffect(() => {
     if (dismissedError && error) {
-      const newSearchParams = new URLSearchParams(searchParams.toString());
+      const newSearchParams = new URLSearchParams(searchParams?.toString());
       newSearchParams.delete("error");
       router.replace(`/forgot-password?${newSearchParams.toString()}`);
       setDismissedError(false);
@@ -79,8 +79,6 @@ export default function ForgotPassword() {
                 {/* Subtle glow - not overpowering */}
                 <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
                 <Logo
-                  alt="Stellar Tools"
-                  darkSrc="/images/logo-dark.png"
                   width={150}
                   height={1}
                   className="object-contain p-5"

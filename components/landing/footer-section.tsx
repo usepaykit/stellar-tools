@@ -40,10 +40,8 @@ export const FooterSection = () => {
           <Link href="/" className="mb-4 flex items-center gap-2.5 text-[17px] font-semibold text-white">
             <div className="relative h-8 w-8">
               <Logo
-                darkSrc="/images/logo-dark.png"
                 width={32}
                 height={32}
-                alt="StellarTools"
                 className="h-full w-full object-contain"
               />
             </div>

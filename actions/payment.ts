@@ -462,7 +462,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
     if (!period) return Result.err(new Error("Period is required for subscription"));
 
-    const result = await api.post<{ id: string; success: boolean }>("/api/subscriptions", {
+    const result = await api.post("/api/subscriptions", {
       body: JSON.stringify({
         customerIds: [checkout.customerId],
         productId: checkout.productId,

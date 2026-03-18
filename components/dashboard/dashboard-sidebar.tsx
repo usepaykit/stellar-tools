@@ -17,7 +17,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import ModeToggle from "@/components/ui/mode-toggle";
+import ModeToggle from "@/components/mode-toggle";
 import {
   Sidebar,
   SidebarContent,

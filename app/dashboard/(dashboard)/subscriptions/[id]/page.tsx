@@ -90,7 +90,7 @@ const InfoSection = ({ title, children }: { title: string; children: React.React
 );
 
 export default function SubscriptionDetailPage() {
-  const { id: _subId } = useParams();
+  const params = useParams();
   const _router = useRouter();
   const [isBusy, setIsBusy] = React.useState(false);
 

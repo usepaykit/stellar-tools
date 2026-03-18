@@ -22,7 +22,7 @@ import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/toast";
 import { fileFromUrl, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ApiClient, Customer } from "@stellartools/core";
+import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Trash2, X } from "lucide-react";
 import moment from "moment";
@@ -124,7 +124,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
       const phone =
         formData.phoneNumber.number.replace(/\D/g, "").length >= 10 ? phoneNumberToString(formData.phoneNumber) : "";
 
-      const response = await api.put<Customer>(
+      const response = await api.put(
         `/customers/${data?.customer?.id}`,
         {
           name: formData.name ?? undefined,
@@ -151,7 +151,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
     useMutation({
       mutationFn: async (subscriptionId: string) => {
         setActionId(subscriptionId);
-        const response = await api.post<Subscription>(`/subscriptions/${subscriptionId}/${path}`, {
+        const response = await api.post(`/subscriptions/${subscriptionId}/${path}`, {
           headers: { "x-portal-token": token },
         });
         if (response.isErr()) throw new Error(response.error.message);
