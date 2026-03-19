@@ -15,8 +15,8 @@ export function Logo({
 }: LogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
- const lightSrc = "/images/logo-light.png";
- const darkSrc = "/images/logo-dark.png";
+ const lightSrc = "/images/logo-light.svg";
+ const darkSrc = "/images/logo-dark.svg";
   React.useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(id);

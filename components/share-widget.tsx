@@ -269,8 +269,8 @@ function renderToCanvas(
   ctx.textAlign = "left";
 }
 
-const LOGO_LIGHT_SRC = "/images/logo-light.png";
-const LOGO_DARK_SRC = "/images/logo-dark.png";
+const LOGO_LIGHT_SRC = "/images/logo-light.svg";
+const LOGO_DARK_SRC = "/images/logo-dark.svg";
 
 export function ShareWidget({ title, value, subtitle, sparkData }: ShareWidgetProps) {
   const [theme, setTheme] = useCookieState<ThemeId>("share_theme", "dark");

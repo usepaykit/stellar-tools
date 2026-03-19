@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="./public/images/logo-dark.png#gh-dark-mode-only" width="180" alt="Stellar Tools" />
-  <img src="./public/images/logo-light.png#gh-light-mode-only" width="180" alt="Stellar Tools" />
+  <img src="./public/images/logo-dark.svg#gh-dark-mode-only" width="180" alt="Stellar Tools" />
+  <img src="./public/images/logo-light.svg#gh-light-mode-only" width="180" alt="Stellar Tools" />
 </p>
 
 <p align="center">

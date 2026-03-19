@@ -67,7 +67,7 @@ const chain = stellarMeter(yourLangChainChain, {
 
 export default function DevelopersSection() {
   return (
-    <section className="bg-foreground px-6 py-24 sm:px-10" id="developers">
+    <section className="bg-primary-foreground px-6 py-24 sm:px-10" id="developers">
       <div className="mx-auto grid max-w-[1200px] items-start gap-12 md:grid-cols-2 md:gap-20">
         <div>
           <div className="text-primary mb-4 text-[12.5px] font-bold tracking-[1.2px] uppercase">For Developers</div>

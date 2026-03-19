@@ -81,9 +81,9 @@ export function Header() {
         <div className="bg-background/95 border-border flex items-center justify-between rounded-2xl border px-4 py-2.5 shadow-sm backdrop-blur-md">
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-7" />
-            <span className="text-muted-foreground text-sm">/</span>
+            <span className="text-foreground text-sm">/</span>
             <Logo width={28} height={28} className="size-7 rounded-md object-contain" />
-            <span className="font-rosemary text-base font-semibold">StellarTools</span>
+            <span className="font-rosemary text-base font-semibold text-foreground">StellarTools</span>
           </Link>
 
           <button
@@ -157,9 +157,9 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-8" />
-            <span className="text-muted-foreground">/</span>
+            <span className=" text-foreground">/</span>
             <Logo width={32} height={32} className="size-8 rounded-md object-contain" />
-            <span className="font-rosemary text-lg font-semibold">StellarTools</span>
+            <span className="font-rosemary text-lg font-semibold text-foreground">StellarTools</span>
           </Link>
 
           {/* Navigation Links */}

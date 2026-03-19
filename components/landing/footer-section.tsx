@@ -34,7 +34,7 @@ export const FooterSection = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-foreground px-10 py-16 text-white">
+    <footer className="bg-primary-foreground px-10 py-16 text-white">
       <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-16 md:grid-cols-4">
         <div className="col-span-2 md:col-span-1">
           <Link href="/" className="mb-4 flex items-center gap-2.5 text-[17px] font-semibold text-white">
