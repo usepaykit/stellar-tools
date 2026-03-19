@@ -4,8 +4,9 @@ import * as React from "react";
 
 import { createCustomerImage, deleteCustomerPortalWallet, getCustomerPortalData } from "@/actions/customers";
 import { AppModal } from "@/components/app-modal";
-import { TestModeBanner } from "@/components/environment-toggle";
+import { TestModeBanner } from "@/components/environment-mode";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
+import Logo from "@/components/logo";
 import {
   PhoneNumber,
   PhoneNumberField,
@@ -26,7 +27,6 @@ import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, Trash2, X } from "lucide-react";
 import moment from "moment";
-import Logo from "@/components/logo";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
 import { z as Schema } from "zod";

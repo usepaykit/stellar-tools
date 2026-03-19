@@ -1,10 +1,9 @@
 "use client";
 
-import { EnvironmentToggle, TestModeBanner } from "@/components/environment-toggle";
+import { EnvironmentToggle, TestModeBanner } from "@/components/environment-mode";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useOrgContext } from "@/hooks/use-org-query";
 import { Info } from "lucide-react";
-
 
 export default function DashboardHeader() {
   const { data: orgContext } = useOrgContext();
@@ -13,9 +12,7 @@ export default function DashboardHeader() {
 
   return (
     <header>
-      {isTestMode && (
-       <TestModeBanner />
-      )}
+      {isTestMode && <TestModeBanner />}
       <div className="container flex h-14 items-center justify-between gap-4 px-4">
         <SidebarTrigger className="-ml-1" />
         <div className="flex items-center gap-4">

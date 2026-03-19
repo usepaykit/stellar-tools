@@ -807,7 +807,7 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
                           ]}
                         />
                         {m.target === "metadata" ? (
-                          <InputGroup className="bg-background h-9 w-44 shadow-none">
+                          <InputGroup className="bg-background h-9 w-44 shadow-none dark:border-border">
                             <InputGroupInput
                               value={m.metadataKey}
                               placeholder="Key..."

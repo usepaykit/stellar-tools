@@ -205,7 +205,7 @@ export default function SignUp() {
               name="password"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup className="w-full shadow-none">
+                  <InputGroup className="w-full shadow-none dark:border-border">
                     <InputGroupInput
                       {...field}
                       id="password"
