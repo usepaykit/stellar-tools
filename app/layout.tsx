@@ -1,4 +1,4 @@
-import ThemeProvider from "@/components/theme-provider";
+import ThemeProvider from "@/providers";
 import { Toaster } from "@/components/ui/toast";
 import { Providers } from "@/providers";
 import "katex/dist/katex.min.css";
@@ -54,7 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${jetBrainsMono.variable} ${instrumentSerif.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <Providers>
             {children}
             <Toaster position="bottom-right" />

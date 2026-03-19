@@ -194,7 +194,7 @@ export default function UpdatePassword() {
               name="newPassword"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup className="w-full shadow-none" aria-invalid={error ? "true" : "false"}>
+                  <InputGroup className="w-full shadow-none  dark:border-border" aria-invalid={error ? "true" : "false"}>
                     <InputGroupInput
                       {...field}
                       id="newPassword"
@@ -235,7 +235,7 @@ export default function UpdatePassword() {
               name="confirmPassword"
               render={({ field, fieldState: { error } }) => (
                 <div className="space-y-1.5">
-                  <InputGroup className="w-full shadow-none" aria-invalid={error ? "true" : "false"}>
+                  <InputGroup className="w-full shadow-none dark:border-border" aria-invalid={error ? "true" : "false"}>
                     <InputGroupInput
                       {...field}
                       id="confirmPassword"

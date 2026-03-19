@@ -234,7 +234,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                               <SidebarMenuSubItem key={sub.title}>
                                 <SidebarMenuSubButton asChild isActive={isActive(sub.url)}>
                                   <Link href={sub.url}>
-                                    <span className={cn(isActive(sub.url) && "text-primary-foreground font-medium")}>
+                                    <span className={cn(isActive(sub.url) && "text-muted-foreground font-medium")}>
                                       {sub.title}
                                     </span>
                                   </Link>

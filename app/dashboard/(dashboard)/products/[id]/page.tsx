@@ -487,7 +487,7 @@ export default function ProductDetailPage() {
                 <section>
                   <div className="flex items-center gap-2">
                     <h2 className="text-foreground text-sm font-semibold tracking-wide uppercase">Cross-sells</h2>
-                    <Badge variant="secondary" className="text-muted-foreground font-normal">
+                    <Badge variant="secondary" className="text-foreground font-normal">
                       Coming soon
                     </Badge>
                   </div>
