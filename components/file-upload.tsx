@@ -2,10 +2,11 @@
 
 import * as React from "react";
 
+import { Spinner } from "@/components/spinner";
 import { ImageTransformer, type MimeType } from "@/integrations/image-transformer";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import { CheckCircle, ImagePlus, Loader2, Pencil } from "lucide-react";
+import { CheckCircle, ImagePlus, Pencil } from "lucide-react";
 import Image from "next/image";
 import { type DropzoneOptions, type FileRejection, useDropzone } from "react-dropzone";
 
@@ -167,14 +168,14 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
 
           {isTransforming && (
             <div className="bg-background/80 absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
-              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              <Spinner size={32} strokeColor="text-primary" />
               {shape == "square" && <p className="text-sm font-medium">Processing image...</p>}
             </div>
           )}
 
           {isLoading && (
             <div className="bg-background/80 absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
-              <Loader2 className="text-primary h-8 w-8 animate-spin" />
+              <Spinner size={32} strokeColor="text-primary" />
             </div>
           )}
 

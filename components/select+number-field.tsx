@@ -4,13 +4,14 @@ import * as React from "react";
 
 import { CheckMark } from "@/components/icon";
 import { NumberField } from "@/components/number-field";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { InputGroup } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ChevronsUpDown, Loader2 } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 export interface SelectNumberFieldValue {
   amount: string;
@@ -105,7 +106,7 @@ export const SelectNumberField = React.forwardRef<HTMLInputElement, SelectNumber
                 className="border-input hover:bg-accent hover:text-accent-foreground flex h-full min-w-[100px] justify-start gap-2 rounded-r-none border-r bg-transparent px-3"
               >
                 {isLoading ? (
-                  <Loader2 className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
+                  <Spinner strokeColor="text-muted-foreground" size={25} />
                 ) : (
                   <>
                     <span className="font-medium">

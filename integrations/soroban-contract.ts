@@ -60,7 +60,34 @@ export class SorobanContractApi {
       }
 
       const prepared = StellarSDK.rpc.assembleTransaction(tx, simulation).build();
-      return Result.ok(prepared.toXDR());
+
+      const envelope = StellarSDK.xdr.TransactionEnvelope.fromXDR(prepared.toXDR(), "base64");
+      const ops = envelope.v1().tx().operations();
+
+      for (const op of ops) {
+        console.log("[buildApprovalXdr] op type:", op.body().switch().name);
+        if (op.body().switch().name !== "invokeHostFunction") continue;
+
+        const hostFnOp = op.body().invokeHostFunctionOp();
+        const before = hostFnOp.auth().map((e) => e.credentials().switch().name);
+        console.log("[buildApprovalXdr] auth credential types BEFORE patch:", before);
+
+        const patchedAuth = hostFnOp.auth().map((entry) => {
+          if (entry.credentials().switch().name !== "sorobanCredentialsAddress") return entry;
+          return new StellarSDK.xdr.SorobanAuthorizationEntry({
+            credentials: StellarSDK.xdr.SorobanCredentials.sorobanCredentialsSourceAccount(),
+            rootInvocation: entry.rootInvocation(),
+          });
+        });
+        hostFnOp.auth(patchedAuth);
+
+        const after = patchedAuth.map((e) => e.credentials().switch().name);
+        console.log("[buildApprovalXdr] auth credential types AFTER patch:", after);
+      }
+
+      const finalXdr = envelope.toXDR().toString("base64");
+      console.log("[buildApprovalXdr] final XDR length:", finalXdr.length, "source:", params.customerAddress);
+      return Result.ok(finalXdr);
     } catch (e) {
       return Result.err(e instanceof Error ? e : new Error(String(e)));
     }

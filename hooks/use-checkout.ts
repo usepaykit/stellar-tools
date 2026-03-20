@@ -9,12 +9,9 @@ import { StellarCoreApi } from "@/integrations/stellar-core";
 import { StellarWalletsKitApi } from "@/integrations/stellar-wallets-kit";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Networks } from "@stellar/stellar-sdk";
-import { ApiClient } from "@stellartools/core";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as RHF from "react-hook-form";
 import { z as Schema } from "zod";
-
-const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: {} });
 
 const checkoutSchema = Schema.object({ email: Schema.email("Required"), phoneNumber: phoneNumberSchema });
 
@@ -26,17 +23,10 @@ export const useCheckout = (checkoutId: string) => {
   const [connectedAddress, setConnectedAddress] = React.useState<string | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [merchantTrustlineError, setMerchantTrustlineError] = React.useState<string | null>(null);
-  const [paymentURI, setPaymentURI] = React.useState<{
-    status: "pending" | "loading" | "success" | "error";
-    uri: string | null;
-    message?: string | null;
-  }>({ status: "pending", uri: null, message: null });
 
   const { data: checkout, isLoading } = useQuery({
     queryKey: ["checkout", checkoutId],
     queryFn: () => retrieveCheckoutAndCustomer(checkoutId),
-    refetchInterval: 10 * 1000,
-    placeholderData: keepPreviousData,
   });
 
   const form = RHF.useForm({
@@ -71,7 +61,12 @@ export const useCheckout = (checkoutId: string) => {
 
   React.useEffect(() => {
     if (!checkout) return;
-    stellarWalletsKit.init({ network: checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC });
+
+    stellarWalletsKit.init({
+      network: checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC,
+      checkoutDescription: checkout.description,
+    });
+
     return () => {
       stellarWalletsKit.disconnect();
     };
@@ -95,27 +90,6 @@ export const useCheckout = (checkoutId: string) => {
     };
     checkTrustline();
   }, [checkout]);
-
-  React.useEffect(() => {
-    // Subscription checkouts require wallet interaction — QR/SEP-7 is not supported
-    if (isPaid || isFailed || !hasDetails || !checkout?.merchantPublicKey) return;
-    if (checkout.productType === "subscription") return;
-
-    const fetchURI = async () => {
-      setPaymentURI({ status: "loading", uri: null });
-      const response = await api.get<{ uri: string } | { error: string }>(
-        `checkout/${checkoutId}/uri?environment=${checkout?.environment}`
-      );
-      if (response.isErr()) return setPaymentURI({ status: "error", uri: null });
-
-      setPaymentURI({
-        status: "uri" in response.value ? "success" : "error",
-        uri: "uri" in response.value ? response.value.uri : null,
-        message: "error" in response.value ? response.value.error : null,
-      });
-    };
-    fetchURI();
-  }, [hasDetails, checkout, checkoutId, isPaid, isFailed]);
 
   const handleWalletPay = async () => {
     if (!stellarWalletsKit.isConnected()) return await stellarWalletsKit.connectWallet();
@@ -170,7 +144,6 @@ export const useCheckout = (checkoutId: string) => {
     hasDetails,
     form,
     updateDetails,
-    paymentURI,
     merchantTrustlineError,
     wallet: { connectedAddress, isProcessing, handleWalletPay, kit: stellarWalletsKit },
     banner: { showBanner, setShowBanner },

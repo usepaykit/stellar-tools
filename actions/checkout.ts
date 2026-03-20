@@ -285,10 +285,32 @@ export async function getCheckoutPaymentDetails(id: string, orgId?: string, env?
 
   const stellar = new StellarCoreApi(result.checkout.environment);
 
-  const paymentUri = stellar.makeCheckoutURI({
-    apiUrl: process.env.NEXT_PUBLIC_API_URL!,
-    id: checkout.id,
+  // Build XDR with a placeholder source account. The wallet will substitute its own
+  // address via the `replace=` parameter (SEP-007). We use a known funded testnet
+  // account as placeholder just to get a valid sequence number for XDR construction.
+  const PLACEHOLDER_SOURCE = "GA5OJOBKLD4MJEZ6SE7FCNDXKHUQAEOKPDXAZTURGNTXL6BJHPMIC6BW";
+  const xdrResult = await stellar.buildPaymentXDR({
+    customerAddress: PLACEHOLDER_SOURCE,
+    merchantAddress: secret.publicKey,
+    amount: rawAmount,
+    memo: checkout.id,
+    network: result.checkout.environment,
+    assetCode,
+    assetIssuer: asset?.issuer ?? null,
+    checkoutExpiresAt: checkout.expiresAt,
   });
+
+  if (xdrResult.isErr()) throw xdrResult.error;
+
+  const networkPassphrase = stellar.getNetworkPassphrase(result.checkout.environment);
+
+  // web+stellar:tx per SEP-007. No callback: wallet signs and submits to the network directly (fewer round trips).
+  const paymentUri =
+    `web+stellar:tx` +
+    `?xdr=${encodeURIComponent(xdrResult.value)}` +
+    `&replace=tx.sourceAccount%3AX%3BX%3Apayer+account` +
+    `&network_passphrase=${encodeURIComponent(networkPassphrase)}` +
+    `&msg=${encodeURIComponent("Pay " + rawAmount + " " + assetCode)}`;
 
   return {
     id: checkout.id,

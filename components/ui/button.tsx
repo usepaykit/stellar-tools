@@ -2,11 +2,11 @@
 
 import * as React from "react";
 
+import { Spinner } from "@/components/spinner";
 import { cn } from "@/lib/utils";
 import { Slot, Slottable } from "@radix-ui/react-slot";
 import { type VariantProps, cva } from "class-variance-authority";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
 
 const buttonVariants = cva(
   "relative inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive overflow-hidden",
@@ -82,7 +82,7 @@ function Button({
                 transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                 className="flex items-center justify-center"
               >
-                <Loader2 className="size-4 animate-spin" />
+                <Spinner />
               </motion.span>
             )}
           </AnimatePresence>

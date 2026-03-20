@@ -585,6 +585,7 @@ function WebhooksModalContent({
   setSubmitRef,
   onFooterChange,
 }: WebhooksModalContentProps) {
+  const { data: orgContext } = useOrgContext();
   const formRef = React.useRef<HTMLFormElement>(null);
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const { data: organization, isLoading } = useOrgContext();
@@ -640,12 +641,12 @@ function WebhooksModalContent({
 
   const createWebhookMutation = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
+      if (!orgContext) throw new Error("No organization context found");
       const { destinationName: name, endpointUrl: url, description, events } = data;
-      const organization = await getCurrentOrganization();
       const result = await api.post(
         "/webhooks",
         { name, url, description, events, secret },
-        { "x-auth-token": organization?.token! }
+        { "x-auth-token": orgContext?.token! }
       );
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
@@ -664,7 +665,7 @@ function WebhooksModalContent({
   const updateWebhookMutation = useMutation({
     mutationFn: async (data: z.infer<typeof schema>) => {
       if (!editingWebhook) return;
-      const organization = await getCurrentOrganization();
+      if (!orgContext) throw new Error("No organization context found");
       const result = await api.put<Webhook>(
         `/webhooks/${editingWebhook.id}`,
         {
@@ -673,7 +674,7 @@ function WebhooksModalContent({
           description: data.description ?? null,
           events: data.events,
         },
-        { "x-auth-token": organization?.token! }
+        { "x-auth-token": orgContext?.token! }
       );
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;

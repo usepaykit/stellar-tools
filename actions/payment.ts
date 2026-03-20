@@ -7,6 +7,7 @@ import { createCustomerWallet, retrieveCustomerWallets, retrieveCustomers } from
 import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
+import { subscriptionIntervals } from "@/constant";
 import {
   Checkout,
   Customer,
@@ -450,25 +451,17 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       headers: { "x-auth-token": accessToken },
     });
 
+    const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
     const period =
-      checkout.subscriptionData &&
-      "periodStart" in checkout.subscriptionData &&
-      "periodEnd" in checkout.subscriptionData
-        ? {
-            from: new Date(checkout.subscriptionData.periodStart),
-            to: new Date(checkout.subscriptionData.periodEnd),
-          }
-        : null;
+      checkout.subscriptionData?.periodStart && checkout.subscriptionData?.periodEnd
+        ? { from: new Date(checkout.subscriptionData.periodStart), to: new Date(checkout.subscriptionData.periodEnd) }
+        : { from: new Date(), to: new Date(Date.now() + durationDays * 864e5) };
 
-    if (!period) return Result.err(new Error("Period is required for subscription"));
-
-    const result = await api.post("/api/subscriptions", {
-      body: JSON.stringify({
-        customerIds: [checkout.customerId],
-        productId: checkout.productId,
-        period,
-        cancelAtPeriodEnd: checkout.subscriptionData?.cancelAtPeriodEnd ?? false,
-      }),
+    const result = await api.post<{ id: string; success: boolean }>("/api/subscriptions", {
+      customerIds: [checkout.customerId],
+      productId: checkout.productId,
+      period,
+      cancelAtPeriodEnd: checkout.subscriptionData?.cancelAtPeriodEnd ?? false,
     });
 
     console.dir({ result }, { depth: 100 });

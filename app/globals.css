@@ -110,48 +110,48 @@
 }
 
 :root {
-  --background: #F6F7F8;
-  --foreground: #0F0F0F;
+  --background: #f6f7f8;
+  --foreground: #0f0f0f;
 
   --card: #ffffff;
-  --card-foreground: #0F0F0F;
+  --card-foreground: #0f0f0f;
 
   --popover: #ffffff;
-  --popover-foreground: #0F0F0F;
+  --popover-foreground: #0f0f0f;
 
-  --primary: #FDDA24;
-  --primary-foreground: #0F0F0F;
+  --primary: #fdda24;
+  --primary-foreground: #0f0f0f;
 
-  --secondary: #B7ACE8;
-  --secondary-foreground: #0F0F0F;
+  --secondary: #b7ace8;
+  --secondary-foreground: #0f0f0f;
 
-  --muted: #D6D2C4;
+  --muted: #d6d2c4;
   --muted-foreground: #5a5750;
 
-  --accent: #D6D2C4;
-  --accent-foreground: #0F0F0F;
+  --accent: #d6d2c4;
+  --accent-foreground: #0f0f0f;
 
   --destructive: #ef4444;
-  --destructive-foreground: #F6F7F8;
+  --destructive-foreground: #f6f7f8;
 
-  --border: #D6D2C4;
-  --input: #D6D2C4;
-  --ring: #FDDA24;
+  --border: #d6d2c4;
+  --input: #d6d2c4;
+  --ring: #fdda24;
 
-  --chart-1: #FDDA24;
-  --chart-2: #00A7B5;
-  --chart-3: #B7ACE8;
-  --chart-4: #002E5D;
-  --chart-5: #D6D2C4;
+  --chart-1: #fdda24;
+  --chart-2: #00a7b5;
+  --chart-3: #b7ace8;
+  --chart-4: #002e5d;
+  --chart-5: #d6d2c4;
 
   --sidebar: #ffffff;
-  --sidebar-foreground: #0F0F0F;
-  --sidebar-primary: #FDDA24;
-  --sidebar-primary-foreground: #0F0F0F;
-  --sidebar-accent: #D6D2C4;
-  --sidebar-accent-foreground: #0F0F0F;
-  --sidebar-border: #D6D2C4;
-  --sidebar-ring: #FDDA24;
+  --sidebar-foreground: #0f0f0f;
+  --sidebar-primary: #fdda24;
+  --sidebar-primary-foreground: #0f0f0f;
+  --sidebar-accent: #d6d2c4;
+  --sidebar-accent-foreground: #0f0f0f;
+  --sidebar-border: #d6d2c4;
+  --sidebar-ring: #fdda24;
 
   --font-sans: var(--font-inter);
   --font-serif: var(--font-inter);
@@ -175,20 +175,20 @@
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  --stellar-wallet-background: #F6F7F8;
+  --stellar-wallet-background: #f6f7f8;
   --stellar-wallet-background-secondary: #edeae0;
-  --stellar-wallet-foreground-strong: #0F0F0F;
-  --stellar-wallet-foreground: #0F0F0F;
+  --stellar-wallet-foreground-strong: #0f0f0f;
+  --stellar-wallet-foreground: #0f0f0f;
   --stellar-wallet-foreground-secondary: #5a5750;
-  --stellar-wallet-primary: #FDDA24;
-  --stellar-wallet-primary-foreground: #0F0F0F;
+  --stellar-wallet-primary: #fdda24;
+  --stellar-wallet-primary-foreground: #0f0f0f;
   --stellar-wallet-transparent: transparent;
   --stellar-wallet-lighter: #ffffff;
   --stellar-wallet-light: #edeae0;
   --stellar-wallet-light-gray: #9ca3af;
   --stellar-wallet-gray: #5a5750;
   --stellar-wallet-danger: #dc2626;
-  --stellar-wallet-border: #D6D2C4;
+  --stellar-wallet-border: #d6d2c4;
   --stellar-wallet-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --stellar-wallet-border-radius: 0.5rem;
   --stellar-wallet-font-family: Inter, sans-serif;
@@ -206,48 +206,48 @@
 }
 
 .dark {
-  --background: #0F0F0F;
-  --foreground: #F6F7F8;
+  --background: #0f0f0f;
+  --foreground: #f6f7f8;
 
-  --card: #18181B;
-  --card-foreground: #F6F7F8;
+  --card: #18181b;
+  --card-foreground: #f6f7f8;
 
-  --popover: #18181B;
-  --popover-foreground: #F6F7F8;
+  --popover: #18181b;
+  --popover-foreground: #f6f7f8;
 
-  --primary: #FDDA24;
-  --primary-foreground: #0F0F0F;
+  --primary: #fdda24;
+  --primary-foreground: #0f0f0f;
 
-  --secondary: #B7ACE8;
-  --secondary-foreground: #0F0F0F;
+  --secondary: #b7ace8;
+  --secondary-foreground: #0f0f0f;
 
-  --muted: #1A1917; 
-  --muted-foreground: #A1A1AA;
+  --muted: #1a1917;
+  --muted-foreground: #a1a1aa;
 
-  --accent: #3A3730;
-  --accent-foreground: #F6F7F8; 
+  --accent: #3a3730;
+  --accent-foreground: #f6f7f8;
 
   --destructive: #7f1d1d;
-  --destructive-foreground: #F6F7F8;
+  --destructive-foreground: #f6f7f8;
 
-  --border: #2A2825; 
-  --input: #1A1917; 
-  --ring: #FDDA24;
+  --border: #2a2825;
+  --input: #1a1917;
+  --ring: #fdda24;
 
-  --chart-1: #FDDA24;
-  --chart-2: #00A7B5;
-  --chart-3: #B7ACE8;
-  --chart-4: #D6D2C4;
-  --chart-5: #F6F7F8;
+  --chart-1: #fdda24;
+  --chart-2: #00a7b5;
+  --chart-3: #b7ace8;
+  --chart-4: #d6d2c4;
+  --chart-5: #f6f7f8;
 
-  --sidebar: #0F0F0F;
-  --sidebar-foreground: #F6F7F8;
-  --sidebar-primary: #FDDA24;
-  --sidebar-primary-foreground: #0F0F0F;
-  --sidebar-accent: #1A1917;  
-  --sidebar-accent-foreground: #F6F7F8;
-  --sidebar-border: #2A2825;
-  --sidebar-ring: #FDDA24;
+  --sidebar: #0f0f0f;
+  --sidebar-foreground: #f6f7f8;
+  --sidebar-primary: #fdda24;
+  --sidebar-primary-foreground: #0f0f0f;
+  --sidebar-accent: #1a1917;
+  --sidebar-accent-foreground: #f6f7f8;
+  --sidebar-border: #2a2825;
+  --sidebar-ring: #fdda24;
 
   --font-sans: var(--font-inter);
   --font-serif: var(--font-inter);
@@ -262,32 +262,27 @@
   --shadow-color: rgba(0, 0, 0, 1);
   --shadow-2xs: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.3);
   --shadow-xs: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.35);
-  --shadow-sm: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.4),
-    0 1px 2px -1px rgba(0, 0, 0, 0.5);
-  --shadow: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.4),
-    0 1px 2px -1px rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.45),
-    0 2px 4px -1px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.5),
-    0 4px 6px -1px rgba(0, 0, 0, 0.6);
-  --shadow-xl: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.55),
-    0 8px 10px -1px rgba(0, 0, 0, 0.7);
+  --shadow-sm: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.5);
+  --shadow: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.5), 0 4px 6px -1px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.55), 0 8px 10px -1px rgba(0, 0, 0, 0.7);
   --shadow-2xl: 0 0.25rem 0.5rem 0 rgba(0, 0, 0, 0.75);
 
-  --stellar-wallet-background: #0F0F0F;
-  --stellar-wallet-background-secondary: #1A1917;
-  --stellar-wallet-foreground-strong: #F6F7F8;
-  --stellar-wallet-foreground: #F6F7F8;
-  --stellar-wallet-foreground-secondary: #A1A1AA;
-  --stellar-wallet-primary: #FDDA24;
-  --stellar-wallet-primary-foreground: #0F0F0F;
+  --stellar-wallet-background: #0f0f0f;
+  --stellar-wallet-background-secondary: #1a1917;
+  --stellar-wallet-foreground-strong: #f6f7f8;
+  --stellar-wallet-foreground: #f6f7f8;
+  --stellar-wallet-foreground-secondary: #a1a1aa;
+  --stellar-wallet-primary: #fdda24;
+  --stellar-wallet-primary-foreground: #0f0f0f;
   --stellar-wallet-transparent: transparent;
-  --stellar-wallet-lighter: #232220;    
-  --stellar-wallet-light: #1A1917;      
+  --stellar-wallet-lighter: #232220;
+  --stellar-wallet-light: #1a1917;
   --stellar-wallet-light-gray: #5a5750;
-  --stellar-wallet-gray: #9C9990;       
+  --stellar-wallet-gray: #9c9990;
   --stellar-wallet-danger: #ef4444;
-  --stellar-wallet-border: #2A2825;     
+  --stellar-wallet-border: #2a2825;
   --stellar-wallet-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.7);
   --stellar-wallet-border-radius: 0.5rem;
   --stellar-wallet-font-family: Inter, sans-serif;
@@ -443,4 +438,139 @@
   .code-block-wrapper code {
     font-size: clamp(12px, 2vw, 14px) !important;
   }
+}
+
+#swk-auth-modal-host.swk-auth-modal-host {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 72px;
+  padding-bottom: env(safe-area-inset-bottom);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+#swk-auth-modal-host.swk-auth-modal-host::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+#swk-auth-modal-host.swk-auth-modal-host.open {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+#swk-auth-modal-host.swk-auth-modal-host.open::before {
+  opacity: 1;
+}
+
+#swk-auth-modal-host .stellar-wallets-kit {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+}
+
+#swk-auth-modal-host .stellar-wallets-kit > section {
+  box-sizing: border-box;
+  flex: 0 0 auto !important;
+  width: min(28rem, calc(100vw - 2rem)) !important;
+  min-width: min(28rem, calc(100vw - 2rem)) !important;
+  max-width: min(28rem, calc(100vw - 2rem)) !important;
+  transform: translateY(-18px);
+  opacity: 0;
+  transition:
+    transform 320ms ease,
+    opacity 320ms ease;
+  max-height: min(85vh, 720px) !important;
+  border-radius: var(--stellar-wallet-border-radius) !important;
+  box-shadow: var(--stellar-wallet-shadow) !important;
+}
+
+#swk-auth-modal-host.open .stellar-wallets-kit > section {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+#swk-auth-modal-host .stellar-wallets-kit header button {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+}
+
+#swk-auth-modal-host .stellar-wallets-kit header button svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+@media (max-width: 639px) {
+  #swk-auth-modal-host.swk-auth-modal-host {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-end;
+    padding-top: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  #swk-auth-modal-host > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-end !important;
+    flex: 0 0 auto !important;
+  }
+
+  #swk-auth-modal-host .stellar-wallets-kit {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    align-items: stretch !important;
+    justify-content: flex-end !important;
+  }
+
+  #swk-auth-modal-host .stellar-wallets-kit > section {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+    max-height: min(88vh, 640px) !important;
+    border-radius: var(--stellar-wallet-border-radius) var(--stellar-wallet-border-radius) 0 0 !important;
+    transform: translateY(18px);
+  }
+}
+
+#swk-auth-modal-host .stellar-wallets-kit footer {
+  display: none !important;
+}
+
+/* Wallet kit “Loading wallets…” → replaced by our <Spinner /> component */
+#swk-auth-modal-host .swk-kit-loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  color: var(--stellar-wallet-primary);
 }

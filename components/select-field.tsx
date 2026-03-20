@@ -1,10 +1,10 @@
 import * as React from "react";
 
+import { Spinner } from "@/components/spinner";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MixinProps, splitProps } from "@/lib/mixin";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
 
 type LabelProps = React.ComponentProps<typeof Label>;
 type ErrorProps = React.ComponentProps<"p">;
@@ -69,11 +69,7 @@ export const SelectField = ({
 
       <Select {...rest} value={value} onValueChange={(v) => onChange(v)}>
         <SelectTrigger {...triggerProps} aria-invalid={!!error} className={cn("w-full", triggerProps?.className)}>
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <SelectValue {...triggerValueProps} placeholder={placeholder} />
-          )}
+          {isLoading ? <Spinner /> : <SelectValue {...triggerValueProps} placeholder={placeholder} />}
         </SelectTrigger>
 
         <SelectContent>

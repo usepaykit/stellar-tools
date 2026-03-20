@@ -3,8 +3,7 @@ import { Toaster } from "@/components/ui/toast";
 import { Providers } from "@/providers";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";
-import { DM_Sans, Instrument_Serif, JetBrains_Mono , Lora, Inter,} from "next/font/google";
-
+import { DM_Sans, Instrument_Serif, Inter, JetBrains_Mono, Lora } from "next/font/google";
 
 import "./globals.css";
 
@@ -25,24 +24,24 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "StellarTools | Stripe for Stellar",
-  description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+  title: "Stellar Tools",
+  description: "The financial infrastructure for the Stellar economy.",
   openGraph: {
-    title: "StellarTools | Stripe for Stellar",
-    description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+    title: "Stellar Tools",
+    description: "The financial infrastructure for the Stellar economy.",
     images: [
       {
         url: "/images/og-image.jpeg",
         width: 1200,
         height: 630,
-        alt: "StellarTools - Stripe alternative for Stellar",
+        alt: "Stellar Tools - The financial infrastructure for the Stellar economy",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "StellarTools | Stripe for Stellar",
-    description: "Drop-in payment adapters for your stack. Accept fast, low-cost crypto payments in minutes",
+    title: "Stellar Tools",
+    description: "The financial infrastructure for the Stellar economy.",
     images: ["/images/og-image.jpeg"],
   },
 };

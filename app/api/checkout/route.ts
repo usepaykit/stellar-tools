@@ -40,17 +40,12 @@ export const POST = async (req: NextRequest) => {
 
     async function processCheckout(data: any, checkoutType: "product" | "direct") {
       const auth = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
-
+      const { customerId, customerEmail, customerPhone, metadata } = data;
       const customer = await upsertCustomer(
-        {
-          id: data.customerId,
-          email: data.customerEmail,
-          phone: data.customerPhone,
-          name: data.customerEmail?.split("@")[0] ?? "Guest",
-          metadata: data.metadata,
-        },
+        { id: customerId, email: customerEmail, phone: customerPhone },
         auth.organizationId,
-        auth.environment
+        auth.environment,
+        { name: customerEmail?.split("@")[0] ?? "Guest", metadata }
       );
 
       const payload = {

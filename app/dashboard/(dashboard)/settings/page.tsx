@@ -14,6 +14,7 @@ import {
   phoneNumberFromString,
   phoneNumberSchema,
 } from "@/components/phone-number-field";
+import { Spinner } from "@/components/spinner";
 import { TextAreaField, TextField } from "@/components/text-field";
 import {
   Breadcrumb,
@@ -38,7 +39,7 @@ import { useOrgContext } from "@/hooks/use-org-query";
 import { fileFromUrl } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, ChevronRight, ExternalLink, Loader2, Save } from "lucide-react";
+import { Calendar, ChevronRight, ExternalLink, Save } from "lucide-react";
 import moment from "moment";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
@@ -207,7 +208,7 @@ const ProfileTabContent = ({ user }: { user: User }) => {
               <Button type="submit" disabled={isSubmitting} className="gap-2 shadow-none">
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Spinner strokeColor="text-primary" size={25} />
                     Saving...
                   </>
                 ) : (
@@ -384,18 +385,8 @@ const OrganizationTabContent = ({ organization }: { organization: Organization }
             />
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting} className="gap-2 shadow-none">
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    Save Changes
-                  </>
-                )}
+              <Button isLoading={isSubmitting} type="submit" disabled={isSubmitting} className="gap-2 shadow-none">
+                Save Changes
               </Button>
             </div>
           </form>

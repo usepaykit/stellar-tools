@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 const MAINNET_PASSPHRASE = "Public Global Stellar Network ; September 2015";
 
+// todo: figure out how to switch environment
 export const GET = async (request: NextRequest) => {
+  console.log("getting stellar.toml");
   const environment = "testnet";
 
   const assets = await retrieveAssets(environment);

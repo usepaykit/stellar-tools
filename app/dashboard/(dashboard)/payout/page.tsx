@@ -11,6 +11,7 @@ import { DataTable, TableAction } from "@/components/data-table";
 import { NumberField } from "@/components/number-field";
 import { SelectInput } from "@/components/select+input";
 import { SelectNumberField } from "@/components/select+number-field";
+import { Spinner } from "@/components/spinner";
 import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { ArrowRight, Banknote, CheckCircle2, Clock, ExternalLink, Loader2, Plus, Wallet, XCircle } from "lucide-react";
+import { ArrowRight, Banknote, CheckCircle2, Clock, ExternalLink, Plus, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
 import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
@@ -95,7 +96,7 @@ const AnchorStatusRow = ({ done, active, label }: { done: boolean; active: boole
       {done ? (
         <CheckCircle2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
       ) : active ? (
-        <Loader2 className="text-primary h-3 w-3 animate-spin" />
+        <Spinner strokeColor="text-primary" size={25} />
       ) : (
         <div className="bg-muted-foreground/30 h-2 w-2 rounded-full" />
       )}
@@ -326,7 +327,7 @@ function BankPayoutFlow({ onClose, onSuccess, initialCurrencyCode, initialAmount
 
   return (
     <div className="flex justify-center py-10">
-      <Loader2 className="animate-spin" />
+      <Spinner />
     </div>
   );
 }

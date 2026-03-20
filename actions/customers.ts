@@ -49,7 +49,7 @@ export const postCustomers = async (
       const results = await db
         .insert(customersSchema)
         .values(
-          params.map((p) => ({ ...p, id: generateResourceId("cus", organizationId, 25), organizationId, environment }))
+          params.map((p) => ({ ...p, id: generateResourceId("cus", organizationId, 20), organizationId, environment }))
         )
         .returning();
 
@@ -213,11 +213,12 @@ export const putCustomer = async (
 };
 
 export const upsertCustomer = async (
-  params: MaybeArray<CustomerLookup & { name: string; metadata: CustomerMetadata }>,
+  lookUpKeys: MaybeArray<CustomerLookup>,
   orgId: string,
-  env: Network
+  env: Network,
+  additionalParams: { name?: string; metadata?: CustomerMetadata; image?: string }
 ) => {
-  const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
+  const lookupArray = Array.isArray(lookUpKeys) ? lookUpKeys : lookUpKeys ? [lookUpKeys] : [];
 
   const existing = await retrieveCustomers(
     lookupArray.map((p) => ({
@@ -236,10 +237,10 @@ export const upsertCustomer = async (
     [
       {
         email: lookupArray.filter((p) => "email" in p).map((p) => ("email" in p ? p.email : undefined))[0] ?? null,
-        name: lookupArray.filter((p) => "name" in p).map((p) => p.name)[0] ?? null,
-        phone: null,
-        metadata: lookupArray.filter((p) => "metadata" in p).map((p) => p.metadata)[0] ?? null,
-        image: lookupArray.filter((p) => "image" in p).map((p) => p.image)[0] as string | null,
+        name: additionalParams.name ?? null,
+        phone: lookupArray.filter((p) => "phone" in p).map((p) => ("phone" in p ? p.phone : undefined))[0] ?? null,
+        metadata: additionalParams.metadata ?? null,
+        image: additionalParams.image ?? null,
       },
     ],
     orgId,
@@ -283,7 +284,7 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
 export async function createCustomerPortalSession(customerId: string, orgId?: string, env?: Network) {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const portalId = generateResourceId("cps", organizationId, 20);
+  const portalId = generateResourceId("cus_ps", organizationId, 20);
   const portalToken = crypto.randomBytes(32).toString("base64url");
 
   return withEvent(
@@ -441,7 +442,7 @@ export const createCustomerWallet = async (
         .insert(customerWallets)
         .values({
           ...params,
-          id: generateResourceId("cwl", organizationId, 25),
+          id: generateResourceId("cwl", organizationId, 20),
           organizationId,
           environment,
           createdAt: new Date(),

@@ -16,6 +16,7 @@ import {
 } from "@/components/icon";
 import { LineChart } from "@/components/line-chart";
 import { ShareWidget } from "@/components/share-widget";
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -24,7 +25,7 @@ import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useCookieState } from "@/hooks/use-cookie-state";
 import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, ChevronsUpDown, Info, Loader2 } from "lucide-react";
+import { ArrowUpRight, ChevronsUpDown, Info } from "lucide-react";
 import Link from "next/link";
 
 type CurrencyItem = { code: string; name: string; symbol: string };
@@ -109,7 +110,7 @@ export default function DashboardPage() {
               <Popover open={countryOpen} onOpenChange={setCountryOpen}>
                 <PopoverTrigger asChild>
                   {isRatesLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Spinner />
                   ) : (
                     <Button
                       variant="outline"

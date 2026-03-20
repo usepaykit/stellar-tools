@@ -19,7 +19,7 @@ export const postWebhook = async (
     .insert(webhooks)
     .values({
       ...data,
-      id: generateResourceId("wh", organizationId, 25),
+      id: generateResourceId("wh", organizationId, 20),
       isDisabled: false,
       organizationId,
       environment,

@@ -40,7 +40,7 @@ export const POST = apiHandler({
     const feeAmount = Math.round((body.amount * rateBps) / BPS_DENOMINATOR);
     const netAmount = body.amount - feeAmount;
 
-    const payoutId = generateResourceId("pay", organizationId, 25);
+    const payoutId = generateResourceId("pay", organizationId, 20);
 
     const [payoutResult, feeResult] = await Promise.all([
       body.walletAddress

@@ -1,69 +1,63 @@
 "use client";
 
+import * as React from "react";
+
+import { Spinner } from "@/components/spinner";
 import { defaultModules } from "@creit-tech/stellar-wallets-kit/modules/utils";
+import { WalletConnectModule, WalletConnectTargetChain } from "@creit-tech/stellar-wallets-kit/modules/wallet-connect";
 import { StellarWalletsKit } from "@creit-tech/stellar-wallets-kit/sdk";
-import { activeAddress } from "@creit-tech/stellar-wallets-kit/state";
-import { KitEventStateUpdated, KitEventType, Networks, SwkAppTheme } from "@creit-tech/stellar-wallets-kit/types";
+import { activeAddress, closeEvent } from "@creit-tech/stellar-wallets-kit/state";
+import {
+  KitEventType,
+  Networks,
+  SwkAppDarkTheme,
+  SwkAppLightTheme,
+  type SwkAppTheme,
+} from "@creit-tech/stellar-wallets-kit/types";
+import { type Root, createRoot } from "react-dom/client";
 
 type WalletConnectionCallback = (address: string | null) => void;
 
 export class StellarWalletsKitApi {
-  private static instance: StellarWalletsKitApi | null = null;
+  private static instance: StellarWalletsKitApi;
   private isInitialized = false;
-  private connectionCallbacks: Set<WalletConnectionCallback> = new Set();
-  private eventUnsubscriber: (() => void) | null = null;
+  private connectionCallbacks = new Set<WalletConnectionCallback>();
+  private unsubscriber: (() => void) | null = null;
+  private host: HTMLDivElement | null = null;
 
   private constructor() {}
 
   static getInstance(): StellarWalletsKitApi {
-    if (!StellarWalletsKitApi.instance) {
-      StellarWalletsKitApi.instance = new StellarWalletsKitApi();
-    }
-    return StellarWalletsKitApi.instance;
+    return (this.instance ??= new StellarWalletsKitApi());
   }
 
-  private $cssvar = (name: string): string => {
-    if (typeof window === "undefined") return "";
-    return getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim() || "";
-  };
-
-  get theme(): SwkAppTheme {
-    return {
-      background: this.$cssvar("stellar-wallet-background"),
-      "background-secondary": this.$cssvar("stellar-wallet-background-secondary"),
-      "foreground-strong": this.$cssvar("stellar-wallet-foreground-strong"),
-      foreground: this.$cssvar("stellar-wallet-foreground"),
-      "foreground-secondary": this.$cssvar("stellar-wallet-foreground-secondary"),
-      primary: this.$cssvar("stellar-wallet-primary"),
-      "primary-foreground": this.$cssvar("stellar-wallet-primary-foreground"),
-      transparent: this.$cssvar("stellar-wallet-transparent"),
-      lighter: this.$cssvar("stellar-wallet-lighter"),
-      light: this.$cssvar("stellar-wallet-light"),
-      "light-gray": this.$cssvar("stellar-wallet-light-gray"),
-      gray: this.$cssvar("stellar-wallet-gray"),
-      danger: this.$cssvar("stellar-wallet-danger"),
-      border: this.$cssvar("stellar-wallet-border"),
-      shadow: this.$cssvar("stellar-wallet-shadow"),
-      "border-radius": this.$cssvar("stellar-wallet-border-radius"),
-      "font-family": this.$cssvar("stellar-wallet-font-family"),
-    };
-  }
-
-  init(options?: { network?: Networks }): void {
+  init(options?: { network?: Networks; checkoutDescription?: string | null; organizationName?: string | null }): void {
     if (typeof window === "undefined") return;
 
-    // Clean up previous event subscription before re-initializing
-    this.eventUnsubscriber?.();
-    this.eventUnsubscriber = null;
+    this.unsubscriber?.();
+    const network = options?.network ?? Networks.TESTNET;
+    const isPublic = network === Networks.PUBLIC;
 
     StellarWalletsKit.init({
-      modules: defaultModules(),
-      theme: this.theme,
-      network: options?.network || Networks.TESTNET,
+      network,
+      modules: [
+        ...defaultModules(),
+        new WalletConnectModule({
+          projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
+          metadata: {
+            name: "Stellar Tools",
+            description: options?.checkoutDescription ?? `Payments for ${options?.organizationName}`,
+            icons: [`${process.env.NEXT_PUBLIC_APP_URL}/favicon.ico`],
+            url: process.env.NEXT_PUBLIC_APP_URL!,
+          },
+          allowedChains: isPublic ? [WalletConnectTargetChain.PUBLIC] : [WalletConnectTargetChain.TESTNET],
+        }),
+      ],
+      theme: this.buildTheme(),
     });
 
-    this.eventUnsubscriber = StellarWalletsKit.on(KitEventType.STATE_UPDATED, (event: KitEventStateUpdated) => {
-      const address = event.payload.address || null;
+    this.unsubscriber = StellarWalletsKit.on(KitEventType.STATE_UPDATED, (ev) => {
+      const address = ev.payload.address || null;
       this.connectionCallbacks.forEach((cb) => cb(address));
     });
 
@@ -72,48 +66,162 @@ export class StellarWalletsKitApi {
 
   async connectWallet(): Promise<{ address: string }> {
     this.ensureInitialized();
-    return await StellarWalletsKit.authModal();
+    const host = this.ensureHost();
+    host.classList.remove("open");
+
+    const stopSpinner = observeAndInjectSpinner(host);
+    const closeOnBackdrop = (e: MouseEvent) => e.target === host && closeEvent.next();
+    const closeOnEscape = (e: KeyboardEvent) => (e.key === "Escape" || e.code === "Escape") && closeEvent.next();
+
+    const closeShellOnWalletRowClick = (e: MouseEvent) => {
+      const li = (e.target as HTMLElement)?.closest(".stellar-wallets-kit ul > li");
+      if (!li) return;
+      host.classList.remove("open");
+    };
+
+    host.addEventListener("click", closeOnBackdrop);
+    host.addEventListener("click", closeShellOnWalletRowClick, true);
+    host.addEventListener("keydown", closeOnEscape);
+
+    try {
+      const authPromise = StellarWalletsKit.authModal({ container: host });
+      await new Promise((r) => window.requestAnimationFrame(r));
+      host.classList.add("open");
+      return await authPromise;
+    } finally {
+      stopSpinner();
+      host.removeEventListener("click", closeOnBackdrop);
+      host.removeEventListener("click", closeShellOnWalletRowClick, true);
+      host.removeEventListener("keydown", closeOnEscape);
+      host.classList.remove("open");
+    }
   }
 
-  getAddressSync(): string | null {
-    if (typeof window === "undefined") return null;
-    return activeAddress.value || null;
-  }
+  getAddressSync = () => (typeof window !== "undefined" ? activeAddress.value || null : null);
+  isConnected = () => this.getAddressSync() !== null;
 
-  isConnected(): boolean {
-    return this.getAddressSync() !== null;
-  }
-
-  async signTransaction(
-    xdr: string,
-    options?: { networkPassphrase?: string; address?: string }
-  ): Promise<{ signedTxXdr: string; signerAddress?: string }> {
+  async signTransaction(xdr: string, opts?: { networkPassphrase?: string; address?: string }) {
     this.ensureInitialized();
-    return await StellarWalletsKit.signTransaction(xdr, options);
+    return StellarWalletsKit.signTransaction(xdr, opts);
   }
 
   async disconnect(): Promise<void> {
     if (!this.isInitialized) return;
     await StellarWalletsKit.disconnect();
-    this.eventUnsubscriber?.();
-    this.eventUnsubscriber = null;
+    this.unsubscriber?.();
+    this.host?.classList.remove("open");
     this.isInitialized = false;
   }
 
   onConnectionChange(callback: WalletConnectionCallback): () => void {
     this.connectionCallbacks.add(callback);
-    // Immediately call with current state
-    if (typeof window !== "undefined") {
-      callback(this.getAddressSync());
-    }
+    if (typeof window !== "undefined") callback(this.getAddressSync());
     return () => this.connectionCallbacks.delete(callback);
   }
 
-  private ensureInitialized(): void {
-    if (!this.isInitialized) {
-      throw new Error("StellarWalletsKitApi must be initialized. Call init() first.");
-    }
+  private ensureInitialized() {
+    if (!this.isInitialized) throw new Error("StellarWalletsKitApi not initialized");
   }
+
+  private ensureHost(): HTMLDivElement {
+    if (typeof window === "undefined") throw new Error("Client-side only");
+    if (this.host) return this.host;
+
+    const existing = document.getElementById("swk-auth-modal-host") as HTMLDivElement;
+    if (existing) return (this.host = existing);
+
+    const host = document.createElement("div");
+    host.id = "swk-auth-modal-host";
+    host.className = "swk-auth-modal-host";
+    document.body.appendChild(host);
+    return (this.host = host);
+  }
+
+  private buildTheme(): SwkAppTheme {
+    const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+    const fallback = isDark ? SwkAppDarkTheme : SwkAppLightTheme;
+    const style = getComputedStyle(document.documentElement);
+
+    const keys: (keyof SwkAppTheme)[] = [
+      "background",
+      "background-secondary",
+      "foreground-strong",
+      "foreground",
+      "foreground-secondary",
+      "primary",
+      "primary-foreground",
+      "transparent",
+      "lighter",
+      "light",
+      "light-gray",
+      "gray",
+      "danger",
+      "border",
+      "shadow",
+      "border-radius",
+      "font-family",
+    ];
+
+    return keys.reduce((acc, key) => {
+      const cssVar = `--stellar-wallet-${key}`;
+      acc[key] = style.getPropertyValue(cssVar).trim() || (fallback[key] as string);
+      return acc;
+    }, {} as SwkAppTheme);
+  }
+}
+
+function observeAndInjectSpinner(host: HTMLElement) {
+  let spinnerRoot: Root | null = null;
+  let rafId = 0;
+
+  const cleanup = () => {
+    if (spinnerRoot) {
+      try {
+        spinnerRoot.unmount();
+      } catch {}
+      spinnerRoot = null;
+    }
+  };
+
+  const update = () => {
+    const kit = host.querySelector(".stellar-wallets-kit");
+    const ul = kit?.querySelector("ul");
+    if (!ul) return;
+
+    // If actual wallets are rendered, remove any active spinner
+    if (ul.querySelector(":scope > li")) {
+      cleanup();
+      ul.querySelector(".swk-kit-loading-spinner")?.remove();
+      return;
+    }
+
+    const loadingDiv = Array.from(ul.querySelectorAll("div")).find(
+      (d) => d.textContent?.trim()?.includes("Loading wallets") && d.children.length === 0
+    );
+
+    if (loadingDiv && !spinnerRoot) {
+      const mount = document.createElement("div");
+      mount.className = "swk-kit-loading-spinner";
+      loadingDiv.replaceWith(mount);
+      spinnerRoot = createRoot(mount);
+      spinnerRoot.render(React.createElement(Spinner, { size: 28, strokeColor: "currentColor" }));
+    }
+  };
+
+  const observer = new MutationObserver(() => {
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(update);
+  });
+
+  observer.observe(host, { subtree: true, childList: true, characterData: true });
+  update();
+
+  return () => {
+    cancelAnimationFrame(rafId);
+    observer.disconnect();
+    cleanup();
+    host.querySelector(".swk-kit-loading-spinner")?.remove();
+  };
 }
 
 export const stellarWalletsKit = StellarWalletsKitApi.getInstance();

@@ -13,7 +13,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCheckout } from "@/hooks/use-checkout";
 import { useCookieState } from "@/hooks/use-cookie-state";
 import { truncate } from "@/lib/utils";
-import { BeautifulQRCode } from "@beautiful-qr-code/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Info, X } from "lucide-react";
 import Image from "next/image";
@@ -33,7 +32,6 @@ export default function CheckoutPage() {
     hasDetails,
     form,
     updateDetails,
-    paymentURI,
     merchantTrustlineError,
     wallet,
     banner,
@@ -43,9 +41,6 @@ export default function CheckoutPage() {
   if (!checkout) return notFound();
   if (isPaid) return <Checkout.Success checkout={checkout} checkoutId={checkoutId} />;
   if (isFailed) return <Checkout.Error checkoutId={checkoutId} onRetry={() => window.location.reload()} />;
-
-  const showPaymentError = paymentURI.status === "error" && !!paymentURI.message;
-  const showQR = paymentURI.status !== "loading" && !showPaymentError;
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
@@ -184,38 +179,6 @@ export default function CheckoutPage() {
                       animate={{ opacity: 1, y: 0 }}
                       className="space-y-6"
                     >
-                      <div className="flex justify-center py-4">
-                        <div className="rounded-2xl border-2 border-dashed bg-white p-3 shadow-sm">
-                          {paymentURI.status === "loading" && (
-                            <div className="flex size-6 items-center justify-center">
-                              <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
-                            </div>
-                          )}
-                          {showPaymentError && (
-                            <div className="bg-destructive/10 flex max-w-[200px] flex-col items-center gap-2 rounded-lg p-4 text-center">
-                              <AlertCircle className="text-destructive size-5 shrink-0" />
-                              <p className="text-destructive text-xs font-medium">{paymentURI.message}</p>
-                            </div>
-                          )}
-                          {showQR && (
-                            <BeautifulQRCode
-                              data={paymentURI.uri!}
-                              foregroundColor="#000000"
-                              backgroundColor="#ffffff"
-                              radius={1}
-                              padding={1}
-                              className="size-50"
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 py-2 opacity-50">
-                        <Separator className="flex-1" />
-                        <span className="text-[10px] font-black tracking-widest uppercase">or connect wallet</span>
-                        <Separator className="flex-1" />
-                      </div>
-
                       <div className="space-y-2">
                         <Button
                           type="button"
@@ -352,9 +315,6 @@ const Checkout = {
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-3/4" />
-          <div className="flex justify-center py-4">
-            <Skeleton className="h-[200px] w-[200px] rounded-2xl" />
-          </div>
           <Skeleton className="h-14 w-full" />
         </div>
       </div>
@@ -362,9 +322,9 @@ const Checkout = {
   ),
 
   Footer: () => (
-    <footer className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-6 border-t px-4 py-12 opacity-30 grayscale transition-all hover:opacity-100 sm:flex-row lg:px-8">
+    <footer className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-6 border-t px-4 py-12 grayscale transition-all sm:flex-row lg:px-8">
       <div className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
-        © {new Date().getFullYear()} Stellar Tools Engine
+        © {new Date().getFullYear()} Stellar Tools
       </div>
       <div className="flex gap-6 text-[10px] font-bold tracking-tighter uppercase">
         <Link href="/terms">Terms</Link>

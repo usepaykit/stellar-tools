@@ -18,7 +18,7 @@ export const postApiKey = async (
     .insert(apiKeys)
     .values({
       ...params,
-      id: generateResourceId("st_api", organizationId, 25),
+      id: generateResourceId("st_api", organizationId, 20),
       organizationId,
       environment,
       token: generateResourceId("st_key", organizationId, 52),

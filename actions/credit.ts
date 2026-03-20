@@ -21,7 +21,7 @@ export const postCreditBalance = async (
 ) => {
   return await db
     .insert(creditBalances)
-    .values({ id: generateResourceId("cb", orgId, 25), organizationId: orgId, environment: env, ...params })
+    .values({ id: generateResourceId("cb", orgId, 20), organizationId: orgId, environment: env, ...params })
     .returning()
     .then(([creditBalance]) => creditBalance);
 };
@@ -130,7 +130,7 @@ export const postCreditTransaction = async (
     .insert(creditTransactions)
     .values({
       ...params,
-      id: generateResourceId("ct", organizationId, 25),
+      id: generateResourceId("ct", organizationId, 20),
       organizationId: organizationId,
       environment: env,
     })

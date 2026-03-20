@@ -1,8 +1,6 @@
 import { AssetCode, AssetIssuer, Network } from "@/constant/schema.client";
 import * as StellarSDK from "@stellar/stellar-sdk";
-import { Sep7Pay } from "@stellar/typescript-wallet-sdk";
 import { Result } from "@stellartools/core";
-import { createHash } from "crypto";
 
 function stellarOpErrorMessage(code: string): string {
   const messages: Record<string, string> = {
@@ -419,19 +417,18 @@ export class StellarCoreApi {
             StellarSDK.nativeToScVal(amountBigInt * BigInt(120), { type: "i128" }), // 120 periods of allowance
             StellarSDK.nativeToScVal(9999999, { type: "u32" }) // expiration ledger
           )
-        )
-          .addOperation(
-            engineContract.call(
-              "start",
-              StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
-              StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
-              StellarSDK.nativeToScVal(tokenContractId, { type: "address" }),
-              StellarSDK.nativeToScVal(subscriptionData.productId, { type: "symbol" }),
-              StellarSDK.nativeToScVal(amountBigInt, { type: "i128" }),
-              StellarSDK.nativeToScVal(durationSeconds, { type: "u64" }), // duration in seconds
-              StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }) // caller = customer
-            )
-          );
+        ).addOperation(
+          engineContract.call(
+            "start",
+            StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
+            StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
+            StellarSDK.nativeToScVal(tokenContractId, { type: "address" }),
+            StellarSDK.nativeToScVal(subscriptionData.productId.slice(-32), { type: "symbol" }), // Soroban symbol is capped at 32 chars
+            StellarSDK.nativeToScVal(amountBigInt, { type: "i128" }),
+            StellarSDK.nativeToScVal(durationSeconds, { type: "u64" }), // duration in seconds
+            StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }) // caller = customer
+          )
+        );
       }
 
       const transaction = tx.setTimeout(Math.floor(params.checkoutExpiresAt.getTime() / 1000)).build();

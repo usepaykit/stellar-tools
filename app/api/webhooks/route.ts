@@ -17,7 +17,7 @@ export const POST = apiHandler({
       description: body.description ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      secret: authToken && body.secret ? body.secret : generateResourceId("whsec", organizationId, 32),
+      secret: authToken && body.secret ? body.secret : generateResourceId("whsec", organizationId, 32, "sha256"),
     };
 
     return await postWebhook(organizationId, environment, webhookPayload).then(Result.ok);
