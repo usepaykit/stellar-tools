@@ -29,11 +29,11 @@ const features = [
 
 export default function CheckoutSection() {
   return (
-    <section className="text-primary-foreground bg-foreground px-6 py-24 sm:px-10" id="checkout">
+    <section className="bg-primary-foreground px-6 py-24 sm:px-10" id="checkout">
       <div className="mx-auto grid max-w-[1200px] items-center gap-12 md:grid-cols-2 md:gap-20">
         <div>
           <div className="text-primary mb-6 text-sm font-bold tracking-[1.5px] uppercase">Hosted Checkout</div>
-          <h2 className="mb-6 max-w-[520px] text-[clamp(40px,5vw,60px)] leading-[1.1] font-bold tracking-tight">
+          <h2 className="mb-6 max-w-[520px] text-[clamp(40px,5vw,60px)] leading-[1.1] font-bold tracking-tight text-foreground">
             A checkout your customers will <em className="text-primary italic">actually use.</em>
           </h2>
           <p className="mb-10 text-lg leading-relaxed text-white/60">
