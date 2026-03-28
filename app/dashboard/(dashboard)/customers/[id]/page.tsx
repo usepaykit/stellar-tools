@@ -41,6 +41,7 @@ import { Payment, ResolvedPayment } from "@/db";
 import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { cn, formatCurrency } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Checkout } from "@stellartools/core";
@@ -139,16 +140,26 @@ const paymentColumns: ColumnDef<ResolvedPayment>[] = [
         {formatCurrency(row.original.amount, row.original.metadata?.assetCode as string)}
       </span>
     ),
+    meta: { filterable: true, filterVariant: "number" },
   },
   {
     accessorKey: "checkoutId",
     header: "Description",
     cell: ({ row }) => <span className="text-muted-foreground font-mono text-sm">{row.original.checkoutId}</span>,
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => <StatusBadge status={row.original.refunded ? "refunded" : row.original.status} />,
+    meta: {
+      filterable: true,
+      filterVariant: "select",
+      filterOptions: [
+        { label: "Refunded", value: true },
+        { label: "Confirmed", value: false },
+      ],
+    },
   },
   {
     accessorKey: "createdAt",
@@ -156,6 +167,7 @@ const paymentColumns: ColumnDef<ResolvedPayment>[] = [
     cell: ({ row }) => (
       <div className="text-muted-foreground text-xs">{moment(row.original.createdAt).format("MMM DD, YYYY")}</div>
     ),
+    meta: { filterable: true, filterVariant: "date" },
   },
 ];
 
@@ -174,7 +186,7 @@ export default function CustomerDetailPage() {
   const invalidate = useInvalidateOrgQuery();
   const { data: orgContext } = useOrgContext();
   const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
-    retrievePayments(undefined, { customerId: customerId }, undefined)
+    retrievePayments(undefined, undefined, { customerId: customerId })
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
     retrieveCustomers({ id: customerId }, { withWallets: true }).then(([c]) => c)
@@ -304,6 +316,8 @@ export default function CustomerDetailPage() {
 
   const { toLocal, formatLocal } = useAssetRates((orgAssets ?? []).map((a) => ({ code: a.code, issuer: a.issuer! })));
 
+  const [columnFilters, setColumnFilters] = useSyncTableFilters();
+
   const totalSpentLocal = React.useMemo(
     () => confirmedPayments.reduce((sum, p) => sum + toLocal(p.amount ?? 0, p.metadata?.assetCode as string), 0),
     [confirmedPayments, toLocal]
@@ -385,6 +399,8 @@ export default function CustomerDetailPage() {
               <section className="space-y-3">
                 <h3 className="text-lg font-semibold">Payments</h3>
                 <DataTable
+                  columnFilters={columnFilters}
+                  setColumnFilters={setColumnFilters}
                   columns={paymentColumns}
                   data={payments ?? []}
                   isLoading={isLoadingPayments}

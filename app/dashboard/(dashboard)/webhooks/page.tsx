@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { cn, generateResourceId, normalizeTimeSeries } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Webhook, type WebhookEvent as WebhookEventType, webhookEvent } from "@stellartools/core";
@@ -178,9 +179,11 @@ const columns: ColumnDef<WebhookDestination>[] = [
       </div>
     ),
     enableSorting: false,
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "destination",
+    meta: { filterable: true, filterVariant: "text" },
     header: ({ column }) => {
       const isSorted = column.getIsSorted();
       return (
@@ -226,6 +229,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
       );
     },
     enableSorting: false,
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "eventsFrom",
@@ -235,6 +239,7 @@ const columns: ColumnDef<WebhookDestination>[] = [
       return <div className="text-muted-foreground text-sm">{source === "account" ? "Your account" : "Test"}</div>;
     },
     enableSorting: false,
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "activity",
@@ -488,6 +493,8 @@ function WebhooksPageContent() {
     },
   ];
 
+  const [columnFilters, setColumnFilters] = useSyncTableFilters();
+
   return (
     <DashboardSidebar>
       <DashboardSidebarInset>
@@ -523,6 +530,8 @@ function WebhooksPageContent() {
                 isLoading={isLoading}
                 onRowClick={(row) => router.push(`/webhooks/${row.id}`)}
                 actions={tableActions}
+                columnFilters={columnFilters}
+                setColumnFilters={setColumnFilters}
               />
             </TabsContent>
           </Tabs>
@@ -561,7 +570,7 @@ const schema = z.object({
     .min(1, "Please select at least one event"),
 });
 
-interface WebhookDestination extends Pick<Webhook, "id" | "name" | "url" | "isDisabled"> {
+interface WebhookDestination extends Pick<Webhook, "id" | "name" | "url" | "isDisabled" | "secret"> {
   eventCount: number;
   eventsFrom: "account" | "test";
   activity?: number[];
@@ -596,6 +605,12 @@ function WebhooksModalContent({
     const webhookSecret = generateResourceId("whsec", organization.id, 32, "sha256");
     setSecret(webhookSecret);
   }, [editingWebhook, organization?.id, isLoading]);
+
+  React.useEffect(() => {
+    if (editingWebhook) {
+      setSecret(editingWebhook.secret);
+    }
+  }, [editingWebhook]);
 
   const { copied, handleCopy } = useCopy();
   const isEditMode = !!editingWebhook;
@@ -836,37 +851,25 @@ function WebhooksModalContent({
         <aside className="min-w-0 flex-1 space-y-6 lg:max-w-2xl">
           <div className="space-y-2">
             <Label>Signing Secret</Label>
-            {isEditMode ? (
-              <>
-                <div className="bg-muted border-border flex items-center rounded-md border p-3 shadow-none">
-                  <span className="text-muted-foreground text-sm italic">Secret is hidden for security</span>
+            <>
+              <div className="flex items-center gap-2">
+                <div className="bg-muted border-border flex-1 rounded-md border px-3 py-1.5 shadow-none">
+                  <code className="font-mono text-sm break-all">{secret}</code>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  The webhook secret cannot be viewed or changed after creation. Use your existing secret to verify
-                  signatures.
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <div className="bg-muted border-border flex-1 rounded-md border px-3 py-1.5 shadow-none">
-                    <code className="font-mono text-sm break-all">{secret}</code>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopySecret}
-                    className="shrink-0 shadow-none"
-                  >
-                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Use this secret to verify signatures. Never expose this in client-side code.
-                </p>
-              </>
-            )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopySecret}
+                  className="shrink-0 shadow-none"
+                >
+                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                Use this secret to verify signatures. Never expose this in client-side code.
+              </p>
+            </>
           </div>
 
           <div className="space-y-4">

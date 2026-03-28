@@ -32,6 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer, ResolvedCustomer } from "@/db";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { cn, fileFromUrl, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
@@ -90,17 +91,20 @@ const columns: ColumnDef<ResolvedCustomer>[] = [
       </div>
     ),
     enableSorting: true,
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "email",
     header: ({ column }) => <SortableHeader column={column} label="Email" ariaLabelPrefix="Sort by email" />,
     cell: ({ row }) => <div className="text-muted-foreground">{row.original.email}</div>,
     enableSorting: true,
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "phone",
     header: "Phone",
     cell: ({ row }) => <div className="text-muted-foreground">{row.original.phone}</div>,
+    meta: { filterable: true, filterVariant: "number" },
   },
   {
     accessorKey: "walletAddress",
@@ -113,6 +117,7 @@ const columns: ColumnDef<ResolvedCustomer>[] = [
       </div>
     ),
     enableSorting: true,
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "createdAt",
@@ -135,6 +140,7 @@ const columns: ColumnDef<ResolvedCustomer>[] = [
       );
     },
     enableSorting: true,
+    meta: { filterable: true, filterVariant: "date" },
   },
 ];
 
@@ -163,6 +169,7 @@ export default function CustomersPage() {
   const searchParams = useSearchParams();
   const [selectedFilter, setSelectedFilter] = useState<number>(0);
   const router = useRouter();
+  const [columnFilters, setColumnFilters] = useSyncTableFilters();
   const invalidate = useInvalidateOrgQuery();
 
   const { data: customers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
@@ -273,6 +280,8 @@ export default function CustomersPage() {
               actions={tableActions}
               onRowClick={handleRowClick}
               isLoading={isLoadingCustomers}
+              columnFilters={columnFilters}
+              setColumnFilters={setColumnFilters}
             />
           </div>
         </DashboardSidebarInset>
@@ -807,7 +816,7 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
                           ]}
                         />
                         {m.target === "metadata" ? (
-                          <InputGroup className="bg-background h-9 w-44 shadow-none dark:border-border">
+                          <InputGroup className="bg-background dark:border-border h-9 w-44 shadow-none">
                             <InputGroupInput
                               value={m.metadataKey}
                               placeholder="Key..."
@@ -843,6 +852,7 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
                       data={previewData}
                       isLoading={false}
                       className="border-0 shadow-none"
+                      withFilterPill={false}
                     />
                   </div>
                   <ScrollBar orientation="horizontal" />

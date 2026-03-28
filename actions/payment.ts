@@ -18,6 +18,7 @@ import {
   Refund,
   ResolvedPayment,
   assets,
+  customerWallets,
   customers,
   db,
   payments,
@@ -232,96 +233,43 @@ export const postPayment = async (
 
 export const retrievePayments = async (
   orgId?: string,
-  params?: { customerId?: string },
-  env?: Network
+  env?: Network,
+  params?: { customerId?: string; paymentId?: string },
+  options?: { withCustomer?: boolean; withWallets?: boolean; withRefunds?: boolean; withAsset?: boolean }
 ): Promise<ResolvedPayment[]> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const rows = await db
     .select({
       payment: payments,
-      hasRefund: refunds.id,
+      ...(options?.withRefunds && { hasRefund: refunds.id }),
+      ...(options?.withWallets && { wallets: customerWallets }),
+      ...(options?.withRefunds && { refunds: refunds }),
+      ...(options?.withCustomer && { customer: customers }),
+      ...(options?.withAsset && { asset: assets }),
     })
     .from(payments)
     .leftJoin(refunds, and(eq(payments.id, refunds.paymentId), eq(refunds.status, "succeeded")))
+    .leftJoin(customerWallets, eq(payments.customerWalletId, customerWallets.id))
+    .leftJoin(assets, eq(payments.assetId, assets.id))
     .where(
       and(
+        params?.paymentId ? eq(payments.id, params.paymentId) : undefined,
         eq(payments.organizationId, organizationId),
         eq(payments.environment, environment),
         params?.customerId ? eq(payments.customerId, params.customerId) : undefined
       )
-    );
-
-  return rows.map(({ payment, hasRefund }) => ({ ...payment, refunded: !!hasRefund }));
-};
-
-export const retrievePayment = async (id: string, orgId?: string, env?: Network) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const [payment] = await db
-    .select()
-    .from(payments)
-    .where(
-      and(eq(payments.id, id), eq(payments.organizationId, organizationId), eq(payments.environment, environment))
-    );
-
-  if (!payment) throw new Error("Payment not found");
-
-  return payment;
-};
-
-export const retrievePaymentWithDetails = async (
-  id: string,
-  orgId?: string,
-  env?: Network
-): Promise<{ payment: Payment; customer: Customer | null; refund: Refund | null } | null> => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const rows = await db
-    .select({
-      payment: payments,
-      customer: customers,
-      refund: refunds,
-    })
-    .from(payments)
-    .leftJoin(customers, eq(payments.customerId, customers.id))
-    .leftJoin(refunds, and(eq(payments.id, refunds.paymentId), eq(refunds.status, "succeeded")))
-    .where(and(eq(payments.id, id), eq(payments.organizationId, organizationId), eq(payments.environment, environment)))
-    .orderBy(desc(refunds.createdAt));
-
-  if (rows.length === 0) return null;
-
-  return {
-    payment: rows[0].payment,
-    customer: rows[0].customer,
-    refund: rows[0].refund,
-  };
-};
-
-export const retrievePaymentsWithDetails = async (orgId?: string, env?: Network) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const result = await db
-    .select({
-      id: payments.id,
-      amount: payments.amount,
-      transactionHash: payments.transactionHash,
-      status: payments.status,
-      createdAt: payments.createdAt,
-      checkoutId: payments.checkoutId,
-      customerEmail: customers.email,
-      assetCode: assets.code,
-      refundStatus: refunds.status,
-      refundedAt: refunds.createdAt,
-    })
-    .from(payments)
-    .leftJoin(customers, eq(payments.customerId, customers.id))
-    .leftJoin(assets, eq(payments.assetId, assets.id))
-    .leftJoin(refunds, eq(payments.id, refunds.paymentId))
-    .where(and(eq(payments.organizationId, organizationId), eq(payments.environment, environment)))
+    )
     .orderBy(desc(payments.createdAt));
 
-  return result;
+  return rows.map(({ customer, payment, hasRefund, wallets, refunds, asset }) => ({
+    ...payment,
+    refunded: !!hasRefund,
+    wallets,
+    refunds,
+    customer,
+    asset,
+  }));
 };
 
 export const putPayment = async (

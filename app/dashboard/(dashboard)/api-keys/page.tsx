@@ -22,6 +22,7 @@ import { toast } from "@/components/ui/toast";
 import { ApiKey } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
@@ -70,12 +71,15 @@ export default function ApiKeysPage() {
     },
   });
 
+  const [columnFilters, setColumnFilters] = useSyncTableFilters();
+
   const columns: ColumnDef<ApiKey>[] = [
     {
       accessorKey: "name",
       header: "NAME",
       cell: ({ row }) => <span className="text-sm font-medium">{row.original.name}</span>,
       enableSorting: true,
+      meta: { filterVariant: "text", filterable: true },
     },
     {
       accessorKey: "token",
@@ -88,6 +92,7 @@ export default function ApiKeysPage() {
         );
       },
       enableSorting: false,
+      meta: { filterable: false },
     },
     {
       accessorKey: "scope",
@@ -108,10 +113,19 @@ export default function ApiKeysPage() {
         );
       },
       enableSorting: false,
+      meta: { filterable: false },
     },
     {
       accessorKey: "isRevoked",
       header: "STATUS",
+      meta: {
+        filterable: true,
+        filterVariant: "select",
+        filterOptions: [
+          { label: "Active", value: "false" },
+          { label: "Revoked", value: "true" },
+        ],
+      },
       cell: ({ row }) => {
         const isRevoked = row.original.isRevoked;
         return (
@@ -132,6 +146,7 @@ export default function ApiKeysPage() {
     {
       accessorKey: "lastUsedAt",
       header: "LAST USED",
+      meta: { filterVariant: "date", filterable: true },
       cell: ({ row }) => {
         const date = row.original.lastUsedAt;
         if (!date) return <span className="text-muted-foreground text-sm">—</span>;
@@ -149,6 +164,7 @@ export default function ApiKeysPage() {
     {
       accessorKey: "createdAt",
       header: "CREATED",
+      meta: { filterVariant: "date", filterable: true },
       cell: ({ row }) => {
         const date = row.original.createdAt;
         return (
@@ -310,7 +326,14 @@ export default function ApiKeysPage() {
                 </Button>
               </div>
 
-              <DataTable columns={columns} data={apiKeys} actions={actions} isLoading={isLoading} />
+              <DataTable
+                columns={columns}
+                data={apiKeys}
+                actions={actions}
+                isLoading={isLoading}
+                columnFilters={columnFilters}
+                setColumnFilters={setColumnFilters}
+              />
             </div>
           </div>
         </DashboardSidebarInset>

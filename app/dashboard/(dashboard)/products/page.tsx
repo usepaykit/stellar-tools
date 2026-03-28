@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
 import { Product as ProductSchema } from "@/db";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { fileFromUrl } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, RecurringPeriod } from "@stellartools/core";
@@ -154,6 +155,7 @@ const columns: ColumnDef<Product>[] = [
         <div className="font-medium">{row.original.name}</div>
       </div>
     ),
+    meta: { filterable: true, filterVariant: "text" },
   },
   {
     accessorKey: "pricing",
@@ -174,6 +176,7 @@ const columns: ColumnDef<Product>[] = [
       );
     },
     sortingFn: (rowA, rowB) => rowA.original.pricing.amount - rowB.original.pricing.amount,
+    meta: { filterable: true, filterVariant: "number" },
   },
   {
     accessorKey: "createdAt",
@@ -186,6 +189,7 @@ const columns: ColumnDef<Product>[] = [
         })}
       </div>
     ),
+    meta: { filterable: true, filterVariant: "date" },
   },
 ];
 
@@ -363,6 +367,8 @@ function ProductsPageContent() {
     },
   ];
 
+  const [columnFilters, setColumnFilters] = useSyncTableFilters();
+
   return (
     <div className="w-full">
       <DashboardSidebar>
@@ -411,6 +417,8 @@ function ProductsPageContent() {
                 enableBulkSelect
                 isLoading={isLoading}
                 onRowClick={(product) => router.push(`/products/${product.id}`)}
+                columnFilters={columnFilters}
+                setColumnFilters={setColumnFilters}
               />
             </div>
           </div>

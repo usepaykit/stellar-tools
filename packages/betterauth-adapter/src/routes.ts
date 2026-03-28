@@ -161,6 +161,7 @@ export const getTransactions = (options: BillingConfig) =>
       return ctx.json(result);
     }
   );
+
 // -- REFUNDS --
 
 export const createRefund = (options: BillingConfig) =>
@@ -170,10 +171,8 @@ export const createRefund = (options: BillingConfig) =>
       method: "POST",
       body: Schema.object({
         paymentId: Schema.string(),
-        amount: Schema.number(),
         reason: Schema.string(),
         metadata: Schema.record(Schema.string(), Schema.unknown()).optional(),
-        receiverPublicKey: Schema.string(),
       }),
       use: [sessionMiddleware],
     },
@@ -181,8 +180,9 @@ export const createRefund = (options: BillingConfig) =>
       const { stellar } = getContext(ctx, options);
       return ctx.json(
         await stellar.refunds.create({
-          ...ctx.body,
-          metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
+          paymentId: ctx.body.paymentId,
+          reason: ctx.body.reason,
+          metadata: { ...(ctx.body?.metadata ?? {}), source: "betterauth-adapter" },
         })
       );
     }

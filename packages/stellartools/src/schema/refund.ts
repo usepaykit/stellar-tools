@@ -76,7 +76,7 @@ export interface Refund {
   /**
    * The receiver public key of the refund.
    */
-  receiverPublicKey: string;
+  receiverPublicKey: string | null;
 }
 
 export const refundSchema = schemaFor<Refund>()(
@@ -94,21 +94,14 @@ export const refundSchema = schemaFor<Refund>()(
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}).nullable(),
     environment: environmentSchema,
-    receiverPublicKey: z.string(),
+    receiverPublicKey: z.string().nullable(),
   })
 );
 
 export const createRefundSchema = refundSchema.pick({
   paymentId: true,
-  customerId: true,
-  assetId: true,
-  amount: true,
   reason: true,
   metadata: true,
-  receiverPublicKey: true,
 });
 
-export interface CreateRefund extends Pick<
-  Refund,
-  "paymentId" | "amount" | "reason" | "metadata" | "receiverPublicKey"
-> {}
+export interface CreateRefund extends Pick<Refund, "paymentId" | "reason" | "metadata"> {}

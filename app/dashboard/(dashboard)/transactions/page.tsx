@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { retrieveCustomerWallets } from "@/actions/customers";
-import { retrievePayment, retrievePaymentsWithDetails } from "@/actions/payment";
+import { retrievePayments } from "@/actions/payment";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { PaymentStatus } from "@/constant/schema.client";
+import { Customer } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { cn, formatCurrency, truncate } from "@/lib/utils";
@@ -39,10 +40,7 @@ type Transaction = {
     address: string;
   };
   description: string;
-  customer: {
-    email: string;
-    name?: string;
-  };
+  customer: Customer;
   date: Date;
   refundedDate?: Date;
   status: PaymentStatus;
@@ -243,11 +241,13 @@ export function RefundModalContent({
 
   const paymentId = form.watch("paymentId");
 
-  const { data: payment } = useQuery({
+  const { data: payments } = useQuery({
     queryKey: ["refund-payment", paymentId?.trim()],
-    queryFn: () => retrievePayment(paymentId!.trim()),
+    queryFn: () => retrievePayments(undefined, undefined, { paymentId: paymentId!.trim() }),
     enabled: !!paymentId?.trim(),
   });
+
+  const payment = payments?.[0] ?? null;
 
   const showWalletField = !!payment && !payment.customerWalletId;
   const showWalletSelect = showWalletField && !!payment?.customerId;
@@ -267,7 +267,7 @@ export function RefundModalContent({
     mutationFn: async (data: RefundFormData) => {
       if (!orgContext) throw new Error("No organization context found");
 
-      const paymentRow = await retrievePayment(data.paymentId);
+      const paymentRow = await retrievePayments(undefined, undefined, { paymentId: data.paymentId }).then(([p]) => p);
 
       let receiverPublicKey: string;
       if (paymentRow.customerWalletId && paymentRow.customerId) {
@@ -476,7 +476,9 @@ function TransactionsPageContent() {
     [invalidate]
   );
 
-  const { data: payments, isLoading } = useOrgQuery(["payments"], () => retrievePaymentsWithDetails());
+  const { data: payments, isLoading } = useOrgQuery(["payments"], () =>
+    retrievePayments(undefined, undefined, undefined, { withRefunds: true, withAsset: true, withCustomer: true })
+  );
 
   const stats = React.useMemo(() => {
     if (!payments?.length) {
@@ -488,7 +490,7 @@ function TransactionsPageContent() {
         ...acc,
         all: acc.all + 1,
         succeeded: acc.succeeded + (p.status === "confirmed" ? 1 : 0),
-        refunded: acc.refunded + (p.refundStatus === "succeeded" ? 1 : 0),
+        refunded: acc.refunded + (p.refunds?.status === "succeeded" ? 1 : 0),
         failed: acc.failed + (p.status === "failed" ? 1 : 0),
       }),
       { all: 0, succeeded: 0, refunded: 0, failed: 0 }
@@ -499,7 +501,7 @@ function TransactionsPageContent() {
     if (!payments?.length) return [];
 
     return payments.filter((p) => {
-      if (customerId && p.customerEmail !== customerId) return false;
+      if (customerId && p.customer?.email !== customerId) return false;
 
       if (paymentId) {
         const matchesId = p.id === paymentId || p.checkoutId === paymentId;
@@ -509,7 +511,7 @@ function TransactionsPageContent() {
       console.log({ p, activeTab });
 
       if (activeTab === "all") return true;
-      if (activeTab === "refunded") return p.refundStatus === "succeeded";
+      if (activeTab === "refunded") return p.refunds?.status === "succeeded";
       return p.status === activeTab;
     });
   }, [payments, activeTab, customerId, paymentId]);
@@ -613,18 +615,16 @@ function TransactionsPageContent() {
                 data={filteredTransactions.map((it) => ({
                   id: it.id,
                   amount: it.amount.toString(),
-                  asset: it.assetCode ?? "",
+                  asset: it.asset?.code ?? "",
                   paymentMethod: {
                     type: "wallet" as const,
                     address: it.transactionHash,
                   },
                   description: it.checkoutId || it.id,
-                  customer: {
-                    email: it.customerEmail!,
-                  },
+                  customer: it.customer!,
                   date: it.createdAt,
-                  status: (it.refundStatus === "succeeded" ? "refunded" : it.status) as PaymentStatus,
-                  refundedDate: it.refundedAt ?? undefined,
+                  status: (it.refunds?.status === "succeeded" ? "refunded" : it.status) as PaymentStatus,
+                  refundedDate: it.refunds?.createdAt ?? undefined,
                 }))}
                 enableBulkSelect={true}
                 actions={tableActions}

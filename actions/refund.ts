@@ -43,12 +43,14 @@ export const postRefund = async (
 
         webhooksTriggers.push({
           event: "refund.failed",
-          map: ({ id: refundId, paymentId, amount, customerId, assetCode }) => ({
+          map: ({ id: refundId, paymentId, amount, customerId, assetCode, createdAt, updatedAt }) => ({
             paymentId,
             amount: `${amount} ${assetCode}`,
             refundId,
             customerId,
             error: options?.errorMessage,
+            createdAt,
+            updatedAt,
           }),
         });
       }
@@ -64,18 +66,31 @@ export const postRefund = async (
 
         webhooksTriggers.push({
           event: "refund.succeeded",
-          map: ({ id: refundId, paymentId, amount, customerId, assetCode, reason }) => ({
+          map: ({
+            id: refundId,
+            paymentId,
+            amount,
+            customerId,
+            assetCode,
+            reason,
+            createdAt,
+            updatedAt,
+            metadata,
+          }) => ({
             amount: `${amount} ${assetCode}`,
             paymentId,
             customerId,
             refundId,
             reason,
+            createdAt,
+            updatedAt,
+            metadata,
           }),
         });
       }
       return {
         events,
-        webhooks: { organizationId, environment, triggers: [] },
+        webhooks: { organizationId, environment, triggers: webhooksTriggers },
       };
     }
   );

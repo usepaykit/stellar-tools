@@ -588,4 +588,10 @@ export type CustomerPortalSession = InferSelectModel<typeof customerPortalSessio
 export type { ProductStatus, ProductType };
 
 export type ResolvedCustomer = Customer & { wallets?: Array<CustomerWallet> };
-export type ResolvedPayment = Payment & { refunded: boolean };
+export type ResolvedPayment = Payment & {
+  refunded: boolean;
+  wallets?: CustomerWallet | null;
+  refunds?: Refund | null;
+  customer?: Customer | null;
+  asset?: Asset | null;
+};

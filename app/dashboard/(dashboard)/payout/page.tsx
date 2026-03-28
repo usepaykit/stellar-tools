@@ -26,6 +26,7 @@ import { PayoutStatus } from "@/constant/schema.client";
 import { Payout } from "@/db";
 import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
@@ -491,10 +492,13 @@ export default function PayoutPage() {
   const router = useRouter();
   const { data: payoutList = [], isLoading } = useOrgQuery(["payouts"], () => retrievePayouts());
 
+  const [columnFilters, setColumnFilters] = useSyncTableFilters();
+
   const columns: ColumnDef<Payout>[] = [
     {
       header: "Date",
       cell: ({ row }) => <div className="text-sm">{moment(row.original.createdAt).format("DD MMM YYYY")}</div>,
+      meta: { filterable: true, filterVariant: "date" },
     },
     {
       header: "Method",
@@ -508,9 +512,26 @@ export default function PayoutPage() {
           {walletAddress ? walletAddress.slice(0, 8) : stringifiedBankAccount ? "Bank Account" : "N/A"}
         </div>
       ),
+      meta: { filterable: true, filterVariant: "text" },
     },
-    { header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status as PayoutStatus} /> },
-    { header: "Amount", cell: ({ row }) => <div className="font-medium">{row.original.amount} XLM</div> },
+    {
+      header: "Status",
+      cell: ({ row }) => <StatusBadge status={row.original.status as PayoutStatus} />,
+      meta: {
+        filterable: true,
+        filterVariant: "select",
+        filterOptions: [
+          { label: "Pending", value: "pending" },
+          { label: "Succeeded", value: "succeeded" },
+          { label: "Failed", value: "failed" },
+        ],
+      },
+    },
+    {
+      header: "Amount",
+      cell: ({ row }) => <div className="font-medium">{row.original.amount} XLM</div>,
+      meta: { filterable: true, filterVariant: "number" },
+    },
   ];
 
   const tableActions: TableAction<Payout>[] = [
@@ -547,6 +568,8 @@ export default function PayoutPage() {
             </Button>
           </div>
           <DataTable
+            columnFilters={columnFilters}
+            setColumnFilters={setColumnFilters}
             columns={columns}
             data={payoutList}
             actions={tableActions}

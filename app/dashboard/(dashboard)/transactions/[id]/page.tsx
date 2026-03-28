@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { retrievePaymentWithDetails } from "@/actions/payment";
+import { retrievePayments } from "@/actions/payment";
 import { RefundModalContent, RefundModalFooter } from "@/app/dashboard/(dashboard)/transactions/page";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -218,13 +218,19 @@ export default function TransactionDetailPage() {
 
   const { data, isLoading, refetch } = useOrgQuery(
     ["payment", paymentId],
-    () => retrievePaymentWithDetails(paymentId),
+    () =>
+      retrievePayments(
+        undefined,
+        undefined,
+        { paymentId },
+        { withCustomer: true, withWallets: true, withRefunds: true }
+      ),
     { enabled: !!paymentId }
   );
 
-  const payment = data?.payment ?? null;
-  const customer = data?.customer ?? null;
-  const refund = data?.refund;
+  const payment = data?.[0] ?? null;
+  const customer = payment?.customer ?? null;
+  const refund = payment?.refunds ?? null;
 
   const handleRefreshStatus = React.useCallback(async () => {
     if (!paymentId) return;

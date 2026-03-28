@@ -1,65 +1,67 @@
 import { retrieveAsset } from "@/actions/asset";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
-import { retrievePayment } from "@/actions/payment";
+import { retrievePayments } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
 import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { generateResourceId } from "@/lib/utils";
-import { createRefundSchema } from "@stellartools/core";
-import { Result } from "@stellartools/core";
+import { Result, createRefundSchema } from "@stellartools/core";
+import { all } from "better-all";
 
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
   auth: ["session", "apikey"],
   schema: { body: createRefundSchema },
-  handler: async ({ body, auth: { organizationId, environment } }) => {
-    const { paymentId, assetId, amount, receiverPublicKey, customerId, reason, metadata } = body;
-    const [payment, asset] = await Promise.all([
-      retrievePayment(paymentId, organizationId, environment),
-      retrieveAsset({ id: assetId }, environment),
-    ]);
-
-    if (!payment) throw new Error("Payment not found");
-
-    if (!asset) throw new Error("Asset not found");
-
-    if (payment.environment !== environment) throw new Error("Invalid state");
-
-    const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
-
-    if (!secret) throw new Error("Organization keys not configured, please contact support");
-
-    const stellar = new StellarCoreApi(environment);
+  handler: async ({ body: { paymentId, reason, metadata }, auth: { organizationId, environment } }) => {
+    const { payment, secret } = await all({
+      payment: async () => {
+        const [p] = await retrievePayments(
+          organizationId,
+          environment,
+          { paymentId },
+          { withWallets: true, withAsset: true }
+        );
+        if (!p) throw new Error("Payment not found");
+        if (!p.asset) throw new Error("Payment asset not found");
+        if (!p.wallets?.address) throw new Error("Customer wallet address not found");
+        return p;
+      },
+      secret: async () => {
+        const { secret: s } = await retrieveOrganizationIdAndSecret(organizationId, environment);
+        if (!s) throw new Error("Merchant keys not configured, please contact support");
+        return s;
+      },
+    });
 
     const refundId = generateResourceId("rf", paymentId, 15);
     const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
-    const refundResult = await stellar.sendAssetPayment(
+    const res = await new StellarCoreApi(environment).sendAssetPayment(
       secretKey,
-      receiverPublicKey,
-      asset.code,
-      asset.issuer!,
-      String(amount),
+      payment.wallets!.address,
+      payment.asset!.code,
+      payment.asset!.issuer!,
+      String(payment.amount),
       refundId
     );
 
     const refund = await postRefund(
       {
         id: refundId,
-        status: refundResult.isOk() ? "succeeded" : "failed",
-        receiverPublicKey,
-        metadata,
-        customerId,
         paymentId,
-        amount,
         reason,
-        assetCode: asset.code,
+        metadata,
+        status: res.isOk() ? "succeeded" : "failed",
+        receiverPublicKey: payment.wallets!.address,
+        customerId: payment.customerId,
+        amount: payment.amount,
+        assetCode: payment.asset!.code,
       },
       organizationId,
       environment,
-      { errorMessage: refundResult.isErr() ? refundResult.error.message : undefined }
+      { errorMessage: res.isErr() ? res.error.message : undefined }
     );
 
     return Result.ok(refund);
