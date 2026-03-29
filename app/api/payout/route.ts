@@ -1,4 +1,4 @@
-import { retrieveAsset } from "@/actions/asset";
+import { retrieveAssets } from "@/actions/asset";
 import { getOrgFeeRateBps } from "@/actions/billing";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { postPayout, putPayout } from "@/actions/payout";
@@ -32,7 +32,7 @@ export const POST = apiHandler({
     const api = new StellarCoreApi(environment);
     const secretKey = new EncryptionApi().decrypt(secret.encrypted);
 
-    const asset = await retrieveAsset({ id: body.assetId }, environment);
+    const [asset] = await retrieveAssets({ id: body.assetId }, environment);
 
     const keeperKey = process.env.KEEPER_PUBLIC_KEY;
 

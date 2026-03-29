@@ -310,7 +310,7 @@ export default function CustomerDetailPage() {
 
   const { data: orgAssets } = useOrgQuery(
     ["assets", orgContext?.environment, ...uniqueAssetCodes],
-    () => retrieveAssets(orgContext!.environment, { assetCodes: uniqueAssetCodes as any[] }),
+    () => retrieveAssets({ codes: uniqueAssetCodes }, orgContext!.environment),
     { enabled: !!orgContext && uniqueAssetCodes.length > 0 }
   );
 

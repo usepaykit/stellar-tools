@@ -1,6 +1,6 @@
 "use server";
 
-import { retrieveAsset, retrieveAssets } from "@/actions/asset";
+import { retrieveAssets } from "@/actions/asset";
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import {
@@ -44,7 +44,7 @@ export const postCheckout = async (
   const initialPagingToken = $pagingTokenResult.value;
 
   if (params.assetCode) {
-    const assetsList = await retrieveAssets(environment);
+    const assetsList = await retrieveAssets(null, environment);
 
     const asset = assetsList.find((asset) => asset.code === params.assetCode);
 

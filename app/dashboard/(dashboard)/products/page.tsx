@@ -508,7 +508,7 @@ export function ProductsModalContent({
   const { data: orgContext } = useOrgContext();
   const { data: assets, isLoading: isLoadingAssets } = useOrgQuery(
     ["assets"],
-    () => retrieveAssets(orgContext?.environment!),
+    () => retrieveAssets(null, orgContext?.environment!),
     { enabled: !!orgContext?.environment }
   );
 

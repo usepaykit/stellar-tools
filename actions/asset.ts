@@ -1,7 +1,6 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
-import { AssetCode } from "@/constant/schema.client";
 import { Asset, Network, assets, db, products } from "@/db";
 import { SQL, and, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
@@ -17,15 +16,24 @@ export const postAsset = async (asset: Partial<Asset>) => {
   return newAsset;
 };
 
-export const retrieveAsset = async (
-  lookUpKey: { id?: string } | { code?: string } | { issuer?: string } | { code?: string; issuer?: string },
+export const retrieveAssets = async (
+  lookUpKey:
+    | { id?: string }
+    | { code?: string }
+    | { issuer?: string }
+    | { code?: string; issuer?: string }
+    | { codes?: string[] }
+    | null,
   environment: Network
 ) => {
-  let whereClause: SQL;
-  if ("id" in lookUpKey) {
+  let whereClause: SQL | undefined;
+  if (!lookUpKey) whereClause = undefined;
+  else if ("id" in lookUpKey) {
     whereClause = eq(assets.id, lookUpKey.id!);
   } else if ("code" in lookUpKey && "issuer" in lookUpKey) {
     whereClause = and(eq(assets.code, lookUpKey.code!), eq(assets.issuer, lookUpKey.issuer!)) as SQL;
+  } else if ("codes" in lookUpKey) {
+    whereClause = inArray(assets.code, lookUpKey.codes!);
   } else if ("code" in lookUpKey) {
     whereClause = eq(assets.code, lookUpKey.code!);
   } else if ("issuer" in lookUpKey) {
@@ -34,26 +42,10 @@ export const retrieveAsset = async (
     throw new Error("Invalid lookup key. Must provide either id or code and issuer.");
   }
 
-  const [asset] = await db
-    .select()
-    .from(assets)
-    .where(and(whereClause, eq(assets.environment, environment)));
-
-  if (!asset) throw new Error("Asset not found");
-
-  return asset as Asset;
-};
-
-export const retrieveAssets = async (env?: Network, filters?: { assetCodes?: AssetCode[] }) => {
   return await db
     .select()
     .from(assets)
-    .where(
-      and(
-        env ? eq(assets.environment, env) : undefined,
-        ...(filters?.assetCodes ? [inArray(assets.code, filters.assetCodes)] : [])
-      )
-    );
+    .where(and(whereClause, eq(assets.environment, environment)));
 };
 
 export const retrieveAssetsFromProducts = async (orgId?: string, env?: Network): Promise<Asset[]> => {
