@@ -1,5 +1,6 @@
 import { refreshTxStatus, retrievePayments } from "@/actions/payment";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { toSnakeCase } from "@/lib/utils";
 import { Result, z as Schema } from "@stellartools/core";
 
 export const OPTIONS = createOptionsHandler();
@@ -22,9 +23,11 @@ export const GET = apiHandler({
     if (verifyOnChain && payment.status === "pending") {
       await refreshTxStatus(id, payment.transactionHash, organizationId, environment);
     }
-    return Result.ok({
-      ...rest,
-      line_items: [{ amount: `${payment.amount} ${payment.asset?.code}`, customer, wallets, refunds: _refunds }],
-    });
+    return Result.ok(
+      toSnakeCase({
+        ...rest,
+        line_items: [{ amount: `${payment.amount} ${payment.asset?.code}`, customer, wallets, refunds: _refunds }],
+      })
+    );
   },
 });

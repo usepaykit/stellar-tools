@@ -31,7 +31,7 @@ export class StellarWalletsKitApi {
     return (this.instance ??= new StellarWalletsKitApi());
   }
 
-  init(options?: { network?: Networks; checkoutDescription?: string | null; organizationName?: string | null }): void {
+  init(options?: { network?: Networks }): void {
     if (typeof window === "undefined") return;
 
     this.unsubscriber?.();
@@ -46,7 +46,7 @@ export class StellarWalletsKitApi {
           projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
           metadata: {
             name: "Stellar Tools",
-            description: options?.checkoutDescription ?? `Payments for ${options?.organizationName}`,
+            description: "Stellar checkout payments",
             icons: [`${process.env.NEXT_PUBLIC_APP_URL}/favicon.ico`],
             url: process.env.NEXT_PUBLIC_APP_URL!,
           },
@@ -73,14 +73,7 @@ export class StellarWalletsKitApi {
     const closeOnBackdrop = (e: MouseEvent) => e.target === host && closeEvent.next();
     const closeOnEscape = (e: KeyboardEvent) => (e.key === "Escape" || e.code === "Escape") && closeEvent.next();
 
-    const closeShellOnWalletRowClick = (e: MouseEvent) => {
-      const li = (e.target as HTMLElement)?.closest(".stellar-wallets-kit ul > li");
-      if (!li) return;
-      host.classList.remove("open");
-    };
-
     host.addEventListener("click", closeOnBackdrop);
-    host.addEventListener("click", closeShellOnWalletRowClick, true);
     host.addEventListener("keydown", closeOnEscape);
 
     try {
@@ -91,7 +84,6 @@ export class StellarWalletsKitApi {
     } finally {
       stopSpinner();
       host.removeEventListener("click", closeOnBackdrop);
-      host.removeEventListener("click", closeShellOnWalletRowClick, true);
       host.removeEventListener("keydown", closeOnEscape);
       host.classList.remove("open");
     }
