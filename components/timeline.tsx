@@ -12,7 +12,7 @@ const ROUTE_MAP = {
   customerId: (id: string) => `/customers/${id}`,
   productId: (id: string) => `/products/${id}`,
   paymentId: (id: string) => `/transactions/${id}`,
-  portalUrl: (url: string) => url,
+  externalUrl: (url: string) => url,
 } as Record<string, (id: string) => string>;
 
 export interface TimelineEntry {

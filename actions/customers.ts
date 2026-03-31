@@ -311,7 +311,7 @@ export async function createCustomerPortalSession(customerId: string, orgId?: st
           type: "customer_portal_session::created",
           map: ({ session, url }) => ({
             customerId,
-            data: { id: session.id, portalUrl: url, expiresAt: session.expiresAt },
+            data: { id: session.id, externalUrl: url, expiresAt: session.expiresAt },
           }),
         },
       ],
