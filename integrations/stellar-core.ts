@@ -114,6 +114,12 @@ export class StellarCoreApi {
     }
   }
 
+  isValidPublicKey(publicKey?: string): Result<boolean, Error> {
+    if (!publicKey?.trim() || !publicKey) return Result.err(new Error("Public key is required"));
+    if (!StellarSDK.StrKey.isValidEd25519PublicKey(publicKey)) return Result.err(new Error("Invalid public key"));
+    return Result.ok(true);
+  }
+
   /**
    * Builds an unsigned payment transaction for wallet signing
    * Use this when you want the user's wallet to sign the transaction

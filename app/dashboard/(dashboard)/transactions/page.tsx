@@ -14,14 +14,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
-import { PaymentStatus } from "@/constant/schema.client";
-import { Customer } from "@/db";
+import { PaymentStatus, paymentStatusEnum } from "@/constant/schema.client";
+import { Customer, ResolvedPayment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { cn, formatCurrency, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Clock, Copy, Download, Plus, Settings, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
@@ -123,6 +124,7 @@ const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "amount",
     header: "Amount",
+    meta: { filterable: true, filterVariant: "number" },
     cell: ({ row }) => {
       const transaction = row.original;
       return <div className="font-semibold">{formatCurrency(Number(transaction.amount), transaction.asset)}</div>;
@@ -131,6 +133,7 @@ const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "paymentMethod",
     header: "Payment method",
+    meta: { filterable: true, filterVariant: "text" },
     cell: ({ row }) => {
       const transaction = row.original;
       return <CopyWalletAddress address={transaction.paymentMethod.address} />;
@@ -146,6 +149,7 @@ const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "customer",
     header: "Customer",
+    meta: { filterable: true, filterVariant: "text" },
     cell: ({ row }) => {
       return <div className="text-sm">{row.original.customer.email}</div>;
     },
@@ -153,6 +157,7 @@ const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "date",
     header: "Date",
+    meta: { filterable: true, filterVariant: "date" },
     cell: ({ row }) => {
       const date = row.original.date;
       return <div className="text-muted-foreground text-sm">{moment(date).format("MMM D, h:mm A")}</div>;
@@ -173,6 +178,14 @@ const columns: ColumnDef<Transaction>[] = [
   {
     accessorKey: "status",
     header: "Status",
+    meta: {
+      filterable: true,
+      filterVariant: "select",
+      filterOptions: [...paymentStatusEnum, "refunded"].map((status) => ({
+        label: status.charAt(0).toUpperCase() + status.slice(1),
+        value: status,
+      })),
+    },
     cell: ({ row }) => {
       return <StatusBadge status={row.original.status} />;
     },
@@ -183,8 +196,7 @@ const columns: ColumnDef<Transaction>[] = [
 
 const refundSchema = z.object({
   paymentId: z.string().min(1, "Payment ID is required"),
-  walletAddress: z.string().optional(),
-  customerWalletId: z.string().optional(),
+  walletAddress: z.string().min(1, "Wallet address is required"),
   reason: z.string().optional(),
 });
 
@@ -221,69 +233,42 @@ export function RefundModalContent({
   onSuccess,
   setSubmitRef,
   onFooterChange,
+  payment,
 }: {
   initialPaymentId?: string;
   onClose: () => void;
   onSuccess: () => void;
   setSubmitRef?: React.MutableRefObject<(() => void) | null>;
   onFooterChange?: (props: { isPending: boolean }) => void;
+  payment: ResolvedPayment | null;
 }) {
   const { data: orgContext } = useOrgContext();
+  const invalidate = useInvalidateOrgQuery();
   const form = RHF.useForm<RefundFormData>({
     resolver: zodResolver(refundSchema),
     defaultValues: {
       paymentId: initialPaymentId ?? "",
       walletAddress: "",
-      customerWalletId: "",
       reason: "",
     },
   });
 
-  const paymentId = form.watch("paymentId");
-
-  const { data: payments } = useQuery({
-    queryKey: ["refund-payment", paymentId?.trim()],
-    queryFn: () => retrievePayments(undefined, undefined, { paymentId: paymentId!.trim() }),
-    enabled: !!paymentId?.trim(),
-  });
-
-  const payment = payments?.[0] ?? null;
-
-  const showWalletField = !!payment && !payment.customerWalletId;
-  const showWalletSelect = showWalletField && !!payment?.customerId;
-  const showWalletText = showWalletField && !payment?.customerId;
-
-  const { data: customerWalletsList = [], isLoading: isLoadingWallets } = useQuery({
-    queryKey: ["refund-customer-wallets", payment?.customerId],
-    queryFn: () => retrieveCustomerWallets(payment!.customerId!),
-    enabled: !!payment?.customerId && showWalletField,
-  });
+  const { data: customerWalletsList = [], isLoading: isLoadingWallets } = useOrgQuery(
+    ["customer-wallets", payment?.customerId],
+    async () => retrieveCustomerWallets(payment!.customerId!),
+    { enabled: !!payment?.customerId }
+  );
 
   React.useEffect(() => {
     if (initialPaymentId) form.setValue("paymentId", initialPaymentId);
-  }, [initialPaymentId, form]);
+    if (payment?.wallets?.address) form.setValue("walletAddress", payment?.wallets?.address);
+  }, [initialPaymentId, form, payment]);
 
   const createRefundMutation = useMutation({
     mutationFn: async (data: RefundFormData) => {
       if (!orgContext) throw new Error("No organization context found");
 
-      const paymentRow = await retrievePayments(undefined, undefined, { paymentId: data.paymentId }).then(([p]) => p);
-
-      let receiverPublicKey: string;
-      if (paymentRow.customerWalletId && paymentRow.customerId) {
-        const wallets = await retrieveCustomerWallets(paymentRow.customerId, { id: paymentRow.customerWalletId });
-        const wallet = Array.isArray(wallets) ? wallets[0] : wallets;
-        if (!wallet?.address) throw new Error("Customer wallet not found");
-        receiverPublicKey = wallet.address;
-      } else if (paymentRow.customerId && data.customerWalletId?.trim()) {
-        const wallets = await retrieveCustomerWallets(paymentRow.customerId, { id: data.customerWalletId.trim() });
-        const wallet = Array.isArray(wallets) ? wallets[0] : wallets;
-        if (!wallet?.address) throw new Error("Customer wallet not found");
-        receiverPublicKey = wallet.address;
-      } else {
-        if (!data.walletAddress?.trim()) throw new Error("Wallet address is required");
-        receiverPublicKey = data.walletAddress.trim();
-      }
+      if (!data.walletAddress?.trim()) throw new Error("Wallet address is required");
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
@@ -292,12 +277,9 @@ export function RefundModalContent({
 
       const result = await api.post<{ id: string }>("/refunds", {
         paymentId: data.paymentId,
-        customerId: paymentRow.customerId,
-        assetId: paymentRow.assetId,
-        amount: paymentRow.amount,
-        receiverPublicKey,
-        reason: data.reason ?? null,
         metadata: null,
+        walletAddress: data.walletAddress,
+        reason: data.reason ?? null,
       });
 
       if (result.isErr()) throw new Error(result.error.message);
@@ -305,28 +287,17 @@ export function RefundModalContent({
       return result.value;
     },
     onSuccess: () => {
-      toast.success("Refund created successfully!");
+      toast.success("Refund successful");
+      invalidate(["payments"]);
       form.reset();
       onSuccess();
     },
     onError: () => toast.error("Failed to create refund"),
   });
 
-  const onSubmit = (data: RefundFormData) => {
-    if (showWalletField && payment?.customerId && !data.customerWalletId?.trim()) {
-      form.setError("customerWalletId", { message: "Select a wallet to refund to" });
-      return;
-    }
-    if (showWalletField && !payment?.customerId && !data.walletAddress?.trim()) {
-      form.setError("walletAddress", { message: "Wallet address is required" });
-      return;
-    }
-    createRefundMutation.mutate(data);
-  };
-
   const submitForm = React.useCallback(() => {
-    form.handleSubmit(onSubmit)();
-  }, [form, onSubmit]);
+    form.handleSubmit((data) => createRefundMutation.mutate(data))();
+  }, [form, createRefundMutation]);
 
   React.useEffect(() => {
     if (!setSubmitRef) return;
@@ -343,44 +314,41 @@ export function RefundModalContent({
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-6">
-        {showWalletSelect && (
-          <RHF.Controller
-            control={form.control}
-            name="customerWalletId"
-            render={({ field, fieldState: { error } }) => (
+        <RHF.Controller
+          control={form.control}
+          name="walletAddress"
+          render={({ field, fieldState: { error } }) => {
+            if (customerWalletsList.length == 0 && !payment?.wallets?.address) {
+              return (
+                <TextField
+                  {...field}
+                  value={field.value ?? ""}
+                  id="walletAddress"
+                  label="Wallet Address"
+                  error={error?.message}
+                  placeholder="Enter wallet address"
+                  className="shadow-none"
+                />
+              );
+            }
+
+            return (
               <SelectField
-                id="customerWalletId"
+                id="walletAddress"
                 label="Refund to wallet"
                 value={field.value ?? ""}
                 onChange={field.onChange}
                 items={customerWalletsList.map((w: { id: string; address: string }) => ({
-                  value: w.id,
-                  label: truncate(w.address, { start: 6, end: 6 }),
+                  value: w.address,
+                  label: truncate(w.address, { start: 10, end: 10 }),
                 }))}
                 placeholder="Select wallet"
                 error={error?.message}
                 isLoading={isLoadingWallets}
               />
-            )}
-          />
-        )}
-        {showWalletText && (
-          <RHF.Controller
-            control={form.control}
-            name="walletAddress"
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                {...field}
-                value={field.value ?? ""}
-                id="walletAddress"
-                label="Wallet Address"
-                error={error?.message}
-                placeholder="Enter wallet address"
-                className="shadow-none"
-              />
-            )}
-          />
-        )}
+            );
+          }}
+        />
 
         <RHF.Controller
           control={form.control}
@@ -398,18 +366,6 @@ export function RefundModalContent({
           )}
         />
       </div>
-      <div className="flex shrink-0 justify-end gap-2 border-t pt-4">
-        <Button variant="outline" type="button" onClick={onClose} disabled={createRefundMutation.isPending}>
-          Cancel
-        </Button>
-        <Button
-          onClick={form.handleSubmit(onSubmit)}
-          disabled={createRefundMutation.isPending}
-          isLoading={createRefundMutation.isPending}
-        >
-          {createRefundMutation.isPending ? "Creating..." : "Create refund"}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -425,12 +381,15 @@ function TransactionsPageContent() {
   const router = useRouter();
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
   const invalidate = useInvalidateOrgQuery();
+  const [paymentToRefund, setPaymentToRefund] = React.useState<ResolvedPayment | null>(null);
 
   const refundModalSubmitRef = React.useRef<(() => void) | null>(null);
   const [refundModalFooterProps, setRefundModalFooterProps] = React.useState({
     isPending: false,
   });
   const isRefundModalOpenRef = React.useRef(false);
+
+  const [columnFilters, setColumnFilters] = useSyncTableFilters();
 
   React.useEffect(() => {
     if (!isRefundModalOpenRef.current) return;
@@ -466,6 +425,7 @@ function TransactionsPageContent() {
             }}
             setSubmitRef={refundModalSubmitRef}
             onFooterChange={(props) => setRefundModalFooterProps(props)}
+            payment={paymentToRefund}
           />
         ),
         footer: <RefundModalFooter onClose={AppModal.close} submitRef={refundModalSubmitRef} isPending={false} />,
@@ -477,7 +437,12 @@ function TransactionsPageContent() {
   );
 
   const { data: payments, isLoading } = useOrgQuery(["payments"], () =>
-    retrievePayments(undefined, undefined, undefined, { withRefunds: true, withAsset: true, withCustomer: true })
+    retrievePayments(undefined, undefined, undefined, {
+      withRefunds: true,
+      withAsset: true,
+      withCustomer: true,
+      withWallets: true,
+    })
   );
 
   const stats = React.useMemo(() => {
@@ -508,8 +473,6 @@ function TransactionsPageContent() {
         if (!matchesId) return false;
       }
 
-      console.log({ p, activeTab });
-
       if (activeTab === "all") return true;
       if (activeTab === "refunded") return p.refunds?.status === "succeeded";
       return p.status === activeTab;
@@ -530,7 +493,13 @@ function TransactionsPageContent() {
     ];
 
     if (row.status === "confirmed") {
-      actions.push({ label: "Refund", onClick: (transaction) => openRefundModal(transaction.description) });
+      actions.push({
+        label: "Refund",
+        onClick: (transaction) => {
+          openRefundModal(transaction.id);
+          setPaymentToRefund(payments?.find(({ id }) => transaction.id == id) ?? null);
+        },
+      });
     }
 
     return actions;
@@ -553,7 +522,13 @@ function TransactionsPageContent() {
                 <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
               </div>
               <div className="flex items-center gap-2">
-                <Button className="gap-2 shadow-sm" onClick={() => openRefundModal()}>
+                <Button
+                  className="gap-2 shadow-sm"
+                  onClick={() => {
+                    openRefundModal();
+                    setPaymentToRefund(null);
+                  }}
+                >
                   <Plus className="h-4 w-4" />
                   Create refund
                 </Button>
@@ -629,6 +604,8 @@ function TransactionsPageContent() {
                 enableBulkSelect={true}
                 actions={tableActions}
                 isLoading={isLoading}
+                columnFilters={columnFilters}
+                setColumnFilters={setColumnFilters}
               />
             </div>
           </div>

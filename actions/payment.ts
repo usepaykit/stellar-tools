@@ -252,6 +252,7 @@ export const retrievePayments = async (
     .leftJoin(refunds, and(eq(payments.id, refunds.paymentId), eq(refunds.status, "succeeded")))
     .leftJoin(customerWallets, eq(payments.customerWalletId, customerWallets.id))
     .leftJoin(assets, eq(payments.assetId, assets.id))
+    .leftJoin(customers, eq(payments.customerId, customers.id))
     .where(
       and(
         params?.paymentId ? eq(payments.id, params.paymentId) : undefined,

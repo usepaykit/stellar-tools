@@ -33,7 +33,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import * as _ from "lodash";
+import _ from "lodash";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import moment from "moment";
 
@@ -100,7 +100,7 @@ export const DataTable = <TData, TValue>({
               checked={table.getIsAllPageRowsSelected()}
               onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
               aria-label="Select all"
-              className={cn(checkbox?.className, "translate-y-[2px]")}
+              className={cn(checkbox?.className, "translate-y-[2px] cursor-pointer")}
             />
           ),
           cell: ({ row }) => (
@@ -110,7 +110,7 @@ export const DataTable = <TData, TValue>({
               onCheckedChange={(v) => row.toggleSelected(!!v)}
               onClick={(e) => e.stopPropagation()}
               aria-label="Select row"
-              className={cn(checkbox?.className, "translate-y-[2px]")}
+              className={cn(checkbox?.className, "translate-y-[2px] cursor-pointer")}
             />
           ),
           enableSorting: false,

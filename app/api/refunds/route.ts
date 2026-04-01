@@ -5,15 +5,15 @@ import { EncryptionApi } from "@/integrations/encryption";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { generateResourceId } from "@/lib/utils";
-import { Result, createRefundSchema } from "@stellartools/core";
+import { Result, z as Schema, createRefundSchema } from "@stellartools/core";
 import { all } from "better-all";
 
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
   auth: ["session", "apikey"],
-  schema: { body: createRefundSchema },
-  handler: async ({ body: { paymentId, reason, metadata }, auth: { organizationId, environment } }) => {
+  schema: { body: createRefundSchema.extend({ walletAddress: Schema.string().optional() }) },
+  handler: async ({ body: { paymentId, reason, metadata, walletAddress }, auth: { organizationId, environment } }) => {
     const { payment, secret } = await all({
       payment: async () => {
         const [p] = await retrievePayments(
@@ -36,6 +36,12 @@ export const POST = apiHandler({
 
     const refundId = generateResourceId("rf", paymentId, 15);
     const secretKey = new EncryptionApi().decrypt(secret.encrypted);
+
+    const isValidPublicKey = new StellarCoreApi(environment).isValidPublicKey(
+      walletAddress ?? payment?.wallets?.address
+    );
+
+    if (isValidPublicKey.isErr()) throw new Error(isValidPublicKey.error.message);
 
     const res = await new StellarCoreApi(environment).sendAssetPayment(
       secretKey,
