@@ -310,6 +310,7 @@ export function CustomerModalContent({
       metadata: [],
     },
   });
+  const invalidate = useInvalidateOrgQuery();
 
   const { fields, append, remove } = RHF.useFieldArray({
     control: form.control,
@@ -386,6 +387,7 @@ export function CustomerModalContent({
       if (data.avatar instanceof File) {
         const formdata = new FormData();
         formdata.append("image", data.avatar);
+        formdata.append("maxSizeKB", "48");
         const uploaded = await createCustomerImage(formdata);
         if (uploaded) imageUrl = uploaded;
       }
@@ -414,6 +416,7 @@ export function CustomerModalContent({
       return response.value;
     },
     onSuccess: () => {
+      invalidate(["customers"]);
       toast.success(isEditMode ? "Customer updated successfully" : "Customer created successfully");
       form.reset();
       onSuccess();
@@ -450,12 +453,13 @@ export function CustomerModalContent({
                     value={field.value ? [field.value] : []}
                     onFilesChange={(files) => field.onChange(files[0])}
                     dropzoneAccept={{ "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"] }}
-                    dropzoneMaxSize={5 * 1024 * 1024}
+                    dropzoneMaxSize={50 * 1024 * 1024}
                     dropzoneMultiple={false}
                     enableTransformation
                     targetFormat="image/png"
                     shape="circle"
                     className="w-fit"
+                    maxDimension={1000}
                   />
                 </div>
               )}

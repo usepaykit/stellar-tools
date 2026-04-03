@@ -27,9 +27,10 @@ import moment from "moment";
 
 export const createCustomerImage = async (formData: FormData): Promise<string | undefined> => {
   const imageFile = formData.get("image");
+  const maxSizeKB = formData.get("maxSizeKB") ? Number(formData.get("maxSizeKB")) : undefined;
 
   if (imageFile) {
-    const uploadResult = await new FileUploadApi().upload([imageFile as File]);
+    const uploadResult = await new FileUploadApi().upload([imageFile as File], { maxSizeKB });
     return uploadResult?.[0] ?? undefined;
   }
 

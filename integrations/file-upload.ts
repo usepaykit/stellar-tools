@@ -1,14 +1,31 @@
+import sharp from "sharp";
 import { UTApi, UTFile } from "uploadthing/server";
 
 interface FileWithMetadata extends File {
   metadata?: Record<string, unknown>;
 }
 
+export interface UploadOptions {
+  maxSizeKB?: number;
+}
+
 export class FileUploadApi {
   private api = new UTApi();
 
-  async upload(filesWithMetadata: FileWithMetadata[]): Promise<Array<string> | null> {
-    const utFiles = filesWithMetadata.map(
+  async upload(filesWithMetadata: FileWithMetadata[], options?: UploadOptions): Promise<Array<string> | null> {
+    const processedFiles = await Promise.all(
+      filesWithMetadata.map(async (file) => {
+        if (options?.maxSizeKB && file.type.startsWith("image/")) {
+          file = await this.compressToTarget(file, options.maxSizeKB).catch((err) => {
+            console.error(`Compression failed for ${file.name}, uploading original.`, err);
+            return file;
+          });
+        }
+        return file;
+      })
+    );
+
+    const utFiles = processedFiles.map(
       (file) => new UTFile([file], file.name, { customId: JSON.stringify(file.metadata) })
     );
 
@@ -43,5 +60,40 @@ export class FileUploadApi {
     }
 
     return await this.upload(newFilesWithMetadata);
+  }
+
+  // -- INTERNAL --
+
+  private async compressToTarget(file: File, maxKB: number): Promise<File> {
+    const targetBytes = maxKB * 1024;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const metadata = await sharp(buffer).metadata();
+    const originalWidth = metadata.width ?? 1200;
+
+    for (let q = 85; q >= 30; q -= 10) {
+      const candidate = await sharp(buffer).jpeg({ quality: q }).toBuffer();
+      if (candidate.byteLength <= targetBytes) return this.bufferToFile(candidate, file.name, "jpeg");
+    }
+
+    for (let scale = 0.8; scale >= 0.1; scale -= 0.2) {
+      const candidate = await sharp(buffer)
+        .jpeg({ quality: 50 })
+        .resize({ width: Math.round(originalWidth * scale), withoutEnlargement: true })
+        .toBuffer();
+
+      if (candidate.byteLength <= targetBytes) return this.bufferToFile(candidate, file.name, "jpeg");
+    }
+
+    const finalBuffer = await sharp(buffer)
+      .resize({ width: Math.round(originalWidth * 0.1) })
+      .jpeg({ quality: 20 })
+      .toBuffer();
+
+    return this.bufferToFile(finalBuffer, file.name, "jpeg");
+  }
+
+  private bufferToFile(buffer: Buffer, originalName: string, format: "jpeg"): File {
+    const newName = originalName.replace(/\.[^/.]+$/, "") + `.${format}`;
+    return new File([new Uint8Array(buffer)], newName, { type: `image/${format}` });
   }
 }

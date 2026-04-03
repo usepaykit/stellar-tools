@@ -44,6 +44,7 @@ interface FileUploadProps
   error?: ErrorProps["children"];
   shape?: "square" | "circle";
   isLoading?: boolean;
+  maxDimension?: number;
 }
 
 export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
@@ -63,6 +64,7 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
       error,
       shape = "square",
       isLoading = false,
+      maxDimension,
       ...mixinProps
     },
     ref
@@ -72,51 +74,53 @@ export const FileUpload = React.forwardRef<HTMLInputElement, FileUploadProps>(
 
     const onDrop = React.useCallback(
       async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-        if (acceptedFiles.length > 0) {
-          setIsTransforming(true);
+        if (acceptedFiles.length === 0) {
+          if (fileRejections.length > 0) onFilesRejected?.(fileRejections);
+          return;
+        }
 
-          try {
-            // Revoke old preview URLs when replacing files in single mode
-            if (!dropzone.multiple && value.length > 0) {
-              value.forEach((file) => URL.revokeObjectURL(file.preview));
-            }
+        setIsTransforming(true);
+        const transformer = new ImageTransformer();
 
-            // Transform and create preview URLs
-            const processedFiles = await Promise.all(
-              acceptedFiles.map(async (file) => {
-                let processedFile = file;
-                let previewUrl: string;
-
-                if (enableTransformation) {
-                  try {
-                    processedFile = await new ImageTransformer().transformTo(file, targetFormat);
-                    previewUrl = URL.createObjectURL(processedFile);
-                  } catch (error) {
-                    console.error("Image transformation failed:", error);
-                    previewUrl = URL.createObjectURL(file);
-                  }
-                } else {
-                  previewUrl = URL.createObjectURL(file);
-                }
-
-                return Object.assign(processedFile, {
-                  preview: previewUrl,
-                });
-              })
-            );
-
-            const updatedFiles = dropzone.multiple ? [...value, ...processedFiles] : processedFiles;
-            onFilesChange?.(updatedFiles);
-          } finally {
-            setIsTransforming(false);
+        try {
+          // 1. Cleanup old previews if replacing in single mode
+          if (!dropzone.multiple && value.length > 0) {
+            value.forEach((file) => URL.revokeObjectURL(file.preview));
           }
+
+          // 2. Process all files in parallel
+          const processedFiles = await Promise.all(
+            acceptedFiles.map(async (file) => {
+              let finalFile = file;
+
+              if (enableTransformation) {
+                try {
+                  finalFile = await transformer.transform(file, {
+                    to: targetFormat,
+                    maxDimension,
+                  });
+                } catch (error) {
+                  console.error("Transformation failed, falling back to original:", error);
+                }
+              }
+
+              return Object.assign(finalFile, {
+                preview: URL.createObjectURL(finalFile),
+              });
+            })
+          );
+
+          const updatedFiles = dropzone.multiple ? [...value, ...processedFiles] : processedFiles;
+          onFilesChange?.(updatedFiles);
+        } finally {
+          setIsTransforming(false);
         }
 
         if (fileRejections.length > 0) {
           onFilesRejected?.(fileRejections);
         }
       },
-      [dropzone.multiple, value, onFilesChange, onFilesRejected, enableTransformation, targetFormat]
+      [dropzone.multiple, value, onFilesChange, onFilesRejected, enableTransformation, targetFormat, maxDimension]
     );
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({

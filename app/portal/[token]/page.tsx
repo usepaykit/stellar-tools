@@ -118,6 +118,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
       if (imageFile instanceof File) {
         const formDataUpload = new FormData();
         formDataUpload.append("image", imageFile);
+        formDataUpload.append("maxSizeKB", "48");
         imageUrl = (await createCustomerImage(formDataUpload)) ?? null;
       }
 
