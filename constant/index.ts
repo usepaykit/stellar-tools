@@ -1,5 +1,3 @@
-import { SuggestedString } from "@stellartools/core";
-
 export const subscriptionIntervals = { day: 1, week: 7, month: 30, year: 365 };
 
 const ALLOWED_ORIGIN_PATTERNS = [
@@ -18,5 +16,3 @@ export function getCorsHeaders(requestOrigin?: string | null): Record<string, st
     "Access-Control-Allow-Credentials": "true",
   };
 }
-
-export type PaymentMethod = SuggestedString<"usdc" | "polar" | "paystack">;

@@ -1,4 +1,4 @@
-import { StellarTools } from "@stellartools/core";
+import { Prettify, StellarTools } from "@stellartools/core";
 import type { BetterAuthOptions, BetterAuthPlugin, GenericEndpointContext, User } from "better-auth";
 
 import * as routes from "./routes";
@@ -14,22 +14,26 @@ async function syncUserWithStellar(user: User, ctx: GenericEndpointContext<Bette
   let customerData = existing?.[0] ?? null;
 
   if (!customerId) {
-    const created = await client.customers.create({
+    const customer = await client.customers.create({
       email: user.email,
       name: user.name,
       image: user.image,
       metadata: {
-        ...(ctx.context.session?.session?.id ? { initialSessionId: ctx.context?.session?.session?.id } : {}),
+        ...(ctx.context.session?.session?.id ? { session_id: ctx.context?.session?.session?.id } : {}),
         source: "BetterAuth Adapter",
       },
     });
 
-    customerId = created.id;
-    customerData = created;
+    customerId = customer.id;
+    customerData = customer;
   }
 
-  await ctx.context.internalAdapter.updateUser(user.id, { stellarCustomerId: customerId });
-  await options.onCustomerCreated?.(customerData!);
+  await Promise.all([
+    ctx.context.internalAdapter.updateUser(user.id, { stellarCustomerId: customerId }),
+    options.onCustomerCreated?.(customerData!),
+  ]).catch(err => {
+    logger.error(`Failed to sync customer ${err}`)
+  })
 
   logger.info(`Stellar: Linked customer ${customerId} to user ${user.id}`);
 }
@@ -42,7 +46,7 @@ type EndpointsFromRoutes<T> = {
 export const stellarTools = (options: BillingConfig) => {
   const endpoints = Object.fromEntries(
     Object.entries(routes).map(([key, factory]) => [key, factory(options)])
-  ) as EndpointsFromRoutes<RouteFactories>;
+  ) as Prettify<EndpointsFromRoutes<RouteFactories>>;
 
   return {
     id: "stellar-tools",

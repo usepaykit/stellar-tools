@@ -196,6 +196,8 @@ export default function CustomerDetailPage() {
     () => retrieveEvents({ customerId })
   );
 
+  const [paymentToRefund, setPaymentToRefund] = React.useState<null | ResolvedPayment>(null);
+
   const openRefundModal = React.useCallback(
     (paymentId: string) => {
       AppModal.open({
@@ -203,6 +205,7 @@ export default function CustomerDetailPage() {
         description: "Process a refund for a transaction by providing the payment details.",
         content: (
           <RefundModalContent
+            payment={paymentToRefund}
             initialPaymentId={paymentId}
             onClose={AppModal.close}
             onSuccess={() => {
@@ -416,7 +419,13 @@ export default function CustomerDetailPage() {
                     ];
 
                     if (!row.refunded) {
-                      actions.push({ label: "Refund payment", onClick: (p) => openRefundModal(p.id) });
+                      actions.push({
+                        label: "Refund payment",
+                        onClick: (p) => {
+                          openRefundModal(p.id);
+                          setPaymentToRefund(payments?.find(({ id }) => p.id == id) ?? null);
+                        },
+                      });
                     }
 
                     return actions;

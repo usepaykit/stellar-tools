@@ -27,7 +27,7 @@ export interface NumberFieldProps
 }
 
 export const NumberField = React.forwardRef<HTMLInputElement, NumberFieldProps>((props, ref) => {
-  const { id, value, onChange, label, error, helpText, allowDecimal = false, ...mixProps } = props;
+  const { id, value, onChange, label, error, helpText, allowDecimal = false, disabled, ...mixProps } = props;
 
   const {
     label: labelProps,
@@ -115,6 +115,7 @@ export const NumberField = React.forwardRef<HTMLInputElement, NumberFieldProps>(
         type="text"
         inputMode={allowDecimal ? "decimal" : "numeric"}
         value={displayValue}
+        disabled={disabled}
         aria-invalid={!!error}
         onChange={handleAmountChange}
         className={cn(

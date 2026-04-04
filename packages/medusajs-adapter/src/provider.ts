@@ -130,7 +130,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     }
 
     const result = validateSchema(
-      Schema.object({ receiverPublicKey: Schema.string(), reason: Schema.string().nullable() }),
+      Schema.object({ reason: Schema.string().nullable(), paymentId: Schema.string() }),
       input.data
     );
 
@@ -139,11 +139,9 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     }
 
     const refund = await this.stellar.refunds.create({
-      paymentId: this.getCustomerId(input),
-      amount: Number(input.amount),
-      reason: result.value.reason ?? "Refund",
+      paymentId: result.value.paymentId,
+      reason: result.value.reason ?? "",
       metadata: { source: "MedusaJS Adapter" },
-      receiverPublicKey: result.value.receiverPublicKey,
     });
 
     return { data: refund as any };
@@ -156,12 +154,16 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
 
     const { customer } = context;
 
+    const image = Object.entries(context?.account_holder?.data ?? {}).find(
+      ([key, value]) => key.toLowerCase().includes("image") && typeof value === "string" && value.startsWith("https://")
+    )?.[1] as string | null;
+
     const res = await this.stellar.customers.create({
       email: customer?.email,
       name: `${customer?.first_name} ${customer?.last_name}`.trim(),
       phone: customer?.phone ?? undefined,
       metadata: { ...((context?.account_holder?.data as Record<string, any>) ?? null), source: "MedusaJS Adapter" },
-      image: customer?.image ?? null,
+      image,
     });
 
     return { id: res.id, data: res as any };

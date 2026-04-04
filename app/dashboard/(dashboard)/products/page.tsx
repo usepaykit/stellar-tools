@@ -970,7 +970,7 @@ export function ProductsModalContent({
                     onChange={(value) => field.onChange({ ...field.value, amount: value.amount, asset: value.option })}
                     options={assets?.map((asset) => `${asset.code}:${asset.id}`) ?? []}
                     error={(error as any)?.asset?.message ?? (error as any)?.amount?.message}
-                    optionsDisabled={isEditMode}
+                    disabled={isEditMode}
                   />
                 )}
               />
@@ -993,6 +993,7 @@ export function ProductsModalContent({
                         { value: "year", label: "Yearly" },
                       ]}
                       error={error?.message}
+                      disabled={isEditMode}
                     />
                   )}
                 />
