@@ -64,7 +64,6 @@ export const useCheckout = (checkoutId: string) => {
 
     stellarWalletsKit.init({
       network: checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC,
-      checkoutDescription: checkout.description,
     });
 
     return () => {
@@ -104,10 +103,10 @@ export const useCheckout = (checkoutId: string) => {
         if ("error" in prepared) throw new Error(prepared.error);
 
         // Step 2: Customer signs the approval with their wallet
-        const { signedTxXdr } = await stellarWalletsKit.signTransaction(prepared.xdr, { address });
-
+        const { signedTxXdr, signerAddress } = await stellarWalletsKit.signTransaction(prepared.xdr, { address });
+        console.log({ signerAddress });
         // Step 3: Server submits approval + calls `start` on the engine (first payment via transfer_from)
-        const result = await finalizeSubscriptionCheckout(checkoutId, signedTxXdr);
+        const result = await finalizeSubscriptionCheckout(checkoutId, signedTxXdr, signerAddress!);
         if (!result.success) throw new Error(result.error ?? "Subscription setup failed");
       } else {
         // One-time payment: classic Stellar payment via Horizon

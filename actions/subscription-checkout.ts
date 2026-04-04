@@ -87,7 +87,8 @@ export async function prepareSubscriptionApproval(
  */
 export async function finalizeSubscriptionCheckout(
   checkoutId: string,
-  signedApprovalXDR: string
+  signedApprovalXDR: string,
+  customerAddress: string
 ): Promise<{ success: boolean; error?: string }> {
   const checkout = await retrieveCheckoutAndCustomer(checkoutId);
 
@@ -103,8 +104,8 @@ export async function finalizeSubscriptionCheckout(
     return { success: false, error: "Missing required checkout data" };
   }
 
-  const sd = checkout.subscriptionData as any;
-  if (!sd?.periodStart || !sd?.periodEnd || !sd?.customerAddress) {
+  const sd = checkout.subscriptionData;
+  if (!sd?.periodStart || !sd?.periodEnd) {
     return { success: false, error: "Period data missing — call prepareSubscriptionApproval first" };
   }
 
@@ -129,7 +130,7 @@ export async function finalizeSubscriptionCheckout(
 
     // Step 2: Backend calls `start` — engine does transfer_from for the first payment
     const startResult = await engine.startSubscription({
-      customerAddress: sd.customerAddress as string,
+      customerAddress,
       merchantAddress: checkout.merchantPublicKey,
       tokenContractId,
       productId: checkout.productId,
@@ -149,7 +150,7 @@ export async function finalizeSubscriptionCheckout(
 
     const subscriptionId = generateResourceId("sub", checkout.organizationId, 20);
 
-    const [payment] = await Promise.all([
+    await Promise.all([
       postPayment(
         {
           customerId: checkout.customerId,

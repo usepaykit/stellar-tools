@@ -4,9 +4,8 @@ import * as React from "react";
 
 import { Spinner } from "@/components/spinner";
 import { defaultModules } from "@creit-tech/stellar-wallets-kit/modules/utils";
-import { WalletConnectModule, WalletConnectTargetChain } from "@creit-tech/stellar-wallets-kit/modules/wallet-connect";
 import { StellarWalletsKit } from "@creit-tech/stellar-wallets-kit/sdk";
-import { activeAddress, closeEvent } from "@creit-tech/stellar-wallets-kit/state";
+import { activeAddress } from "@creit-tech/stellar-wallets-kit/state";
 import {
   KitEventType,
   Networks,
@@ -40,19 +39,7 @@ export class StellarWalletsKitApi {
 
     StellarWalletsKit.init({
       network,
-      modules: [
-        ...defaultModules(),
-        new WalletConnectModule({
-          projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-          metadata: {
-            name: "Stellar Tools",
-            description: "Stellar checkout payments",
-            icons: [`${process.env.NEXT_PUBLIC_APP_URL}/favicon.ico`],
-            url: process.env.NEXT_PUBLIC_APP_URL!,
-          },
-          allowedChains: isPublic ? [WalletConnectTargetChain.PUBLIC] : [WalletConnectTargetChain.TESTNET],
-        }),
-      ],
+      modules: [...defaultModules()],
       theme: this.buildTheme(),
     });
 
@@ -66,27 +53,8 @@ export class StellarWalletsKitApi {
 
   async connectWallet(): Promise<{ address: string }> {
     this.ensureInitialized();
-    const host = this.ensureHost();
-    host.classList.remove("open");
-
-    const stopSpinner = observeAndInjectSpinner(host);
-    const closeOnBackdrop = (e: MouseEvent) => e.target === host && closeEvent.next();
-    const closeOnEscape = (e: KeyboardEvent) => (e.key === "Escape" || e.code === "Escape") && closeEvent.next();
-
-    host.addEventListener("click", closeOnBackdrop);
-    host.addEventListener("keydown", closeOnEscape);
-
-    try {
-      const authPromise = StellarWalletsKit.authModal({ container: host });
-      await new Promise((r) => window.requestAnimationFrame(r));
-      host.classList.add("open");
-      return await authPromise;
-    } finally {
-      stopSpinner();
-      host.removeEventListener("click", closeOnBackdrop);
-      host.removeEventListener("keydown", closeOnEscape);
-      host.classList.remove("open");
-    }
+    const authPromise = StellarWalletsKit.authModal({ container: undefined });
+    return await authPromise;
   }
 
   getAddressSync = () => (typeof window !== "undefined" ? activeAddress.value || null : null);
@@ -113,20 +81,6 @@ export class StellarWalletsKitApi {
 
   private ensureInitialized() {
     if (!this.isInitialized) throw new Error("StellarWalletsKitApi not initialized");
-  }
-
-  private ensureHost(): HTMLDivElement {
-    if (typeof window === "undefined") throw new Error("Client-side only");
-    if (this.host) return this.host;
-
-    const existing = document.getElementById("swk-auth-modal-host") as HTMLDivElement;
-    if (existing) return (this.host = existing);
-
-    const host = document.createElement("div");
-    host.id = "swk-auth-modal-host";
-    host.className = "swk-auth-modal-host";
-    document.body.appendChild(host);
-    return (this.host = host);
   }
 
   private buildTheme(): SwkAppTheme {

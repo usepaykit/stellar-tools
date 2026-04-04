@@ -1,5 +1,4 @@
-import { retrieveCheckouts } from "@/actions/checkout";
-import { postPayment, sweepAndProcessPayment } from "@/actions/payment";
+import { postPayment } from "@/actions/payment";
 import { putSubscription, retrieveDueSubscriptions } from "@/actions/subscription";
 import { Network } from "@/db";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
@@ -32,46 +31,7 @@ export class CronJobApi {
   }
 
   getFunctions() {
-    return [this.sweepOpenCheckouts(), this.chargeDueSubscriptions()];
-  }
-
-  private sweepOpenCheckouts() {
-    return this.client.createFunction(
-      {
-        id: "sweep-open-checkouts",
-        name: "Sweep Open Checkouts Every 5 Seconds",
-      },
-      { cron: "* * * * *" }, // Every minute
-      async ({ step }) => {
-        console.log("Sweeping open checkouts");
-        const checkouts = await step.run("fetch-open-checkouts", async () => {
-          return await retrieveCheckouts(undefined, undefined, { status: "open" }, true);
-        });
-
-        console.log({ checkouts });
-
-        const results = await step.run("process-payments", async () => {
-          return await Promise.allSettled(
-            checkouts.map((checkout) =>
-              sweepAndProcessPayment(checkout.id).catch((error) => ({
-                checkoutId: checkout.id,
-                error: error.message,
-              }))
-            )
-          );
-        });
-
-        const succeeded = results.filter((r) => r.status === "fulfilled").length;
-        const failed = results.filter((r) => r.status === "rejected").length;
-
-        return {
-          total: checkouts.length,
-          succeeded,
-          failed,
-          timestamp: new Date().toISOString(),
-        };
-      }
-    );
+    return [this.chargeDueSubscriptions()];
   }
 
   private chargeDueSubscriptions() {

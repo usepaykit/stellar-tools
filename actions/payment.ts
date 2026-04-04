@@ -395,6 +395,8 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       1 * 60 // 1 minute
     );
 
+    console.log({ accessToken });
+
     const api = new ApiClient({
       baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
       headers: { "x-auth-token": accessToken },

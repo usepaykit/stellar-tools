@@ -6,6 +6,7 @@ import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/or
 import {
   Checkout,
   Network,
+  Product,
   accounts,
   assets,
   checkouts,
@@ -100,11 +101,14 @@ export const retrieveCheckouts = async (
   orgId?: string,
   env?: Network,
   parameters?: { status?: CheckoutStatus },
-  overrideOrganizationContext?: boolean
-) => {
+  overrideOrganizationContext?: boolean,
+  options?: { withProduct?: boolean }
+): Promise<{ checkout: Checkout; product?: Product }[]> => {
   if (overrideOrganizationContext) {
     return await db
-      .select()
+      .select({
+        checkout: checkouts,
+      })
       .from(checkouts)
       .where(and(...(parameters?.status ? [eq(checkouts.status, parameters.status)] : [])));
   }
@@ -112,13 +116,17 @@ export const retrieveCheckouts = async (
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   return await db
-    .select()
+    .select({
+      checkout: checkouts,
+      product: products,
+    })
     .from(checkouts)
     .where(
       and(
         eq(checkouts.organizationId, organizationId),
         eq(checkouts.environment, environment),
-        ...(parameters?.status ? [eq(checkouts.status, parameters.status)] : [])
+        ...(parameters?.status ? [eq(checkouts.status, parameters.status)] : []),
+        ...(options?.withProduct ? [eq(checkouts.productId, products.id)] : [])
       )
     );
 };
