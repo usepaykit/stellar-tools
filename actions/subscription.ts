@@ -2,9 +2,11 @@
 
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
+import { SubscriptionStatus } from "@/constant/schema.client";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
 import { computeDiff } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
+import { OverrideProps, Prettify } from "@stellartools/core";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 export const postSubscriptionsBulk = async (
@@ -12,7 +14,7 @@ export const postSubscriptionsBulk = async (
     id: string;
     customerIds: string[];
     productId: string;
-    period: { from: Date; to: Date };
+    period: { from: string; to: string };
     cancelAtPeriodEnd: boolean;
     metadata: Record<string, unknown> | null;
   },
@@ -30,8 +32,8 @@ export const postSubscriptionsBulk = async (
         status: "active" as const,
         organizationId,
         environment,
-        currentPeriodStart: params.period.from,
-        currentPeriodEnd: params.period.to,
+        currentPeriodStart: new Date(params.period.from),
+        currentPeriodEnd: new Date(params.period.to),
         cancelAtPeriodEnd: params.cancelAtPeriodEnd,
       }));
 
@@ -82,18 +84,40 @@ export const postSubscriptionsBulk = async (
   );
 };
 
-export const retrieveSubscription = async (id: string) => {
-  const [subscription] = await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1);
+export const retrieveSubscription = async (id: string, orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const [subscription] = await db
+    .select()
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.id, id),
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment)
+      )
+    )
+    .limit(1);
 
   if (!subscription) throw new Error("Subscription not found");
 
   return subscription;
 };
 
-export const retrieveSubscriptions = async (orgId?: string, env?: Network) => {
+type SubscriptionRow<S extends SubscriptionStatus> = {
+  subscription: OverrideProps<Subscription, { status: S }>;
+  customer: { name: string | null; email: string | null };
+  product: { name: string; priceAmount: number };
+};
+
+export const retrieveSubscriptions = async <S extends SubscriptionStatus = SubscriptionStatus>(
+  orgId?: string,
+  env?: Network,
+  filters?: { customerId?: string; status?: S }
+): Promise<SubscriptionRow<S>[]> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  return await db
+  const results = await db
     .select({
       subscription: subscriptions,
       customer: { name: customers.name, email: customers.email },
@@ -102,8 +126,17 @@ export const retrieveSubscriptions = async (orgId?: string, env?: Network) => {
     .from(subscriptions)
     .innerJoin(customers, eq(subscriptions.customerId, customers.id))
     .innerJoin(products, eq(subscriptions.productId, products.id))
-    .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptions.environment, environment)))
+    .where(
+      and(
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment),
+        filters?.customerId ? eq(subscriptions.customerId, filters.customerId) : undefined,
+        filters?.status ? eq(subscriptions.status, filters.status) : undefined
+      )
+    )
     .orderBy(desc(subscriptions.createdAt));
+
+  return results as Prettify<SubscriptionRow<S>[]>;
 };
 
 export const listSubscriptions = async (customerId: string, orgId?: string, env?: Network) => {

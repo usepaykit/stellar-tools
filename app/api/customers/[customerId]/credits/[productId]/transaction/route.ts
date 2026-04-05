@@ -30,7 +30,7 @@ export const POST = async (
       const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
 
       const [{ product }, creditBalance] = await Promise.all([
-        retrieveProducts(organizationId, environment, productId).then(([product]) => product),
+        retrieveProducts(organizationId, environment, { productId }).then(([product]) => product),
         retrieveCreditBalance(customerId, productId, organizationId),
       ]);
 

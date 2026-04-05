@@ -82,7 +82,7 @@ function Button({
                 transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                 className="flex items-center justify-center"
               >
-                <Spinner />
+                <Spinner size={25} />
               </motion.span>
             )}
           </AnimatePresence>

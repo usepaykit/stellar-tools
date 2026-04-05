@@ -28,7 +28,6 @@ export class SorobanContractApi {
   async buildApprovalXdr(params: {
     customerAddress: string;
     tokenContractId: string;
-    /** Total allowance in stroops (base units). Should cover many billing periods. */
     amount: bigint;
   }): Promise<Result<string, Error>> {
     try {
@@ -55,6 +54,7 @@ export class SorobanContractApi {
         .build();
 
       const simulation = await this.server.simulateTransaction(tx);
+
       if (StellarSDK.rpc.Api.isSimulationError(simulation)) {
         return Result.err(new Error(`Approval simulation failed: ${simulation.error}`));
       }
@@ -121,11 +121,9 @@ export class SorobanContractApi {
     merchantAddress: string;
     tokenContractId: string;
     productId: string;
-    /** Amount in stroops */
     amountStroops: bigint;
-    /** Period duration in seconds */
     durationSeconds: number;
-  }): Promise<Result<{ hash: string; events: any[] }, Error>> {
+  }): Promise<Result<{ hash: string; events: Array<any>; customerWalletAddress: string }, Error>> {
     const operation = this.contract.call(
       "start",
       StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
@@ -140,28 +138,24 @@ export class SorobanContractApi {
     return await this.invoke(operation);
   }
 
-  async pauseSubscription(customerAddress: string, productId: string): Promise<void> {
+  async pauseSubscription(customerAddress: string, productId: string) {
     const operation = this.contract.call(
       "pause",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
       StellarSDK.nativeToScVal(productId, { type: "string" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
-    const result = await this.invoke(operation);
-    if (result.isErr()) throw new Error(result.error.message);
-    return result.value;
+    return await this.invoke(operation);
   }
 
-  async resumeSubscription(customerAddress: string, productId: string): Promise<void> {
+  async resumeSubscription(customerAddress: string, productId: string) {
     const operation = this.contract.call(
       "resume",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
       StellarSDK.nativeToScVal(productId, { type: "string" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
-    const result = await this.invoke(operation);
-    if (result.isErr()) throw new Error(result.error.message);
-    return result.value;
+    return await this.invoke(operation);
   }
 
   async cancelSubscription(customerAddress: string, productId: string) {
@@ -191,7 +185,7 @@ export class SorobanContractApi {
     status: SubscriptionStatus | null,
     periodDuration: number | null,
     periodEnd: number | null
-  ): Promise<Result<string, Error>> {
+  ): Promise<Result<{ hash: string; events: Array<any>; customerWalletAddress: string }, Error>> {
     const operation = this.contract.call(
       "update",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
@@ -229,13 +223,14 @@ export class SorobanContractApi {
       StellarSDK.nativeToScVal(customer, { type: "address" }),
       StellarSDK.nativeToScVal(productId, { type: "string" })
     );
+
     return await this.invoke(operation);
   }
 
   private async invoke(
     operation: StellarSDK.xdr.Operation,
     options: { readOnly?: boolean } = {}
-  ): Promise<Result<any, Error>> {
+  ): Promise<Result<{ hash: string; events: Array<any>; customerWalletAddress: string }, Error>> {
     try {
       // 1. Prepare Base Transaction
       const source = await this.server.getAccount(this.sourceKeypair.publicKey());
@@ -255,7 +250,9 @@ export class SorobanContractApi {
 
       // If read-only, we stop here and return the ScVal
       if (options.readOnly) {
-        return Result.ok(simulation.result?.retval);
+        console.dir({ simulation }, { depth: 1000 });
+        return null as any;
+        // return Result.ok(simulation.transactionData.getReadOnly()[0] as any);
       }
 
       // 3. Assemble & Sign (Adds footprint/resources from simulation)
@@ -270,6 +267,7 @@ export class SorobanContractApi {
 
       const pollResult = await this.pollForTransaction(response.hash);
       if (pollResult.isErr()) return pollResult;
+      console.log({ pollResult });
       return Result.ok(pollResult.value);
     } catch (e) {
       if (e instanceof Error) return Result.err(e);

@@ -416,11 +416,17 @@ export default function CustomerDetailPage() {
                           toast.success("Copied");
                         },
                       },
+                      {
+                        label: "View Details",
+                        onClick: (p) => {
+                          router.push(`/transactions/${p.id}`);
+                        },
+                      },
                     ];
 
                     if (!row.refunded) {
                       actions.push({
-                        label: "Refund payment",
+                        label: "Refund Payment",
                         onClick: (p) => {
                           openRefundModal(p.id);
                           setPaymentToRefund(payments?.find(({ id }) => p.id == id) ?? null);
@@ -612,12 +618,6 @@ function CheckoutModalContent({
     );
   }, [productsData]);
 
-  const selectedProductId = form.watch("productId");
-  const selectedProduct = React.useMemo(
-    () => products.find((p) => p.value === selectedProductId),
-    [products, selectedProductId]
-  );
-
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof checkoutSchema>) => {
       if (!orgContext) throw new Error("No organization context found");
@@ -629,34 +629,6 @@ function CheckoutModalContent({
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 1);
 
-      let subscriptionData = undefined;
-
-      if (selectedProduct?.type === "subscription") {
-        const periodStart = new Date();
-        const periodEnd = new Date();
-
-        switch (selectedProduct.recurringPeriod) {
-          case "day":
-            periodEnd.setDate(periodEnd.getDate() + 1);
-            break;
-          case "week":
-            periodEnd.setDate(periodEnd.getDate() + 7);
-            break;
-          case "month":
-            periodEnd.setMonth(periodEnd.getMonth() + 1);
-            break;
-          case "year":
-            periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-            break;
-        }
-
-        subscriptionData = {
-          periodStart,
-          periodEnd,
-          cancelAtPeriodEnd: false,
-        };
-      }
-
       const response = await api.post<Checkout>("/checkout?type=product", {
         customerId,
         customerEmail: undefined,
@@ -664,7 +636,6 @@ function CheckoutModalContent({
         productId: data.productId,
         description: data.description,
         redirectUrl: data.redirectUrl || undefined,
-        subscriptionData,
         metadata: null,
       });
 

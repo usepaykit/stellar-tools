@@ -99,7 +99,7 @@ export const createSubscription = (options: BillingConfig) =>
   );
 
 export const listSubscriptions = (options: BillingConfig) =>
-  createAuthEndpoint("/stellar/subscription/list", { method: "GET", use: [sessionMiddleware] }, async (ctx) => {
+  createAuthEndpoint("/stellar/subscriptions/list", { method: "GET", use: [sessionMiddleware] }, async (ctx) => {
     const { user, stellar } = getContext(ctx, options);
     return ctx.json(await stellar.subscriptions.list(user.stellarCustomerId));
   });

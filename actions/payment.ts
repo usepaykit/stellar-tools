@@ -3,7 +3,12 @@
 import { applyPaymentFee } from "@/actions/billing";
 import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
-import { createCustomerWallet, retrieveCustomerWallets, retrieveCustomers } from "@/actions/customers";
+import {
+  createCustomerWallet,
+  retrieveCustomerWallets,
+  retrieveCustomers,
+  upsertCustomerWallet,
+} from "@/actions/customers";
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
@@ -33,6 +38,7 @@ import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
 import { ApiClient, Result } from "@stellartools/core";
+import { all } from "better-all";
 import { and, count, desc, eq } from "drizzle-orm";
 import moment from "moment";
 
@@ -48,17 +54,24 @@ async function loadPaymentContext(
   organizationId: string,
   environment: Network
 ): Promise<PaymentContext> {
-  const [org, customer, checkout] = await Promise.all([
-    retrieveOrganization(organizationId),
-    payment.customerId
-      ? retrieveCustomers({ id: payment.customerId }, undefined, organizationId, environment).then((res) => res[0])
-      : undefined,
-    payment.checkoutId ? retrieveCheckout(payment.checkoutId) : undefined,
-  ]);
-
-  const product = checkout?.productId
-    ? await retrieveProducts(organizationId, environment, checkout.productId).then((res) => res[0]?.product)
-    : undefined;
+  const { org, customer, checkout, product } = await all({
+    org: async () => retrieveOrganization(organizationId),
+    customer: async () => {
+      if (!payment.customerId) return undefined;
+      return retrieveCustomers({ id: payment.customerId }, undefined, organizationId, environment).then(
+        (res) => res[0]
+      );
+    },
+    checkout: async () => {
+      if (!payment.checkoutId) return undefined;
+      return retrieveCheckout(payment.checkoutId, organizationId, environment);
+    },
+    async product() {
+      const productId = (await this.$.checkout)?.productId ?? undefined;
+      if (!productId) return undefined;
+      return retrieveProducts(organizationId, environment, { productId }).then((res) => res[0]?.product);
+    },
+  });
 
   return { org, customer, product, checkout };
 }
@@ -127,6 +140,8 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
       // Load all data once
       const ctx = await loadPaymentContext(payment, organizationId, environment);
       const emailApi = new EmailApi();
+
+      console.log({ ctx });
 
       // Customer Receipt
       if (ctx.customer?.email) {
@@ -200,14 +215,12 @@ export const postPayment = async (
   let customerWalletId: string | null = null;
 
   if (params?.customerId && options?.customerWalletAddress) {
-    customerWalletId = (
-      await retrieveCustomerWallets(
-        params.customerId,
-        { walletAddress: options.customerWalletAddress },
-        organizationId,
-        environment
-      )
-    )?.[0]?.id;
+    customerWalletId = await upsertCustomerWallet(
+      params.customerId,
+      { walletAddress: options.customerWalletAddress },
+      organizationId,
+      environment
+    ).then((w) => w?.id ?? null);
   }
 
   return paymentActionHandler(
@@ -381,7 +394,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
         },
         organizationId,
         environment,
-        { assetId, assetCode: assetCode ?? undefined }
+        { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
       ),
     ]);
     return checkout;

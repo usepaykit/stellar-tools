@@ -38,7 +38,9 @@ const STATUS_CONFIG = {
 
 export default function SubscriptionsPage() {
   const invalidate = useInvalidateOrgQuery();
-  const { data: subs, isLoading } = useOrgQuery(["subscriptions"], () => retrieveSubscriptions());
+  const { data: subs, isLoading } = useOrgQuery(["subscriptions"], () =>
+    retrieveSubscriptions(undefined, undefined, { status: "active" })
+  );
 
   const openCreateModal = () => {
     AppModal.open({
@@ -114,7 +116,7 @@ export default function SubscriptionsPage() {
 const subscriptionSchema = Schema.object({
   customerIds: Schema.array(Schema.string()),
   productId: Schema.string(),
-  billingPeriod: Schema.object({ from: Schema.date(), to: Schema.date() }),
+  billingPeriod: Schema.object({ from: Schema.date(), to: Schema.date() }).nullable(),
   cancelAtPeriodEnd: Schema.boolean(),
 });
 
@@ -122,12 +124,14 @@ type Subscription = Schema.infer<typeof subscriptionSchema>;
 
 export function CreateSubscriptionModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { data: allCustomers, isLoading: isLoadingCustomers } = useOrgQuery(["customers"], () => retrieveCustomers());
-  const { data: allProducts, isLoading: isLoadingProducts } = useOrgQuery(["products"], () => retrieveProducts());
+  const { data: allProducts, isLoading: isLoadingProducts } = useOrgQuery(["products"], () =>
+    retrieveProducts(undefined, undefined, { status: "active" })
+  );
 
-  const [form, setForm] = React.useState({
+  const [form, setForm] = React.useState<Subscription>({
     customerIds: [] as string[],
     productId: "",
-    billingPeriod: { from: moment().toDate(), to: moment().add(30, "days").toDate() },
+    billingPeriod: null,
     cancelAtPeriodEnd: false,
   });
 
@@ -219,7 +223,7 @@ export function CreateSubscriptionModalContent({ onClose, onSuccess }: { onClose
               id="billingPeriod"
               mode="range"
               label="Active Period"
-              value={form.billingPeriod}
+              value={form.billingPeriod ?? undefined}
               onChange={(p: any) => setForm({ ...form, billingPeriod: p })}
             />
             <div className="flex items-start gap-3">
@@ -244,11 +248,11 @@ export function CreateSubscriptionModalContent({ onClose, onSuccess }: { onClose
             <div className="space-y-3">
               <div className="flex justify-between text-[11px]">
                 <span>Activation</span>
-                <span className="font-mono">{formatDate(form.billingPeriod.from)}</span>
+                <span className="font-mono">{formatDate(form.billingPeriod?.from ?? new Date())}</span>
               </div>
               <div className="flex justify-between text-[11px]">
                 <span>Termination</span>
-                <span className="font-mono">{formatDate(form.billingPeriod.to)}</span>
+                <span className="font-mono">{formatDate(form.billingPeriod?.to ?? new Date())}</span>
               </div>
               <Separator />
               <div className="flex items-end justify-between">

@@ -1,6 +1,6 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, token, Address, Env, Symbol, symbol_short
+    contract, contractimpl, contracttype, token, Address, Env, String, symbol_short
 };
 
 #[contracttype]
@@ -25,9 +25,9 @@ pub struct SubscriptionEngine;
 
 #[contractimpl]
 impl SubscriptionEngine {
-    /// Initial signature by Customer. 
+    /// Initial signature by Customer.
     /// Bundles Approval + Start + First Payment.
-    pub fn start(e: Env, customer: Address, merchant: Address, token: Address, product_id: Symbol, amount: i128, duration: u64, caller: Address) {
+    pub fn start(e: Env, customer: Address, merchant: Address, token: Address, product_id: String, amount: i128, duration: u64, caller: Address) {
         caller.require_auth();
 
         // Transfer first payment immediately
@@ -42,7 +42,7 @@ impl SubscriptionEngine {
             period_end: e.ledger().timestamp() + duration,
             status: Status::Active,
         };
-        
+
         e.storage().persistent().set(&(customer.clone(), product_id.clone()), &sub);
 
         // Emit event for backend indexing
@@ -51,7 +51,7 @@ impl SubscriptionEngine {
 
     /// Backend/Cron calls this.
     /// If this returns without error, the payment WAS successful.
-    pub fn charge(e: Env, customer: Address, product_id: Symbol) {
+    pub fn charge(e: Env, customer: Address, product_id: String) {
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).expect("Sub not found");
 
@@ -70,9 +70,9 @@ impl SubscriptionEngine {
         e.events().publish((symbol_short!("sub_pay"), customer, product_id), (sub.amount, sub.period_end));
     }
 
-    pub fn resume(e: Env, customer: Address, product_id: Symbol, caller: Address) {
+    pub fn resume(e: Env, customer: Address, product_id: String, caller: Address) {
         caller.require_auth();
-        
+
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
 
@@ -83,35 +83,35 @@ impl SubscriptionEngine {
         e.events().publish((symbol_short!("sub_res"), customer, product_id), ());
     }
 
-    pub fn pause(e: Env, customer: Address, product_id: Symbol, caller: Address) {
+    pub fn pause(e: Env, customer: Address, product_id: String, caller: Address) {
         caller.require_auth();
 
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
-        
+
 
         sub.status = Status::Paused;
         e.storage().persistent().set(&key, &sub);
         e.events().publish((symbol_short!("sub_pau"), customer, product_id), ());
     }
 
-    pub fn cancel(e: Env, customer: Address, product_id: Symbol, caller: Address) {
+    pub fn cancel(e: Env, customer: Address, product_id: String, caller: Address) {
         caller.require_auth();
-        
+
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
-        
+
         sub.status = Status::Canceled;
         e.storage().persistent().set(&key, &sub);
         e.events().publish((symbol_short!("sub_can"), customer, product_id), ());
     }
 
-    pub fn update(e: Env, customer: Address, product_id: Symbol, status: Status, period_duration: u64, period_end: u64, caller: Address) {
+    pub fn update(e: Env, customer: Address, product_id: String, status: Status, period_duration: u64, period_end: u64, caller: Address) {
         caller.require_auth();
-        
+
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
-        
+
         sub.status = status;
         sub.period_duration = period_duration;
         sub.period_end = period_end;
@@ -120,7 +120,7 @@ impl SubscriptionEngine {
     }
 
 
-    pub fn get_subscription(e: Env, customer: Address, product_id: Symbol) -> Subscription {
+    pub fn get_subscription(e: Env, customer: Address, product_id: String) -> Subscription {
         e.storage().persistent().get(&(customer, product_id)).expect("Sub not found")
     }
 }

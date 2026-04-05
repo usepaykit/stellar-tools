@@ -19,8 +19,10 @@ export const POST = apiHandler({
     if (!customerWallet?.address) throw new Error("Customer wallet not found");
 
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-    await api.pauseSubscription(customerWallet.address, subscription.productId);
+    const response = await api.pauseSubscription(customerWallet.address, subscription.productId);
 
+    console.log({ response });
+    
     return await putSubscription(id, { status: "paused", pausedAt: new Date() }, organizationId, environment).then(
       Result.ok
     );

@@ -1,28 +1,28 @@
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { retrieveCustomerWallets } from "@/actions/customers";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
-import { Result, z as Schema, updateSubscriptionSchema, validateSchema } from "@stellartools/core";
-import { NextRequest, NextResponse } from "next/server";
+import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { Result, z as Schema, updateSubscriptionSchema } from "@stellartools/core";
+import { all } from "better-all";
 
-export const GET = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const { id } = await context.params;
+export const OPTIONS = createOptionsHandler();
 
-  const apiKey = req.headers.get("x-api-key");
-  const authToken = req.headers.get("x-auth-token");
-  const portalToken = req.headers.get("x-portal-token");
-
-  if (!apiKey && !authToken && !portalToken) {
-    return NextResponse.json({ error: "API key or Auth Token is required" }, { status: 400 });
-  }
-
-  const result = await Result.andThenAsync(validateSchema(Schema.string(), id), async (id) => {
-    const { environment } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken, portalToken);
+export const GET = apiHandler({
+  auth: ["session", "apikey", "portal"],
+  schema: { params: Schema.object({ id: Schema.string() }) },
+  handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-
-    const subscription = await retrieveSubscription(id);
-    const [customerWallet] = await retrieveCustomerWallets(subscription.customerId, {
-      id: subscription.customerWalletId,
+    const { subscription, customerWallet } = await all({
+      subscription: async () => retrieveSubscription(id, organizationId, environment),
+      async customerWallet() {
+        const subscription = await this.$.subscription;
+        return await retrieveCustomerWallets(
+          subscription.customerId,
+          { id: subscription.customerWalletId },
+          organizationId,
+          environment
+        ).then(([w]) => w ?? null);
+      },
     });
 
     if (!customerWallet?.address) {
@@ -33,68 +33,49 @@ export const GET = async (req: NextRequest, context: { params: Promise<{ id: str
 
     if (!onchainSubscription) return Result.err(new Error("Subscription not found"));
 
-    return Result.ok(subscription);
-  });
+    return Result.ok({ ...subscription, ...onchainSubscription });
+  },
+});
 
-  if (result.isErr()) {
-    if (result.error instanceof Error) {
-      return NextResponse.json({ error: result.error.message }, { status: 404 });
+export const PUT = apiHandler({
+  auth: ["session", "apikey", "portal"],
+  schema: { body: updateSubscriptionSchema, params: Schema.object({ id: Schema.string() }) },
+  handler: async ({ body: { metadata, cancelAtPeriodEnd }, params: { id }, auth: { organizationId, environment } }) => {
+    const { subscription, customerWallet } = await all({
+      subscription: async () => retrieveSubscription(id, organizationId, environment),
+      async customerWallet() {
+        const subscription = await this.$.subscription;
+        return await retrieveCustomerWallets(
+          subscription.customerId,
+          { id: subscription.customerWalletId },
+          organizationId,
+          environment
+        ).then(([w]) => w ?? null);
+      },
+    });
+
+    if (!customerWallet?.address) return Result.err(new Error("Customer wallet not found"));
+
+    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
+
+    let cancellationResult: Awaited<ReturnType<typeof api.cancelSubscription>> | null = null;
+
+    if (cancelAtPeriodEnd) {
+      cancellationResult = await api.cancelSubscription(customerWallet.address, subscription.productId);
     }
-    return NextResponse.json({ error: "Failed to retrieve subscription" }, { status: 404 });
-  }
 
-  return NextResponse.json({ data: result.value });
-};
+    if (cancellationResult?.isErr()) return Result.err(cancellationResult.error);
 
-export const PUT = async (req: NextRequest, context: { params: Promise<{ id: string }> }) => {
-  const { id } = await context.params;
+    const updatedSubscription = await putSubscription(
+      id,
+      {
+        ...(cancelAtPeriodEnd && { cancelAtPeriodEnd }),
+        ...(metadata && { metadata: { ...(subscription.metadata ?? {}), ...metadata } }),
+      },
+      organizationId,
+      environment
+    );
 
-  const apiKey = req.headers.get("x-api-key");
-  const authToken = req.headers.get("x-auth-token");
-  const portalToken = req.headers.get("x-portal-token");
-
-  if (!apiKey && !authToken && !portalToken) {
-    return NextResponse.json({ error: "API key or Auth Token is required" }, { status: 400 });
-  }
-
-  const result = await Result.andThenAsync(
-    validateSchema(updateSubscriptionSchema, await req.json()),
-    async ({ metadata, cancelAtPeriodEnd }) => {
-      const { environment, organizationId } = await resolveApiKeyOrAuthorizationToken(apiKey, authToken, portalToken);
-      const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-
-      const subscription = await retrieveSubscription(id);
-      const [customerWallet] = await retrieveCustomerWallets(subscription.customerId, {
-        id: subscription.customerWalletId,
-      });
-
-      if (!customerWallet?.address) return Result.err(new Error("Customer wallet not found"));
-
-      let cancellationResult: Result<string, Error> | null = null;
-
-      if (cancelAtPeriodEnd) {
-        cancellationResult = await api.cancelSubscription(customerWallet.address, subscription.productId);
-      }
-
-      if (cancellationResult?.isErr()) return Result.err(cancellationResult.error);
-
-      const updatedSubscription = await putSubscription(
-        id,
-        {
-          ...(cancelAtPeriodEnd !== undefined && { cancelAtPeriodEnd }),
-          ...(metadata && { metadata: { ...(subscription.metadata ?? {}), ...metadata } }),
-        },
-        organizationId,
-        environment
-      );
-
-      return Result.ok(updatedSubscription);
-    }
-  );
-
-  if (result.isErr()) {
-    return NextResponse.json({ error: result.error.message }, { status: 404 });
-  }
-
-  return NextResponse.json({ data: result.value });
-};
+    return Result.ok(updatedSubscription);
+  },
+});

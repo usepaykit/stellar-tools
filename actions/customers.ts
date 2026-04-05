@@ -511,6 +511,31 @@ export const retrieveCustomerWallets = async (
     );
 };
 
+export const upsertCustomerWallet = async (
+  customerId: string,
+  lookUpKey: { walletAddress?: string | null } | { id?: string | null },
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  let wallet = await retrieveCustomerWallets(customerId, lookUpKey, organizationId, environment).then(
+    ([w]) => w ?? null
+  );
+
+  if (wallet) return wallet;
+
+  if ("walletAddress" in lookUpKey && lookUpKey.walletAddress) {
+    wallet = await createCustomerWallet(organizationId, environment, {
+      address: lookUpKey.walletAddress!,
+      customerId,
+      metadata: null,
+    });
+  }
+
+  return wallet;
+};
+
 export const deleteCustomerPortalWallet = async (walletId: string, token: string) => {
   const session = await retrieveCustomerPortalSession(token);
 

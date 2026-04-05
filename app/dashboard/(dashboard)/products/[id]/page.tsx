@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { getCurrentOrganization } from "@/actions/organization";
-import { retrieveProductsWithAsset } from "@/actions/product";
+import { retrieveProducts } from "@/actions/product";
 import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -172,7 +172,7 @@ export default function ProductDetailPage() {
 
   const { data: product, isLoading } = useOrgQuery(
     ["products", id],
-    () => retrieveProductsWithAsset(undefined, undefined, id),
+    () => retrieveProducts(undefined, undefined, { productId: id }),
     {
       select: (data) => {
         const first = data[0];

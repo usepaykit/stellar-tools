@@ -1,17 +1,14 @@
 "use server";
 
 import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
+import { postSubscriptionsBulk } from "@/actions/subscription";
 import { subscriptionIntervals } from "@/constant";
-import { db } from "@/db";
-import { checkouts } from "@/db";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
-import { eq } from "drizzle-orm";
-
-import { runAtomic } from "./event";
-import { postSubscriptionsBulk } from "./subscription";
+import moment from "moment";
 
 /**
  * Builds a prepared (simulated) Soroban `approve` transaction XDR for the customer to sign.
@@ -40,14 +37,13 @@ export async function prepareSubscriptionApproval(
     );
 
     const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
-    const durationSeconds = durationDays * 86400;
     const amountStroops = BigInt(Math.round(checkout.finalAmount * 1e7));
 
     const periodStart = new Date();
     const periodEnd = new Date(Date.now() + durationDays * 864e5);
 
-    // Approve 120 periods worth of allowance so recurring charges work without re-approval
-    const totalAllowance = amountStroops * BigInt(120);
+    // Approve 200 periods worth of allowance so recurring charges work without re-approval
+    const totalAllowance = amountStroops * BigInt(200);
 
     const engine = new SorobanContractApi(checkout.environment, process.env.KEEPER_SECRET!);
     const xdrResult = await engine.buildApprovalXdr({
@@ -57,19 +53,6 @@ export async function prepareSubscriptionApproval(
     });
 
     if (xdrResult.isErr()) return { error: xdrResult.error.message };
-
-    // Persist period info + customer address so finalizeSubscriptionCheckout can read them
-    await db
-      .update(checkouts)
-      .set({
-        subscriptionData: {
-          periodStart: periodStart.toISOString(),
-          periodEnd: periodEnd.toISOString(),
-          customerAddress,
-        } as any,
-        updatedAt: new Date(),
-      })
-      .where(eq(checkouts.id, checkoutId));
 
     return {
       xdr: xdrResult.value,
@@ -102,8 +85,7 @@ export async function finalizeSubscriptionCheckout(
     organizationId,
     environment,
     customerId,
-    finalAmount,
-    assetId,
+    subscriptionData,
   } = checkout;
 
   if (status !== "open") {
@@ -114,88 +96,82 @@ export async function finalizeSubscriptionCheckout(
     return { success: false, error: "Not a subscription checkout" };
   }
 
-  if (!assetCode || !productId || !merchantPublicKey) {
+  if (!assetCode || !productId || !merchantPublicKey || !customerId) {
     return { success: false, error: "Missing required checkout data" };
   }
 
-  const sd = checkout.subscriptionData;
-  if (!sd?.periodStart || !sd?.periodEnd) {
+  if (!subscriptionData?.periodStart || !subscriptionData?.periodEnd) {
     return { success: false, error: "Period data missing — call prepareSubscriptionApproval first" };
   }
 
-  try {
-    const stellar = new StellarCoreApi(checkout.environment);
-    const tokenContractId = await stellar.retrieveAssetContractId(
-      checkout.assetCode,
-      checkout.assetIssuer ?? undefined
+  const stellar = new StellarCoreApi(checkout.environment);
+  const tokenContractId = await stellar.retrieveAssetContractId(checkout.assetCode, checkout.assetIssuer ?? undefined);
+  const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
+
+  const durationSeconds = durationDays * 86400;
+  const amountStroops = BigInt(Math.round(checkout.finalAmount * 1e7));
+
+  const engine = new SorobanContractApi(checkout.environment, process.env.KEEPER_SECRET!);
+
+  const approvalResult = await engine.submitSignedSorobanTransaction(signedApprovalXDR);
+  if (approvalResult.isErr()) {
+    return { success: false, error: `Approval failed: ${approvalResult.error.message}` };
+  }
+
+  const startResult = await engine.startSubscription({
+    customerAddress,
+    merchantAddress: merchantPublicKey,
+    tokenContractId,
+    productId,
+    amountStroops,
+    durationSeconds,
+  });
+
+  if (startResult.isErr()) {
+    return { success: false, error: `Subscription start failed: ${startResult.error.message}` };
+  }
+
+  const { hash } = startResult.value;
+
+  const subscriptionId = generateResourceId("sub", checkout.organizationId, 20);
+
+  await runAtomic(async () => {
+    console.log({ checkout });
+    await putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment);
+
+    await postSubscriptionsBulk(
+      {
+        id: subscriptionId,
+        customerIds: [customerId],
+        productId: productId!,
+        period: { from: moment().toISOString(), to: moment().add(durationDays, "days").toISOString() },
+        cancelAtPeriodEnd: false,
+        metadata: null,
+      },
+      organizationId,
+      environment
     );
 
-    const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
-    const durationSeconds = durationDays * 86400;
-    const amountStroops = BigInt(Math.round(checkout.finalAmount * 1e7));
-
-    const engine = new SorobanContractApi(checkout.environment, process.env.KEEPER_SECRET!);
-
-    // Step 1: Submit the customer-signed approval transaction
-    const approvalResult = await engine.submitSignedSorobanTransaction(signedApprovalXDR);
-    if (approvalResult.isErr()) {
-      return { success: false, error: `Approval failed: ${approvalResult.error.message}` };
-    }
-
-    // Step 2: Backend calls `start` — engine does transfer_from for the first payment
-    const startResult = await engine.startSubscription({
-      customerAddress,
-      merchantAddress: merchantPublicKey,
-      tokenContractId,
-      productId,
-      amountStroops,
-      durationSeconds,
-    });
-
-    if (startResult.isErr()) {
-      return { success: false, error: `Subscription start failed: ${startResult.error.message}` };
-    }
-
-    const { hash } = startResult.value;
-
-    // Step 3: Record the payment, subscription, and mark checkout complete in parallel
-    const periodStart = new Date(sd.periodStart);
-    const periodEnd = new Date(sd.periodEnd);
-
-    const subscriptionId = generateResourceId("sub", checkout.organizationId, 20);
-
-    await runAtomic(async () => {
-      putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment);
-      postPayment(
-        {
-          customerId: checkout.customerId,
-          checkoutId,
-          amount: checkout.finalAmount,
-          transactionHash: hash,
-          status: "confirmed",
-          metadata: null,
-          assetId: checkout.assetId,
-          subscriptionId,
-        },
-        checkout.organizationId,
-        checkout.environment,
-        { assetId: checkout.assetId ?? undefined, assetCode: checkout.assetCode ?? undefined }
-      );
-
-      if (customerId) {
-        await postSubscriptionsBulk({
-          id: subscriptionId,
-          customerIds: [customerId],
-          productId: productId!,
-          period: { from: periodStart, to: periodEnd },
-          cancelAtPeriodEnd: false,
-          metadata: null,
-        });
+    await postPayment(
+      {
+        customerId: checkout.customerId,
+        checkoutId,
+        amount: checkout.finalAmount,
+        transactionHash: hash,
+        status: "confirmed",
+        metadata: null,
+        assetId: checkout.assetId,
+        subscriptionId,
+      },
+      organizationId,
+      environment,
+      {
+        assetId: checkout.assetId ?? undefined,
+        assetCode: checkout.assetCode ?? undefined,
+        customerWalletAddress: customerAddress,
       }
-    });
+    );
+  });
 
-    return { success: true };
-  } catch (e: any) {
-    return { success: false, error: e.message ?? "Subscription finalization failed" };
-  }
+  return { success: true };
 }

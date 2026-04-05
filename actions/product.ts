@@ -2,7 +2,7 @@
 
 import { retrieveAssets } from "@/actions/asset";
 import { resolveOrgContext, setupMerchantTrustline } from "@/actions/organization";
-import { Network, Product, assets, db, products } from "@/db";
+import { Network, Product, ProductStatus, assets, db, products } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
@@ -43,7 +43,11 @@ export const postProduct = async (
   return product;
 };
 
-export const retrieveProducts = async (orgId?: string, env?: Network, productId?: string) => {
+export const retrieveProducts = async (
+  orgId?: string,
+  env?: Network,
+  filters: { productId?: string; status?: ProductStatus } = {}
+) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const productsList = await db
@@ -56,34 +60,13 @@ export const retrieveProducts = async (orgId?: string, env?: Network, productId?
       and(
         eq(products.organizationId, organizationId),
         eq(products.environment, environment),
-        ...(productId ? [eq(products.id, productId)] : [])
+        ...(filters.productId ? [eq(products.id, filters.productId)] : []),
+        ...(filters.status ? [eq(products.status, filters.status)] : [])
       )
     )
     .innerJoin(assets, eq(products.assetId, assets.id));
 
   return productsList;
-};
-
-export const retrieveProductsWithAsset = async (orgId?: string, env?: Network, productId?: string) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const result = await db
-    .select({
-      product: products,
-      asset: assets,
-    })
-    .from(products)
-    .innerJoin(assets, eq(products.assetId, assets.id))
-    .where(
-      and(
-        eq(products.organizationId, organizationId),
-        eq(products.environment, environment),
-        eq(products.status, "active"),
-        ...(productId ? [eq(products.id, productId)] : [])
-      )
-    );
-
-  return result;
 };
 
 export const putProduct = async (id: string, organizationId: string, retUpdate: Partial<Product>) => {

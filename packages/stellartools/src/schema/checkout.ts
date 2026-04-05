@@ -11,12 +11,12 @@ export type SubscriptionData = {
   /**
    * The start date of the subscription.
    */
-  periodStart: Date;
+  periodStart: string;
 
   /**
    * The end date of the subscription.
    */
-  periodEnd: Date;
+  periodEnd: string;
 
   /**
    * Whether to cancel the subscription at the end of the current period.
@@ -108,8 +108,8 @@ export interface Checkout {
 
 export const subscriptionDataSchema = schemaFor<SubscriptionData>()(
   z.object({
-    periodStart: z.coerce.date(),
-    periodEnd: z.coerce.date(),
+    periodStart: z.string(),
+    periodEnd: z.string(),
     cancelAtPeriodEnd: z.boolean().default(false).optional(),
   })
 );
@@ -141,13 +141,6 @@ const baseCreateSchema = z.object({
   description: z.string().optional(),
   metadata: z.record(z.string(), z.any()).nullable().optional(),
   redirectUrl: z.string().optional(),
-  subscriptionData: z
-    .object({
-      periodStart: z.coerce.date(),
-      periodEnd: z.coerce.date(),
-      cancelAtPeriodEnd: z.boolean().default(false).optional(),
-    })
-    .optional(),
 });
 
 export const createCheckoutSchema = baseCreateSchema.extend({
@@ -172,37 +165,3 @@ export type UpdateCheckout = Pick<Checkout, "status" | "metadata">;
 export const retrieveCheckoutSchema = checkoutSchema.pick({
   id: true,
 });
-
-export interface CheckoutEmbedDetails {
-  /**
-   * The unique identifier for the checkout.
-   */
-  id: string;
-
-  /**
-   * The merchant address of the checkout.
-   */
-  merchantAddress: string;
-
-  /**
-   * The amount of the checkout.
-   */
-  amount: number;
-
-  /**
-   * The asset code of the checkout.
-   */
-  assetCode: string;
-
-  /**
-   * The QR code URL of the checkout.
-   * Can be rendered as an image in the browser.
-   * @example <img src="https://st.stellartools.dev/qr_1234567890.png" alt="QR Code" />
-   */
-  qrCodeUrl: string | null;
-
-  /**
-   * The expiration date of the checkout.
-   */
-  expiresAt: Date;
-}

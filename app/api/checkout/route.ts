@@ -1,9 +1,11 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { upsertCustomer } from "@/actions/customers";
-import { getCorsHeaders } from "@/constant";
+import { retrieveProducts } from "@/actions/product";
+import { getCorsHeaders, subscriptionIntervals } from "@/constant";
 import { createOptionsHandler } from "@/lib/api-handler";
 import { Result, createCheckoutSchema, createDirectCheckoutSchema, validateSchema } from "@stellartools/core";
+import moment from "moment";
 import { NextRequest, NextResponse } from "next/server";
 
 export const OPTIONS = createOptionsHandler();
@@ -48,6 +50,26 @@ export const POST = async (req: NextRequest) => {
         { name: customerEmail?.split("@")[0] ?? "Guest", metadata }
       );
 
+      let subscriptionData = null;
+
+      if ("productId" in data) {
+        const [{ product }] = await retrieveProducts(auth.organizationId, auth.environment, data.productId);
+
+        if (!product) return Result.err(new Error(`Product Not Found ${data.productId}`));
+
+        if (product.type == "subscription" && !product.recurringPeriod) {
+          return Result.err(new Error("Subscription product does not have a recurring period"));
+        }
+
+        const durationDays = subscriptionIntervals[product.recurringPeriod!];
+
+        subscriptionData = {
+          periodStart: moment().toISOString(),
+          periodEnd: moment().add(durationDays, "days").toISOString(),
+          cancelAtPeriodEnd: false,
+        };
+      }
+
       const payload = {
         organizationId: auth.organizationId,
         environment: auth.environment,
@@ -59,7 +81,7 @@ export const POST = async (req: NextRequest) => {
         metadata: data.metadata ?? {},
         description: data.description ?? null,
         redirectUrl: data.redirectUrl ?? null,
-        subscriptionData: data.subscriptionData ?? null,
+        subscriptionData,
         productId: checkoutType === "product" ? data.productId : null,
         amount: checkoutType === "direct" ? data.amount : null,
         assetCode: checkoutType === "direct" ? data.assetCode : null,

@@ -3,7 +3,6 @@ import { Result } from "better-result";
 import { ApiClient } from "../api-client";
 import {
   Checkout,
-  CheckoutEmbedDetails,
   CreateCheckout,
   CreateDirectCheckout,
   UpdateCheckout,
@@ -61,14 +60,6 @@ export class CheckoutApi {
     return unwrap(
       await Result.andThenAsync(validateSchema(retrieveCheckoutSchema, { id }), async (id) => {
         return await this.apiClient.delete<Checkout>(`checkout/${id}`);
-      })
-    );
-  }
-
-  async retrieveEmbedDetails(id: string) {
-    return unwrap(
-      await Result.andThenAsync(validateSchema(retrieveCheckoutSchema, { id }), async (id) => {
-        return await this.apiClient.get<CheckoutEmbedDetails>(`checkout/${id}/embed-details`);
       })
     );
   }

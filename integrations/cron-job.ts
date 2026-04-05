@@ -1,7 +1,6 @@
 import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { putSubscription, retrieveDueSubscriptions } from "@/actions/subscription";
-import { Network } from "@/db";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
 import { EventSchemas, Inngest } from "inngest";
 
@@ -41,43 +40,52 @@ export class CronJobApi {
         id: "charge-due-subscriptions",
         name: "Charge Due Subscriptions",
       },
-      { cron: "0 * * * *" }, // Every hour
+      { cron: "*/5 * * * *" },
       async ({ step }) => {
         const subs = await step.run("fetch-due-subscriptions", () => retrieveDueSubscriptions());
 
         const results = await step.run("process-charges", async () => {
           const keeperSecret = process.env.KEEPER_SECRET;
+
           if (!keeperSecret) return { processed: 0, succeeded: 0, failed: 0 };
 
           let succeeded = 0;
           let failed = 0;
 
           for (const sub of subs) {
+            const {
+              subscription: { organizationId, environment, id: subscriptionId, productId },
+              wallet: { address: walletAddress },
+            } = sub;
+
             try {
-              // 1. Handle Cancellations
               if (sub.subscription.cancelAtPeriodEnd) {
                 await runAtomic(async () => {
-                  await putSubscription(
-                    sub.subscription.id,
-                    { status: "canceled", canceledAt: new Date() },
-                    sub.subscription.organizationId,
-                    sub.subscription.environment
-                  );
+                  const api = new SorobanContractApi(environment, keeperSecret);
+
+                  const response = await api.cancelSubscription(walletAddress, productId);
+
+                  if (response.isOk()) {
+                    await putSubscription(
+                      subscriptionId,
+                      { status: "canceled", canceledAt: new Date() },
+                      organizationId,
+                      environment
+                    );
+                  }
                 });
+
                 succeeded += 1;
                 continue;
               }
-
-              const walletAddress = sub.wallet.address;
 
               if (!walletAddress) {
                 failed += 1;
                 continue;
               }
 
-              const env = sub.subscription.environment as Network;
-              const api = new SorobanContractApi(env, keeperSecret);
-              const result = await api.charge(walletAddress, sub.subscription.productId);
+              const api = new SorobanContractApi(environment, keeperSecret);
+              const result = await api.charge(walletAddress, productId);
 
               if (result.isErr()) {
                 failed += 1;
@@ -85,12 +93,14 @@ export class CronJobApi {
               }
 
               const paymentEvent = result.value.events.find((e: { topic: string }) => e.topic === "sub_pay");
+
+              console.log("paymentEvent", paymentEvent);
+
               if (!paymentEvent) {
                 failed += 1;
                 continue;
               }
 
-              // 2. Atomic Database Sync
               await runAtomic(async () => {
                 if (!paymentEvent.success) {
                   await postPayment(
@@ -108,7 +118,6 @@ export class CronJobApi {
                     sub.subscription.environment,
                     { customerWalletAddress: result.value.customerWalletAddress }
                   );
-                  // Throw to trigger catch block and increment failed count
                   throw new Error("On-chain payment failure recorded");
                 }
 

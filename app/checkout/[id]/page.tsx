@@ -59,7 +59,7 @@ export default function CheckoutPage() {
             {(checkout.organizationName || checkout.organizationLogo) && (
               <div className="flex items-center gap-3 border-b px-6 py-4">
                 {checkout.organizationLogo && (
-                  <div className="bg-muted relative size-10 shrink-0 overflow-hidden rounded-lg">
+                  <div className="relative size-10 shrink-0 overflow-hidden rounded-lg">
                     <Image
                       src={checkout.organizationLogo}
                       alt=""

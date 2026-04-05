@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { retrieveAssets } from "@/actions/asset";
 import { getCurrentOrganization } from "@/actions/organization";
-import { createProductImage, retrieveProductsWithAsset } from "@/actions/product";
+import { createProductImage, retrieveProducts } from "@/actions/product";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -317,34 +317,38 @@ function ProductsPageContent() {
     if (searchParams?.get("mode") === "create") openCreateModal();
   }, [searchParams?.get("mode"), openCreateModal]);
 
-  const { data: products, isLoading } = useOrgQuery(["products"], () => retrieveProductsWithAsset(), {
-    select: (productsData) => {
-      return productsData.map(({ product, asset }) => {
-        return {
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          pricing: {
-            amount: product.priceAmount,
-            asset: `${asset.code}:${asset.id}`,
-            isRecurring: product.type === "subscription",
-            period: product.recurringPeriod!,
-          },
-          status: product.status,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt,
-          type: product.type,
-          images: product.images,
-          metadata: product.metadata ?? {},
-          unit: product.unit ?? null,
-          unitDivisor: product.unitDivisor ?? null,
-          unitsPerCredit: product.unitsPerCredit ?? null,
-          creditsGranted: product.creditsGranted ?? null,
-          assetId: product.assetId ?? null,
-        };
-      });
-    },
-  });
+  const { data: products, isLoading } = useOrgQuery(
+    ["products"],
+    () => retrieveProducts(undefined, undefined, { status: "active" }),
+    {
+      select: (productsData) => {
+        return productsData.map(({ product, asset }) => {
+          return {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            pricing: {
+              amount: product.priceAmount,
+              asset: `${asset.code}:${asset.id}`,
+              isRecurring: product.type === "subscription",
+              period: product.recurringPeriod!,
+            },
+            status: product.status,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+            type: product.type,
+            images: product.images,
+            metadata: product.metadata ?? {},
+            unit: product.unit ?? null,
+            unitDivisor: product.unitDivisor ?? null,
+            unitsPerCredit: product.unitsPerCredit ?? null,
+            creditsGranted: product.creditsGranted ?? null,
+            assetId: product.assetId ?? null,
+          };
+        });
+      },
+    }
+  );
 
   const stats = React.useMemo(
     () => ({
