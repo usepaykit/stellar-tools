@@ -1,9 +1,10 @@
 "use server";
 
-import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
+import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Refund, refunds } from "@/db";
 import { db } from "@/db";
+import { EventTrigger, WebhookTrigger } from "@/types";
 import { and, desc, eq } from "drizzle-orm";
 
 export const postRefund = async (

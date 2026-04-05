@@ -27,7 +27,7 @@ export const postProduct = async (
 
   const [product] = await db
     .insert(products)
-    .values({ ...params, id: generateResourceId("prod", organizationId, 20), organizationId, environment })
+    .values({ ...params, id: generateResourceId("prod", organizationId, 16), organizationId, environment })
     .returning();
 
   console.log({ params });

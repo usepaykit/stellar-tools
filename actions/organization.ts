@@ -1,6 +1,7 @@
 "use server";
 
 import { resolveAccountContext } from "@/actions/account";
+import { runAtomic } from "@/actions/event";
 import {
   Network,
   Organization,
@@ -35,7 +36,7 @@ export const postOrganizationAndSecret = async (
   const logoFile = options?.formDataWithFiles?.get("logo");
 
   if (logoFile) {
-    const logoUploadResult = await new FileUploadApi().upload([logoFile as File]);
+    const logoUploadResult = await new FileUploadApi().upload([logoFile as File], { maxSizeKB: 48 });
     params.logoUrl = logoUploadResult?.[0] ?? null;
   }
 
@@ -43,16 +44,16 @@ export const postOrganizationAndSecret = async (
 
   const organizationId = generateResourceId("org", accountId, 25);
 
-  const [organization] = await db
-    .insert(organizations)
-    .values({ ...params, id: organizationId, accountId, feeToken: TIER_FEE_TOKENS.FREE })
-    .returning();
+  return await runAtomic(async () => {
+    const [organization] = await db
+      .insert(organizations)
+      .values({ ...params, id: organizationId, accountId, feeToken: TIER_FEE_TOKENS.FREE })
+      .returning();
 
-  const account = await new StellarCoreApi(defaultEnvironment).createAccount();
+    const account = await new StellarCoreApi(defaultEnvironment).createAccount();
 
-  if (account.isErr()) throw new Error(account.error?.message);
+    if (account.isErr()) throw new Error(account.error?.message);
 
-  await Promise.allSettled([
     postOrganizationSecretWithEncryption(
       {
         testnetSecret: account.value!.keypair.secret(),
@@ -64,10 +65,16 @@ export const postOrganizationAndSecret = async (
       },
       organization.id,
       defaultEnvironment
-    ),
-  ]);
+    );
 
-  return { success: true, id: organization.id };
+    return organization;
+  })
+    .then((organization) => {
+      return { success: true, id: organization.id };
+    })
+    .catch((error) => {
+      return { success: false, error: error.message };
+    });
 };
 
 export const retrieveOrganizations = async (accId?: string) => {

@@ -4,7 +4,7 @@ import { applyPaymentFee } from "@/actions/billing";
 import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { createCustomerWallet, retrieveCustomerWallets, retrieveCustomers } from "@/actions/customers";
-import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
+import { withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
 import { subscriptionIntervals } from "@/constant";
@@ -15,7 +15,6 @@ import {
   Organization,
   Payment,
   Product,
-  Refund,
   ResolvedPayment,
   assets,
   customerWallets,
@@ -32,6 +31,7 @@ import { EmailApi } from "@/integrations/email";
 import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
+import { EventTrigger, WebhookTrigger } from "@/types";
 import { ApiClient, Result } from "@stellartools/core";
 import { and, count, desc, eq } from "drizzle-orm";
 import moment from "moment";

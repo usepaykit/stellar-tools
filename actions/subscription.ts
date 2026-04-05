@@ -1,9 +1,10 @@
 "use server";
 
-import { EventTrigger, WebhookTrigger, withEvent } from "@/actions/event";
+import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
 import { computeDiff } from "@/lib/utils";
+import { EventTrigger, WebhookTrigger } from "@/types";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
 export const postSubscriptionsBulk = async (

@@ -4,43 +4,13 @@ import { resolveOrgContext } from "@/actions/organization";
 import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events, rawDb, txContext } from "@/db";
-import { computeDiff, generateResourceId } from "@/lib/utils";
-import { MaybeArray, MaybePromise, SuggestedString, WebhookEvent } from "@stellartools/core";
+import { generateResourceId } from "@/lib/utils";
+import { EventConfig, EventEmitParams } from "@/types";
+import { MaybePromise, SuggestedString } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
 import { AsyncLocalStorage } from "node:async_hooks";
-
-type EventDataDiff = { $changes?: ReturnType<typeof computeDiff> };
-
-interface EmitParams {
-  type: EventType;
-  customerId?: string | null; // for customer operations
-  merchantId?: string | null; // for merchant operations
-  data?: Record<
-    string,
-    string | number | boolean | null | undefined | Date | EventDataDiff | ReturnType<typeof computeDiff>
-  >;
-}
-
-export interface EventTrigger<T> {
-  type: EventType;
-  map: (result: T) => MaybeArray<Omit<EmitParams, "type">>;
-}
-
-export interface WebhookTrigger<T> {
-  event: WebhookEvent;
-  map: (result: T) => MaybeArray<Record<string, unknown>>;
-}
-
-export interface EventConfig<T> {
-  events?: MaybeArray<EventTrigger<T>>;
-  webhooks?: {
-    organizationId: string;
-    environment: Network;
-    triggers: MaybeArray<WebhookTrigger<T>>;
-  };
-}
 
 const effectBuffer = new AsyncLocalStorage<Array<() => Promise<void>>>();
 
@@ -105,7 +75,7 @@ export async function withEvent<T>(
   return result;
 }
 
-export const emitEvents = async (params: Array<EmitParams>, orgId?: string, env?: Network) => {
+export const emitEvents = async (params: Array<EventEmitParams>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   return await db

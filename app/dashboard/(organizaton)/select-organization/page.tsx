@@ -285,17 +285,21 @@ const CreateOrganizationModalContent = ({
           metadata: null,
           address: null,
           socialLinks: null,
-          supportEmail: null
+          supportEmail: null,
         },
         defaultEnvironment,
         { formDataWithFiles: formData }
       );
     },
     onSuccess: async (org) => {
-      toast.success("Organization created successfully");
-      await setCurrentOrganization(org.id);
-      form.reset();
-      onSuccess();
+      if (org.success && "id" in org) {
+        toast.success("Organization created successfully");
+        await setCurrentOrganization(org.id);
+        form.reset();
+        onSuccess();
+      } else if (!org.success && "error" in org) {
+        toast.error(org.error as string);
+      }
     },
     onError: (error) => {
       console.error(error);

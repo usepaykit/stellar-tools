@@ -106,7 +106,7 @@ export const useCheckout = (checkoutId: string) => {
         const { signedTxXdr, signerAddress } = await stellarWalletsKit.signTransaction(prepared.xdr, { address });
         console.log({ signerAddress });
         // Step 3: Server submits approval + calls `start` on the engine (first payment via transfer_from)
-        const result = await finalizeSubscriptionCheckout(checkoutId, signedTxXdr, signerAddress!);
+        const result = await finalizeSubscriptionCheckout(checkoutId, signedTxXdr, signerAddress ?? address);
         if (!result.success) throw new Error(result.error ?? "Subscription setup failed");
       } else {
         // One-time payment: classic Stellar payment via Horizon

@@ -1,8 +1,9 @@
 "use server";
 
-import { EventTrigger, withEvent } from "@/actions/event";
+import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payout, db, payouts } from "@/db";
+import { EventTrigger } from "@/types";
 import { and, desc, eq } from "drizzle-orm";
 
 export const retrievePayouts = async () => {

@@ -103,8 +103,8 @@ export class SorobanContractApi {
       if (response.status !== "PENDING") {
         return Result.err(new Error(`Soroban tx submission failed: ${response.status}`));
       }
-      const result = await this.pollForTransaction(response.hash);
-      if (result instanceof Error) return Result.err(result);
+      const pollResult = await this.pollForTransaction(response.hash);
+      if (pollResult.isErr()) return Result.err(pollResult.error);
       return Result.ok({ hash: response.hash });
     } catch (e) {
       return Result.err(e instanceof Error ? e : new Error(String(e)));
@@ -131,7 +131,7 @@ export class SorobanContractApi {
       StellarSDK.nativeToScVal(params.customerAddress, { type: "address" }),
       StellarSDK.nativeToScVal(params.merchantAddress, { type: "address" }),
       StellarSDK.nativeToScVal(params.tokenContractId, { type: "address" }),
-      StellarSDK.nativeToScVal(this.toSymbol(params.productId), { type: "symbol" }),
+      StellarSDK.nativeToScVal(params.productId, { type: "string" }),
       StellarSDK.nativeToScVal(params.amountStroops, { type: "i128" }),
       StellarSDK.nativeToScVal(BigInt(params.durationSeconds), { type: "u64" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
@@ -144,7 +144,7 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "pause",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
+      StellarSDK.nativeToScVal(productId, { type: "string" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     const result = await this.invoke(operation);
@@ -156,7 +156,7 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "resume",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
+      StellarSDK.nativeToScVal(productId, { type: "string" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
     const result = await this.invoke(operation);
@@ -168,7 +168,7 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "cancel",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
+      StellarSDK.nativeToScVal(productId, { type: "string" }),
       StellarSDK.nativeToScVal(this.sourceKeypair.publicKey(), { type: "address" })
     );
 
@@ -179,7 +179,7 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "get_subscription",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" })
+      StellarSDK.nativeToScVal(productId, { type: "string" })
     );
 
     return await this.invoke(operation, { readOnly: true });
@@ -195,7 +195,7 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "update",
       StellarSDK.nativeToScVal(customerAddress, { type: "address" }),
-      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" }),
+      StellarSDK.nativeToScVal(productId, { type: "string" }),
       StellarSDK.nativeToScVal(status, { type: "u32" }),
       StellarSDK.nativeToScVal(periodDuration, { type: "u64" }),
       StellarSDK.nativeToScVal(periodEnd, { type: "u64" }),
@@ -227,18 +227,9 @@ export class SorobanContractApi {
     const operation = this.contract.call(
       "charge",
       StellarSDK.nativeToScVal(customer, { type: "address" }),
-      StellarSDK.nativeToScVal(this.toSymbol(productId), { type: "symbol" })
+      StellarSDK.nativeToScVal(productId, { type: "string" })
     );
     return await this.invoke(operation);
-  }
-
-  /**
-   * Soroban Symbol type is capped at 32 characters.
-   * Product IDs are generated as 34 chars (prod_ + 4 org sig + 25 entropy).
-   * We take the last 32 chars which preserves the full unique entropy tail.
-   */
-  private toSymbol(productId: string): string {
-    return productId.slice(-32);
   }
 
   private async invoke(
@@ -277,7 +268,9 @@ export class SorobanContractApi {
         return Result.err(new Error(`Transaction submission failed: ${response.status}`));
       }
 
-      return Result.ok(await this.pollForTransaction(response.hash));
+      const pollResult = await this.pollForTransaction(response.hash);
+      if (pollResult.isErr()) return pollResult;
+      return Result.ok(pollResult.value);
     } catch (e) {
       if (e instanceof Error) return Result.err(e);
       return Result.err(new Error(String(e)));
@@ -322,7 +315,7 @@ export class SorobanContractApi {
       }
 
       if (res.status === "FAILED") {
-        return Result.ok({ hash, events: [], success: false });
+        return Result.err(new Error(`Transaction failed on-chain: ${hash}`));
       }
 
       // Delay for 10s, expected to be resolved after 10 * 10s = 100s (1m40s)
