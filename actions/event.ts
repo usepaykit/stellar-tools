@@ -3,12 +3,13 @@
 import { resolveOrgContext } from "@/actions/organization";
 import { triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
-import { Event, Network, db, events } from "@/db";
+import { Event, Network, db, events, rawDb, txContext } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { MaybeArray, MaybePromise, SuggestedString, WebhookEvent } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 type EventDataDiff = { $changes?: ReturnType<typeof computeDiff> };
 
@@ -40,6 +41,8 @@ export interface EventConfig<T> {
     triggers: MaybeArray<WebhookTrigger<T>>;
   };
 }
+
+const effectBuffer = new AsyncLocalStorage<Array<() => Promise<void>>>();
 
 export async function withEvent<T>(
   action: () => Promise<T>,
@@ -89,10 +92,14 @@ export async function withEvent<T>(
     }
   };
 
-  if (typeof waitUntil === "function") {
-    waitUntil(runSideEffects());
+  const buffer = effectBuffer.getStore();
+
+  if (buffer) {
+    // If we are in an Atomic Chain, just queue the side effect
+    buffer.push(runSideEffects);
   } else {
-    runSideEffects();
+    if (typeof waitUntil === "function") waitUntil(runSideEffects());
+    else runSideEffects();
   }
 
   return result;
@@ -138,3 +145,28 @@ export const retrieveEvents = async <T extends readonly EventType[]>(
     )
     .orderBy(desc(events.createdAt));
 };
+
+/**
+ * Runs multiple actions atomically.
+ * If any DB call fails, everything rolls back.
+ * If any DB call fails, NO side-effects are fired.
+ * NB: This works because of the Proxy on the db instance used in all actions.
+ */
+export async function runAtomic<T>(fn: () => Promise<T>): Promise<T> {
+  const sideEffects: Array<() => Promise<void>> = [];
+
+  return await effectBuffer.run(sideEffects, async () => {
+    return await rawDb.transaction(async (tx) => {
+      return await txContext.run(tx, async () => {
+        const result = await fn();
+
+        sideEffects.forEach((effect) => {
+          if (typeof waitUntil === "function") waitUntil(effect());
+          else effect();
+        });
+
+        return result;
+      });
+    });
+  });
+}

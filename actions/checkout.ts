@@ -190,6 +190,8 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     merchantEmail,
   } = result;
 
+  if (!assets$1) throw new Error(`Asset not found, Checkout must be associated with an asset`);
+
   return {
     ...checkout,
     merchantPublicKey,
@@ -199,9 +201,9 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     recurringPeriod: product?.recurringPeriod ?? "month",
     customerEmail: customer?.email || checkout.customerEmail,
     customerPhone: customer?.phone || checkout.customerPhone,
-    assetId: assets$1?.id ?? null,
-    assetCode: assets$1?.code ?? null,
-    assetIssuer: assets$1?.issuer ?? null,
+    assetId: assets$1.id,
+    assetCode: assets$1.code,
+    assetIssuer: assets$1.issuer,
     productImage: product?.images?.[0] ?? null,
     customerImage: customer?.image ?? null,
     organizationName,

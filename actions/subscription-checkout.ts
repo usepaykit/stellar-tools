@@ -10,6 +10,7 @@ import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { eq } from "drizzle-orm";
 
+import { runAtomic } from "./event";
 import { postSubscriptionsBulk } from "./subscription";
 
 /**
@@ -92,15 +93,28 @@ export async function finalizeSubscriptionCheckout(
 ): Promise<{ success: boolean; error?: string }> {
   const checkout = await retrieveCheckoutAndCustomer(checkoutId);
 
-  if (checkout.status !== "open") {
+  const {
+    status,
+    productType,
+    assetCode,
+    productId,
+    merchantPublicKey,
+    organizationId,
+    environment,
+    customerId,
+    finalAmount,
+    assetId,
+  } = checkout;
+
+  if (status !== "open") {
     return { success: false, error: "Checkout is not open" };
   }
 
-  if (checkout.productType !== "subscription") {
+  if (productType !== "subscription") {
     return { success: false, error: "Not a subscription checkout" };
   }
 
-  if (!checkout.assetCode || !checkout.productId || !checkout.merchantPublicKey) {
+  if (!assetCode || !productId || !merchantPublicKey) {
     return { success: false, error: "Missing required checkout data" };
   }
 
@@ -131,9 +145,9 @@ export async function finalizeSubscriptionCheckout(
     // Step 2: Backend calls `start` — engine does transfer_from for the first payment
     const startResult = await engine.startSubscription({
       customerAddress,
-      merchantAddress: checkout.merchantPublicKey,
+      merchantAddress: merchantPublicKey,
       tokenContractId,
-      productId: checkout.productId,
+      productId,
       amountStroops,
       durationSeconds,
     });
@@ -150,7 +164,8 @@ export async function finalizeSubscriptionCheckout(
 
     const subscriptionId = generateResourceId("sub", checkout.organizationId, 20);
 
-    await Promise.all([
+    await runAtomic(async () => {
+      putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment);
       postPayment(
         {
           customerId: checkout.customerId,
@@ -164,27 +179,20 @@ export async function finalizeSubscriptionCheckout(
         },
         checkout.organizationId,
         checkout.environment,
-        { assetId: checkout.assetId ?? undefined, assetCode: checkout.assetCode }
-      ),
-      putCheckout(
-        checkoutId,
-        { status: "completed", updatedAt: new Date() },
-        checkout.organizationId,
-        checkout.environment
-      ),
-    ]);
+        { assetId: checkout.assetId ?? undefined, assetCode: checkout.assetCode ?? undefined }
+      );
 
-    // Step 4: Create the subscription record
-    if (checkout.customerId) {
-      await postSubscriptionsBulk({
-        id: subscriptionId,
-        customerIds: [checkout.customerId],
-        productId: checkout.productId,
-        period: { from: periodStart, to: periodEnd },
-        cancelAtPeriodEnd: false,
-        metadata: null,
-      });
-    }
+      if (customerId) {
+        await postSubscriptionsBulk({
+          id: subscriptionId,
+          customerIds: [customerId],
+          productId: productId!,
+          period: { from: periodStart, to: periodEnd },
+          cancelAtPeriodEnd: false,
+          metadata: null,
+        });
+      }
+    });
 
     return { success: true };
   } catch (e: any) {

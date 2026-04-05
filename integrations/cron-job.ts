@@ -1,3 +1,4 @@
+import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { putSubscription, retrieveDueSubscriptions } from "@/actions/subscription";
 import { Network } from "@/db";
@@ -52,82 +53,97 @@ export class CronJobApi {
           let failed = 0;
 
           for (const sub of subs) {
-            if (sub.subscription.cancelAtPeriodEnd) {
-              await putSubscription(
-                sub.subscription.id,
-                { status: "canceled", canceledAt: new Date() },
-                sub.subscription.organizationId,
-                sub.subscription.environment
-              );
+            try {
+              // 1. Handle Cancellations
+              if (sub.subscription.cancelAtPeriodEnd) {
+                await runAtomic(async () => {
+                  await putSubscription(
+                    sub.subscription.id,
+                    { status: "canceled", canceledAt: new Date() },
+                    sub.subscription.organizationId,
+                    sub.subscription.environment
+                  );
+                });
+                succeeded += 1;
+                continue;
+              }
+
+              const walletAddress = sub.wallet.address;
+
+              if (!walletAddress) {
+                failed += 1;
+                continue;
+              }
+
+              const env = sub.subscription.environment as Network;
+              const api = new SorobanContractApi(env, keeperSecret);
+              const result = await api.charge(walletAddress, sub.subscription.productId);
+
+              if (result.isErr()) {
+                failed += 1;
+                continue;
+              }
+
+              const paymentEvent = result.value.events.find((e: { topic: string }) => e.topic === "sub_pay");
+              if (!paymentEvent) {
+                failed += 1;
+                continue;
+              }
+
+              // 2. Atomic Database Sync
+              await runAtomic(async () => {
+                if (!paymentEvent.success) {
+                  await postPayment(
+                    {
+                      checkoutId: null,
+                      customerId: sub.customer.id,
+                      amount: parseInt(paymentEvent.data.amount),
+                      transactionHash: result.value.hash,
+                      status: "failed",
+                      metadata: null,
+                      assetId: sub.subscription.assetId,
+                      subscriptionId: sub.subscription.id,
+                    },
+                    sub.subscription.organizationId,
+                    sub.subscription.environment,
+                    { customerWalletAddress: result.value.customerWalletAddress }
+                  );
+                  // Throw to trigger catch block and increment failed count
+                  throw new Error("On-chain payment failure recorded");
+                }
+
+                await putSubscription(
+                  sub.subscription.id,
+                  {
+                    status: "active",
+                    currentPeriodEnd: new Date(paymentEvent.data.periodEnd),
+                  },
+                  sub.subscription.organizationId,
+                  sub.subscription.environment
+                );
+
+                await postPayment(
+                  {
+                    checkoutId: null,
+                    customerId: sub.customer.id,
+                    amount: parseInt(paymentEvent.data.amount),
+                    transactionHash: result.value.hash,
+                    status: "confirmed",
+                    metadata: null,
+                    assetId: sub.subscription.assetId,
+                    subscriptionId: sub.subscription.id,
+                  },
+                  sub.subscription.organizationId,
+                  sub.subscription.environment,
+                  { customerWalletAddress: result.value.customerWalletAddress }
+                );
+              });
+
               succeeded += 1;
-              continue;
-            }
-
-            const walletAddress = sub.wallet.address;
-            if (!walletAddress) continue;
-
-            const env = sub.subscription.environment as Network;
-            const api = new SorobanContractApi(env, keeperSecret);
-            const result = await api.charge(walletAddress, sub.subscription.productId);
-
-            if (result.isErr()) {
+            } catch (err) {
               failed += 1;
-              continue;
+              console.error(`[Atomic Process Error] Sub: ${sub.subscription.id}:`, err);
             }
-
-            const paymentEvent = result.value.events.find((e: { topic: string }) => e.topic === "sub_pay");
-            if (!paymentEvent) {
-              failed += 1;
-              continue;
-            }
-
-            if (!paymentEvent.success) {
-              await postPayment(
-                {
-                  checkoutId: null,
-                  customerId: sub.customer.id,
-                  amount: parseInt(paymentEvent.data.amount),
-                  transactionHash: result.value.hash,
-                  status: "failed",
-                  metadata: null,
-                  assetId: sub.subscription.assetId,
-                  subscriptionId: sub.subscription.id,
-                },
-                sub.subscription.organizationId,
-                sub.subscription.environment,
-                { customerWalletAddress: result.value.customerWalletAddress }
-              );
-              failed += 1;
-              continue;
-            }
-
-            await Promise.all([
-              putSubscription(
-                sub.subscription.id,
-                {
-                  status: "active",
-                  currentPeriodEnd: new Date(paymentEvent.data.periodEnd),
-                },
-                sub.subscription.organizationId,
-                sub.subscription.environment
-              ),
-              postPayment(
-                {
-                  checkoutId: null,
-                  customerId: sub.customer.id,
-                  amount: parseInt(paymentEvent.data.amount),
-                  transactionHash: result.value.hash,
-                  status: "confirmed",
-                  metadata: null,
-                  assetId: sub.subscription.assetId,
-                  subscriptionId: sub.subscription.id,
-                },
-                sub.subscription.organizationId,
-                sub.subscription.environment,
-                { customerWalletAddress: result.value.customerWalletAddress }
-              ),
-            ]);
-            succeeded += 1;
           }
 
           return { processed: subs.length, succeeded, failed };
