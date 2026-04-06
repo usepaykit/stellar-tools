@@ -23,7 +23,7 @@ import { EncryptionApi } from "@/integrations/encryption";
 import { FileUploadApi } from "@/integrations/file-upload";
 import { JWTApi } from "@/integrations/jwt";
 import { PriceFeedApi } from "@/integrations/price-feed";
-import { StellarCoreApi } from "@/integrations/stellar-core";
+import { createAccount } from "@/integrations/stellar-core";
 import { TIER_FEE_TOKENS } from "@/lib/pricing.server";
 import { generateResourceId, normalizeTimeSeries } from "@/lib/utils";
 import { and, eq, gte, lt, or, sql } from "drizzle-orm";
@@ -50,7 +50,7 @@ export const postOrganizationAndSecret = async (
       .values({ ...params, id: organizationId, accountId, feeToken: TIER_FEE_TOKENS.FREE })
       .returning();
 
-    const account = await new StellarCoreApi(defaultEnvironment).createAccount();
+    const account = await createAccount(defaultEnvironment);
 
     if (account.isErr()) throw new Error(account.error?.message);
 
@@ -124,25 +124,6 @@ export const retrieveOrganizationIdAndSecret = async (id: string, environment: N
   if (!result) throw new Error("Organization not found");
 
   return result;
-};
-
-export const setupMerchantTrustline = async (
-  organizationId: string,
-  environment: Network,
-  assetCode: string,
-  assetIssuer: string
-) => {
-  const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
-
-  if (!secret?.encrypted) throw new Error("Merchant wallet not configured for this environment");
-
-  const secretKey = new EncryptionApi().decrypt(secret.encrypted);
-  const stellar = new StellarCoreApi(environment);
-  const result = await stellar.addTrustline(secretKey, assetCode, assetIssuer);
-
-  if (result.isErr()) throw result.error;
-
-  return { success: true, assetCode, assetIssuer };
 };
 
 export const putOrganization = async (

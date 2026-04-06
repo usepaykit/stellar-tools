@@ -1,5 +1,5 @@
 import { putPayment, retrievePayments } from "@/actions/payment";
-import { StellarCoreApi } from "@/integrations/stellar-core";
+import { retrieveTransaction } from "@/integrations/stellar-core";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { toSnakeCase } from "@/lib/utils";
 import { Result, z as Schema } from "@stellartools/core";
@@ -22,9 +22,7 @@ export const GET = apiHandler({
     const { customer, wallets, refunds, asset: _asset, ...rest } = payment;
 
     if (payment.status === "pending") {
-      const stellar = new StellarCoreApi(environment);
-
-      const txResult = await stellar.retrieveTx(payment.transactionHash);
+      const txResult = await retrieveTransaction(payment.transactionHash, environment);
 
       if (txResult.isErr()) throw new Error(txResult.error?.message);
 

@@ -6,6 +6,9 @@ import { AppModalProvider } from "@/components/app-modal";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+import { WalletProvider } from "./contexts/wallet-context";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -19,7 +22,7 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <AppModalProvider>
-        {children}
+        <WalletProvider rpcUrl={process.env.NEXT_PUBLIC_STELLAR_RPC_URL!}>{children}</WalletProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </AppModalProvider>
     </QueryClientProvider>

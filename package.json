@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@aliimam/icons": "^0.1.9",
-    "@creit-tech/stellar-wallets-kit": "jsr:2.0.1",
+    "@creit.tech/stellar-wallets-kit": "1.9.5",
     "@hookform/resolvers": "^5.2.2",
     "@iarna/toml": "^2.2.5",
     "@number-flow/react": "^0.5.10",
@@ -44,7 +44,7 @@
     "@react-email/components": "^1.0.9",
     "@react-email/render": "^2.0.4",
     "@react-pdf/renderer": "^4.3.2",
-    "@stellar/stellar-sdk": "^14.4.2",
+    "@stellar/stellar-sdk": "14.1.1",
     "@stellartools/core": "file:./packages/stellartools",
     "@tabler/icons-react": "^3.36.0",
     "@tanstack/react-query": "^5.90.12",

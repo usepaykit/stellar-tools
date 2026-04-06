@@ -27,7 +27,7 @@ import { MerchantFirstPaymentConfirmedEmail } from "@/emails/merchant-first-paym
 import { MerchantMeteredFirstPurchaseEmail } from "@/emails/merchant-metered-first-purchase";
 import { MerchantSubscriptionStartedEmail } from "@/emails/merchant-subscription-started";
 import { EmailApi } from "@/integrations/email";
-import { StellarCoreApi } from "@/integrations/stellar-core";
+import { verifyPaymentByPagingToken } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
 import { all } from "better-all";
@@ -344,9 +344,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
     assetIssuer,
   } = checkout;
 
-  const stellar = new StellarCoreApi(environment);
-
-  const result = await stellar.verifyPaymentByPagingToken(merchantPublicKey, checkoutId, initialPagingToken!);
+  const result = await verifyPaymentByPagingToken(merchantPublicKey, checkoutId, initialPagingToken!, environment);
 
   if (result.isErr()) throw new Error(result.error.message);
 

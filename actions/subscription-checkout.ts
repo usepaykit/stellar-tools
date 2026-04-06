@@ -6,7 +6,7 @@ import { postPayment } from "@/actions/payment";
 import { postSubscriptionsBulk } from "@/actions/subscription";
 import { subscriptionIntervals } from "@/constant";
 import { SorobanContractApi } from "@/integrations/soroban-contract";
-import { StellarCoreApi } from "@/integrations/stellar-core";
+import { retrieveAssetContractId } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import moment from "moment";
 
@@ -30,10 +30,10 @@ export async function prepareSubscriptionApproval(
       return { error: "Asset not configured for this checkout" };
     }
 
-    const stellar = new StellarCoreApi(checkout.environment);
-    const tokenContractId = await stellar.retrieveAssetContractId(
+    const tokenContractId = await retrieveAssetContractId(
       checkout.assetCode,
-      checkout.assetIssuer ?? undefined
+      checkout.assetIssuer!,
+      checkout.environment
     );
 
     const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
@@ -104,8 +104,7 @@ export async function finalizeSubscriptionCheckout(
     return { success: false, error: "Period data missing — call prepareSubscriptionApproval first" };
   }
 
-  const stellar = new StellarCoreApi(checkout.environment);
-  const tokenContractId = await stellar.retrieveAssetContractId(checkout.assetCode, checkout.assetIssuer ?? undefined);
+  const tokenContractId = await retrieveAssetContractId(assetCode, checkout.assetIssuer!, checkout.environment);
   const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
 
   const durationSeconds = durationDays * 86400;

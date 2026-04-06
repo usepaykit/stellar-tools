@@ -1,0 +1,186 @@
+"use client";
+
+import * as React from "react";
+
+import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { sweepAndProcessPayment } from "@/actions/payment";
+import { finalizeSubscriptionCheckout, prepareSubscriptionApproval } from "@/actions/subscription-checkout";
+import { phoneNumberFromString, phoneNumberSchema, phoneNumberToString } from "@/components/phone-number-field";
+import { toast } from "@/components/ui/toast";
+import { TxStatus, useWallet } from "@/contexts/wallet-context";
+import { requiresTrustline, retrieveAccount } from "@/integrations/stellar-core";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Asset, BASE_FEE, Memo, Networks, Operation, Transaction, TransactionBuilder } from "@stellar/stellar-sdk";
+import { UseMutationResult, UseQueryResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as RHF from "react-hook-form";
+import { z as Schema } from "zod";
+
+interface CheckoutContextValue {
+  id: string;
+  checkout: undefined | ReturnType<typeof retrieveCheckoutAndCustomer> extends Promise<infer T> ? T : any;
+  query: UseQueryResult<any, Error>;
+  form: RHF.UseFormReturn<any>;
+  isLoading: boolean;
+  isPaid: boolean;
+  isFailed: boolean;
+  hasDetails: boolean;
+  isProcessing: boolean;
+  wallet: {
+    connectedAddress: string;
+    handleWalletPay: () => Promise<void>;
+    isProcessing: boolean;
+    kit: { connectWallet: () => Promise<void> };
+  };
+  updateDetails: UseMutationResult<any, Error, CheckoutFormData>;
+  banner: { show: boolean; setShow: (show: boolean) => void };
+}
+
+const CheckoutContext = React.createContext({} as CheckoutContextValue);
+
+const baseSchema = Schema.object({
+  email: Schema.email(),
+  phoneNumber: phoneNumberSchema,
+});
+
+type CheckoutFormData = Schema.infer<typeof baseSchema>;
+
+export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string; children: React.ReactNode }) => {
+  const queryClient = useQueryClient();
+  const wallet = useWallet();
+
+  const query = useQuery({
+    queryKey: ["checkout", checkoutId],
+    queryFn: () => retrieveCheckoutAndCustomer(checkoutId),
+  });
+
+  const checkout = query.data;
+
+  const form = RHF.useForm({
+    resolver: zodResolver(baseSchema),
+    values: {
+      email: checkout?.customerEmail ?? "",
+      phoneNumber: checkout?.customerPhone
+        ? phoneNumberFromString(checkout.customerPhone)
+        : { number: "", countryCode: "US" },
+    },
+  });
+
+  // Derived States
+  const isPaid = checkout?.status === "completed";
+  const isFailed = checkout?.status === "failed";
+  const hasDetails = !!(checkout?.customerEmail && checkout?.customerPhone);
+  const isProcessing = [TxStatus.BUILDING, TxStatus.SIGNING, TxStatus.SUBMITTING].includes(wallet.txStatus);
+
+  const [showBanner, setShowBanner] = React.useState(true);
+
+  const updateDetails = useMutation({
+    mutationFn: (data: CheckoutFormData) =>
+      putCheckout(
+        checkoutId,
+        { customerEmail: data.email, customerPhone: phoneNumberToString(data.phoneNumber) },
+        checkout?.organizationId,
+        checkout?.environment
+      ),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] }),
+  });
+
+  const handleWalletPay = async () => {
+    if (!wallet.connected) return await wallet.connect();
+    if (!checkout) return;
+
+    wallet.setError(undefined);
+    const network = checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
+
+    try {
+      // 1. Trustline Logic
+      if (checkout.assetCode && checkout.assetCode !== "XLM") {
+        const trustNeeded = await requiresTrustline(
+          wallet.walletAddress,
+          checkout.assetCode,
+          checkout.assetIssuer!,
+          checkout.environment
+        );
+
+        if (trustNeeded) {
+          toast.info(`Adding trustline for ${checkout.assetCode}...`);
+          await wallet.createTrustlines([new Asset(checkout.assetCode, checkout.assetIssuer!)], network);
+          // If trustline fails or user rejects, stop here
+          if (wallet.txStatus === TxStatus.FAIL) return;
+        }
+      }
+
+      // 2. Execution Logic
+      if (checkout.productType === "subscription") {
+        wallet.setTxStatus(TxStatus.BUILDING);
+        const prepared = await prepareSubscriptionApproval(checkoutId, wallet.walletAddress);
+        if ("error" in prepared) throw new Error(prepared.error);
+
+        const tx = new Transaction(prepared.xdr, network);
+        const hash = await wallet.signAndSubmit(tx);
+
+        if (hash) {
+          wallet.setTxStatus(TxStatus.SUBMITTING);
+          const result = await finalizeSubscriptionCheckout(checkoutId, hash, wallet.walletAddress);
+          if (!result.success) throw new Error(result.error);
+        }
+      } else {
+        wallet.setTxStatus(TxStatus.BUILDING);
+        const accountRes = await retrieveAccount(wallet.walletAddress, checkout.environment);
+        if (accountRes.isErr()) throw new Error(accountRes.error.message);
+
+        const builder = new TransactionBuilder(accountRes.value!, {
+          fee: BASE_FEE,
+          networkPassphrase: network,
+        })
+          .addOperation(
+            Operation.payment({
+              destination: checkout.merchantPublicKey,
+              asset:
+                checkout.assetCode === "XLM" ? Asset.native() : new Asset(checkout.assetCode!, checkout.assetIssuer!),
+              amount: checkout.finalAmount.toString(),
+            })
+          )
+          .addMemo(Memo.text(checkoutId))
+          .setTimeout(0);
+
+        const hash = await wallet.signAndSubmit(builder);
+        if (hash) await sweepAndProcessPayment(checkoutId);
+      }
+
+      // 3. Success Lifecycle
+      await queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
+      toast.success("Payment successful!");
+    } catch (e: any) {
+      console.error("[Checkout Error]", e);
+      toast.error(e.message ?? "Payment Failed");
+    }
+  };
+
+  const value = {
+    id: checkoutId,
+    checkout,
+    query,
+    form,
+    isLoading: query.isLoading,
+    isPaid,
+    isFailed,
+    hasDetails,
+    isProcessing,
+    updateDetails,
+    banner: { show: showBanner, setShow: setShowBanner },
+    wallet: {
+      connectedAddress: wallet.walletAddress,
+      handleWalletPay,
+      isProcessing,
+      kit: { connectWallet: wallet.connect },
+    },
+  };
+
+  return <CheckoutContext.Provider value={value}>{children}</CheckoutContext.Provider>;
+};
+
+export const useCheckout = () => {
+  const context = React.useContext(CheckoutContext);
+  if (!context) throw new Error("useCheckout must be used within a CheckoutProvider");
+  return context;
+};

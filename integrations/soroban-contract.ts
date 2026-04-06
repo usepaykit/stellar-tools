@@ -14,7 +14,7 @@ export class SorobanContractApi {
   constructor(network: Network, sourceSecret: string) {
     this.networkPassphrase = network === "testnet" ? StellarSDK.Networks.TESTNET : StellarSDK.Networks.PUBLIC;
     this.server = new StellarSDK.rpc.Server(
-      network === "testnet" ? process.env.RPC_URL_TESTNET! : process.env.RPC_URL_MAINNET!
+      network === "testnet" ? process.env.NEXT_PUBLIC_RPC_URL_TESTNET! : process.env.NEXT_PUBLIC_RPC_URL_MAINNET!
     );
     this.sourceKeypair = StellarSDK.Keypair.fromSecret(sourceSecret);
     this.contract = new StellarSDK.Contract(this.CONTRACT_ID);

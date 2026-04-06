@@ -1,9 +1,10 @@
 "use server";
 
 import { retrieveAssets } from "@/actions/asset";
-import { resolveOrgContext, setupMerchantTrustline } from "@/actions/organization";
+import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { Network, Product, ProductStatus, assets, db, products } from "@/db";
 import { FileUploadApi } from "@/integrations/file-upload";
+import { createTrustlines } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 
@@ -30,14 +31,19 @@ export const postProduct = async (
     .values({ ...params, id: generateResourceId("prod", organizationId, 16), organizationId, environment })
     .returning();
 
-  console.log({ params });
-
   if (params.assetId) {
-    const [asset] = await retrieveAssets({ id: params.assetId }, environment);
-    if (!asset || !asset?.issuer || asset?.code === "XLM") return;
-    setupMerchantTrustline(organizationId, environment, asset.code, asset.issuer).catch(() => {
-      console.error("Failed to setup merchant trustline for asset", asset.code, asset.issuer);
-    });
+    const [[asset], { secret }] = await Promise.all([
+      retrieveAssets({ id: params.assetId }, environment),
+      retrieveOrganizationIdAndSecret(organizationId, environment),
+    ]);
+
+    if (!asset || !asset?.issuer || !asset?.code || asset?.code === "XLM") return;
+
+    if (secret?.publicKey) {
+      createTrustlines(secret.publicKey, [{ code: asset.code, issuer: asset.issuer }], environment).catch((err) => {
+        console.error("Failed to create trustline for asset", asset.code, asset.issuer, err);
+      });
+    }
   }
 
   return product;
@@ -79,11 +85,20 @@ export const putProduct = async (id: string, organizationId: string, retUpdate: 
   if (!product) return;
 
   if (retUpdate.assetId) {
-    const [asset] = await retrieveAssets({ id: retUpdate.assetId }, product.environment);
-    if (!asset || !asset?.issuer || asset.code === "XLM") return;
-    setupMerchantTrustline(organizationId, product.environment, asset.code, asset.issuer).catch((err) => {
-      console.error("Failed to setup merchant trustline for asset", asset.code, asset.issuer, err);
-    });
+    const [[asset], { secret }] = await Promise.all([
+      retrieveAssets({ id: retUpdate.assetId }, product.environment),
+      retrieveOrganizationIdAndSecret(organizationId, product.environment),
+    ]);
+
+    if (!asset || !asset?.issuer || !asset?.code || asset?.code === "XLM") return;
+
+    if (secret?.publicKey) {
+      createTrustlines(secret.publicKey, [{ code: asset.code, issuer: asset.issuer }], product.environment).catch(
+        (err) => {
+          console.error("Failed to create trustline for asset", asset.code, asset.issuer, err);
+        }
+      );
+    }
   }
 
   return product;

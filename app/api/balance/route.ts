@@ -1,5 +1,5 @@
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
-import { StellarCoreApi } from "@/integrations/stellar-core";
+import { retrieveAccount } from "@/integrations/stellar-core";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { Result } from "@stellartools/core";
 
@@ -12,11 +12,10 @@ export const GET = apiHandler({
 
     if (!secret?.publicKey) return Result.ok([]);
 
-    const api = new StellarCoreApi(environment);
-    const result = await api.retrieveAccount(secret.publicKey);
+    const accountResult = await retrieveAccount(secret.publicKey, environment);
 
-    if (result.isErr()) return Result.ok([]);
+    if (accountResult.isErr()) return Result.ok([]);
 
-    return Result.ok(result.value?.balances ?? []);
+    return Result.ok(accountResult.value!.balances ?? []);
   },
 });
