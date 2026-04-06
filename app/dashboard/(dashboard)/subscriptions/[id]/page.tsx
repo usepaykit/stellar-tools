@@ -2,8 +2,14 @@
 
 import * as React from "react";
 
+import { retrieveEvents } from "@/actions/event";
+import { retrievePayments } from "@/actions/payment";
+import { retrieveSubscriptions } from "@/actions/subscription";
+import { SubscriptionModalContent, SubscriptionModalFooter } from "@/app/dashboard/(dashboard)/subscriptions/page";
+import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { Spinner } from "@/components/spinner";
 import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,57 +21,377 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "@/components/ui/toast";
+import { useCopy } from "@/hooks/use-copy";
+import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { STROOPS_PER_XLM, cn } from "@/lib/utils";
-import { CheckCircle2, ChevronRight, Clock, Copy, ExternalLink, Pause, Play, RefreshCw, XCircle } from "lucide-react";
+import { ApiClient } from "@stellartools/core";
+import { useMutation } from "@tanstack/react-query";
+import _ from "lodash";
+import { ChevronRight, Copy, ExternalLink, MoreHorizontal, Pause, Play, XCircle } from "lucide-react";
+import moment from "moment";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
 
-// --- Helpers ---
-const formatXLM = (stroops: number) =>
-  (stroops / STROOPS_PER_XLM).toLocaleString(undefined, { minimumFractionDigits: 2 });
-const formatDate = (date: Date | string) =>
-  new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(date));
-const getExplorerUrl = (hash: string, env: string) =>
-  `https://stellar.expert/explorer/${env === "live" ? "public" : "testnet"}/tx/${hash}`;
+const formatXLM = (s: number) => (s / STROOPS_PER_XLM).toLocaleString(undefined, { minimumFractionDigits: 2 });
+const formatDate = (d: Date | string) => moment(d).format("D MMM, YYYY");
+const formatDateTime = (d: Date | string) => moment(d).format("D MMM, YYYY [at] HH:mm");
+const getExplorerUrl = (h: string, e: string) =>
+  `https://stellar.expert/explorer/${e === "live" ? "public" : "testnet"}/tx/${h}`;
 
-// --- Internal Components ---
+const STATUS_MAP: Record<string, { cls: string; label: string }> = {
+  active: { cls: "bg-green-500/10 text-green-700 border-green-500/20", label: "Active" },
+  trialing: { cls: "bg-blue-500/10 text-blue-700 border-blue-500/20", label: "Trialing" },
+  past_due: { cls: "bg-orange-500/10 text-orange-700 border-orange-500/20", label: "Past due" },
+  canceled: { cls: "bg-gray-500/10 text-gray-700 border-gray-500/20", label: "Canceled" },
+  paused: { cls: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20", label: "Paused" },
+};
+
 const StatusBadge = ({ status }: { status: string }) => {
-  const variants: any = {
-    active: { cls: "bg-green-500/10 text-green-700 border-green-500/20", icon: CheckCircle2, label: "Active" },
-    past_due: { cls: "bg-orange-500/10 text-orange-700 border-orange-500/20", icon: Clock, label: "Past Due" },
-    canceled: { cls: "bg-gray-500/10 text-gray-700 border-gray-500/20", icon: XCircle, label: "Canceled" },
-    paused: { cls: "bg-yellow-500/10 text-yellow-700 border-yellow-500/20", icon: Pause, label: "Paused" },
-  };
-  const { cls, icon: Icon, label } = variants[status] || variants.active;
+  const cfg = STATUS_MAP[status] ?? STATUS_MAP.active;
   return (
-    <Badge variant="outline" className={cn("gap-1.5", cls)}>
-      <Icon className="h-3 w-3" /> {label}
+    <Badge variant="outline" className={cn("gap-1.5", cfg.cls)}>
+      {cfg.label}
     </Badge>
   );
 };
 
-const DetailRow = ({
-  label,
-  value,
-  href,
-  copy,
-}: {
-  label: string;
-  value: React.ReactNode;
-  href?: string;
-  copy?: string;
-}) => (
-  <div className="flex items-center justify-between text-sm">
-    <span className="text-muted-foreground font-medium">{label}</span>
-    <div className="flex items-center gap-2">
+export default function SubscriptionDetailPage() {
+  const router = useRouter();
+  const { id } = useParams() as { id: string };
+  const invalidate = useInvalidateOrgQuery();
+  const { data: orgContext } = useOrgContext();
+  const { handleCopy } = useCopy();
+
+  // Queries
+  const { data: allSubs, isLoading } = useOrgQuery(["subscriptions"], retrieveSubscriptions);
+  const sub = React.useMemo(() => allSubs?.find((s) => s.subscription.id === id), [allSubs, id]);
+
+  const { data: subEvents, isLoading: loadingEvents } = useOrgQuery(
+    ["subscription-events", sub?.subscription.customerId],
+    () =>
+      retrieveEvents({ customerId: sub!.subscription.customerId }, [
+        "subscription::created",
+        "subscription::updated",
+        "subscription::canceled",
+        "payment::completed",
+      ]),
+    { enabled: !!sub }
+  );
+
+  const { data: payments = [], isLoading: loadingPayments } = useOrgQuery(
+    ["subscription-payments", id],
+    () => retrievePayments(undefined, undefined, { customerId: sub!.subscription.customerId }, { withAsset: true }),
+    { enabled: !!sub }
+  );
+
+  const subscriptionPayments = React.useMemo(() => payments.filter((p) => p.subscriptionId === id), [payments, id]);
+
+  // Mutations
+  const mutation = useMutation({
+    mutationFn: async ({ path, method = "POST" }: { path: string; method?: "POST" | "PUT" }) => {
+      const api = new ApiClient({
+        baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
+        headers: { "x-auth-token": orgContext?.token! },
+      });
+      const res = await (method === "POST"
+        ? api.post(`/api/subscriptions/${id}${path}`, {})
+        : api.put(`/api/subscriptions/${id}${path}`, {}));
+      if (res.isErr()) throw new Error(res.error.message);
+      return res.value;
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`Subscription ${variables.path.replace("/", "")}d`);
+      invalidate(["subscriptions"]);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  // Modal Sync
+  const submitRef = React.useRef<(() => void) | null>(null);
+  const [footerState, setFooterState] = React.useState({ isPending: false });
+
+  const openUpdateModal = () => {
+    if (!sub) return;
+    AppModal.open({
+      title: "Update subscription",
+      size: "full",
+      showCloseButton: true,
+      content: (
+        <SubscriptionModalContent
+          editingSubscription={{
+            ...sub.subscription,
+            customerName: sub.customer.name,
+            customerEmail: sub.customer.email,
+            productName: sub.product.name,
+            productPrice: sub.product.priceAmount,
+          }}
+          onSuccess={() => {
+            invalidate(["subscriptions"]);
+            AppModal.close();
+          }}
+          setSubmitRef={submitRef}
+          onFooterChange={setFooterState}
+        />
+      ),
+      footer: (
+        <SubscriptionModalFooter
+          onClose={AppModal.close}
+          submitRef={submitRef}
+          isPending={footerState.isPending}
+          isEditMode
+        />
+      ),
+    });
+  };
+
+  if (isLoading) return <Spinner size={25} />;
+
+  if (!sub) return <NotFound router={router} />;
+
+  const { subscription: s, customer: c, product: p } = sub;
+
+  return (
+    <DashboardSidebar>
+      <DashboardSidebarInset>
+        <div className="flex flex-col gap-6 p-4 sm:p-6">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/subscriptions">Subscriptions</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator>
+                <ChevronRight className="h-4 w-4" />
+              </BreadcrumbSeparator>
+              <BreadcrumbItem>
+                <BreadcrumbPage>{s.id}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold">{c.name ?? c.email}</h1>
+                <span className="text-muted-foreground text-sm">on</span>
+                <span className="text-lg font-semibold">{p.name}</span>
+                <StatusBadge status={s.status} />
+              </div>
+              <div className="text-muted-foreground mt-1 flex items-center gap-4 text-sm">
+                <span>Started {formatDate(s.currentPeriodStart)}</span>
+                <span>&middot;</span>
+                <span>
+                  Next billing {formatXLM(p.priceAmount)} XLM on {formatDate(s.currentPeriodEnd)}
+                </span>
+                {s.cancelAtPeriodEnd && (
+                  <>
+                    <span className="mx-1">&middot;</span>
+                    <span className="text-destructive font-medium">Cancels at period end</span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={openUpdateModal}>
+                Update subscription
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {["active", "trialing"].includes(s.status) && (
+                    <DropdownMenuItem onClick={() => mutation.mutate({ path: "/pause" })}>
+                      <Pause className="mr-2 h-4 w-4" /> Pause
+                    </DropdownMenuItem>
+                  )}
+                  {s.status === "paused" && (
+                    <DropdownMenuItem onClick={() => mutation.mutate({ path: "/resume" })}>
+                      <Play className="mr-2 h-4 w-4" /> Resume
+                    </DropdownMenuItem>
+                  )}
+                  {s.status !== "canceled" && (
+                    <DropdownMenuItem onClick={() => mutation.mutate({ path: "/cancel" })} className="text-destructive">
+                      <XCircle className="mr-2 h-4 w-4" /> Cancel
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="space-y-6 lg:col-span-2">
+              <section className="space-y-3">
+                <h3 className="text-lg font-semibold">Pricing</h3>
+                <div className="bg-card divide-y rounded-lg border">
+                  <div className="text-muted-foreground grid grid-cols-4 gap-4 px-4 py-2.5 text-xs font-medium uppercase">
+                    <span>Product</span>
+                    <span>Price</span>
+                    <span className="text-right">Qty</span>
+                    <span className="text-right">Total</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-4 px-4 py-3">
+                    <div>
+                      <div className="font-medium">{p.name}</div>
+                      <div className="text-muted-foreground text-xs">{formatXLM(p.priceAmount)} XLM / mo</div>
+                    </div>
+                    <div className="text-sm">{formatXLM(p.priceAmount)} XLM</div>
+                    <div className="text-right text-sm">1</div>
+                    <div className="text-right font-medium">{formatXLM(p.priceAmount)} XLM / mo</div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="text-lg font-semibold">Invoices</h3>
+                <div className="bg-card overflow-hidden rounded-lg border">
+                  {loadingPayments ? (
+                    <div className="flex justify-center p-10">
+                      <Spinner size={25} />
+                    </div>
+                  ) : subscriptionPayments.length === 0 ? (
+                    <div className="text-muted-foreground p-6 text-center text-sm">No payments yet</div>
+                  ) : (
+                    <div className="divide-y">
+                      <div className="text-muted-foreground bg-muted/20 grid grid-cols-5 gap-4 px-4 py-2.5 text-xs font-medium uppercase">
+                        <span>Amount</span>
+                        <span>Status</span>
+                        <span>Customer</span>
+                        <span>Created</span>
+                        <span className="text-right">Tx</span>
+                      </div>
+                      {subscriptionPayments.map((p) => (
+                        <div key={p.id} className="hover:bg-muted/50 grid grid-cols-5 items-center gap-4 px-4 py-3">
+                          <div className="text-sm font-medium">
+                            {p.amount} {(p.metadata as any)?.assetCode ?? "XLM"}
+                          </div>
+                          <div>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] tracking-tighter uppercase",
+                                p.status === "confirmed" ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
+                              )}
+                            >
+                              {p.status === "confirmed" ? "Paid" : p.status}
+                            </Badge>
+                          </div>
+                          <div className="text-muted-foreground truncate text-xs">{c.email}</div>
+                          <div className="text-muted-foreground text-xs">
+                            {moment(p.createdAt).format("D MMM, HH:mm")}
+                          </div>
+                          <div className="text-right">
+                            {p.transactionHash && (
+                              <a
+                                href={getExplorerUrl(p.transactionHash, s.environment)}
+                                target="_blank"
+                                className="text-primary"
+                              >
+                                <ExternalLink className="inline h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h3 className="text-lg font-semibold">Events</h3>
+                <Timeline
+                  isLoading={loadingEvents}
+                  items={subEvents ?? []}
+                  limit={5}
+                  renderItem={(evt) => ({
+                    title: _.startCase(evt.type.replace(/::/g, " ")),
+                    date: formatDateTime(evt.createdAt),
+                    data: evt.data,
+                    contentOverride: evt.data?.transactionHash ? (
+                      <a
+                        href={getExplorerUrl(String(evt.data.transactionHash), s.environment)}
+                        target="_blank"
+                        className="text-primary mt-1 flex items-center gap-1 text-xs hover:underline"
+                      >
+                        <ExternalLink className="h-3 w-3" /> View transaction
+                      </a>
+                    ) : undefined,
+                  })}
+                />
+              </section>
+            </div>
+
+            <aside className="sticky top-20 space-y-6">
+              <section className="space-y-3">
+                <h3 className="text-lg font-semibold">Details</h3>
+                <div className="bg-card space-y-4 rounded-lg border p-5">
+                  <DetailRow label="Customer" value={c.name ?? c.email} href={`/customers/${s.customerId}`} />
+                  <Separator />
+                  <DetailRow label="Created" value={formatDateTime(s.createdAt)} />
+                  <Separator />
+                  <DetailRow
+                    label="Current period"
+                    value={`${formatDate(s.currentPeriodStart)} to ${formatDate(s.currentPeriodEnd)}`}
+                  />
+                  <Separator />
+                  <DetailRow label="ID" value={s.id} copy={s.id} mono />
+                  {s.pausedAt && (
+                    <>
+                      <Separator />
+                      <DetailRow label="Paused on" value={formatDateTime(s.pausedAt)} />
+                    </>
+                  )}
+                  {s.canceledAt && (
+                    <>
+                      <Separator />
+                      <DetailRow label="Canceled on" value={formatDateTime(s.canceledAt)} />
+                    </>
+                  )}
+                </div>
+              </section>
+
+              {s.metadata && Object.keys(s.metadata).length > 0 && (
+                <section className="space-y-3">
+                  <h3 className="text-lg font-semibold">Metadata</h3>
+                  <div className="bg-card space-y-2 rounded-lg border p-5">
+                    {Object.entries(s.metadata).map(([k, v]) => (
+                      <div key={k} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{k}</span>
+                        <span className="font-mono text-xs">{String(v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </aside>
+          </div>
+        </div>
+      </DashboardSidebarInset>
+    </DashboardSidebar>
+  );
+}
+
+const DetailRow = ({ label, value, href, copy, mono }: any) => (
+  <div className="flex items-start justify-between gap-4 text-sm">
+    <span className="text-muted-foreground shrink-0">{label}</span>
+    <div className="flex items-center gap-1.5 text-right">
       {href ? (
         <Link href={href} className="text-primary font-medium hover:underline">
           {value}
         </Link>
       ) : (
-        <span>{value}</span>
+        <span className={cn(mono && "font-mono text-xs")}>{value}</span>
       )}
       {copy && (
         <button
@@ -82,202 +408,13 @@ const DetailRow = ({
   </div>
 );
 
-const InfoSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="bg-card space-y-4 rounded-lg border p-6">
-    <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-    <div className="space-y-4">{children}</div>
-  </div>
+const NotFound = ({ router }: any) => (
+  <DashboardSidebarInset>
+    <div className="py-24 text-center">
+      <h1 className="text-2xl font-bold">Subscription not found</h1>
+      <Button onClick={() => router.push("/subscriptions")} className="mt-4">
+        Back to list
+      </Button>
+    </div>
+  </DashboardSidebarInset>
 );
-
-export default function SubscriptionDetailPage() {
-  const params = useParams();
-  const _router = useRouter();
-  const [isBusy, setIsBusy] = React.useState(false);
-
-  // Mocked for structure - replace with useOrgQuery for sub and retrieveEvents for history
-  const sub = mockSubscription;
-  const history = mockEvents;
-
-  const performAction = async (msg: string) => {
-    setIsBusy(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    toast.success(msg);
-    setIsBusy(false);
-  };
-
-  return (
-    <DashboardSidebar>
-      <DashboardSidebarInset>
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 p-4 sm:p-6">
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/subscriptions">Subscriptions</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator>
-                <ChevronRight className="h-4 w-4" />
-              </BreadcrumbSeparator>
-              <BreadcrumbItem>
-                <BreadcrumbPage>{sub.id}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-
-          <header className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">Subscription</h1>
-              <StatusBadge status={sub.status} />
-            </div>
-            <p className="text-muted-foreground font-mono text-xs">{sub.id}</p>
-          </header>
-
-          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-2">
-              <InfoSection title="Subscription Details">
-                <DetailRow label="Current Status" value={<StatusBadge status={sub.status} />} />
-                <Separator />
-                <DetailRow
-                  label="Billing Period"
-                  value={
-                    <div className="text-right">
-                      <p>{formatDate(sub.currentPeriodStart)}</p>
-                      <p className="text-muted-foreground text-xs italic">Ends {formatDate(sub.currentPeriodEnd)}</p>
-                    </div>
-                  }
-                />
-                <Separator />
-                <DetailRow
-                  label="Auto-renew"
-                  value={
-                    sub.cancelAtPeriodEnd ? (
-                      <span className="text-destructive text-[10px] font-bold uppercase">Off</span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-green-600 uppercase">On</span>
-                    )
-                  }
-                />
-              </InfoSection>
-
-              <InfoSection title="Participants">
-                <DetailRow
-                  label="Customer"
-                  value={sub.customer.name}
-                  href={`/customers/${sub.customer.id}`}
-                  copy={sub.customer.id}
-                />
-                <Separator />
-                <DetailRow label="Product" value={sub.product.name} href={`/products/${sub.product.id}`} />
-                <Separator />
-                <DetailRow
-                  label="Recurring Amount"
-                  value={`${formatXLM(sub.product.priceAmount)} ${sub.product.assetId}`}
-                />
-              </InfoSection>
-
-              <InfoSection title="History & Events">
-                <Timeline
-                  items={history}
-                  limit={5}
-                  renderItem={(evt) => ({
-                    key: evt.id,
-                    title: evt.type.replace(/[._]/g, " ").toUpperCase(),
-                    date: formatDate(evt.createdAt),
-                    data: evt.data,
-                    contentOverride: evt.data?.transactionHash ? (
-                      <a
-                        href={getExplorerUrl(evt.data.transactionHash, sub.environment)}
-                        target="_blank"
-                        className="text-primary mt-1 flex items-center gap-1 text-xs hover:underline"
-                      >
-                        <ExternalLink className="h-3 w-3" /> View Transaction
-                      </a>
-                    ) : undefined,
-                  })}
-                />
-              </InfoSection>
-            </div>
-
-            <div className="sticky top-20 space-y-6">
-              <InfoSection title="Actions">
-                <div className="flex flex-col gap-2">
-                  {sub.status === "active" ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start gap-2"
-                        onClick={() => performAction("Paused")}
-                      >
-                        <Pause className="h-4 w-4" /> Pause
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="text-destructive w-full justify-start gap-2"
-                        onClick={() => performAction("Canceled")}
-                      >
-                        <XCircle className="h-4 w-4" /> Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start gap-2"
-                      onClick={() => performAction("Resumed")}
-                    >
-                      <Play className="h-4 w-4" /> Resume
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                    onClick={() => performAction("Refreshed")}
-                    disabled={isBusy}
-                  >
-                    <RefreshCw className={cn("h-4 w-4", isBusy && "animate-spin")} /> Sync Status
-                  </Button>
-                </div>
-              </InfoSection>
-
-              <div className="bg-primary/5 border-primary/10 rounded-lg border p-6">
-                <h3 className="text-primary/70 mb-4 text-xs font-black tracking-widest uppercase">
-                  Financial Metadata
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-end justify-between">
-                    <span className="text-muted-foreground text-xs">Lifetime Value</span>
-                    <span className="text-foreground text-lg font-black">
-                      {formatXLM(sub.product.priceAmount * 12)}{" "}
-                      <span className="text-[10px] opacity-50">{sub.product.assetId}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </DashboardSidebarInset>
-    </DashboardSidebar>
-  );
-}
-
-const mockSubscription = {
-  id: "sub_abc123",
-  status: "active",
-  currentPeriodStart: "2025-01-01T00:00:00Z",
-  currentPeriodEnd: "2025-02-01T00:00:00Z",
-  cancelAtPeriodEnd: false,
-  environment: "test",
-  customer: { id: "cust_001", name: "John Doe", email: "john@example.com" },
-  product: { id: "prod_001", name: "Premium Plan", priceAmount: 50000000, assetId: "XLM" },
-};
-
-const mockEvents = [
-  { id: "e1", type: "subscription.created", createdAt: "2025-01-01T10:00:00Z", data: { plan: "Premium" } },
-  {
-    id: "e2",
-    type: "payment.confirmed",
-    createdAt: "2025-01-01T10:05:00Z",
-    data: { amount: 50, transactionHash: "abc..." },
-  },
-];

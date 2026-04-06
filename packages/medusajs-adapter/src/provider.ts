@@ -104,7 +104,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       this.log("Getting payment status", { input });
     }
 
-    const payment = await this.stellar.payments.retrieve(this.getCustomerId(input), { verifyOnChain: true });
+    const payment = await this.stellar.payments.retrieve(this.getCustomerId(input));
 
     const statusMap: Record<string, PaymentSessionStatus> = {
       pending: PaymentSessionStatus.REQUIRES_MORE,

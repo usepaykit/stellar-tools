@@ -14,6 +14,7 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
+import { Stellar } from "@/components/icon";
 import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
@@ -461,13 +462,8 @@ export default function CustomerDetailPage() {
                 <div className="space-y-3">
                   {customer.wallets?.map(({ address }) => (
                     <div key={address} className="bg-muted/50 flex items-center gap-3 rounded-lg border p-4">
-                      <Image
-                        src="/images/integrations/stellar-official.png"
-                        alt=""
-                        width={20}
-                        height={20}
-                        className="h-5 w-5"
-                      />
+                      <Stellar className="h-5 w-5" />
+
                       <div className="min-w-0 flex-1">
                         <div className="font-mono text-xs break-all sm:text-sm">
                           {hiddenWallets.has(address) ? "•".repeat(20) : address}

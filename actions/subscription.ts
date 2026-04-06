@@ -47,6 +47,7 @@ export const postSubscriptionsBulk = async (
             subscription.map(
               ({ customerId, id, status, productId, currentPeriodStart, currentPeriodEnd, cancelAtPeriodEnd }) => ({
                 customerId,
+                subscriptionId: id,
                 data: {
                   id,
                   productId,
@@ -194,6 +195,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
           type: "subscription::canceled",
           map: (subscription) => ({
             customerId: subscription.customerId,
+            subscriptionId: subscription.id,
           }),
         });
       } else {
@@ -206,6 +208,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
           type: "subscription::updated",
           map: (subscription) => ({
             customerId: subscription.customerId,
+            subscriptionId: subscription.id,
             data: {
               $changes: computeDiff(oldSubscription, subscription),
             },

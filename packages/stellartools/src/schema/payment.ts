@@ -62,9 +62,3 @@ export interface Payment {
    */
   environment: Environment;
 }
-
-export const retrievePaymentSchema = z.object({
-  verifyOnChain: z.boolean().default(false),
-});
-
-export type RetrievePayment = z.infer<typeof retrievePaymentSchema>;

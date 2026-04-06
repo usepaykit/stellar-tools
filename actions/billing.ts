@@ -32,8 +32,7 @@ export async function applyPaymentFee(
   orgId: string,
   amount: string | number, // XLM amount from Horizon (e.g. "1.0000000") or numeric units
   assetCode = "XLM",
-  assetIssuer?: string | null,
-  customerWalletId?: string | null
+  assetIssuer?: string | null
 ): Promise<void> {
   const [[assetRow], prevMonthlyUsdCents] = await Promise.all([
     db
@@ -56,7 +55,6 @@ export async function applyPaymentFee(
       platformFeeUsd: Math.round(feeUsd * 100),
       orgMonthlyVolumeUsd: Math.round(newMonthlyUsd * 100),
       updatedAt: new Date(),
-      customerWalletId: customerWalletId,
     })
     .where(eq(payments.id, paymentId));
 

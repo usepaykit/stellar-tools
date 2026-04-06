@@ -15,6 +15,7 @@ import { NumberField } from "@/components/number-field";
 import { RadioGroup } from "@/components/radio-group";
 import { SelectInput } from "@/components/select+input";
 import { SelectField } from "@/components/select-field";
+import { Spinner } from "@/components/spinner";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -434,7 +435,13 @@ function ProductsPageContent() {
 
 export default function ProductsPage() {
   return (
-    <React.Suspense fallback={<div>Loading...</div>}>
+    <React.Suspense
+      fallback={
+        <div className="flex w-screen items-center justify-center">
+          <Spinner />
+        </div>
+      }
+    >
       <ProductsPageContent />
     </React.Suspense>
   );

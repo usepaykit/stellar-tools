@@ -535,6 +535,7 @@ export const events = pgTable("event", {
 
   customerId: text("customer_id").references(() => customers.id), // for end users
   merchantId: text("merchant_id").references(() => organizations.id), // for merchants
+  subscriptionId: text("subscription_id").references(() => subscriptions.id), // for subscriptions
 
   // Payload for the timeline UI (e.g., { "amount": 50, "currency": "USD" })
   data: jsonb("data").$type<Record<string, unknown>>(),

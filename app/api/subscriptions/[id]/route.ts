@@ -40,7 +40,11 @@ export const GET = apiHandler({
 export const PUT = apiHandler({
   auth: ["session", "apikey", "portal"],
   schema: { body: updateSubscriptionSchema, params: Schema.object({ id: Schema.string() }) },
-  handler: async ({ body: { metadata, cancelAtPeriodEnd }, params: { id }, auth: { organizationId, environment } }) => {
+  handler: async ({
+    body: { metadata, cancelAtPeriodEnd, productId },
+    params: { id },
+    auth: { organizationId, environment },
+  }) => {
     const { subscription, customerWallet } = await all({
       subscription: async () => retrieveSubscription(id, organizationId, environment),
       async customerWallet() {
@@ -71,6 +75,7 @@ export const PUT = apiHandler({
       {
         ...(cancelAtPeriodEnd && { cancelAtPeriodEnd }),
         ...(metadata && { metadata: { ...(subscription.metadata ?? {}), ...metadata } }),
+        ...(productId && { productId }),
       },
       organizationId,
       environment

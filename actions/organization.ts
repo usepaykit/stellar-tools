@@ -511,6 +511,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
       and(
         eq(subscriptions.organizationId, organizationId),
         eq(subscriptions.environment, environment),
+        eq(subscriptions.status, "active"),
         gte(subscriptions.createdAt, since)
       )
     )

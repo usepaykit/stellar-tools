@@ -3,16 +3,10 @@
 import { applyPaymentFee } from "@/actions/billing";
 import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
-import {
-  createCustomerWallet,
-  retrieveCustomerWallets,
-  retrieveCustomers,
-  upsertCustomerWallet,
-} from "@/actions/customers";
-import { withEvent } from "@/actions/event";
+import { retrieveCustomers, upsertCustomerWallet } from "@/actions/customers";
+import { runAtomic, withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
-import { subscriptionIntervals } from "@/constant";
 import {
   Checkout,
   Customer,
@@ -33,11 +27,9 @@ import { MerchantFirstPaymentConfirmedEmail } from "@/emails/merchant-first-paym
 import { MerchantMeteredFirstPurchaseEmail } from "@/emails/merchant-metered-first-purchase";
 import { MerchantSubscriptionStartedEmail } from "@/emails/merchant-subscription-started";
 import { EmailApi } from "@/integrations/email";
-import { JWTApi } from "@/integrations/jwt";
 import { StellarCoreApi } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
-import { ApiClient, Result } from "@stellartools/core";
 import { all } from "better-all";
 import { and, count, desc, eq } from "drizzle-orm";
 import moment from "moment";
@@ -133,7 +125,11 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
 
       events.push({
         type: "payment::completed",
-        map: (p) => ({ customerId: p.customerId, data: { ...basePayload, amount: assetLabel } }),
+        map: (p) => ({
+          customerId: p.customerId,
+          subscriptionId: p.subscriptionId,
+          data: { ...basePayload, amount: assetLabel },
+        }),
       });
       webhooks.push({ event: "payment.confirmed", map: () => basePayload });
 
@@ -330,38 +326,18 @@ export const deletePayment = async (id: string, organizationId: string) => {
   return null;
 };
 
-// STELLAR
-
-export const refreshTxStatus = async (
-  paymentId: string,
-  transactionHash: string,
-  organizationId: string,
-  environment: Network
-): Promise<void> => {
-  const stellar = new StellarCoreApi(environment);
-
-  const txResult = await stellar.retrieveTx(transactionHash);
-
-  if (txResult.isErr()) throw new Error(txResult.error?.message);
-
-  if (txResult.value?.successful) {
-    putPayment(paymentId, organizationId, environment, { status: "confirmed" });
-  } else {
-    putPayment(paymentId, organizationId, environment, { status: "failed" });
-  }
-};
-
 export const sweepAndProcessPayment = async (checkoutId: string) => {
   const checkout = await retrieveCheckoutAndCustomer(checkoutId);
 
-  if (!checkout || checkout.status !== "open") return checkout;
+  if (!checkout || checkout.status !== "open" || checkout.productType == "subscription") {
+    return checkout;
+  }
 
   const {
     organizationId,
     environment,
     initialPagingToken,
     merchantPublicKey,
-    productType,
     customerId,
     assetId,
     assetCode,
@@ -379,9 +355,9 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
   const { hash, amount, successful, from: payerAddress } = result.value;
 
   if (!successful) {
-    await Promise.all([
-      putCheckout(checkoutId, { status: "failed" }, organizationId, environment),
-      postPayment(
+    await runAtomic(async () => {
+      await putCheckout(checkoutId, { status: "failed" }, organizationId, environment);
+      await postPayment(
         {
           subscriptionId: null,
           checkoutId,
@@ -395,86 +371,33 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
         organizationId,
         environment,
         { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
-      ),
-    ]);
+      );
+    });
+
     return checkout;
   }
 
-  const createSubscriptionHandler = async () => {
-    if (!checkout.productId) return Result.err(new Error("Product ID is required for subscription"));
+  await runAtomic(async () => {
+    await putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment);
 
-    const accessToken = await new JWTApi().sign(
-      { orgId: checkout.organizationId, environment: checkout.environment },
-      1 * 60 // 1 minute
+    const confirmedPayment = await postPayment(
+      {
+        subscriptionId: null,
+        customerId,
+        checkoutId,
+        amount: Number(amount),
+        transactionHash: hash,
+        status: "confirmed",
+        metadata: null,
+        assetId,
+      },
+      organizationId,
+      environment,
+      { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
     );
 
-    console.log({ accessToken });
-
-    const api = new ApiClient({
-      baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
-      headers: { "x-auth-token": accessToken },
-    });
-
-    const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
-    const period =
-      checkout.subscriptionData?.periodStart && checkout.subscriptionData?.periodEnd
-        ? { from: new Date(checkout.subscriptionData.periodStart), to: new Date(checkout.subscriptionData.periodEnd) }
-        : { from: new Date(), to: new Date(Date.now() + durationDays * 864e5) };
-
-    const result = await api.post<{ id: string; success: boolean }>("/api/subscriptions", {
-      customerIds: [checkout.customerId],
-      productId: checkout.productId,
-      period,
-      cancelAtPeriodEnd: checkout.subscriptionData?.cancelAtPeriodEnd ?? false,
-    });
-
-    console.dir({ result }, { depth: 100 });
-
-    return Result.ok(result);
-  };
-
-  const confirmedPayment = await postPayment(
-    {
-      subscriptionId: null,
-      customerId,
-      checkoutId,
-      amount: Number(amount),
-      transactionHash: hash,
-      status: "confirmed",
-      metadata: null,
-      assetId,
-    },
-    organizationId,
-    environment,
-    { assetId, assetCode: assetCode ?? undefined }
-  );
-
-  let customerWalletId: string | null = null;
-
-  if (customerId) {
-    customerWalletId = (
-      await createCustomerWallet(organizationId, environment, {
-        customerId,
-        address: payerAddress,
-        metadata: null,
-      })
-    )?.id;
-  }
-
-  console.log("customerWalletId", customerWalletId);
-
-  await Promise.all([
-    putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment),
-    applyPaymentFee(
-      confirmedPayment.id,
-      organizationId,
-      Number(amount),
-      assetCode ?? "XLM",
-      assetIssuer,
-      customerWalletId
-    ),
-    ...(productType === "subscription" ? [createSubscriptionHandler()] : []),
-  ]);
+    await applyPaymentFee(confirmedPayment.id, organizationId, Number(amount), assetCode ?? "XLM", assetIssuer);
+  });
 
   return checkout;
 };

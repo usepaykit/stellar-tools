@@ -9,6 +9,7 @@ export interface EventEmitParams {
   type: EventType;
   customerId?: string | null; // for customer operations
   merchantId?: string | null; // for merchant operations
+  subscriptionId?: string | null;
   data?: Record<
     string,
     string | number | boolean | null | undefined | Date | EventDataDiff | ReturnType<typeof computeDiff>

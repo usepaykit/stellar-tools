@@ -15,6 +15,7 @@ import {
   SubscriptionIcon,
 } from "@/components/icon";
 import { LineChart } from "@/components/line-chart";
+import { SelectField } from "@/components/select-field";
 import { ShareWidget } from "@/components/share-widget";
 import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
@@ -62,11 +63,14 @@ const SPARKLINE_CONFIG = {
 export default function DashboardPage() {
   const [selectedCode, setSelectedCode] = useCookieState("dashboard_currency", "USD");
   const [countryOpen, setCountryOpen] = React.useState(false);
+  const [period, setPeriod] = useCookieState("dashboard_period", "30");
   const { data: orgContext } = useOrgContext();
 
+  const since = React.useMemo(() => new Date(Date.now() - Number(period) * 24 * 60 * 60 * 1000), [period]);
+
   const { data: stats, isLoading: isStatsLoading } = useOrgQuery(
-    ["overview-stats", orgContext?.id, orgContext?.environment],
-    () => retrieveOverviewStats(),
+    ["overview-stats", orgContext?.id, orgContext?.environment, period],
+    () => retrieveOverviewStats({ since }),
     { staleTime: 60 * 1000 }
   );
 
@@ -96,8 +100,6 @@ export default function DashboardPage() {
   const revenue28 = usdCentsToDisplay(stats.revenue, selectedItem, fiatRates);
   const mrrDisplay = usdCentsToDisplay(stats.mrr, selectedItem, fiatRates);
 
-  console.log({ mrrDisplay, revenue28 });
-
   return (
     <div className="w-full">
       <DashboardSidebar>
@@ -107,49 +109,62 @@ export default function DashboardPage() {
               <div>
                 <h1 className="text-foreground text-2xl font-bold tracking-tight md:text-3xl">Overview</h1>
               </div>
-              <Popover open={countryOpen} onOpenChange={setCountryOpen}>
-                <PopoverTrigger asChild>
-                  {isRatesLoading ? (
-                    <Spinner />
-                  ) : (
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={countryOpen}
-                      className="border-border/80 h-9 w-[200px] justify-between rounded-lg font-normal shadow-xs"
-                    >
-                      <span className="truncate">
-                        {selectedItem ? `${selectedItem.name} (${selectedItem.code})` : "Select currency"}
-                      </span>
-                      <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                    </Button>
-                  )}
-                </PopoverTrigger>
-                <PopoverContent className="w-[280px] p-0" align="end" onWheel={(e) => e.stopPropagation()}>
-                  <Command>
-                    <CommandInput placeholder="Search currency..." />
-                    <CommandList className="max-h-[280px]">
-                      <CommandEmpty>No currency found.</CommandEmpty>
-                      <CommandGroup>
-                        {currencyItems.map((item) => (
-                          <CommandItem
-                            key={item.code}
-                            value={`${item.name} ${item.code}`.toLowerCase()}
-                            onSelect={() => {
-                              setSelectedCode(item.code);
-                              setCountryOpen(false);
-                            }}
-                          >
-                            <span className={cn("flex-1 truncate", selectedCode === item.code && "font-medium")}>
-                              {item.name} ({item.code})
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <div className="flex items-center gap-2">
+                <SelectField
+                  id="period-select"
+                  value={period}
+                  onChange={setPeriod}
+                  triggerClassName="h-9 w-[140px]"
+                  items={[
+                    { value: "7", label: "Last 7 days" },
+                    { value: "30", label: "Last 30 days" },
+                    { value: "365", label: "Last 365 days" },
+                  ]}
+                />
+                <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                  <PopoverTrigger asChild>
+                    {isRatesLoading ? (
+                      <Spinner />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={countryOpen}
+                        className="border-border/80 h-9 w-[200px] justify-between rounded-lg font-normal shadow-xs"
+                      >
+                        <span className="truncate">
+                          {selectedItem ? `${selectedItem.name} (${selectedItem.code})` : "Select currency"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                      </Button>
+                    )}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[280px] p-0" align="end" onWheel={(e) => e.stopPropagation()}>
+                    <Command>
+                      <CommandInput placeholder="Search currency..." />
+                      <CommandList className="max-h-[280px]">
+                        <CommandEmpty>No currency found.</CommandEmpty>
+                        <CommandGroup>
+                          {currencyItems.map((item) => (
+                            <CommandItem
+                              key={item.code}
+                              value={`${item.name} ${item.code}`.toLowerCase()}
+                              onSelect={() => {
+                                setSelectedCode(item.code);
+                                setCountryOpen(false);
+                              }}
+                            >
+                              <span className={cn("flex-1 truncate", selectedCode === item.code && "font-medium")}>
+                                {item.name} ({item.code})
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
@@ -183,7 +198,7 @@ export default function DashboardPage() {
               <StatCard
                 title="Revenue"
                 value={revenue28}
-                subtitle="Last 4 months"
+                subtitle={`Last ${period} days`}
                 icon={<DollarIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.revenue}
                 color="var(--chart-2)"
@@ -192,7 +207,7 @@ export default function DashboardPage() {
               <StatCard
                 title="New Customers"
                 value={stats.newCustomers}
-                subtitle="Last 4 months"
+                subtitle={`Last ${period} days`}
                 icon={<AddUserIcon className="text-muted-foreground size-5" />}
                 sparkData={stats.charts.customers}
                 color="var(--chart-3)"

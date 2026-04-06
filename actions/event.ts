@@ -92,27 +92,31 @@ type NarrowedEvent<T extends EventType> = Event & { type: T };
 type NarrowedEvents<T extends readonly EventType[]> = Array<NarrowedEvent<T[number]>>;
 
 export const retrieveEvents = async <T extends readonly EventType[]>(
-  filters: { customerId?: string; merchantId?: SuggestedString<"current"> },
+  filters: { customerId?: string; merchantId?: SuggestedString<"current">; subscriptionId?: string },
   eventTypes?: T,
   orgId?: string,
   env?: Network
 ): Promise<NarrowedEvents<T>> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const merchantId = filters.merchantId === "current" ? organizationId : filters.merchantId;
+  let whereClause = [];
+
+  if (filters.merchantId == "current") {
+    whereClause.push(eq(events.merchantId, organizationId));
+  } else if (filters.merchantId) {
+    whereClause.push(eq(events.merchantId, filters.merchantId));
+  }
+  if (filters.subscriptionId) {
+    whereClause.push(eq(events.subscriptionId, filters.subscriptionId));
+  }
+  if (eventTypes) {
+    whereClause.push(inArray(events.type, eventTypes));
+  }
 
   return await db
     .select()
     .from(events)
-    .where(
-      and(
-        eq(events.organizationId, organizationId),
-        eq(events.environment, environment),
-        filters.customerId ? eq(events.customerId, filters.customerId) : undefined,
-        merchantId ? eq(events.merchantId, String(merchantId)) : undefined,
-        eventTypes ? inArray(events.type, eventTypes) : undefined
-      )
-    )
+    .where(and(eq(events.organizationId, organizationId), eq(events.environment, environment), ...whereClause))
     .orderBy(desc(events.createdAt));
 };
 

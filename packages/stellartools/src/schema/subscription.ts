@@ -130,9 +130,10 @@ export const resumeSubscriptionSchema = subscriptionSchema.pick({
 
 export type ResumeSubscription = Pick<Subscription, "id">;
 
-export const updateSubscriptionSchema = subscriptionSchema.pick({
-  metadata: true,
-  cancelAtPeriodEnd: true,
+export const updateSubscriptionSchema = z.object({
+  metadata: z.record(z.string(), z.any()).optional(),
+  cancelAtPeriodEnd: z.boolean().optional(),
+  productId: z.string().optional(),
 });
 
-export type UpdateSubscription = Partial<Pick<Subscription, "metadata" | "cancelAtPeriodEnd">>;
+export type UpdateSubscription = z.infer<typeof updateSubscriptionSchema>;
