@@ -29,7 +29,7 @@ interface CheckoutContextValue {
     connectedAddress: string;
     handleWalletPay: () => Promise<void>;
     isProcessing: boolean;
-    kit: { connectWallet: () => Promise<void> };
+    kit: { connectWallet: (handleSuccess: (success: boolean) => void) => Promise<void> };
   };
   updateDetails: UseMutationResult<any, Error, CheckoutFormData>;
   banner: { show: boolean; setShow: (show: boolean) => void };
@@ -65,7 +65,6 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
     },
   });
 
-  // Derived States
   const isPaid = checkout?.status === "completed";
   const isFailed = checkout?.status === "failed";
   const hasDetails = !!(checkout?.customerEmail && checkout?.customerPhone);
@@ -85,14 +84,17 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
   });
 
   const handleWalletPay = async () => {
-    if (!wallet.connected) return await wallet.connect();
+    if (!wallet.connected)
+      return await wallet.connect((success) => {
+        if (!success) toast.error("Failed to connect wallet");
+      });
+
     if (!checkout) return;
 
     wallet.setError(undefined);
     const network = checkout.environment === "testnet" ? Networks.TESTNET : Networks.PUBLIC;
 
     try {
-      // 1. Trustline Logic
       if (checkout.assetCode && checkout.assetCode !== "XLM") {
         const trustNeeded = await requiresTrustline(
           wallet.walletAddress,
@@ -104,12 +106,10 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
         if (trustNeeded) {
           toast.info(`Adding trustline for ${checkout.assetCode}...`);
           await wallet.createTrustlines([new Asset(checkout.assetCode, checkout.assetIssuer!)], network);
-          // If trustline fails or user rejects, stop here
           if (wallet.txStatus === TxStatus.FAIL) return;
         }
       }
 
-      // 2. Execution Logic
       if (checkout.productType === "subscription") {
         wallet.setTxStatus(TxStatus.BUILDING);
         const prepared = await prepareSubscriptionApproval(checkoutId, wallet.walletAddress);
@@ -144,6 +144,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
           .setTimeout(0);
 
         const hash = await wallet.signAndSubmit(builder);
+
         if (hash) await sweepAndProcessPayment(checkoutId);
       }
 

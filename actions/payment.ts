@@ -376,7 +376,11 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
   }
 
   await runAtomic(async () => {
-    await putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment);
+    await putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment).catch(
+      (err) => {
+        console.error("Error putting checkout", err);
+      }
+    );
 
     const confirmedPayment = await postPayment(
       {
@@ -394,7 +398,9 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
     );
 
-    await applyPaymentFee(confirmedPayment.id, organizationId, Number(amount), assetCode ?? "XLM", assetIssuer);
+    if (confirmedPayment) {
+      await applyPaymentFee(confirmedPayment.id, organizationId, Number(amount), assetCode ?? "XLM", assetIssuer);
+    }
   });
 
   return checkout;

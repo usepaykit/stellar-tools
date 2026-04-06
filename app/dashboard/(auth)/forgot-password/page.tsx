@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
@@ -78,12 +77,7 @@ export default function ForgotPassword() {
               <div className="relative inline-block">
                 {/* Subtle glow - not overpowering */}
                 <div className="bg-primary/5 absolute -inset-4 rounded-2xl opacity-50 blur-2xl" />
-                <Logo
-                  width={150}
-                  height={1}
-                  className="object-contain p-5"
-                  priority
-                />
+                <Logo width={150} height={1} className="object-contain p-5" priority />
               </div>
 
               {/* Typography with refined hierarchy */}

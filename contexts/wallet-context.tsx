@@ -1,14 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
 
 import { Network as StellarToolsNetwork } from "@/constant/schema.client";
-import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import {
   AlbedoModule,
   FreighterModule,
   HanaModule,
+  HotWalletModule,
   ISupportedWallet,
   LobstrModule,
   StellarWalletsKit,
@@ -33,14 +32,6 @@ export enum TxStatus {
   FAIL,
 }
 
-export enum ContractErrorType {
-  INSUFFICIENT_FUNDS = "INSUFFICIENT_FUNDS",
-  NOT_AUTHORIZED = "NOT_AUTHORIZED",
-  NOT_ENOUGH_XLM = "NOT_ENOUGH_XLM",
-  NOT_ENOUGH_NATIVE_ASSET = "NOT_ENOUGH_NATIVE_ASSET",
-  NOT_ENOUGH_ASSET = "NOT_ENOUGH_ASSET",
-}
-
 export interface IWalletContext {
   connected: boolean;
   walletAddress: string;
@@ -48,7 +39,7 @@ export interface IWalletContext {
   lastTxHash: string | undefined;
   error: string | undefined;
   isLoading: boolean;
-  connect: () => Promise<void>;
+  connect: (handleSuccess: (success: boolean) => void) => Promise<void>;
   disconnect: () => void;
   signAndSubmit: (tx: Transaction | TransactionBuilder) => Promise<string | undefined>;
   createTrustlines: (assets: Asset[], network: Networks) => Promise<void>;
@@ -57,7 +48,7 @@ export interface IWalletContext {
   setEnvironment: (environment: StellarToolsNetwork) => void;
 }
 
-const WalletContext = createContext<IWalletContext | undefined>(undefined);
+const WalletContext = React.createContext<IWalletContext | undefined>(undefined);
 
 let walletConnectModule: WalletConnectModule | undefined;
 let walletKit: StellarWalletsKit | undefined;
@@ -85,6 +76,7 @@ function getWalletKit(network: Networks): StellarWalletsKit {
         new LobstrModule(),
         new AlbedoModule(),
         new HanaModule(),
+        new HotWalletModule(),
         walletConnectModule,
       ],
     });
@@ -93,14 +85,13 @@ function getWalletKit(network: Networks): StellarWalletsKit {
 }
 
 export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [connected, setConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
-  const [txStatus, setTxStatus] = useState<TxStatus>(TxStatus.NONE);
-  const [txHash, setTxHash] = useState<string | undefined>();
-  const [error, setError] = useState<string | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [autoConnect, setAutoConnect] = useLocalStorageState("preferredWallet", "false");
-  const [environment, setEnvironment] = useState<StellarToolsNetwork>("testnet");
+  const [connected, setConnected] = React.useState(false);
+  const [walletAddress, setWalletAddress] = React.useState("");
+  const [txStatus, setTxStatus] = React.useState<TxStatus>(TxStatus.NONE);
+  const [txHash, setTxHash] = React.useState<string | undefined>();
+  const [error, setError] = React.useState<string | undefined>();
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [environment, setEnvironment] = React.useState<StellarToolsNetwork>("testnet");
 
   const rpcUrl = React.useMemo(() => {
     if (environment === "testnet") return process.env.NEXT_PUBLIC_RPC_URL_TESTNET!;
@@ -113,26 +104,6 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [environment]);
 
   const stellarRpc = new rpc.Server(rpcUrl);
-
-  useEffect(() => {
-    // @dev: timeout ensures chrome has the ability to load extensions
-    // if the wallet is already connected, this will be a no-op
-    if (!connected) {
-      if (autoConnect !== undefined && autoConnect !== "false" && autoConnect !== WALLET_CONNECT_ID) {
-        // attempt to auto-connect wallet
-        setTimeout(() => {
-          getWalletKit(network).setWallet(autoConnect);
-          handleSetWalletAddress();
-        }, 750);
-      } else {
-        // initialize wallet kit
-        setTimeout(() => {
-          getWalletKit(network);
-        }, 750);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoConnect]);
 
   async function handleSetWalletAddress(): Promise<boolean> {
     try {
@@ -150,7 +121,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }
 
-  const connect = async () => {
+  const connect = async (handleSuccess: (success: boolean) => void) => {
     try {
       setIsLoading(true);
       const kit = getWalletKit(network);
@@ -166,27 +137,22 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
 
           kit.setWallet(option.id);
-          const { address } = await kit.getAddress();
-          setWalletAddress(address);
-          setConnected(true);
-          setAutoConnect(option.id);
+          let result = await handleSetWalletAddress();
+          handleSuccess(result);
         },
       });
     } catch (e: any) {
       setError(e.message);
+      handleSuccess(false);
     } finally {
       setIsLoading(false);
     }
   };
 
   const disconnect = async () => {
-    if (autoConnect === WALLET_CONNECT_ID && walletConnectModule) {
-      await walletConnectModule.disconnect();
-    }
     getWalletKit(network).disconnect();
     setConnected(false);
     setWalletAddress("");
-    setAutoConnect("false");
   };
 
   const signAndSubmit = async (input: Transaction | TransactionBuilder): Promise<string | undefined> => {
@@ -296,7 +262,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 };
 
 export const useWallet = () => {
-  const context = useContext(WalletContext);
+  const context = React.use(WalletContext);
   if (!context) throw new Error("useWallet must be used within WalletProvider");
   return context;
 };

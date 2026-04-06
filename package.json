@@ -90,6 +90,7 @@
     "react-dropzone": "^14.3.8",
     "react-email-components": "^0.1.13",
     "react-hook-form": "^7.68.0",
+    "react-hot-toast": "^2.6.0",
     "react-hotkeys-hook": "^5.2.1",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.0",

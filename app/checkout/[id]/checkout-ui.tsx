@@ -5,13 +5,12 @@ import * as React from "react";
 import { AnimatedCheckmark } from "@/components/icon";
 import { PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
 import { useCheckout } from "@/contexts/checkout-context";
-import { useCookieState } from "@/hooks/use-cookie-state";
 import { truncate } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Info, X } from "lucide-react";
@@ -34,6 +33,14 @@ export default function CheckoutUI() {
     banner,
   } = useCheckout();
 
+  const handleConnectWallet = (successful: boolean) => {
+    if (!successful) toast.error("Unable to connect wallet.");
+  };
+
+  const handleClickConnect = () => {
+    wallet.kit.connectWallet(handleConnectWallet);
+  };
+
   if (isLoading) return <Checkout.Skeleton />;
   if (!checkout) return notFound();
   if (isPaid) return <Checkout.Success checkout={checkout} checkoutId={checkoutId} />;
@@ -47,9 +54,6 @@ export default function CheckoutUI() {
             <Info className="text-muted h-4 w-4" />
             <span>Test mode</span>
           </div>
-          <button onClick={() => banner.setShow(false)} className="absolute top-1/2 right-4 -translate-y-1/2">
-            <X className="size-4" />
-          </button>
         </div>
       )}
 
@@ -188,7 +192,7 @@ export default function CheckoutUI() {
                         <button
                           type="button"
                           className="text-muted-foreground hover:text-foreground w-full text-center text-xs underline-offset-2 transition-colors hover:underline"
-                          onClick={() => wallet.kit.connectWallet()}
+                          onClick={handleClickConnect}
                         >
                           Change wallet
                         </button>
@@ -209,50 +213,16 @@ export default function CheckoutUI() {
 
 const Checkout = {
   Success: ({ checkout, checkoutId }: any) => {
-    const [seenIds, setSeenIds] = useCookieState<string[]>("checkout_seen", []);
-    const isFirstVisit = !seenIds.includes(checkoutId);
-
-    React.useEffect(() => {
-      if (isFirstVisit && checkoutId) setSeenIds((prev) => (prev.includes(checkoutId) ? prev : [...prev, checkoutId]));
-    }, [checkoutId, isFirstVisit, setSeenIds]);
-
-    React.useEffect(() => {
-      if (!isFirstVisit || !checkout?.redirectUrl) return;
-      const t = setTimeout(() => {
-        window.location.href = checkout.redirectUrl!;
-      }, 2000);
-      return () => clearTimeout(t);
-    }, [isFirstVisit, checkout?.redirectUrl]);
-
     return (
       <div className="bg-background animate-in fade-in flex min-h-screen items-center justify-center p-6 duration-500">
-        <div className="w-full max-w-lg space-y-8 text-center">
-          {isFirstVisit && <AnimatedCheckmark />}
-          <div className="space-y-2">
-            <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">
-              {isFirstVisit ? "Payment received" : "Checkout"}
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              {isFirstVisit ? "This checkout has been completed." : "This checkout has been completed or expired."}
-            </p>
-          </div>
-          {isFirstVisit && (
-            <div className="bg-muted/50 space-y-4 rounded-2xl border p-6 text-left sm:p-8">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <span className="text-muted-foreground shrink-0 font-medium">Order ID</span>
-                <span className="text-right font-mono break-all">{checkoutId}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground font-medium">Status</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                  Paid
-                </Badge>
-              </div>
+        <div className="bg-muted/50 space-y-4 rounded-2xl border p-6 text-left sm:p-8">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <AnimatedCheckmark />
+            <div className="space-y-2">
+              <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">Payment received</h1>
+              <p className="text-muted-foreground text-lg">This checkout has been completed.</p>
             </div>
-          )}
-          {isFirstVisit && checkout?.redirectUrl && (
-            <p className="text-muted-foreground text-sm">Redirecting you shortly…</p>
-          )}
+          </div>
         </div>
       </div>
     );
