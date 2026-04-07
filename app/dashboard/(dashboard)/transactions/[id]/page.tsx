@@ -6,6 +6,7 @@ import { retrievePayments } from "@/actions/payment";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { CheckMark2 } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -86,7 +87,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       aria-label={label || "Copy to clipboard"}
     >
       {copied ? (
-        <CheckCircle2 className="h-4 w-4 text-green-600" />
+        <CheckMark2 width={16} height={16} className="text-green-600" />
       ) : (
         <Copy className="text-muted-foreground h-4 w-4" />
       )}

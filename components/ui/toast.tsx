@@ -16,6 +16,7 @@ const Toaster = (props: ToasterProps) => (
     toastOptions={{
       className: toastBaseClass,
       duration: 4000,
+      position: "top-center",
       ...props.toastOptions,
     }}
   />

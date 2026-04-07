@@ -6,6 +6,7 @@ import { resendWebhookLog, retrieveWebhookLogs } from "@/actions/webhook";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { CheckMark2 } from "@/components/icon";
 import { Log, LogDetailItem, LogDetailSection } from "@/components/log";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,7 +27,7 @@ import { useOrgQuery } from "@/hooks/use-org-query";
 import type { WebhookEvent } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { CheckCircle2, ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
+import { ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
 import moment from "moment";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -38,7 +39,7 @@ const StatusBadge = ({ statusCode, nextRetry }: { statusCode?: number; nextRetry
         variant="outline"
         className="w-[90px] justify-center gap-1.5 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
       >
-        <CheckCircle2 className="h-3 w-3" />
+        <CheckMark2 width={16} height={16} className="text-green-600" />
         200 OK
       </Badge>
     );
@@ -66,7 +67,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
-      {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+      {copied ? <CheckMark2 width={16} height={16} className="text-green-600" /> : <Copy className="h-4 w-4" />}
     </Button>
   );
 };
@@ -213,7 +214,7 @@ export default function WebhookLogPage() {
                       variant="outline"
                       className="w-[90px] justify-center gap-1.5 border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-400"
                     >
-                      <CheckCircle2 className="h-3 w-3" />
+                      <CheckMark2 width={16} height={16} className="text-green-600" />
                       200 OK
                     </Badge>
                   ) : (

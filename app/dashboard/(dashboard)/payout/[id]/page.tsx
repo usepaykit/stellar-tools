@@ -6,6 +6,7 @@ import { retrieveEvents } from "@/actions/event";
 import { retrievePayoutById } from "@/actions/payout";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { CheckMark2 } from "@/components/icon";
 import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -86,7 +87,7 @@ const CopyBtn = ({ text }: { text: string | null }) => {
       className="hover:bg-muted rounded-md p-1 transition-colors"
     >
       {copied ? (
-        <CheckCircle2 className="h-4 w-4 text-green-600" />
+        <CheckMark2 width={16} height={16} className="text-green-600" />
       ) : (
         <Copy className="text-muted-foreground h-4 w-4" />
       )}

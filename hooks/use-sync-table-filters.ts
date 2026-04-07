@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { ColumnFiltersState } from "@tanstack/react-table";
+import _ from "lodash";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function useSyncTableFilters() {
@@ -11,23 +12,11 @@ export function useSyncTableFilters() {
   const searchParams = useSearchParams();
 
   const filters = React.useMemo(() => {
-    const raw = searchParams.get("q");
+    const raw = searchParams.get("filter");
     if (!raw) return [] as ColumnFiltersState;
     try {
-      const decoded = JSON.parse(window.atob(raw));
-
-      return decoded.map((f: any) => ({
-        ...f,
-        value:
-          typeof f.value === "object" && f.value !== null
-            ? Object.fromEntries(
-                Object.entries(f.value).map(([k, v]) => [
-                  k,
-                  typeof v === "string" && /^\d{4}-\d{2}-\d{2}T/.test(v) ? new Date(v) : v,
-                ])
-              )
-            : f.value,
-      }));
+      const decoded = JSON.parse(raw);
+      return decoded.map((f: any) => ({ id: f.field, value: f.value, type: f.type }));
     } catch (e) {
       return [] as ColumnFiltersState;
     }
@@ -37,11 +26,19 @@ export function useSyncTableFilters() {
     (updaterOrValue: ColumnFiltersState | ((old: ColumnFiltersState) => ColumnFiltersState)) => {
       const nextValue = typeof updaterOrValue === "function" ? updaterOrValue(filters) : updaterOrValue;
 
+      if (_.isEqual(filters, nextValue)) return;
+
+      const urlFilters = nextValue.map((f) => ({
+        field: f.id,
+        value: f.value,
+        type: (f as any).type || "con", // Default to "contains"
+      }));
+
       const params = new URLSearchParams(searchParams.toString());
-      if (nextValue.length > 0) {
-        params.set("q", window.btoa(JSON.stringify(nextValue)));
+      if (urlFilters.length > 0) {
+        params.set("filter", JSON.stringify(urlFilters));
       } else {
-        params.delete("q");
+        params.delete("filter");
       }
 
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });

@@ -13,7 +13,7 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
-import { Stellar } from "@/components/icon";
+import { CheckMark2, Stellar } from "@/components/icon";
 import { SelectField } from "@/components/select-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Timeline } from "@/components/timeline";
@@ -60,11 +60,9 @@ import {
   EyeOff,
   Link2,
   MoreHorizontal,
-  Plus,
   XCircle,
 } from "lucide-react";
 import moment from "moment";
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
@@ -113,7 +111,7 @@ const CopyBtn = ({ text }: { text: string }) => {
       className="hover:bg-muted rounded-md p-1 transition-colors"
     >
       {copied ? (
-        <CheckCircle2 className="h-4 w-4 text-green-600" />
+        <CheckMark2 width={16} height={16} className="text-green-600" />
       ) : (
         <Copy className="text-muted-foreground h-4 w-4" />
       )}

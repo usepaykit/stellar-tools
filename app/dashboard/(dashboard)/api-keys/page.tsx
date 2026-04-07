@@ -7,6 +7,7 @@ import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
+import { CheckMark2 } from "@/components/icon";
 import { TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -45,7 +46,7 @@ type ApiKeyFormData = z.infer<typeof apiKeySchema>;
 export default function ApiKeysPage() {
   const invalidate = useInvalidateOrgQuery();
   const { data: apiKeys = [], isLoading } = useOrgQuery(["apiKeys"], () => retrieveApiKeys());
-  const { handleCopy } = useCopy();
+  const { handleCopy, copied } = useCopy();
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteApiKey(id),
@@ -355,7 +356,7 @@ function ApiKeyModalContent({
   onSuccess: () => void;
   onCreated?: () => void;
 }) {
-  const { handleCopy } = useCopy();
+  const { handleCopy, copied } = useCopy();
   const [createdApiKey, setCreatedApiKey] = React.useState<string | null>(null);
 
   const form = RHF.useForm<ApiKeyFormData>({
@@ -479,7 +480,11 @@ function ApiKeyModalContent({
                 {createdApiKey}
               </code>
               <Button type="button" variant="ghost" size="icon" onClick={handleCopyKey} className="h-8 w-8 shrink-0">
-                <Copy className="h-4 w-4" />
+                {copied ? (
+                  <CheckMark2 width={16} height={16} className="text-green-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </Button>
             </div>
             <p className="text-muted-foreground truncate text-xs">Click copy to save to clipboard.</p>

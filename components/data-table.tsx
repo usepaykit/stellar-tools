@@ -74,19 +74,18 @@ export const DataTable = <TData, TValue>({
   skeletonRowCount = 5,
   emptyMessage = "No results found.",
   withFilterPill = true,
-  columnFilters: initialColumnFilters,
-  setColumnFilters: setInitialColumnFilters,
+  columnFilters: externalFilters,
+  setColumnFilters: setExternalFilters,
   ...mixProps
 }: DataTableProps<TData, TValue>) => {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(initialColumnFilters ?? []);
+  const [internalFilters, setInternalFilters] = React.useState<ColumnFiltersState>([]);
+
+  const columnFilters = externalFilters ?? internalFilters;
+  const onColumnFiltersChange = setExternalFilters ?? setInternalFilters;
 
   const { row, checkbox, body, cell, rest } = splitProps(mixProps, "row", "checkbox", "body", "head", "cell");
-
-  React.useEffect(() => {
-    setInitialColumnFilters?.(columnFilters);
-  }, [columnFilters, setInitialColumnFilters]);
 
   const tableColumns = React.useMemo(() => {
     let cols = [...columns];
@@ -170,7 +169,10 @@ export const DataTable = <TData, TValue>({
     state: { sorting, rowSelection, columnFilters },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: (updaterOrValue: ColumnFiltersState | ((old: ColumnFiltersState) => ColumnFiltersState)) => {
+      const nextValue = typeof updaterOrValue === "function" ? updaterOrValue(columnFilters) : updaterOrValue;
+      onColumnFiltersChange(nextValue);
+    },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),

@@ -7,6 +7,7 @@ import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, TableAction } from "@/components/data-table";
+import { CheckMark2 } from "@/components/icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -102,7 +103,7 @@ const CopyWalletAddress = ({ address }: { address: string }) => {
         title="Copy wallet address"
       >
         {copied ? (
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <CheckMark2 width={16} height={16} className="text-green-600" />
         ) : (
           <Copy className="text-muted-foreground h-4 w-4" />
         )}

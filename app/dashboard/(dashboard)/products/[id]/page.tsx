@@ -8,6 +8,7 @@ import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { CheckMark2 } from "@/components/icon";
 import { LogDetailItem } from "@/components/log";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,17 +35,7 @@ import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { ApiClient } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  ChevronRight,
-  Copy,
-  Edit,
-  ExternalLink,
-  MoreHorizontal,
-  Package,
-  Pencil,
-  Plus,
-} from "lucide-react";
+import { ChevronRight, Copy, Edit, ExternalLink, MoreHorizontal, Package, Pencil } from "lucide-react";
 import moment from "moment";
 import Image from "next/image";
 import Link from "next/link";
@@ -76,7 +67,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       title={label ?? "Copy"}
     >
       {copied ? (
-        <CheckCircle2 className="h-4 w-4 text-green-600" />
+        <CheckMark2 width={16} height={16} className="text-green-600" />
       ) : (
         <Copy className="text-muted-foreground h-4 w-4" />
       )}

@@ -6,6 +6,7 @@ import { retrieveCreditBalanceById, retrieveCreditTransactionsByBalance } from "
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { CheckMark2 } from "@/components/icon";
 import { Log, LogDetailItem, LogDetailSection } from "@/components/log";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -110,7 +111,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       onClick={() => handleCopy({ text, message: "Copied to clipboard" })}
       title={label || "Copy to clipboard"}
     >
-      {copied ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+      {copied ? <CheckMark2 width={16} height={16} className="text-green-600" /> : <Copy className="h-4 w-4" />}
     </Button>
   );
 };
