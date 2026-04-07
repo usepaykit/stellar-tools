@@ -12,7 +12,7 @@ export const GET = async (request: NextRequest) => {
   console.log("getting stellar.toml");
   const environment = "testnet";
 
-  const assets = await retrieveAssets(environment);
+  const assets = await retrieveAssets(null, environment);
 
   const toml = TOML.stringify({
     NETWORK_PASSPHRASE: environment === "testnet" ? TESTNET_PASSPHRASE : MAINNET_PASSPHRASE,

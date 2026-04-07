@@ -1,12 +1,9 @@
 import { CronJobApi } from "@/integrations/cron-job";
 import { serve } from "inngest/next";
 
-export const cronJobApi = new CronJobApi();
+const cronJobApi = new CronJobApi();
 
-export const inngestServe = serve({
+export const { GET, POST, PUT } = serve({
   client: cronJobApi.getClient(),
   functions: cronJobApi.getFunctions(),
-  //   signingKey: process.env.INNGEST_SIGNING_KEY,
 });
-
-export const { GET, POST, PUT } = inngestServe;

@@ -2,7 +2,7 @@
 
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
-import { WebhookDelivery } from "@/integrations/webhook-delivery";
+import { deliverWebhook } from "@/integrations/webhook-delivery";
 import { toSnakeCase } from "@/lib/utils";
 import { generateResourceId } from "@/lib/utils";
 import { WebhookEvent } from "@stellartools/core";
@@ -247,7 +247,7 @@ export const triggerWebhooks = async (
   if (subscribers.length === 0) return { success: true, delivered: 0 };
 
   const results = await Promise.allSettled(
-    subscribers.map((webhook) => new WebhookDelivery().deliver(webhook, eventType, snakePayload as any))
+    subscribers.map((webhook) => deliverWebhook(webhook, eventType, snakePayload as Record<string, unknown>))
   );
 
   return {
@@ -265,5 +265,5 @@ export const resendWebhookLog = async (
 ) => {
   const webhook = await retrieveWebhook(webhookId, orgId, env);
   const normalizedPayload = toSnakeCase(payload) as Record<string, unknown>;
-  return new WebhookDelivery().deliver(webhook, eventType, normalizedPayload);
+  return deliverWebhook(webhook, eventType, normalizedPayload);
 };

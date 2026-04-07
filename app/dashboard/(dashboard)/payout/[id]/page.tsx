@@ -6,7 +6,6 @@ import { retrieveEvents } from "@/actions/event";
 import { retrievePayoutById } from "@/actions/payout";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { PayoutReceipt } from "@/components/payout/payout-receipt";
 import { Timeline } from "@/components/timeline";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,12 +26,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { PayoutStatus } from "@/constant/schema.client";
-import { Payout } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
-import { pdf } from "@react-pdf/renderer";
-import { saveAs } from "file-saver";
 import _ from "lodash";
 import {
   CheckCircle2,
@@ -49,6 +45,8 @@ import {
 import moment from "moment";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+
+import { generateAndDownloadReceipt } from "../_shared";
 
 const getExplorerUrl = (hash: string, env?: string) =>
   `https://stellar.expert/explorer/${env === "live" ? "public" : "testnet"}/tx/${hash}`;
@@ -306,31 +304,4 @@ export default function PayoutDetailPage() {
       </DashboardSidebarInset>
     </DashboardSidebar>
   );
-}
-
-export async function generateAndDownloadReceipt(
-  payout: Payout,
-  organizationName?: string,
-  organizationAddress?: string,
-  organizationEmail?: string
-): Promise<void> {
-  try {
-    const doc = (
-      <PayoutReceipt
-        payout={payout}
-        organizationName={organizationName}
-        organizationAddress={organizationAddress}
-        organizationEmail={organizationEmail}
-      />
-    );
-
-    const blob = await pdf(doc).toBlob();
-
-    const dateStr = new Date().toISOString().split("T")[0];
-    const filename = `stellartools-payout-receipt-${payout.id}-${dateStr}.pdf`;
-    saveAs(blob, filename);
-  } catch (error) {
-    console.error("Error generating receipt:", error);
-    throw new Error("Failed to generate receipt");
-  }
 }

@@ -5,7 +5,6 @@ import * as React from "react";
 import { retrieveEvents } from "@/actions/event";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveSubscriptions } from "@/actions/subscription";
-import { SubscriptionModalContent, SubscriptionModalFooter } from "@/app/dashboard/(dashboard)/subscriptions/page";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -39,6 +38,8 @@ import { ChevronRight, Copy, ExternalLink, MoreHorizontal, Pause, Play, XCircle 
 import moment from "moment";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+
+import { SubscriptionModalContent, SubscriptionModalFooter } from "../_shared";
 
 const formatXLM = (s: number) => (s / STROOPS_PER_XLM).toLocaleString(undefined, { minimumFractionDigits: 2 });
 const formatDate = (d: Date | string) => moment(d).format("D MMM, YYYY");

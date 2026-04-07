@@ -3,7 +3,7 @@
 import { retrieveCustomerPortalSession } from "@/actions/customers";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { ApiKey, Network, apiKeys, db, organizations } from "@/db";
-import { JWTApi } from "@/integrations/jwt";
+import { verifyJwt } from "@/integrations/jwt";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -70,10 +70,7 @@ export const deleteApiKey = async (id: string, orgId?: string, env?: Network) =>
 
 export const resolveApiKeyOrAuthorizationToken$1 = async (apiKey: string, sessionToken?: string) => {
   if (sessionToken) {
-    const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
-      orgId: string;
-      environment: Network;
-    };
+    const { orgId, environment } = verifyJwt<{ orgId: string; environment: Network }>(sessionToken);
 
     const organization = await retrieveOrganization(orgId);
 
@@ -110,10 +107,7 @@ export const resolveApiKeyOrAuthorizationToken = async (
   }
 
   if (sessionToken) {
-    const { orgId, environment } = (await new JWTApi().verify(sessionToken)) as {
-      orgId: string;
-      environment: Network;
-    };
+    const { orgId, environment } = verifyJwt<{ orgId: string; environment: Network }>(sessionToken);
 
     const [row] = await db
       .select({ organizationId: organizations.id, environment: sql<Network>`${environment}` })

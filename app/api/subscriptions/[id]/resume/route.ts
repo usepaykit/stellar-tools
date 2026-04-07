@@ -1,6 +1,6 @@
 import { retrieveCustomerWallets } from "@/actions/customers";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
-import { SorobanContractApi } from "@/integrations/soroban-contract";
+import { resumeSubscription as resumeSorobanSubscription } from "@/integrations/soroban-contract";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { Result, z as Schema } from "@stellartools/core";
 import { all } from "better-all";
@@ -26,11 +26,18 @@ export const POST = apiHandler({
 
     if (!customerWallet?.address) throw new Error("Customer wallet not found");
 
-    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
+    const resumeResult = await resumeSorobanSubscription(
+      environment,
+      customerWallet.address,
+      subscription.customerId,
+      subscription.productId
+    );
 
-    const result = await api.resumeSubscription(customerWallet.address, subscription.productId);
-    if (result.isErr()) return Result.err(new Error("Failed to resume subscription: " + result.error.message));
+    if (resumeResult.isErr())
+      return Result.err(new Error("Failed to resume subscription: " + resumeResult.error.message));
 
-    return await putSubscription(id, { status: "active", pausedAt: null }, organizationId, environment).then(Result.ok);
+    return await putSubscription(id, { status: "active", pausedAt: null }, organizationId, environment).then((_) =>
+      Result.ok({ success: true })
+    );
   },
 });

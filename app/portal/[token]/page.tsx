@@ -25,7 +25,7 @@ import { fileFromUrl, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Info, Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import moment from "moment";
 import Link from "next/link";
 import * as RHF from "react-hook-form";
@@ -118,7 +118,6 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
       if (imageFile instanceof File) {
         const formDataUpload = new FormData();
         formDataUpload.append("image", imageFile);
-        formDataUpload.append("maxSizeKB", "48");
         imageUrl = (await createCustomerImage(formDataUpload)) ?? null;
       }
 

@@ -3,9 +3,9 @@
 import { getCurrentUser } from "@/actions/auth";
 import { AuthProvider } from "@/constant/schema.client";
 import { Account, accounts, db } from "@/db";
-import { CookieManager } from "@/integrations/cookie-manager";
-import { FileUploadApi } from "@/integrations/file-upload";
-import { JWTApi } from "@/integrations/jwt";
+import { getCookie } from "@/integrations/cookie-manager";
+import { uploadFiles } from "@/integrations/file-upload";
+import { verifyJwt } from "@/integrations/jwt";
 import { eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
@@ -28,9 +28,9 @@ export const retrieveAccount = async (payload: AccountLookup): Promise<Account |
   let whereClause;
 
   if ("accessToken" in payload) {
-    const accessToken = await new CookieManager().get("accessToken");
+    const accessToken = await getCookie("accessToken");
     if (!accessToken) return null;
-    const { accountId } = (await new JWTApi().verify(accessToken)) as { accountId: string };
+    const { accountId } = (await verifyJwt(accessToken)) as { accountId: string };
     return await retrieveAccount({ id: accountId });
   }
 
@@ -56,7 +56,7 @@ export const putAccount = async (id: string, params: Partial<Account>, options?:
   const avatarFile = options?.formDataWithFiles?.get("avatar");
 
   if (avatarFile) {
-    const avatarUploadResult = await new FileUploadApi().upload([avatarFile as File]);
+    const avatarUploadResult = await uploadFiles([avatarFile as File], { maxSizeKB: 48 });
     params.profile = { ...params.profile, avatarUrl: avatarUploadResult?.[0] };
   }
 

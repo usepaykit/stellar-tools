@@ -1,15 +1,14 @@
 "use server";
 
+import { postAccount, putAccount, retrieveAccount } from "@/actions/account";
 import { Account, Auth, PasswordReset, auth, db, passwordReset } from "@/db";
-import { CookieManager } from "@/integrations/cookie-manager";
-import { EmailApi } from "@/integrations/email";
-import { JWTApi } from "@/integrations/jwt";
+import { deleteCookies, getCookie, setCookies } from "@/integrations/cookie-manager";
+import { sendEmail } from "@/integrations/email";
+import { signJwt, verifyJwt } from "@/integrations/jwt";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import moment from "moment";
 import { nanoid } from "nanoid";
-
-import { postAccount, putAccount, retrieveAccount } from "./account";
 
 const BCRYPT_SALT_ROUNDS = 10;
 
@@ -109,12 +108,12 @@ export const deletePasswordReset = async (id: string) => {
 const generateAndSetSession = async (account: { id: string; email: string }) => {
   const payload = { accountId: account.id, email: account.email };
 
-  const accessToken = await new JWTApi().sign(payload, "6h");
-  const refreshToken = await new JWTApi().sign(payload, "30d");
+  const accessToken = signJwt(payload, "6h");
+  const refreshToken = signJwt(payload, "30d");
 
-  await new CookieManager().set([
-    { key: "accessToken", value: accessToken, maxAge: 30 * 60 },
-    { key: "refreshToken", value: refreshToken, maxAge: 30 * 24 * 60 * 60 },
+  await setCookies([
+    { key: "accessToken", value: accessToken, maxAge: 6 * 60 * 60 }, // 6 hours
+    { key: "refreshToken", value: refreshToken, maxAge: 30 * 24 * 60 * 60 }, // 30 days
   ]);
 
   return { accessToken, refreshToken };
@@ -195,7 +194,7 @@ export const forgotPassword = async (email: string) => {
 
   const resetLink = `${process.env.APP_URL}/reset-password?token=${resetToken.token}`;
 
-  new EmailApi().sendEmail(email, "Reset Password", `<a href="${resetLink}">Reset Password</a>`);
+  await sendEmail(email, "Reset Password", `<a href="${resetLink}">Reset Password</a>`);
 
   return { success: true };
 };
@@ -224,29 +223,31 @@ export const resetPassword = async (token: string, newPassword: string) => {
   return { success: true };
 };
 
+interface CurrentUserPayload {
+  accountId: string;
+  email: string;
+  iat: number;
+  exp: number;
+}
+
 export const getCurrentUser = async () => {
-  const accessToken = await new CookieManager().get("accessToken");
+  const accessToken = await getCookie("accessToken");
 
   if (!accessToken) return null;
 
-  const payload = (await new JWTApi().verify(accessToken)) as {
-    accountId: string;
-    email: string;
-    iat: number;
-    exp: number;
-  };
+  const payload = verifyJwt<CurrentUserPayload>(accessToken);
 
   const authRecord = await retrieveAuth({ accountId: payload.accountId });
 
   if (authRecord.isRevoked || new Date() > authRecord.expiresAt) {
-    await new CookieManager().delete([{ key: "accessToken" }, { key: "refreshToken" }]);
+    await deleteCookies(["accessToken", "refreshToken"]);
     return null;
   }
 
   const account = await retrieveAccount({ id: payload.accountId });
 
   if (!account) {
-    await new CookieManager().delete([{ key: "accessToken" }, { key: "refreshToken" }]);
+    await deleteCookies(["accessToken", "refreshToken"]);
     return null;
   }
 
@@ -263,15 +264,11 @@ export const getCurrentUser = async () => {
 };
 
 export const signOut = async () => {
-  const accessToken = await new CookieManager().get("accessToken");
+  const accessToken = await getCookie("accessToken");
+
   if (accessToken) {
     try {
-      const payload = (await new JWTApi().verify(accessToken)) as {
-        accountId: string;
-        email: string;
-        iat: number;
-        exp: number;
-      };
+      const payload = verifyJwt<CurrentUserPayload>(accessToken);
 
       const authRecord = await retrieveAuth({ accountId: payload.accountId });
       await putAuth(authRecord.id, { isRevoked: true });
@@ -280,6 +277,7 @@ export const signOut = async () => {
     }
   }
 
-  await new CookieManager().delete([{ key: "accessToken" }, { key: "refreshToken" }]);
+  await deleteCookies(["accessToken", "refreshToken"]);
+
   return { success: true };
 };

@@ -3,33 +3,26 @@ import { cookies } from "next/headers";
 
 type CookieKey = SuggestedString<"accessToken" | "refreshToken" | "selectedOrg">;
 
-export class CookieManager {
-  private readonly BASE_OPTIONS = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    path: "/",
-  };
+const BASE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
 
-  async get(key: CookieKey) {
-    const cookieStore = await cookies();
-    return cookieStore.get(key as string)?.value;
-  }
+export const getCookie = async (key: CookieKey) => {
+  const store = await cookies();
+  return store.get(key)?.value;
+};
 
-  async set(params: Array<{ key: CookieKey; value: string; maxAge?: number }>): Promise<void> {
-    const cookieStore = await cookies();
-    for (const param of params) {
-      cookieStore.set(param.key as string, param.value, {
-        ...this.BASE_OPTIONS,
-        maxAge: param.maxAge,
-      });
-    }
-  }
+export const setCookies = async (params: { key: CookieKey; value: string; maxAge?: number }[]): Promise<void> => {
+  const store = await cookies();
+  params.forEach(({ key, value, maxAge }) => {
+    store.set(key, value, { ...BASE_OPTIONS, maxAge });
+  });
+};
 
-  async delete(params: Array<{ key: CookieKey }>) {
-    const cookieStore = await cookies();
-    for (const param of params) {
-      cookieStore.delete(param.key as string);
-    }
-  }
-}
+export const deleteCookies = async (keys: CookieKey[]): Promise<void> => {
+  const store = await cookies();
+  keys.forEach((key) => store.delete(key));
+};

@@ -3,7 +3,7 @@
 import { retrieveAssets } from "@/actions/asset";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { Network, Product, ProductStatus, assets, db, products } from "@/db";
-import { FileUploadApi } from "@/integrations/file-upload";
+import { uploadFiles } from "@/integrations/file-upload";
 import { createTrustlines } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
@@ -12,11 +12,10 @@ export const createProductImage = async (formData: FormData) => {
   const imageFiles = formData.getAll("images");
 
   if (imageFiles) {
-    const imageUploadResult = await new FileUploadApi().upload(imageFiles as File[]);
-    return imageUploadResult || [];
+    return (await uploadFiles(imageFiles as File[], { maxSizeKB: 1024 })) ?? [];
   }
 
-  return [];
+  return undefined;
 };
 
 export const postProduct = async (

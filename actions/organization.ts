@@ -18,10 +18,10 @@ import {
   secretAccessLog,
   subscriptions,
 } from "@/db";
-import { CookieManager } from "@/integrations/cookie-manager";
+import { getCookie, setCookies } from "@/integrations/cookie-manager";
 import { EncryptionApi } from "@/integrations/encryption";
-import { FileUploadApi } from "@/integrations/file-upload";
-import { JWTApi } from "@/integrations/jwt";
+import { uploadFiles } from "@/integrations/file-upload";
+import { signJwt, verifyJwt } from "@/integrations/jwt";
 import { PriceFeedApi } from "@/integrations/price-feed";
 import { createAccount } from "@/integrations/stellar-core";
 import { TIER_FEE_TOKENS } from "@/lib/pricing.server";
@@ -36,7 +36,7 @@ export const postOrganizationAndSecret = async (
   const logoFile = options?.formDataWithFiles?.get("logo");
 
   if (logoFile) {
-    const logoUploadResult = await new FileUploadApi().upload([logoFile as File], { maxSizeKB: 48 });
+    const logoUploadResult = await uploadFiles([logoFile as File], { maxSizeKB: 48 });
     params.logoUrl = logoUploadResult?.[0] ?? null;
   }
 
@@ -134,7 +134,7 @@ export const putOrganization = async (
   const logoFile = options?.formDataWithFiles?.get("logo");
 
   if (logoFile) {
-    const logoUploadResult = await new FileUploadApi().upload([logoFile as File]);
+    const logoUploadResult = await uploadFiles([logoFile as File], { maxSizeKB: 48 });
     params.logoUrl = logoUploadResult?.[0] ?? null;
   }
 
@@ -159,26 +159,23 @@ export const deleteOrganization = async (id: string) => {
 
 export const setCurrentOrganization = async (orgId: string, environment: Network = "testnet") => {
   const payload = { orgId, environment };
-  const token = await new JWTApi().sign(payload, "1y");
+  const token = signJwt(payload, "1y");
 
-  await new CookieManager().set([
+  await setCookies([
     { key: "selectedOrg", value: token, maxAge: 365 * 24 * 60 * 60 }, // 1 year
   ]);
 };
 
 export const getCurrentOrganization = async () => {
-  const token = await new CookieManager().get("selectedOrg");
+  const selectedOrg = await getCookie("selectedOrg");
 
-  if (!token) return null;
+  if (!selectedOrg) return null;
 
-  const { orgId, environment } = (await new JWTApi().verify(token)) as {
-    orgId: string;
-    environment: Network;
-  };
+  const { orgId, environment } = verifyJwt<{ orgId: string; environment: Network }>(selectedOrg);
 
   const organization = await retrieveOrganization(orgId);
 
-  return { id: organization.id, environment, token };
+  return { id: organization.id, environment, token: selectedOrg };
 };
 
 export const switchEnvironment = async (environment: Network) => {

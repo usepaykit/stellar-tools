@@ -7,8 +7,7 @@ import { retrieveCustomers } from "@/actions/customers";
 import { retrieveEvents } from "@/actions/event";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
-import { CustomerModalContent } from "@/app/dashboard/(dashboard)/customers/page";
-import { RefundModalContent } from "@/app/dashboard/(dashboard)/transactions/page";
+import { CustomerModalContent } from "@/app/dashboard/(dashboard)/customers/_shared";
 import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
@@ -69,6 +68,8 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
+
+import { RefundModalContent } from "../../transactions/_shared";
 
 // --- Reusable Internal Components ---
 

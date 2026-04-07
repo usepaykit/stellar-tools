@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { useCheckout } from "@/contexts/checkout-context";
-import { truncate } from "@/lib/utils";
+import { cn, truncate } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Info, X } from "lucide-react";
 import Image from "next/image";
@@ -180,9 +180,13 @@ export default function CheckoutUI() {
                     <div className="space-y-2">
                       <Button
                         type="button"
-                        className="h-14 w-full text-lg font-bold shadow-lg"
+                        className={cn(
+                          "h-14 w-full text-lg font-bold shadow-lg",
+                          wallet.isProcessing && "pointer-events-none opacity-80"
+                        )}
                         onClick={wallet.handleWalletPay}
                         isLoading={wallet.isProcessing}
+                        disabled={wallet.isProcessing}
                       >
                         {wallet.connectedAddress
                           ? `Pay as ${truncate(wallet.connectedAddress, { start: 4, end: 4 })}`

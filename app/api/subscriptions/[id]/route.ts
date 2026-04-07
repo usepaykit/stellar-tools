@@ -1,9 +1,16 @@
 import { retrieveCustomerWallets } from "@/actions/customers";
+import { runAtomic } from "@/actions/event";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
-import { SorobanContractApi } from "@/integrations/soroban-contract";
+import { Subscription } from "@/db";
+import {
+  cancelSubscription as cancelSorobanSubscription,
+  retrieveSubscription as retrieveSorobanSubscription,
+} from "@/integrations/soroban-contract";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { computeDiff, toSnakeCase } from "@/lib/utils";
 import { Result, z as Schema, updateSubscriptionSchema } from "@stellartools/core";
 import { all } from "better-all";
+import _ from "lodash";
 
 export const OPTIONS = createOptionsHandler();
 
@@ -11,7 +18,6 @@ export const GET = apiHandler({
   auth: ["session", "apikey", "portal"],
   schema: { params: Schema.object({ id: Schema.string() }) },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
-    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
     const { subscription, customerWallet } = await all({
       subscription: async () => retrieveSubscription(id, organizationId, environment),
       async customerWallet() {
@@ -29,11 +35,47 @@ export const GET = apiHandler({
       return Result.err(new Error("Customer wallet not found"));
     }
 
-    const onchainSubscription = await api.getSubscription(customerWallet.address, subscription.productId);
+    const onchainSubscription = await retrieveSorobanSubscription(
+      environment,
+      customerWallet.address,
+      subscription.productId
+    );
 
-    if (!onchainSubscription) return Result.err(new Error("Subscription not found"));
+    if (onchainSubscription.isErr()) return Result.err(onchainSubscription.error);
 
-    return Result.ok({ ...subscription, ...onchainSubscription });
+    const chainStateAsDb = {
+      status: onchainSubscription.value.status,
+      amount: Number(onchainSubscription.value.amount),
+      currentPeriodEnd: new Date(Number(onchainSubscription.value.periodEnd) * 1000),
+    };
+
+    const dbComparisonState = _.pick(subscription, Object.keys(chainStateAsDb));
+    const diff = computeDiff(dbComparisonState, chainStateAsDb);
+
+    let updatedSubscription: Subscription | null = subscription;
+
+    if (diff) {
+      await runAtomic(async () => {
+        const updated = await putSubscription(id, chainStateAsDb, organizationId, environment);
+        updatedSubscription = updated;
+      });
+    }
+
+    return Result.ok(
+      toSnakeCase({
+        id: updatedSubscription.id,
+        customerId: updatedSubscription.customerId,
+        productId: updatedSubscription.productId,
+        status: updatedSubscription.status,
+        currentPeriodStart: updatedSubscription.currentPeriodStart,
+        currentPeriodEnd: updatedSubscription.currentPeriodEnd,
+        cancelAtPeriodEnd: updatedSubscription.cancelAtPeriodEnd,
+        metadata: updatedSubscription.metadata,
+        trialDays: updatedSubscription.trialDays,
+        updatedAt: updatedSubscription.updatedAt,
+        createdAt: updatedSubscription.createdAt,
+      })
+    );
   },
 });
 
@@ -60,12 +102,15 @@ export const PUT = apiHandler({
 
     if (!customerWallet?.address) return Result.err(new Error("Customer wallet not found"));
 
-    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-
-    let cancellationResult: Awaited<ReturnType<typeof api.cancelSubscription>> | null = null;
+    let cancellationResult: Awaited<ReturnType<typeof cancelSorobanSubscription>> | null = null;
 
     if (cancelAtPeriodEnd) {
-      cancellationResult = await api.cancelSubscription(customerWallet.address, subscription.productId);
+      cancellationResult = await cancelSorobanSubscription(
+        environment,
+        customerWallet.address,
+        subscription.customerId,
+        subscription.productId
+      );
     }
 
     if (cancellationResult?.isErr()) return Result.err(cancellationResult.error);

@@ -17,7 +17,7 @@ import {
   subscriptions as subscriptionsSchema,
 } from "@/db";
 import { CustomerWallet as CustomerWalletSchema } from "@/db";
-import { FileUploadApi } from "@/integrations/file-upload";
+import { uploadFiles } from "@/integrations/file-upload";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { mergeWithNullDeletes } from "@/lib/utils";
 import { MaybeArray } from "@stellartools/core";
@@ -27,10 +27,9 @@ import moment from "moment";
 
 export const createCustomerImage = async (formData: FormData): Promise<string | undefined> => {
   const imageFile = formData.get("image");
-  const maxSizeKB = formData.get("maxSizeKB") ? Number(formData.get("maxSizeKB")) : undefined;
 
   if (imageFile) {
-    const uploadResult = await new FileUploadApi().upload([imageFile as File], { maxSizeKB });
+    const uploadResult = await uploadFiles([imageFile as File], { maxSizeKB: 48 });
     return uploadResult?.[0] ?? undefined;
   }
 

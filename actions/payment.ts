@@ -26,7 +26,7 @@ import { CustomerPaymentReceiptEmail } from "@/emails/customer-payment-receipt-e
 import { MerchantFirstPaymentConfirmedEmail } from "@/emails/merchant-first-payment-confirmed";
 import { MerchantMeteredFirstPurchaseEmail } from "@/emails/merchant-metered-first-purchase";
 import { MerchantSubscriptionStartedEmail } from "@/emails/merchant-subscription-started";
-import { EmailApi } from "@/integrations/email";
+import { sendEmail } from "@/integrations/email";
 import { verifyPaymentByPagingToken } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
@@ -135,14 +135,13 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
 
       // Load all data once
       const ctx = await loadPaymentContext(payment, organizationId, environment);
-      const emailApi = new EmailApi();
 
       console.log({ ctx });
 
       // Customer Receipt
       if (ctx.customer?.email) {
         sideEffects.push(
-          emailApi.sendEmail(
+          sendEmail(
             ctx.customer.email,
             "Payment Confirmed",
             CustomerPaymentReceiptEmail({
@@ -170,7 +169,7 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
           ctx as Required<PaymentContext>,
           payment
         );
-        sideEffects.push(emailApi.sendEmail(ctx.org.supportEmail, subject, component));
+        sideEffects.push(sendEmail(ctx.org.supportEmail, subject, component));
       }
     }
 

@@ -50,7 +50,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-import { type Product, ProductsModalContent, ProductsModalFooter } from "../page";
+import { type Product, ProductsModalContent, ProductsModalFooter } from "../_shared";
 
 const productTypeLabels: Record<string, string> = {
   one_time: "One-off",

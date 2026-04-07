@@ -5,7 +5,7 @@ import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { postSubscriptionsBulk } from "@/actions/subscription";
 import { subscriptionIntervals } from "@/constant";
-import { SorobanContractApi } from "@/integrations/soroban-contract";
+import { buildSubscriptionApprovalXdr, startSubscription, submitSorobanTx } from "@/integrations/soroban-contract";
 import { retrieveAssetContractId } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
 import moment from "moment";
@@ -45,8 +45,7 @@ export async function prepareSubscriptionApproval(
     // Approve 200 periods worth of allowance so recurring charges work without re-approval
     const totalAllowance = amountStroops * BigInt(200);
 
-    const engine = new SorobanContractApi(checkout.environment, process.env.KEEPER_SECRET!);
-    const xdrResult = await engine.buildApprovalXdr({
+    const xdrResult = await buildSubscriptionApprovalXdr(checkout.environment, {
       customerAddress,
       tokenContractId,
       amount: totalAllowance,
@@ -110,14 +109,12 @@ export async function finalizeSubscriptionCheckout(
   const durationSeconds = durationDays * 86400;
   const amountStroops = BigInt(Math.round(checkout.finalAmount * 1e7));
 
-  const engine = new SorobanContractApi(checkout.environment, process.env.KEEPER_SECRET!);
-
-  const approvalResult = await engine.submitSignedSorobanTransaction(signedApprovalXDR);
+  const approvalResult = await submitSorobanTx(checkout.environment, signedApprovalXDR);
   if (approvalResult.isErr()) {
     return { success: false, error: `Approval failed: ${approvalResult.error.message}` };
   }
 
-  const startResult = await engine.startSubscription({
+  const startResult = await startSubscription(checkout.environment, process.env.KEEPER_SECRET!, {
     customerAddress,
     merchantAddress: merchantPublicKey,
     tokenContractId,
@@ -135,7 +132,6 @@ export async function finalizeSubscriptionCheckout(
   const subscriptionId = generateResourceId("sub", checkout.organizationId, 20);
 
   await runAtomic(async () => {
-    console.log({ checkout });
     await putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment);
 
     await postSubscriptionsBulk(

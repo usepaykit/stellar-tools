@@ -1,6 +1,6 @@
 import { retrieveCustomerWallets } from "@/actions/customers";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
-import { SorobanContractApi } from "@/integrations/soroban-contract";
+import { pauseSubscription as pauseSorobanSubscription } from "@/integrations/soroban-contract";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { Result, z as Schema } from "@stellartools/core";
 
@@ -18,13 +18,17 @@ export const POST = apiHandler({
 
     if (!customerWallet?.address) throw new Error("Customer wallet not found");
 
-    const api = new SorobanContractApi(environment, process.env.KEEPER_SECRET!);
-    const response = await api.pauseSubscription(customerWallet.address, subscription.productId);
+    const pauseResult = await pauseSorobanSubscription(
+      environment,
+      customerWallet.address,
+      subscription.customerId,
+      subscription.productId
+    );
 
-    console.log({ response });
-    
+    if (pauseResult.isErr()) return Result.err(pauseResult.error);
+
     return await putSubscription(id, { status: "paused", pausedAt: new Date() }, organizationId, environment).then(
-      Result.ok
+      (_) => Result.ok({ success: true })
     );
   },
 });

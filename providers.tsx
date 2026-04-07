@@ -22,7 +22,7 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <AppModalProvider>
-        <WalletProvider rpcUrl={process.env.NEXT_PUBLIC_STELLAR_RPC_URL!}>{children}</WalletProvider>
+        <WalletProvider>{children}</WalletProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </AppModalProvider>
     </QueryClientProvider>

@@ -38,7 +38,7 @@ import { useRouter } from "next/navigation";
 import * as RHF from "react-hook-form";
 import { z } from "zod";
 
-import { generateAndDownloadReceipt } from "./[id]/page";
+import { generateAndDownloadReceipt } from "./_shared";
 
 // --- Constants & Types ---
 

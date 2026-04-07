@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { retrievePayments } from "@/actions/payment";
-import { RefundModalContent, RefundModalFooter } from "@/app/dashboard/(dashboard)/transactions/page";
 import { AppModal } from "@/components/app-modal";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
@@ -44,6 +43,8 @@ import {
 import moment from "moment";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+
+import { RefundModalContent, RefundModalFooter } from "../_shared";
 
 const StatusBadge = ({ status }: { status: Payment["status"] }) => {
   const variants = {
@@ -195,6 +196,7 @@ export default function TransactionDetailPage() {
       description: "Process a refund for a transaction by providing the payment details.",
       content: (
         <RefundModalContent
+          payment={payment}
           initialPaymentId={paymentId}
           onClose={() => {
             isRefundModalOpenRef.current = false;

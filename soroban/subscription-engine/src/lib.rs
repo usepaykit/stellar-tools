@@ -4,11 +4,6 @@ use soroban_sdk::{
 };
 
 #[contracttype]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(u32)]
-pub enum Status { Active = 1, Paused = 2, Canceled = 3 }
-
-#[contracttype]
 #[derive(Clone, Debug)]
 pub struct Subscription {
     pub customer: Address,
@@ -17,7 +12,26 @@ pub struct Subscription {
     pub amount: i128,
     pub period_duration: u64,
     pub period_end: u64,
-    pub status: Status,
+    pub status: String,
+}
+
+fn status_active(e: &Env) -> String {
+    String::from_str(e, "active")
+}
+
+fn status_paused(e: &Env) -> String {
+    String::from_str(e, "paused")
+}
+
+fn status_canceled(e: &Env) -> String {
+    String::from_str(e, "canceled")
+}
+
+fn require_allowed_status(e: &Env, s: &String) {
+    let ok = s == &status_active(e) || s == &status_paused(e) || s == &status_canceled(e);
+    if !ok {
+        panic!("Invalid status");
+    }
 }
 
 #[contract]
@@ -40,7 +54,7 @@ impl SubscriptionEngine {
             amount,
             period_duration: duration,
             period_end: e.ledger().timestamp() + duration,
-            status: Status::Active,
+            status: status_active(&e),
         };
 
         e.storage().persistent().set(&(customer.clone(), product_id.clone()), &sub);
@@ -55,7 +69,9 @@ impl SubscriptionEngine {
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).expect("Sub not found");
 
-        if sub.status != Status::Active { panic!("Inactive sub"); }
+        if sub.status != status_active(&e) {
+            panic!("Inactive sub");
+        }
         if e.ledger().timestamp() < sub.period_end { panic!("Period not ended"); }
 
         // Execute transfer. If user has no funds, this line PANICS.
@@ -78,7 +94,7 @@ impl SubscriptionEngine {
 
         if e.ledger().timestamp() > sub.period_end { panic!("Period ended"); }
 
-        sub.status = Status::Active;
+        sub.status = status_active(&e);
         e.storage().persistent().set(&key, &sub);
         e.events().publish((symbol_short!("sub_res"), customer, product_id), ());
     }
@@ -89,8 +105,7 @@ impl SubscriptionEngine {
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
 
-
-        sub.status = Status::Paused;
+        sub.status = status_paused(&e);
         e.storage().persistent().set(&key, &sub);
         e.events().publish((symbol_short!("sub_pau"), customer, product_id), ());
     }
@@ -101,13 +116,15 @@ impl SubscriptionEngine {
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
 
-        sub.status = Status::Canceled;
+        sub.status = status_canceled(&e);
         e.storage().persistent().set(&key, &sub);
         e.events().publish((symbol_short!("sub_can"), customer, product_id), ());
     }
 
-    pub fn update(e: Env, customer: Address, product_id: String, status: Status, period_duration: u64, period_end: u64, caller: Address) {
+    pub fn update(e: Env, customer: Address, product_id: String, status: String, period_duration: u64, period_end: u64, caller: Address) {
         caller.require_auth();
+
+        require_allowed_status(&e, &status);
 
         let key = (customer.clone(), product_id.clone());
         let mut sub: Subscription = e.storage().persistent().get(&key).unwrap();
@@ -116,9 +133,8 @@ impl SubscriptionEngine {
         sub.period_duration = period_duration;
         sub.period_end = period_end;
         e.storage().persistent().set(&key, &sub);
-        e.events().publish((symbol_short!("sub_upd"), customer, product_id), (status, period_duration, period_end));
+        e.events().publish((symbol_short!("sub_upd"), customer, product_id), (sub.status.clone(), period_duration, period_end));
     }
-
 
     pub fn get_subscription(e: Env, customer: Address, product_id: String) -> Subscription {
         e.storage().persistent().get(&(customer, product_id)).expect("Sub not found")

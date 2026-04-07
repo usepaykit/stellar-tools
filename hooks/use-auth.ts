@@ -1,0 +1,40 @@
+"use client";
+
+import React from "react";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+export const useAuth = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const [dismissedError, setDismissedError] = React.useState(false);
+
+  const error = searchParams?.get("error");
+  const redirect = searchParams?.get("redirect") ?? "/";
+
+  React.useEffect(() => {
+    if (dismissedError && error) {
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete("error");
+      router.replace(`${pathname}?${newParams.toString()}`);
+      setDismissedError(false);
+    }
+  }, [dismissedError, error, router, searchParams, pathname]);
+
+  const handleGoogleSignIn = React.useCallback(() => {
+    const authUrlParams = {
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+      redirect_uri: `${process.env.NEXT_PUBLIC_API_URL}/auth/verify-callback`,
+      response_type: "code",
+      scope: "openid profile email",
+      access_type: "offline",
+      prompt: "consent",
+      state: btoa(JSON.stringify({ intent: pathname.includes("signup") ? "SIGN_UP" : "SIGN_IN", redirect })),
+    };
+    router.push(`https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams(authUrlParams as any)}`);
+  }, [router, redirect, pathname]);
+
+  return { error, handleGoogleSignIn, setDismissedError };
+};

@@ -1,7 +1,10 @@
 import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { putSubscription, retrieveDueSubscriptions } from "@/actions/subscription";
-import { SorobanContractApi } from "@/integrations/soroban-contract";
+import {
+  cancelSubscription as cancelSorobanSubscription,
+  chargeSubscription as chargeSorobanSubscription,
+} from "@/integrations/soroban-contract";
 import { EventSchemas, Inngest } from "inngest";
 
 type Events = {
@@ -61,11 +64,14 @@ export class CronJobApi {
             try {
               if (sub.subscription.cancelAtPeriodEnd) {
                 await runAtomic(async () => {
-                  const api = new SorobanContractApi(environment, keeperSecret);
+                  const cancellationResult = await cancelSorobanSubscription(
+                    environment,
+                    walletAddress,
+                    sub.customer.id,
+                    productId
+                  );
 
-                  const response = await api.cancelSubscription(walletAddress, productId);
-
-                  if (response.isOk()) {
+                  if (cancellationResult.isOk()) {
                     await putSubscription(
                       subscriptionId,
                       { status: "canceled", canceledAt: new Date() },
@@ -84,15 +90,19 @@ export class CronJobApi {
                 continue;
               }
 
-              const api = new SorobanContractApi(environment, keeperSecret);
-              const result = await api.charge(walletAddress, productId);
+              const chargeResult = await chargeSorobanSubscription(
+                environment,
+                walletAddress,
+                sub.customer.id,
+                productId
+              );
 
-              if (result.isErr()) {
+              if (chargeResult.isErr()) {
                 failed += 1;
                 continue;
               }
 
-              const paymentEvent = result.value.events.find((e: { topic: string }) => e.topic === "sub_pay");
+              const paymentEvent = chargeResult.value.events.find((e: { topic: string }) => e.topic === "sub_pay");
 
               console.log("paymentEvent", paymentEvent);
 
@@ -108,7 +118,7 @@ export class CronJobApi {
                       checkoutId: null,
                       customerId: sub.customer.id,
                       amount: parseInt(paymentEvent.data.amount),
-                      transactionHash: result.value.hash,
+                      transactionHash: chargeResult.value.hash,
                       status: "failed",
                       metadata: null,
                       assetId: sub.subscription.assetId,
@@ -116,7 +126,7 @@ export class CronJobApi {
                     },
                     sub.subscription.organizationId,
                     sub.subscription.environment,
-                    { customerWalletAddress: result.value.customerWalletAddress }
+                    { customerWalletAddress: chargeResult.value.customerWalletAddress }
                   );
                   throw new Error("On-chain payment failure recorded");
                 }
@@ -136,7 +146,7 @@ export class CronJobApi {
                     checkoutId: null,
                     customerId: sub.customer.id,
                     amount: parseInt(paymentEvent.data.amount),
-                    transactionHash: result.value.hash,
+                    transactionHash: chargeResult.value.hash,
                     status: "confirmed",
                     metadata: null,
                     assetId: sub.subscription.assetId,
@@ -144,7 +154,7 @@ export class CronJobApi {
                   },
                   sub.subscription.organizationId,
                   sub.subscription.environment,
-                  { customerWalletAddress: result.value.customerWalletAddress }
+                  { customerWalletAddress: chargeResult.value.customerWalletAddress }
                 );
               });
 
