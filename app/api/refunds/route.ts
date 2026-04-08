@@ -1,7 +1,7 @@
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { retrievePayments } from "@/actions/payment";
 import { postRefund } from "@/actions/refund";
-import { EncryptionApi } from "@/integrations/encryption";
+import { decrypt } from "@/integrations/encryption";
 import { isValidPublicKey, sendAssetPayment } from "@/integrations/stellar-core";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { generateResourceId } from "@/lib/utils";
@@ -35,7 +35,7 @@ export const POST = apiHandler({
     });
 
     const refundId = generateResourceId("rf", paymentId, 15);
-    const secretKey = new EncryptionApi().decrypt(secret.encrypted);
+    const secretKey = decrypt(secret.encrypted);
 
     const isValidPublicKeyResult = isValidPublicKey(walletAddress ?? payment?.wallets?.address);
 

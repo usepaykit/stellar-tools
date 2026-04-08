@@ -2,7 +2,7 @@ import { retrieveAssets } from "@/actions/asset";
 import { getOrgFeeRateBps } from "@/actions/billing";
 import { retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import { postPayout, putPayout } from "@/actions/payout";
-import { EncryptionApi } from "@/integrations/encryption";
+import { decrypt } from "@/integrations/encryption";
 import { sendAssetPayment } from "@/integrations/stellar-core";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { BPS_DENOMINATOR } from "@/lib/pricing";
@@ -39,7 +39,7 @@ export const POST = apiHandler({
       },
     });
 
-    const secretKey = new EncryptionApi().decrypt(secret.encrypted);
+    const secretKey = decrypt(secret.encrypted);
 
     const keeperKey = process.env.KEEPER_PUBLIC_KEY;
 

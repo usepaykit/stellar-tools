@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { Network as StellarToolsNetwork } from "@/constant/schema.client";
+import { parseError } from "@/integrations/stellar-core";
 import {
   AlbedoModule,
   FreighterModule,
@@ -13,7 +14,6 @@ import {
   StellarWalletsKit,
   WalletNetwork,
   XBULL_ID,
-  parseError,
   xBullModule,
 } from "@creit.tech/stellar-wallets-kit";
 import {
@@ -41,7 +41,9 @@ export interface IWalletContext {
   isLoading: boolean;
   connect: (handleSuccess: (success: boolean) => void) => Promise<void>;
   disconnect: () => void;
-  signAndSubmit: (tx: Transaction | TransactionBuilder) => Promise<string | undefined>;
+  signAndSubmit: (
+    tx: Transaction | TransactionBuilder
+  ) => Promise<{ txHash: string | null; status: "SUCCESS" | "FAIL"; message?: string }>;
   createTrustlines: (assets: Asset[], network: Networks) => Promise<void>;
   setTxStatus: (status: TxStatus) => void;
   setError: (err: string | undefined) => void;
@@ -155,7 +157,9 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setWalletAddress("");
   };
 
-  const signAndSubmit = async (input: Transaction | TransactionBuilder): Promise<string | undefined> => {
+  const signAndSubmit = async (
+    input: Transaction | TransactionBuilder
+  ): Promise<{ txHash: string | null; status: "SUCCESS" | "FAIL"; message?: string }> => {
     setTxStatus(TxStatus.SIGNING);
     try {
       const network = input instanceof Transaction ? input.networkPassphrase : (input as any).networkPassphrase;
@@ -166,9 +170,12 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         networkPassphrase: network,
       });
 
+      console.log("signedTxXdr", signedTxXdr);
+
       setTxStatus(TxStatus.SUBMITTING);
       const signedTx = new Transaction(signedTxXdr, network);
 
+      console.log("signedTx", signedTx);
       let send_tx_response = await stellarRpc.sendTransaction(signedTx);
       let curr_time = Date.now();
 
@@ -177,11 +184,13 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         send_tx_response = await stellarRpc.sendTransaction(signedTx);
       }
 
+      console.log("send_tx_response", send_tx_response);
+
       if (send_tx_response.status !== "PENDING") {
         setError("Failed to send transaction");
         console.error("Failed to send transaction: ", send_tx_response.hash, error);
         setTxStatus(TxStatus.FAIL);
-        return undefined;
+        return { txHash: null, status: "FAIL", message: "Failed to send transaction" };
       }
 
       curr_time = Date.now();
@@ -191,14 +200,18 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         get_tx_response = await stellarRpc.getTransaction(send_tx_response.hash);
       }
 
+      console.log("get_tx_response", get_tx_response);
+
       if (get_tx_response.status === "NOT_FOUND") {
         setError("Unable to validate transaction success");
         console.error("Unable to validate transaction success: ", get_tx_response.txHash);
         setTxStatus(TxStatus.FAIL);
-        return undefined;
+        return { txHash: null, status: "FAIL", message: "Unable to validate transaction success" };
       }
 
       let hash = signedTx.hash().toString("hex");
+
+      console.log("hash", hash);
 
       setTxHash(hash);
       if (get_tx_response.status === "SUCCESS") {
@@ -206,17 +219,18 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // stall for a bit to ensure data propagates to horizon
         await new Promise((resolve) => setTimeout(resolve, 500));
         setTxStatus(TxStatus.SUCCESS);
-        return hash;
+        return { txHash: hash, status: "SUCCESS" };
       } else {
+        console.dir({ get_tx_response }, { depth: 10000 });
         let error = parseError(get_tx_response);
         console.error(`Transaction failed: `, hash, error);
         setTxStatus(TxStatus.FAIL);
-        return undefined;
+        return { txHash: get_tx_response.txHash, status: "FAIL", message: error.message };
       }
     } catch (e: any) {
       setError(e.message || "Execution failed");
       setTxStatus(TxStatus.FAIL);
-      return undefined;
+      return { txHash: null, status: "FAIL", message: "Execution failed" };
     }
   };
 

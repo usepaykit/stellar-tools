@@ -19,7 +19,7 @@ import {
   subscriptions,
 } from "@/db";
 import { getCookie, setCookies } from "@/integrations/cookie-manager";
-import { EncryptionApi } from "@/integrations/encryption";
+import { encrypt, reencrypt } from "@/integrations/encryption";
 import { uploadFiles } from "@/integrations/file-upload";
 import { signJwt, verifyJwt } from "@/integrations/jwt";
 import { PriceFeedApi } from "@/integrations/price-feed";
@@ -239,7 +239,6 @@ export const postOrganizationSecretWithEncryption = async (
   orgId?: string,
   env?: Network
 ) => {
-  const encryption = new EncryptionApi();
   const { organizationId } = await resolveOrgContext(orgId, env);
 
   const [secret] = await db
@@ -249,8 +248,8 @@ export const postOrganizationSecretWithEncryption = async (
       testnetPublicKey: params.testnetPublicKey,
       mainnetSecretVersion: params.testnetSecretVersion,
       testnetSecretVersion: params.testnetSecretVersion,
-      mainnetSecretEncrypted: params.mainnetSecret ? encryption.encrypt(params.mainnetSecret) : null,
-      testnetSecretEncrypted: params.testnetSecret ? encryption.encrypt(params.testnetSecret) : null,
+      mainnetSecretEncrypted: params.mainnetSecret ? encrypt(params.mainnetSecret) : null,
+      testnetSecretEncrypted: params.testnetSecret ? encrypt(params.testnetSecret) : null,
       id: generateResourceId("org_sec", organizationId, 25),
       organizationId,
     })
@@ -280,7 +279,6 @@ export const deleteOrganizationSecret = async (id: string) => {
 // -- Rotate Organization Secret --
 
 export const rotateAllSecrets = async (newVersion: number, performedBy: string) => {
-  const encryption = new EncryptionApi();
   const stats = { total: 0, succeeded: 0, failed: 0 };
 
   // 1. Generator: Fetch only records that are behind the current version
@@ -309,13 +307,11 @@ export const rotateAllSecrets = async (newVersion: number, performedBy: string) 
       batch.map(async (secret) => {
         try {
           // Re-encrypt testnet (Mandatory field in your schema)
-          const testnetReencrypted = secret.testnetSecretEncrypted
-            ? encryption.reencrypt(secret.testnetSecretEncrypted)
-            : null;
+          const testnetReencrypted = secret.testnetSecretEncrypted ? reencrypt(secret.testnetSecretEncrypted) : null;
 
           // Re-encrypt mainnet (Optional field in your schema)
           const hasMainnet = secret.mainnetSecretEncrypted && secret.mainnetSecretVersion;
-          const mainnetReencrypted = hasMainnet ? encryption.reencrypt(secret.mainnetSecretEncrypted!) : null;
+          const mainnetReencrypted = hasMainnet ? reencrypt(secret.mainnetSecretEncrypted!) : null;
 
           await db.transaction(async (tx) => {
             await tx

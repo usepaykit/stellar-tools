@@ -69,7 +69,7 @@ export const SelectField = ({
 
       <Select {...rest} value={value} onValueChange={(v) => onChange(v)}>
         <SelectTrigger {...triggerProps} aria-invalid={!!error} className={cn("w-full", triggerProps?.className)}>
-          {isLoading ? <Spinner /> : <SelectValue {...triggerValueProps} placeholder={placeholder} />}
+          {isLoading ? <Spinner size={25} /> : <SelectValue {...triggerValueProps} placeholder={placeholder} />}
         </SelectTrigger>
 
         <SelectContent>

@@ -19,6 +19,7 @@ import {
 import { getLatestPagingToken } from "@/integrations/stellar-core";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { CheckoutStatus } from "@/packages/stellartools/dist/schema/checkout";
+import { all } from "better-all";
 import { and, eq, or, sql } from "drizzle-orm";
 
 export const postCheckout = async (
@@ -28,13 +29,16 @@ export const postCheckout = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const { secret } = await retrieveOrganizationIdAndSecret(organizationId, environment);
-
-  if (!secret?.publicKey) throw new Error("Merchant public key not found");
+  const { token } = await all({
+    secret: async () => await retrieveOrganizationIdAndSecret(organizationId, environment),
+    async token() {
+      const publicKey = (await this.$.secret).secret?.publicKey;
+      if (!publicKey) throw new Error("Merchant public key not found");
+      return await getLatestPagingToken(publicKey, environment);
+    },
+  });
 
   const checkoutId = generateResourceId("cz", organizationId, 20);
-
-  const tokenResult = await getLatestPagingToken(secret.publicKey, environment);
 
   if (params.assetCode) {
     const assetsList = await retrieveAssets(null, environment);
@@ -54,7 +58,7 @@ export const postCheckout = async (
     async () => {
       const [checkout] = await db
         .insert(checkouts)
-        .values({ ...params, id: checkoutId, organizationId, environment, initialPagingToken: tokenResult.value })
+        .values({ ...params, id: checkoutId, organizationId, environment, initialPagingToken: token })
         .returning();
 
       return checkout;
@@ -65,7 +69,13 @@ export const postCheckout = async (
           type: "checkout::created",
           map: ({ productId, expiresAt, amount, customerId, id: checkoutId }) => ({
             customerId: customerId ?? undefined,
-            data: { productId, expiresAt, amount, checkoutId },
+            data: {
+              productId,
+              expiresAt,
+              amount,
+              checkoutId,
+              externalUrl: `${process.env.NEXT_PUBLIC_CHECKOUT_URL!}/${checkoutId}`,
+            },
           }),
         },
       ],
@@ -170,6 +180,8 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     .leftJoin(accounts, eq(organizations.accountId, accounts.id))
     .where(eq(checkouts.id, id));
 
+  if (!result) return null;
+
   const {
     checkout,
     customer,
@@ -230,7 +242,11 @@ export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?:
           type: "checkout::updated",
           map: (checkout) => ({
             checkoutId: checkout.id,
-            data: { $changes: computeDiff(oldCheckout, checkout, undefined, ".") },
+            data: {
+              id: checkout.id,
+              productId: checkout.productId,
+              $changes: computeDiff(oldCheckout, checkout, undefined, "."),
+            },
           }),
         },
       ],

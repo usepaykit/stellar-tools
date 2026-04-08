@@ -22,6 +22,8 @@ export async function prepareSubscriptionApproval(
   try {
     const checkout = await retrieveCheckoutAndCustomer(checkoutId);
 
+    if (!checkout) throw new Error("Checkout not found");
+
     if (checkout.productType !== "subscription") {
       return { error: "Not a subscription checkout" };
     }
@@ -74,6 +76,8 @@ export async function finalizeSubscriptionCheckout(
   customerAddress: string
 ): Promise<{ success: boolean; error?: string }> {
   const checkout = await retrieveCheckoutAndCustomer(checkoutId);
+
+  if (!checkout) throw new Error("Checkout not found");
 
   const {
     status,

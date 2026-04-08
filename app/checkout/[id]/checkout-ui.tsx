@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-
+import { TestModeBanner } from "@/components/environment-mode";
 import { AnimatedCheckmark } from "@/components/icon";
 import { PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
 import { TextField } from "@/components/text-field";
@@ -13,7 +12,7 @@ import { toast } from "@/components/ui/toast";
 import { useCheckout } from "@/contexts/checkout-context";
 import { cn, truncate } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Info, X } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -48,14 +47,7 @@ export default function CheckoutUI() {
 
   return (
     <div className="bg-background flex min-h-screen flex-col">
-      {banner.show && checkout.environment === "testnet" && (
-        <div className="bg-primary text-primary-foreground animate-in fade-in slide-in-from-top-1 relative py-1.5 text-center text-xs font-medium">
-          <div className="flex items-center justify-center gap-2">
-            <Info className="text-muted h-4 w-4" />
-            <span>Test mode</span>
-          </div>
-        </div>
-      )}
+      {banner.show && checkout.environment === "testnet" && <TestModeBanner />}
 
       <main className="mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 items-start gap-8 px-4 py-10 sm:gap-10 sm:px-6 lg:max-w-6xl lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:px-8">
         <div className="space-y-6 lg:sticky lg:top-12">
@@ -218,15 +210,11 @@ export default function CheckoutUI() {
 const Checkout = {
   Success: ({ checkout, checkoutId }: any) => {
     return (
-      <div className="bg-background animate-in fade-in flex min-h-screen items-center justify-center p-6 duration-500">
-        <div className="bg-muted/50 space-y-4 rounded-2xl border p-6 text-left sm:p-8">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <AnimatedCheckmark />
-            <div className="space-y-2">
-              <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">Payment received</h1>
-              <p className="text-muted-foreground text-lg">This checkout has been completed.</p>
-            </div>
-          </div>
+      <div className="bg-background animate-in fade-in flex min-h-screen flex-col items-center justify-center gap-2 p-6 duration-500">
+        <AnimatedCheckmark />
+        <div className="flex w-full flex-col items-center justify-center space-y-2">
+          <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">Payment received</h1>
+          <p className="text-muted-foreground text-lg">This checkout has been completed.</p>
         </div>
       </div>
     );
@@ -258,30 +246,12 @@ const Checkout = {
   ),
 
   Skeleton: () => (
-    <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-8 px-4 py-10 sm:gap-10 sm:px-6 lg:max-w-6xl lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:px-8">
-      <div className="space-y-6 lg:sticky lg:top-12">
-        <div className="bg-card overflow-hidden rounded-2xl border">
-          <Skeleton className="h-16 w-full rounded-none border-b" />
-          <Skeleton className="aspect-video w-full rounded-none border-b" />
-          <div className="space-y-4 p-6 sm:p-8">
-            <div className="space-y-2">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="h-8 w-3/4" />
-            </div>
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-px w-full" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-        </div>
-      </div>
-      <div className="bg-card overflow-hidden rounded-2xl border">
-        <div className="space-y-6 p-6 sm:p-8 lg:p-10">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-3/4" />
-          <Skeleton className="h-14 w-full" />
-        </div>
+    <div className="bg-background flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-2xl space-y-3">
+        <Skeleton className="h-3 w-40 rounded-md" />
+        <Skeleton className="h-3 w-full rounded-md" />
+        <Skeleton className="h-3 w-5/6 rounded-md" />
+        <Skeleton className="h-3 w-2/3 rounded-md" />
       </div>
     </div>
   ),

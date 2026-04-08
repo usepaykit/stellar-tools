@@ -108,7 +108,12 @@ const MERCHANT_EMAIL_TEMPLATES = {
   }),
 };
 
-const paymentActionHandler = async (call: () => Promise<Payment>, organizationId: string, environment: Network) => {
+const paymentActionHandler = async (
+  call: () => Promise<Payment>,
+  organizationId: string,
+  environment: Network,
+  options?: { failErrorMessage?: string }
+) => {
   return withEvent(call, async (payment) => {
     const events: EventTrigger<typeof payment>[] = [];
     const webhooks: WebhookTrigger<typeof payment>[] = [];
@@ -132,7 +137,11 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
         map: (p) => ({
           customerId: p.customerId,
           subscriptionId: p.subscriptionId,
-          data: { ...basePayload, amount: assetLabel },
+          data: {
+            ...basePayload,
+            amount: assetLabel,
+            ...(options?.failErrorMessage && { error: options.failErrorMessage }),
+          },
         }),
       });
       webhooks.push({ event: "payment.confirmed", map: () => basePayload });
@@ -210,7 +219,7 @@ export const postPayment = async (
   >,
   orgId?: string,
   env?: Network,
-  options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null }
+  options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null; failErrorMessage?: string }
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 

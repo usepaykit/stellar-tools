@@ -2,56 +2,58 @@ import "server-only";
 
 import crypto from "crypto";
 
-export class EncryptionApi {
-  private readonly algorithm = "aes-256-gcm";
-  private readonly keyLength = 32;
-  private readonly ivLength = 16;
-  private readonly tagLength = 16;
+const ALGORITHM = "aes-256-gcm";
+const KEY_LENGTH = 32;
+const IV_LENGTH = 16;
+const TAG_LENGTH = 16;
 
-  private getEncryptionKey(): Buffer {
-    const key = process.env.MASTER_ENCRYPTION_KEY;
+const getEncryptionKey = (): Buffer => {
+  const key = process.env.MASTER_ENCRYPTION_KEY;
+  const saltHex = process.env.ENCRYPTION_SALT;
 
-    if (!key) throw new Error("Encryption key not found");
-
-    const salt = Buffer.from(process.env.ENCRYPTION_SALT!, "hex");
-    return crypto.pbkdf2Sync(key, salt, 100000, this.keyLength, "sha512");
+  if (!key || !saltHex) {
+    throw new Error("Encryption configuration (KEY/SALT) not found in environment");
   }
 
-  encrypt(plaintext: string) {
-    const key = this.getEncryptionKey();
+  const salt = Buffer.from(saltHex, "hex");
+  // Derive a cryptographically strong key from the master key and salt
+  return crypto.pbkdf2Sync(key, salt, 100000, KEY_LENGTH, "sha512");
+};
 
-    const iv = crypto.randomBytes(this.ivLength);
-    const cipher = crypto.createCipheriv(this.algorithm, key, iv);
+export const encrypt = (plaintext: string): string => {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
 
-    let encrypted = cipher.update(plaintext, "utf8", "hex");
-    encrypted += cipher.final("hex");
+  let encrypted = cipher.update(plaintext, "utf8", "hex");
+  encrypted += cipher.final("hex");
 
-    const authTag = cipher.getAuthTag();
+  const authTag = cipher.getAuthTag();
 
-    return iv.toString("hex") + authTag.toString("hex") + encrypted;
-  }
+  return iv.toString("hex") + authTag.toString("hex") + encrypted;
+};
 
-  decrypt(encrypted: string): string {
-    const key = this.getEncryptionKey();
+export const decrypt = (encrypted: string): string => {
+  const key = getEncryptionKey();
 
-    const ivHex = encrypted.slice(0, this.ivLength * 2);
-    const authTagHex = encrypted.slice(this.ivLength * 2, (this.ivLength + this.tagLength) * 2);
-    const encryptedHex = encrypted.slice((this.ivLength + this.tagLength) * 2);
+  // Extract components based on fixed lengths
+  // 16 bytes = 32 hex characters
+  const ivHex = encrypted.slice(0, IV_LENGTH * 2);
+  const authTagHex = encrypted.slice(IV_LENGTH * 2, (IV_LENGTH + TAG_LENGTH) * 2);
+  const encryptedHex = encrypted.slice((IV_LENGTH + TAG_LENGTH) * 2);
 
-    const iv = Buffer.from(ivHex, "hex");
-    const authTag = Buffer.from(authTagHex, "hex");
+  const iv = Buffer.from(ivHex, "hex");
+  const authTag = Buffer.from(authTagHex, "hex");
 
-    const decipher = crypto.createDecipheriv(this.algorithm, key, iv);
-    decipher.setAuthTag(authTag);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
 
-    let decrypted = decipher.update(encryptedHex, "hex", "utf8");
-    decrypted += decipher.final("utf8");
+  let decrypted = decipher.update(encryptedHex, "hex", "utf8");
+  decrypted += decipher.final("utf8");
 
-    return decrypted;
-  }
+  return decrypted;
+};
 
-  reencrypt(encrypted: string): string {
-    const decrypted = this.decrypt(encrypted);
-    return this.encrypt(decrypted);
-  }
-}
+export const reencrypt = (encrypted: string): string => {
+  return encrypt(decrypt(encrypted));
+};

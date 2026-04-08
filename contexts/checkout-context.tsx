@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
-import { sweepAndProcessPayment } from "@/actions/payment";
+import { postPayment, sweepAndProcessPayment } from "@/actions/payment";
 import { finalizeSubscriptionCheckout, prepareSubscriptionApproval } from "@/actions/subscription-checkout";
 import { phoneNumberFromString, phoneNumberSchema, phoneNumberToString } from "@/components/phone-number-field";
 import { toast } from "@/components/ui/toast";
@@ -84,10 +84,11 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
   });
 
   const handleWalletPay = async () => {
-    if (!wallet.connected)
+    if (!wallet.connected) {
       return await wallet.connect((success) => {
         if (!success) toast.error("Failed to connect wallet");
       });
+    }
 
     if (!checkout) return;
 
@@ -116,17 +117,47 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
         if ("error" in prepared) throw new Error(prepared.error);
 
         const tx = new Transaction(prepared.xdr, network);
-        const hash = await wallet.signAndSubmit(tx);
+        const txResult = await wallet.signAndSubmit(tx);
 
-        if (hash) {
-          wallet.setTxStatus(TxStatus.SUBMITTING);
-          const result = await finalizeSubscriptionCheckout(checkoutId, hash, wallet.walletAddress);
-          if (!result.success) throw new Error(result.error);
+        if (txResult?.txHash) {
+          if (txResult.status === "SUCCESS") {
+            wallet.setTxStatus(TxStatus.SUBMITTING);
+            const result = await finalizeSubscriptionCheckout(checkoutId, txResult.txHash, wallet.walletAddress);
+            if (!result.success) throw new Error(result.error);
+          } else if (txResult.status == "FAIL") {
+            await postPayment(
+              {
+                checkoutId,
+                customerId: checkout?.customerId,
+                amount: Number(checkout?.finalAmount),
+                transactionHash: txResult.txHash,
+                status: "failed",
+                metadata: null,
+                assetId: checkout?.assetId,
+                subscriptionId: null,
+              },
+              checkout?.organizationId,
+              checkout?.environment,
+              { failErrorMessage: txResult.message, customerWalletAddress: wallet.walletAddress }
+            );
+          }
         }
       } else {
         wallet.setTxStatus(TxStatus.BUILDING);
         const accountRes = await retrieveAccount(wallet.walletAddress, checkout.environment);
-        if (accountRes.isErr()) throw new Error(accountRes.error.message);
+        if (accountRes.isErr()) {
+          const is404 =
+            accountRes.error.message.includes("404") || accountRes.error.message.toLowerCase().includes("not found");
+
+          if (is404) {
+            const network = checkout.environment === "testnet" ? "Testnet" : "Public";
+            throw new Error(`Account not found on ${network}. Check wallet network.`);
+          }
+
+          throw new Error(accountRes.error.message);
+        }
+
+        console.log("accountRes", accountRes);
 
         const builder = new TransactionBuilder(accountRes.value!, {
           fee: BASE_FEE,
@@ -143,17 +174,43 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
           .addMemo(Memo.text(checkoutId))
           .setTimeout(0);
 
-        const hash = await wallet.signAndSubmit(builder);
+        console.log("builder", builder);
 
-        if (hash) await sweepAndProcessPayment(checkoutId);
+        const txResult = await wallet.signAndSubmit(builder);
+
+        if (txResult?.txHash) {
+          if (txResult.status === "SUCCESS") {
+            await sweepAndProcessPayment(checkoutId);
+            toast.success("Payment successful!");
+          } else if (txResult.status === "FAIL") {
+            console.log("posting failed payemnts");
+            await postPayment(
+              {
+                checkoutId,
+                customerId: checkout?.customerId,
+                amount: Number(checkout?.finalAmount),
+                transactionHash: txResult.txHash,
+                status: "failed",
+                metadata: null,
+                assetId: checkout?.assetId,
+                subscriptionId: null,
+              },
+              checkout?.organizationId,
+              checkout?.environment,
+              { failErrorMessage: txResult.message, customerWalletAddress: wallet.walletAddress }
+            );
+            toast.error(txResult.message ?? "Payment Failed");
+          }
+        }
+
+        console.log({ txResult });
       }
-
-      // 3. Success Lifecycle
-      await queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
-      toast.success("Payment successful!");
     } catch (e: any) {
       console.error("[Checkout Error]", e);
-      toast.error(e.message ?? "Payment Failed");
+      wallet.setTxStatus(TxStatus.FAIL);
+      if (wallet.error) toast.error(wallet.error);
+      else if (e.message) toast.error(e.message);
+      else toast.error("Payment Failed");
     }
   };
 
