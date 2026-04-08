@@ -2,7 +2,6 @@
 
 import { AuroraBackground } from "@/components/aurora-background";
 import Logo from "@/components/logo";
-import Link from "next/link";
 
 export default function NotFound() {
   return (
@@ -16,13 +15,6 @@ export default function NotFound() {
             Even the best explorers take a wrong turn now and then.
           </p>
         </div>
-
-        <Link
-          className="text-primary hover:text-primary/80 text-sm underline"
-          href={process.env.NEXT_PUBLIC_APP_URL ?? "http://www.stellartools.dev"}
-        >
-          Go home
-        </Link>
       </div>
     </AuroraBackground>
   );

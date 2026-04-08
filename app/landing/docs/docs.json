@@ -12,9 +12,9 @@
     }
   },
   "colors": {
-    "primary": "#6347eb",
-    "light": "#6347eb",
-    "dark": "#6347eb"
+    "primary": "#fdda24",
+    "light": "#fdda24",
+    "dark": "#fdda24"
   },
   "favicon": "/favicon.ico",
   "navigation": {
@@ -99,9 +99,9 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/usepaykit",
+      "x": "https://x.com/stellartoolsorg",
       "github": "https://github.com/usepaykit/stellartools",
-      "linkedin": "https://www.linkedin.com/company/stellar-tools"
+      "linkedin": "https://www.linkedin.com/company/stellartools"
     }
   }
 }
