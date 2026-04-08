@@ -1,2 +1,0 @@
-ALTER TABLE "payment" ADD COLUMN "subscription_id" text;--> statement-breakpoint
-ALTER TABLE "payment" ADD CONSTRAINT "payment_subscription_id_subscription_id_fk" FOREIGN KEY ("subscription_id") REFERENCES "public"."subscription"("id") ON DELETE no action ON UPDATE no action;

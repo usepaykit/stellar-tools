@@ -1,2 +1,0 @@
-ALTER TABLE "payment" ADD COLUMN "asset_id" text;--> statement-breakpoint
-ALTER TABLE "payment" ADD CONSTRAINT "payment_asset_id_asset_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."asset"("id") ON DELETE no action ON UPDATE no action;

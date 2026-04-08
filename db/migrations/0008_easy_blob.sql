@@ -1,1 +1,0 @@
-ALTER TABLE "organization" ADD COLUMN "support_email" text;

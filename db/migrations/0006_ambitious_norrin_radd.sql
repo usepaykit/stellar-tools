@@ -1,2 +1,0 @@
-ALTER TABLE "refund" DROP CONSTRAINT "refund_payment_id_customer_id_unique";--> statement-breakpoint
-CREATE UNIQUE INDEX "unique_succeeded_refund" ON "refund" USING btree ("payment_id","customer_id") WHERE status = 'succeeded';
