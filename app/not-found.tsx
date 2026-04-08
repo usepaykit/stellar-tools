@@ -17,7 +17,10 @@ export default function NotFound() {
           </p>
         </div>
 
-        <Link className="text-primary hover:text-primary/80 text-sm underline" href={process.env.NEXT_PUBLIC_APP_URL!}>
+        <Link
+          className="text-primary hover:text-primary/80 text-sm underline"
+          href={process.env.NEXT_PUBLIC_APP_URL ?? "http://www.stellartools.dev"}
+        >
           Go home
         </Link>
       </div>
