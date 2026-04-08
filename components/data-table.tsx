@@ -50,7 +50,8 @@ interface DataTableProps<TData, TValue>
     MixinProps<"row", React.ComponentProps<typeof TableRow>>,
     MixinProps<"checkbox", React.ComponentProps<typeof Checkbox>>,
     MixinProps<"body", React.ComponentProps<typeof TableBody>>,
-    MixinProps<"cell", React.ComponentProps<typeof TableCell>> {
+    MixinProps<"cell", React.ComponentProps<typeof TableCell>>,
+    MixinProps<"container", React.ComponentProps<"div">> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
@@ -85,7 +86,15 @@ export const DataTable = <TData, TValue>({
   const columnFilters = externalFilters ?? internalFilters;
   const onColumnFiltersChange = setExternalFilters ?? setInternalFilters;
 
-  const { row, checkbox, body, cell, rest } = splitProps(mixProps, "row", "checkbox", "body", "head", "cell");
+  const { row, checkbox, body, cell, rest, container } = splitProps(
+    mixProps,
+    "row",
+    "checkbox",
+    "body",
+    "head",
+    "cell",
+    "container"
+  );
 
   const tableColumns = React.useMemo(() => {
     let cols = [...columns];
@@ -189,7 +198,7 @@ export const DataTable = <TData, TValue>({
   if (isLoading) return <DataTableSkeleton columns={columns} enableBulkSelect={enableBulkSelect} actions={_Actions} />;
 
   return (
-    <div className="space-y-4">
+    <div {...container} className={cn("space-y-4", container?.className)}>
       <div className="flex flex-wrap items-center gap-2 px-1">
         {withFilterPill && visibleFilterColumns.map((column) => <FilterPill key={column.id} column={column} />)}
 

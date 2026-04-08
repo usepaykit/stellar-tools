@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
 import { Customer } from "@/db";
@@ -607,20 +606,13 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
 
           <div className="space-y-10">
             <CsvImportSection label="3. System Preview">
-              <div className="bg-background overflow-hidden rounded-xl border shadow-xs">
-                <ScrollArea className="h-[280px] w-full">
-                  <div className="**:table:min-w-full!">
-                    <DataTable
-                      columns={PREVIEW_COLS}
-                      data={previewData}
-                      isLoading={false}
-                      className="border-0 shadow-none"
-                      withFilterPill={false}
-                    />
-                  </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-              </div>
+              <DataTable
+                columns={PREVIEW_COLS}
+                data={previewData}
+                isLoading={false}
+                className="border-0 shadow-none"
+                withFilterPill={false}
+              />
             </CsvImportSection>
 
             <CsvImportSection label="4. Logic Validation">
