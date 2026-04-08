@@ -1,18 +1,18 @@
 import { postWebhookLog } from "@/actions/webhook";
 import { Webhook as WebhookSchema } from "@/db/schema";
-import { generateResourceId } from "@/lib/utils";
 import { ApiClient, WebhookEvent, WebhookSigner } from "@stellartools/core";
 
 export const deliverWebhook = async (
   webhook: WebhookSchema,
   eventType: WebhookEvent,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  logId: string
 ) => {
   const startTime = Date.now();
-  const webhookEventId = generateResourceId("wh+evt", webhook.id, 52);
+  // const webhookEventId = generateResourceId("wh_evt", webhook.id, 52);
 
   const webhookPayload = {
-    id: webhookEventId,
+    id: logId,
     object: "event",
     type: eventType,
     created: Math.floor(Date.now() / 1000),
@@ -58,7 +58,7 @@ export const deliverWebhook = async (
   await postWebhookLog(
     webhook.id,
     {
-      id: webhookEventId,
+      id: logId,
       eventType,
       request: webhookPayload,
       statusCode,

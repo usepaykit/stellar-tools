@@ -49,7 +49,7 @@ export async function withEvent<T>(
         const deliveries = triggersArray.flatMap((trigger) => {
           const payloads = trigger.map(result);
           return (Array.isArray(payloads) ? payloads : [payloads]).map((payload) =>
-            triggerWebhooks(trigger.event, payload, organizationId, environment).catch((err) => {
+            triggerWebhooks(trigger.event, payload, trigger.logId, organizationId, environment).catch((err) => {
               console.error(`[Webhook Error] ${trigger.event} for ${organizationId}:`, err);
             })
           );
@@ -81,7 +81,7 @@ export const emitEvents = async (params: Array<EventEmitParams>, orgId?: string,
   return await db
     .insert(events)
     .values(
-      params.map((p) => ({ id: generateResourceId("evt", organizationId, 25), organizationId, environment, ...p }))
+      params.map((p) => ({ ...p, id: generateResourceId("evt", organizationId, 25), organizationId, environment }))
     )
     .returning()
     .then(([event]) => event);
@@ -100,6 +100,10 @@ export const retrieveEvents = async <T extends readonly EventType[]>(
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   let whereClause = [];
+
+  if (filters?.customerId) {
+    whereClause.push(eq(events.customerId, filters.customerId));
+  }
 
   if (filters.merchantId == "current") {
     whereClause.push(eq(events.merchantId, organizationId));

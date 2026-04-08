@@ -26,7 +26,7 @@ export const useAuth = () => {
   const handleGoogleSignIn = React.useCallback(() => {
     const authUrlParams = {
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-      redirect_uri: `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/+__api/verify-callback`,
+      redirect_uri: `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/~api/verify-callback`,
       response_type: "code",
       scope: "openid profile email",
       access_type: "offline",

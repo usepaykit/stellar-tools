@@ -13,6 +13,7 @@ interface LogProps<TData, TValue> extends React.ComponentProps<typeof DataTable<
   emptyMessage?: string;
   detailPanelWidth?: number;
   isLoading?: boolean;
+  defaultSelected?: TData;
 }
 
 export function Log<TData, TValue>({
@@ -24,10 +25,17 @@ export function Log<TData, TValue>({
   className,
   detailPanelWidth = 350,
   isLoading,
+  defaultSelected,
   ...props
 }: LogProps<TData, TValue>) {
   const [selectedRow, setSelectedRow] = React.useState<TData | null>(null);
   const [isAnimating, setIsAnimating] = React.useState(false);
+
+  React.useEffect(() => {
+    if (defaultSelected) {
+      handleRowClick(defaultSelected);
+    }
+  }, [defaultSelected]);
 
   const handleRowClick = React.useCallback(
     (row: TData) => {

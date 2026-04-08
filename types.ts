@@ -23,6 +23,7 @@ export interface EventTrigger<T> {
 
 export interface WebhookTrigger<T> {
   event: WebhookEvent;
+  logId: string;
   map: (result: T) => MaybeArray<Record<string, unknown>>;
 }
 

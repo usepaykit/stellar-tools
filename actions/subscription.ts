@@ -4,7 +4,7 @@ import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { SubscriptionStatus } from "@/constant/schema.client";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
-import { computeDiff } from "@/lib/utils";
+import { computeDiff, generateResourceId } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
 import { OverrideProps, Prettify } from "@stellartools/core";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
@@ -22,6 +22,8 @@ export const postSubscriptionsBulk = async (
   env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const logId = generateResourceId("wh_evt", organizationId, 52);
 
   return withEvent(
     async () => {
@@ -55,6 +57,7 @@ export const postSubscriptionsBulk = async (
                   currentPeriodStart,
                   currentPeriodEnd,
                   cancelAtPeriodEnd,
+                  eventId: logId,
                 },
               })
             ),
@@ -65,6 +68,7 @@ export const postSubscriptionsBulk = async (
         environment,
         triggers: [
           {
+            logId,
             event: "subscription.created",
             map: (subscription) =>
               subscription.map(
@@ -184,9 +188,11 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
     (subscription) => {
       let events: EventTrigger<typeof subscription>[] = [];
       let webhookTriggers: WebhookTrigger<typeof subscription>[] = [];
+      const logId = generateResourceId("wh_evt", organizationId, 52);
 
       if (subscription.status === "canceled") {
         webhookTriggers.push({
+          logId,
           event: "subscription.canceled",
           map: (subscription) => ({ id: subscription.id, ...(computeDiff(oldSubscription, subscription) ?? {}) }),
         });
@@ -196,10 +202,12 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
           map: (subscription) => ({
             customerId: subscription.customerId,
             subscriptionId: subscription.id,
+            data: { $changes: computeDiff(oldSubscription, subscription) ?? {}, eventId: logId },
           }),
         });
       } else {
         webhookTriggers.push({
+          logId,
           event: "subscription.updated",
           map: (subscription) => ({ id: subscription.id, ...(computeDiff(oldSubscription, subscription) ?? {}) }),
         });
@@ -209,9 +217,7 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
           map: (subscription) => ({
             customerId: subscription.customerId,
             subscriptionId: subscription.id,
-            data: {
-              $changes: computeDiff(oldSubscription, subscription),
-            },
+            data: { $changes: computeDiff(oldSubscription, subscription) ?? {}, eventId: logId },
           }),
         });
       }

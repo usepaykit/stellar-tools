@@ -44,6 +44,8 @@ export const postCustomers = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
+  const logId = generateResourceId("wh_evt", organizationId, 52);
+
   return withEvent(
     async () => {
       const results = await db
@@ -69,10 +71,10 @@ export const postCustomers = async (
         events: [
           {
             type: "customer::created",
-            map: () => data.map((c) => ({ customerId: c.id, data: c })),
+            map: () => data.map((c) => ({ customerId: c.id, data: { ...c, eventId: logId } })),
           },
         ],
-        webhooks: { organizationId, environment, triggers: [{ event: "customer.created", map: () => data }] },
+        webhooks: { organizationId, environment, triggers: [{ event: "customer.created", map: () => data, logId }] },
       };
     }
   );
@@ -158,6 +160,8 @@ export const putCustomer = async (
     retrieveCustomers({ id }, undefined, orgId, env),
   ]);
 
+  const logId = generateResourceId("wh_evt", organizationId, 52);
+
   return withEvent(
     async () => {
       const [customer] = await db
@@ -194,6 +198,7 @@ export const putCustomer = async (
             data: {
               $changes: computeDiff(oldCustomer ?? {}, newCustomer, undefined, ".") ?? {},
               ...(options?.source ? { source: options.source } : {}),
+              eventId: logId,
             },
           }),
         },
@@ -205,6 +210,7 @@ export const putCustomer = async (
           {
             event: "customer.updated",
             map: (newCustomer) => computeDiff(oldCustomer, newCustomer) ?? {},
+            logId,
           },
         ],
       },
@@ -251,6 +257,8 @@ export const upsertCustomer = async (
 export const deleteCustomer = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
+  const logId = generateResourceId("wh_evt", organizationId, 52);
+
   return withEvent(
     async () => {
       const [customer] = await db
@@ -273,7 +281,7 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
       webhooks: {
         organizationId,
         environment,
-        triggers: [{ event: "customer.deleted", map: (customer) => ({ id: customer.id, deleted: true }) }],
+        triggers: [{ event: "customer.deleted", map: (customer) => ({ id: customer.id, deleted: true }), logId }],
       },
     }
   );
@@ -286,6 +294,8 @@ export async function createCustomerPortalSession(customerId: string, orgId?: st
 
   const portalId = generateResourceId("cus_ps", organizationId, 20);
   const portalToken = crypto.randomBytes(32).toString("base64url");
+
+  const eventId = generateResourceId("evt", organizationId, 25);
 
   return withEvent(
     async () => {
@@ -310,6 +320,7 @@ export async function createCustomerPortalSession(customerId: string, orgId?: st
         {
           type: "customer_portal_session::created",
           map: ({ session, url }) => ({
+            id: eventId,
             customerId,
             data: { id: session.id, externalUrl: url, expiresAt: session.expiresAt },
           }),
@@ -436,6 +447,8 @@ export const createCustomerWallet = async (
   environment: Network,
   params: Omit<CustomerWalletSchema, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt">
 ) => {
+  const logId = generateResourceId("wh_evt", organizationId, 52);
+
   return withEvent(
     async () => {
       return await db
@@ -458,7 +471,7 @@ export const createCustomerWallet = async (
           type: "customer_wallet::linked",
           map: (wallet) => ({
             customerId: wallet.customerId,
-            data: { id: wallet.id, walletAddress: wallet.address },
+            data: { id: wallet.id, walletAddress: wallet.address, eventId: logId },
           }),
         },
       ],
@@ -472,6 +485,7 @@ export const createCustomerWallet = async (
               customerId: wallet.customerId,
               data: { id: wallet.id, walletAddress: wallet.address },
             }),
+            logId,
           },
         ],
       },

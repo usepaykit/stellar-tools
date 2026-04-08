@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const client = new OAuth2Client(
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
       process.env.GOOGLE_CLIENT_SECRET!,
-      `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/+__api/verify-callback`
+      `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/~api/verify-callback`
     );
 
     const { tokens } = await client.getToken(code);

@@ -119,6 +119,8 @@ const paymentActionHandler = async (
     const webhooks: WebhookTrigger<typeof payment>[] = [];
     const sideEffects: Promise<any>[] = [];
 
+    const logId = generateResourceId("wh_evt", organizationId, 52);
+
     const assetLabel = `${payment.amount} ${payment.metadata?.assetCode}`;
     const basePayload = {
       customerId: payment.customerId,
@@ -141,10 +143,11 @@ const paymentActionHandler = async (
             ...basePayload,
             amount: assetLabel,
             ...(options?.failErrorMessage && { error: options.failErrorMessage }),
+            eventId: logId,
           },
         }),
       });
-      webhooks.push({ event: "payment.confirmed", map: () => basePayload });
+      webhooks.push({ event: "payment.confirmed", map: () => basePayload, logId });
 
       // Load all data once
       const ctx = await loadPaymentContext(payment, organizationId, environment);
@@ -195,7 +198,7 @@ const paymentActionHandler = async (
         map: (p) => ({ customerId: p.customerId, data: { ...basePayload, amount: assetLabel } }),
       });
 
-      webhooks.push({ event: "payment.failed", map: () => basePayload });
+      webhooks.push({ event: "payment.failed", map: () => basePayload, logId });
     }
 
     // Fire side effects in parallel, don't block the response

@@ -30,7 +30,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
 import moment from "moment";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 
 const StatusBadge = ({ statusCode, nextRetry }: { statusCode?: number; nextRetry?: string }) => {
   if (statusCode === 200) {
@@ -114,8 +114,12 @@ const columns: ColumnDef<WebhookLog>[] = [
 export default function WebhookLogPage() {
   const params = useParams();
   const webhookId = params?.id as string;
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("eventId");
   const [searchQuery, _] = React.useState("");
   const [statusFilter, setStatusFilter] = useCookieState("webhook_status_filter", "all");
+
+  console.log({ eventId });
 
   const {
     data: webhookLogs,
@@ -165,6 +169,12 @@ export default function WebhookLogPage() {
   const filteredLogs = React.useMemo(() => {
     let logs = webhookLogs;
 
+    if (eventId && logs) {
+      const targetLog = logs.find((l) => l.id === eventId);
+      console.log({ targetLog, logs });
+      if (targetLog) return [targetLog];
+    }
+
     if (searchQuery) {
       logs = logs?.filter(
         (log) =>
@@ -178,7 +188,7 @@ export default function WebhookLogPage() {
     }
 
     return logs ?? [];
-  }, [webhookLogs, searchQuery, statusFilter]);
+  }, [webhookLogs, searchQuery, statusFilter, eventId]);
 
   const renderDetail = (log: WebhookLog) => {
     return (
@@ -340,6 +350,7 @@ export default function WebhookLogPage() {
                 emptyMessage="No logs found"
                 className="h-full"
                 isLoading={isLoadingWebhookLogs}
+                defaultSelected={eventId ? (filteredLogs[0] as any | undefined) : undefined}
               />
             </div>
           </div>

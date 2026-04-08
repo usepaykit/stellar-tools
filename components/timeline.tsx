@@ -13,6 +13,7 @@ const ROUTE_MAP = {
   productId: (id: string) => `/products/${id}`,
   paymentId: (id: string) => `/transactions/${id}`,
   externalUrl: (url: string) => url,
+  eventId: (id: string) => `/webhooks/~?eventId=${id}`,
 } as Record<string, (id: string) => string>;
 
 export interface TimelineEntry {

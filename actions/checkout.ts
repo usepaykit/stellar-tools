@@ -54,6 +54,8 @@ export const postCheckout = async (
     params.assetCode = asset.code;
   }
 
+  const logId = generateResourceId("wh_evt", organizationId, 52);
+
   return withEvent(
     async () => {
       const [checkout] = await db
@@ -75,6 +77,7 @@ export const postCheckout = async (
               amount,
               checkoutId,
               externalUrl: `${process.env.NEXT_PUBLIC_CHECKOUT_URL!}/${checkoutId}`,
+              eventId: logId,
             },
           }),
         },
@@ -92,6 +95,7 @@ export const postCheckout = async (
               amount,
               customerId,
             }),
+            logId,
           },
         ],
       },

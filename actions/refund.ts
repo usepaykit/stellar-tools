@@ -4,6 +4,7 @@ import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Refund, refunds } from "@/db";
 import { db } from "@/db";
+import { generateResourceId } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
 import { and, desc, eq } from "drizzle-orm";
 
@@ -32,18 +33,20 @@ export const postRefund = async (
     (refund) => {
       let events: EventTrigger<typeof refund>[] = [];
       let webhooksTriggers: WebhookTrigger<typeof refund>[] = [];
+      const logId = generateResourceId("wh_evt", organizationId, 52);
 
       if (refund.status == "failed") {
         events.push({
           type: "refund::failed",
           map: ({ id: refundId, customerId, paymentId, amount, assetCode }) => ({
             customerId,
-            data: { paymentId, refundId, amount: `${amount} ${assetCode}` },
+            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, eventId: logId },
           }),
         });
 
         webhooksTriggers.push({
           event: "refund.failed",
+          logId,
           map: ({ id: refundId, paymentId, amount, customerId, assetCode, createdAt, updatedAt }) => ({
             paymentId,
             amount: `${amount} ${assetCode}`,
@@ -61,11 +64,12 @@ export const postRefund = async (
           type: "refund::created",
           map: ({ id: refundId, paymentId, amount, customerId, assetCode, reason }) => ({
             customerId,
-            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, reason },
+            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, reason, eventId: logId },
           }),
         });
 
         webhooksTriggers.push({
+          logId,
           event: "refund.succeeded",
           map: ({
             id: refundId,

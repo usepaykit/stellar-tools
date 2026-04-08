@@ -224,6 +224,7 @@ export const deleteWebhookLog = async (id: string, orgId?: string, env?: Network
 export const triggerWebhooks = async (
   eventType: WebhookEvent,
   payload: Record<string, unknown>,
+  logId: string,
   orgId?: string,
   env?: Network
 ) => {
@@ -247,7 +248,7 @@ export const triggerWebhooks = async (
   if (subscribers.length === 0) return { success: true, delivered: 0 };
 
   const results = await Promise.allSettled(
-    subscribers.map((webhook) => deliverWebhook(webhook, eventType, snakePayload as Record<string, unknown>))
+    subscribers.map((webhook) => deliverWebhook(webhook, eventType, snakePayload as Record<string, unknown>, logId))
   );
 
   return {
@@ -265,5 +266,8 @@ export const resendWebhookLog = async (
 ) => {
   const webhook = await retrieveWebhook(webhookId, orgId, env);
   const normalizedPayload = toSnakeCase(payload) as Record<string, unknown>;
-  return deliverWebhook(webhook, eventType, normalizedPayload);
+
+  const logId = generateResourceId("wh_evt", webhookId, 52);
+
+  return deliverWebhook(webhook, eventType, normalizedPayload, logId);
 };

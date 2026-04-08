@@ -3,6 +3,7 @@
 import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Payout, db, payouts } from "@/db";
+import { generateResourceId } from "@/lib/utils";
 import { EventTrigger } from "@/types";
 import { and, desc, eq } from "drizzle-orm";
 
@@ -32,10 +33,12 @@ export const postPayout = async (
   orgId?: string,
   env?: Network
 ) => {
+  let eventId: string | null = null;
+
   return withEvent(
     async () => {
       const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
+      eventId = generateResourceId("evt", organizationId, 25);
       const [result] = await db
         .insert(payouts)
         .values({ ...params, organizationId, environment })
@@ -48,6 +51,7 @@ export const postPayout = async (
         {
           type: "payout::requested",
           map: (payout) => ({
+            id: eventId as string,
             merchantId: payout.organizationId,
             data: { amount: payout.amount, walletAddress: payout.walletAddress, memo: payout.memo },
           }),
@@ -65,11 +69,13 @@ export const putPayout = async (id: string, params: Partial<Payout>) => {
     },
     (payout) => {
       let events: EventTrigger<typeof payout>[] = [];
+      const eventId = generateResourceId("evt", id, 25);
 
       if (payout.status == "succeeded") {
         events.push({
           type: "payout::processed",
           map: (payout) => ({
+            id: eventId,
             merchantId: payout.organizationId,
             data: {
               amount: payout.amount,
