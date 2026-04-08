@@ -2,6 +2,7 @@ export const subscriptionIntervals = { day: 1, week: 7, month: 30, year: 365 };
 
 const ALLOWED_ORIGIN_PATTERNS = [
   /^https?:\/\/([^.]+\.)?stellartools\.dev$/,
+  /^https?:\/\/([^.]+\.)?stellartools\.site$/,
   /^https?:\/\/([^.]+\.)*localhost(:\d{1,5})?$/,
   /^https?:\/\/([^.]+\.)*127\.0\.0\.1\.nip\.io(:\d{1,5})?$/,
 ];

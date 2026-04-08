@@ -122,7 +122,7 @@ export default function SelectOrganizationPage() {
                 className="hover:bg-accent/50 group flex cursor-pointer items-center gap-4 rounded-lg p-4 transition-all"
                 onClick={() => handleSelectOrg(org.id)}
               >
-                <div className="bg-muted flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg">
                   {org.logoUrl ? (
                     <Image
                       src={org.logoUrl}

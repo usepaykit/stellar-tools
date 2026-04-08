@@ -5,7 +5,7 @@ type CookieKey = SuggestedString<"accessToken" | "refreshToken" | "selectedOrg">
 
 const BASE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: process.env.NEXT_PUBLIC_APP_URL?.includes("https") ?? false,
   sameSite: "lax" as const,
   path: "/",
 };
@@ -18,6 +18,7 @@ export const getCookie = async (key: CookieKey) => {
 export const setCookies = async (params: { key: CookieKey; value: string; maxAge?: number }[]): Promise<void> => {
   const store = await cookies();
   params.forEach(({ key, value, maxAge }) => {
+    console.log("setting cookie", key, value, maxAge);
     store.set(key, value, { ...BASE_OPTIONS, maxAge });
   });
 };

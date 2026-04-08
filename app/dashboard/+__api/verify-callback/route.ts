@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.redirect(
         new URL(
-          `/signin?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription)}`,
+          process.env.NEXT_PUBLIC_DASHBOARD_URL! +
+            `/signin?error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription)}`,
           req.url
         )
       );
@@ -24,13 +25,16 @@ export async function GET(req: NextRequest) {
     if (!code) {
       return NextResponse.redirect(
         new URL(
-          `/signin?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`,
+          process.env.NEXT_PUBLIC_DASHBOARD_URL! +
+            `/signin?error=no_code&error_description=${encodeURIComponent("No authorization code received")}`,
           req.url
         )
       );
     }
 
-    const stateDataResult = Result.try(() => JSON.parse(Buffer.from(state ?? "", "base64").toString()));
+    const stateDataResult = Result.try<{ intent: string; redirect: string }>(() =>
+      JSON.parse(Buffer.from(state ?? "", "base64").toString())
+    );
 
     if (stateDataResult.isErr()) {
       throw new Error("Invalid state data: " + stateDataResult.error.message);
@@ -41,7 +45,7 @@ export async function GET(req: NextRequest) {
     const client = new OAuth2Client(
       process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
       process.env.GOOGLE_CLIENT_SECRET!,
-      `${process.env.NEXT_PUBLIC_APP_URL}/auth/verify-callback`
+      `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/+__api/verify-callback`
     );
 
     const { tokens } = await client.getToken(code);
@@ -71,13 +75,16 @@ export async function GET(req: NextRequest) {
     const nameParts = payload.name?.split(/\s+/) || [];
     const firstName = payload.given_name || nameParts[0] || "";
     const lastName = payload.family_name || nameParts.slice(1).join(" ") || "";
-    await accountValidator(
+
+    const account = await accountValidator(
       payload.email,
       { provider: "google", sub: payload.sub },
-      "SIGN_IN",
+      stateData.intent === "SIGN_UP" ? "SIGN_UP" : "SIGN_IN",
       { firstName, lastName, avatarUrl: payload.picture },
       { ...stateData }
     );
+
+    console.log({ account });
 
     return NextResponse.redirect(new URL(`/`, process.env.NEXT_PUBLIC_DASHBOARD_URL!));
   } catch (error) {

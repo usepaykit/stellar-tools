@@ -162,6 +162,7 @@ export const accountValidator = async (
       if (!existingSso) {
         await putAccount(account.id, {
           sso: { values: [...account.sso.values, { provider, sub: rawSub }] },
+          ...(profile?.avatarUrl && { profile: { ...account.profile, avatarUrl: profile.avatarUrl } }),
         });
       }
     }

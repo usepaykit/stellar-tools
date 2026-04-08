@@ -25,15 +25,15 @@ export const useAuth = () => {
 
   const handleGoogleSignIn = React.useCallback(() => {
     const authUrlParams = {
-      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-      redirect_uri: `${process.env.NEXT_PUBLIC_API_URL}/auth/verify-callback`,
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      redirect_uri: `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/+__api/verify-callback`,
       response_type: "code",
       scope: "openid profile email",
       access_type: "offline",
       prompt: "consent",
       state: btoa(JSON.stringify({ intent: pathname.includes("signup") ? "SIGN_UP" : "SIGN_IN", redirect })),
     };
-    router.push(`https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams(authUrlParams as any)}`);
+    router.push(`https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams(authUrlParams)}`);
   }, [router, redirect, pathname]);
 
   return { error, handleGoogleSignIn, setDismissedError };

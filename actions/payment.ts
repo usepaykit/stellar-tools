@@ -1,5 +1,6 @@
 "use server";
 
+import { retrieveAccount } from "@/actions/account";
 import { applyPaymentFee } from "@/actions/billing";
 import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
@@ -8,6 +9,7 @@ import { runAtomic, withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
 import {
+  Account,
   Checkout,
   Customer,
   Network,
@@ -39,6 +41,7 @@ type PaymentContext = {
   customer?: Customer;
   product?: Product;
   checkout?: Checkout;
+  account?: Account;
 };
 
 async function loadPaymentContext(
@@ -48,6 +51,7 @@ async function loadPaymentContext(
 ): Promise<PaymentContext> {
   const { org, customer, checkout, product } = await all({
     org: async () => retrieveOrganization(organizationId),
+    account: async () => retrieveAccount({ organizationId }),
     customer: async () => {
       if (!payment.customerId) return undefined;
       return retrieveCustomers({ id: payment.customerId }, undefined, organizationId, environment).then(
@@ -169,7 +173,10 @@ const paymentActionHandler = async (call: () => Promise<Payment>, organizationId
           ctx as Required<PaymentContext>,
           payment
         );
-        sideEffects.push(sendEmail(ctx.org.supportEmail, subject, component));
+
+        if (ctx.account?.email) {
+          sideEffects.push(sendEmail(ctx.account.email, subject, component));
+        }
       }
     }
 

@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from "@/actions/auth";
 import { AuthProvider } from "@/constant/schema.client";
-import { Account, accounts, db } from "@/db";
+import { Account, accounts, db, organizations } from "@/db";
 import { getCookie } from "@/integrations/cookie-manager";
 import { uploadFiles } from "@/integrations/file-upload";
 import { verifyJwt } from "@/integrations/jwt";
@@ -22,7 +22,8 @@ export type AccountLookup =
   | { id: string }
   | { email: string }
   | { sso: { provider: AuthProvider; sub: string } }
-  | { accessToken: true };
+  | { accessToken: true }
+  | { organizationId: string };
 
 export const retrieveAccount = async (payload: AccountLookup): Promise<Account | null> => {
   let whereClause;
@@ -43,6 +44,16 @@ export const retrieveAccount = async (payload: AccountLookup): Promise<Account |
     )`;
   } else if ("id" in payload) {
     whereClause = eq(accounts.id, payload.id);
+  } else if ("organizationId" in payload) {
+    whereClause = eq(organizations.id, payload.organizationId);
+    const [{ account }] = await db
+      .select()
+      .from(accounts)
+      .innerJoin(organizations, eq(accounts.id, organizations.accountId))
+      .where(whereClause)
+      .limit(1);
+
+    return account;
   } else {
     whereClause = eq(accounts.email, payload.email);
   }
