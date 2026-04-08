@@ -1,6 +1,6 @@
 import React from "react";
 
-import Logo from "@/components/logo";
+import { StellarTools } from "@/components/icon";
 import { Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -38,13 +38,7 @@ export const FooterSection = () => {
       <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-16 md:grid-cols-4">
         <div className="col-span-2 md:col-span-1">
           <Link href="/" className="mb-4 flex items-center gap-2.5 text-[17px] font-semibold text-white">
-            <div className="relative h-8 w-8">
-              <Logo
-                width={32}
-                height={32}
-                className="h-full w-full object-contain"
-              />
-            </div>
+            <StellarTools width={25} height={25} className="object-contain" />
             StellarTools
           </Link>
           <p className="max-w-[260px] text-sm leading-relaxed text-white/50">

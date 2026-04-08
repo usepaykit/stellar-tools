@@ -6,7 +6,7 @@ import { createCustomerImage, deleteCustomerPortalWallet, getCustomerPortalData 
 import { AppModal } from "@/components/app-modal";
 import { TestModeBanner } from "@/components/environment-mode";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
-import Logo from "@/components/logo";
+import { StellarTools } from "@/components/icon";
 import {
   PhoneNumber,
   PhoneNumberField,
@@ -260,7 +260,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
               href={process.env.NEXT_PUBLIC_APP_URL!}
               className="text-foreground flex items-center gap-2.5 font-semibold transition-opacity hover:opacity-80"
             >
-              <Logo width={28} height={28} className="object-contain" />
+              <StellarTools width={28} height={28} className="object-contain" />
               <span>StellarTools</span>
             </Link>
           </div>
@@ -293,7 +293,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
             href={process.env.NEXT_PUBLIC_APP_URL!}
             className="text-foreground flex items-center gap-2.5 font-semibold transition-opacity hover:opacity-80"
           >
-            <Logo width={28} height={28} className="object-contain" />
+            <StellarTools width={28} height={28} className="object-contain" />
             <span>StellarTools</span>
           </Link>
         </div>
@@ -596,7 +596,7 @@ function PortalSkeleton() {
             href={process.env.NEXT_PUBLIC_APP_URL!}
             className="text-foreground flex items-center gap-2.5 font-semibold transition-opacity hover:opacity-80"
           >
-            <Logo width={28} height={28} className="object-contain" />
+            <StellarTools width={28} height={28} className="object-contain" />
             <span>StellarTools</span>
           </Link>
         </div>

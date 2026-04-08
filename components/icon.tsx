@@ -370,7 +370,7 @@ export const StellarTools = (props: SVGProps<SVGSVGElement>) => {
       width={props.width}
       height={props.height}
       viewBox="0 0 423 367"
-      fill="none"
+      fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >

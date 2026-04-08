@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getCurrentUser, signOut } from "@/actions/auth";
 import { AppModal } from "@/components/app-modal";
-import Logo from "@/components/logo";
+import { Paykit, StellarTools } from "@/components/icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -21,11 +21,8 @@ import { cn } from "@/lib/utils";
 import { CirclePlus, LogOut, Menu, Monitor, Moon, Sun } from "@aliimam/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-import { Paykit } from "../icon";
 
 const NAV_LINKS = [
   { href: "#features", label: "Products" },
@@ -82,8 +79,8 @@ export function Header() {
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-7" />
             <span className="text-foreground text-sm">/</span>
-            <Logo width={28} height={28} className="size-7 rounded-md object-contain" />
-            <span className="font-rosemary text-base font-semibold text-foreground">StellarTools</span>
+            <StellarTools width={28} height={28} className="size-7 rounded-md object-contain" />
+            <span className="font-rosemary text-foreground text-base font-semibold">StellarTools</span>
           </Link>
 
           <button
@@ -146,7 +143,6 @@ export function Header() {
         </DialogContent>
       </Dialog>
 
-      {/* Desktop: full-width bar */}
       <div
         className={cn(
           "hidden border-b backdrop-blur-md transition-all duration-300 md:block",
@@ -154,15 +150,13 @@ export function Header() {
         )}
       >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Paykit className="size-8" />
-            <span className=" text-foreground">/</span>
-            <Logo width={32} height={32} className="size-8 rounded-md object-contain" />
-            <span className="font-rosemary text-lg font-semibold text-foreground">StellarTools</span>
+            <span className="text-foreground">/</span>
+            <StellarTools width={32} height={32} />
+            <span className="font-rosemary text-foreground text-lg font-semibold">StellarTools</span>
           </Link>
 
-          {/* Navigation Links */}
           <ul className="flex list-none gap-8">
             {NAV_LINKS.map(({ href, label }) => (
               <li key={href}>
@@ -176,7 +170,6 @@ export function Header() {
             ))}
           </ul>
 
-          {/* Desktop Actions */}
           <div className="flex items-center gap-3">
             {isLoading ? (
               <div className="bg-muted h-8 w-8 animate-pulse rounded-full" />

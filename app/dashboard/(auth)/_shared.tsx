@@ -3,7 +3,7 @@
 import React from "react";
 
 import { Google } from "@/components/icon";
-import Logo from "@/components/logo";
+import { StellarTools } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { AlertCircle, X } from "lucide-react";
@@ -62,10 +62,9 @@ export function AuthLayout({
 }: AuthLayoutProps) {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      {/* Marketing Sidebar */}
       <div className="bg-foreground hidden flex-col justify-between overflow-hidden p-16 lg:flex">
         <div className="space-y-8">
-          <Logo width={150} height={40} className="object-contain" priority />
+          <StellarTools width={100} height={100} className="text-background" />
           <h1 className="text-background mb-6 text-4xl leading-[1.1] font-extrabold tracking-normal">
             The financial infrastructure
             <br />
@@ -88,7 +87,6 @@ export function AuthLayout({
         </p>
       </div>
 
-      {/* Form Container */}
       <div className="bg-background relative flex flex-col justify-center">
         <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center px-6 py-12">
           <div className="mb-6 w-full space-y-1 text-center">
