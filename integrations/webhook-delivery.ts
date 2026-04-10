@@ -1,3 +1,5 @@
+import "server-only";
+
 import { postWebhookLog } from "@/actions/webhook";
 import { Webhook as WebhookSchema } from "@/db/schema";
 import { ApiClient, WebhookEvent, WebhookSigner } from "@stellartools/core";
@@ -9,7 +11,6 @@ export const deliverWebhook = async (
   logId: string
 ) => {
   const startTime = Date.now();
-  // const webhookEventId = generateResourceId("wh_evt", webhook.id, 52);
 
   const webhookPayload = {
     id: logId,
