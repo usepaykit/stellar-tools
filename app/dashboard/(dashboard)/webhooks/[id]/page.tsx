@@ -24,7 +24,7 @@ import { WebhookLog } from "@/db";
 import { useCookieState } from "@/hooks/use-cookie-state";
 import { useCopy } from "@/hooks/use-copy";
 import { useOrgQuery } from "@/hooks/use-org-query";
-import type { WebhookEvent } from "@stellartools/core";
+import type { WebhookEventType } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
@@ -147,7 +147,7 @@ export default function WebhookLogPage() {
   });
 
   const resendMutation = useMutation({
-    mutationFn: async ({ eventType, payload }: { eventType: WebhookEvent; payload: Record<string, unknown> }) =>
+    mutationFn: async ({ eventType, payload }: { eventType: WebhookEventType; payload: Record<string, unknown> }) =>
       resendWebhookLog(webhookId, eventType, payload),
     onSuccess: () => {
       refetchWebhookLogs();
@@ -202,7 +202,7 @@ export default function WebhookLogPage() {
             size="sm"
             onClick={() =>
               resendMutation.mutate({
-                eventType: log.eventType as WebhookEvent,
+                eventType: log.eventType as WebhookEventType,
                 payload: getResendPayload(log),
               })
             }

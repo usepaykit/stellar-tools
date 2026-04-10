@@ -1,17 +1,56 @@
 import { StellarTools } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
-const stellarToolsApi = new StellarTools({ apiKey: process.env.STELLARTOOLS_API_KEY! });
+const client = new StellarTools({ apiKey: process.env.STELLARTOOLS_API_KEY! });
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get("X-StellarTools-Signature")!;
 
-  const isValid = stellarToolsApi.webhooks.verifySignature(body, signature, process.env.STELLARTOOLS_WEBHOOK_SECRET!);
-  if (!isValid) return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  const event = client.webhooks.constructEvent(body, signature, process.env.STELLARTOOLS_WEBHOOK_SECRET!);
 
-  const event = JSON.parse(body);
-  console.dir({ event }, { depth: 100 });
-  // Handle event.type (e.g. 'payment.confirmed')
+  if (event.type == "customer.created") {
+    const customer = event.data.object;
+    console.dir(customer, { depth: 100 });
+  } else if (event.type == "customer.updated") {
+    const customer = event.data.object;
+    console.dir(customer, { depth: 100 });
+  } else if (event.type == "customer.deleted") {
+    const customer = event.data.object;
+    console.dir(customer, { depth: 100 });
+  } else if (event.type == "customer.wallet_linked") {
+    const customer = event.data.object;
+    console.dir(customer, { depth: 100 });
+  } else if (event.type == "checkout.created") {
+    const checkout = event.data.object;
+    console.dir(checkout, { depth: 100 });
+  } else if (event.type == "payment.confirmed") {
+    const payment = event.data.object;
+    console.dir(payment, { depth: 100 });
+  } else if (event.type == "payment.pending") {
+    const payment = event.data.object;
+    console.dir(payment, { depth: 100 });
+  } else if (event.type == "payment.failed") {
+    const payment = event.data.object;
+    console.dir(payment, { depth: 100 });
+  } else if (event.type == "refund.succeeded") {
+    const refund = event.data.object;
+    console.dir(refund, { depth: 100 });
+  } else if (event.type == "refund.failed") {
+    const refund = event.data.object;
+    console.dir(refund, { depth: 100 });
+  } else if (event.type == "subscription.created") {
+    const subscription = event.data.object;
+    console.dir(subscription, { depth: 100 });
+  } else if (event.type == "subscription.updated") {
+    const subscription = event.data.object;
+    console.dir(subscription, { depth: 100 });
+  } else if (event.type == "subscription.canceled") {
+    const subscription = event.data.object;
+    console.dir(subscription, { depth: 100 });
+  } else {
+    console.dir(event, { depth: 100 });
+  }
+
   return NextResponse.json({ received: true });
 }

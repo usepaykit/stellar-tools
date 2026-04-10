@@ -19,7 +19,7 @@ import {
   WebhookActionResult,
 } from "@medusajs/framework/types";
 import { AbstractPaymentProvider, MedusaError, PaymentActions, PaymentSessionStatus } from "@medusajs/framework/utils";
-import { Result, z as Schema, StellarTools, WebhookEvent, validateSchema } from "@stellartools/core";
+import { Result, z as Schema, StellarTools, WebhookEventType, validateSchema } from "@stellartools/core";
 
 import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
 
@@ -216,14 +216,14 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     }
 
     const body = JSON.parse(payload.rawData.toString());
-    const actionMap: Partial<Record<WebhookEvent, PaymentActions>> = {
+    const actionMap: Partial<Record<WebhookEventType, PaymentActions>> = {
       "payment.pending": PaymentActions.PENDING,
       "payment.confirmed": PaymentActions.SUCCESSFUL,
       "payment.failed": PaymentActions.FAILED,
     };
 
     return {
-      action: actionMap[body.event as WebhookEvent] ?? PaymentActions.NOT_SUPPORTED,
+      action: actionMap[body.event as WebhookEventType] ?? PaymentActions.NOT_SUPPORTED,
       data: { session_id: body.data?.metadata?.session_id, amount: body.data?.amount },
     };
   };

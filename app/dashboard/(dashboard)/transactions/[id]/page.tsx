@@ -476,7 +476,7 @@ export default function TransactionDetailPage() {
                         </>
                       )}
 
-                      {refund.receiverPublicKey && (
+                      {refund.receiverWalletAddress && (
                         <>
                           <Separator />
                           <div className="flex items-start justify-between gap-2">
@@ -485,11 +485,11 @@ export default function TransactionDetailPage() {
                               <div className="flex items-center gap-2">
                                 <Wallet className="text-muted-foreground h-4 w-4" />
                                 <span className="font-mono text-sm break-all">
-                                  {truncate(refund.receiverPublicKey, { start: 6, end: 6 })}
+                                  {truncate(refund.receiverWalletAddress, { start: 6, end: 6 })}
                                 </span>
                               </div>
                             </div>
-                            <CopyButton text={refund.receiverPublicKey} label="Copy wallet address" />
+                            <CopyButton text={refund.receiverWalletAddress} label="Copy wallet address" />
                           </div>
                         </>
                       )}

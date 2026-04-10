@@ -1,7 +1,5 @@
 import z from "zod";
 
-import { Environment } from "./shared";
-
 export const paymentStatusEnum = z.enum(["pending", "confirmed", "failed"]);
 
 type PaymentStatus = z.infer<typeof paymentStatusEnum>;
@@ -11,11 +9,6 @@ export interface Payment {
    * The unique identifier for the payment.
    */
   id: string;
-
-  /**
-   * The organization ID of the payment.
-   */
-  organizationId: string;
 
   /**
    * The checkout ID of the payment.
@@ -28,14 +21,9 @@ export interface Payment {
   customerId: string;
 
   /**
-   * The asset ID of the payment.
+   * The amount of the payment e.g `"50 XLM"` or `"100 USDC"`.
    */
-  assetId: string;
-
-  /**
-   * The amount of the payment.
-   */
-  amount: number;
+  amount: string;
 
   /**
    * The status of the payment.
@@ -51,14 +39,4 @@ export interface Payment {
    * The created at timestamp for the payment.
    */
   createdAt: string;
-
-  /**
-   * The updated at timestamp for the payment.
-   */
-  updatedAt: string;
-
-  /**
-   * The environment of the payment.
-   */
-  environment: Environment;
 }

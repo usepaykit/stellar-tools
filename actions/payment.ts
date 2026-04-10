@@ -8,6 +8,7 @@ import { retrieveCustomers, upsertCustomerWallet } from "@/actions/customers";
 import { runAtomic, withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
+import { PaymentStatus } from "@/constant/schema.client";
 import {
   Account,
   Checkout,
@@ -119,15 +120,16 @@ const paymentActionHandler = async (
     const webhooks: WebhookTrigger<typeof payment>[] = [];
     const sideEffects: Promise<any>[] = [];
 
-    const logId = generateResourceId("wh_evt", organizationId, 52);
+    const rawAmount = `${payment.amount} ${payment.metadata?.assetCode}`;
 
-    const assetLabel = `${payment.amount} ${payment.metadata?.assetCode}`;
     const basePayload = {
-      customerId: payment.customerId,
-      checkoutId: payment.checkoutId,
-      amount: payment.amount,
-      paymentId: payment.id,
-      subscriptionId: payment.subscriptionId,
+      id: payment.id,
+      checkoutId: payment.checkoutId!,
+      customerId: payment.customerId!,
+      amount: rawAmount,
+      status: payment.status,
+      transactionHash: payment.transactionHash,
+      createdAt: payment.createdAt?.toISOString(),
     };
 
     if (payment.status === "confirmed") {
@@ -141,13 +143,15 @@ const paymentActionHandler = async (
           subscriptionId: p.subscriptionId,
           data: {
             ...basePayload,
-            amount: assetLabel,
+            subscriptionId: p.subscriptionId,
             ...(options?.failErrorMessage && { error: options.failErrorMessage }),
-            eventId: logId,
           },
         }),
       });
-      webhooks.push({ event: "payment.confirmed", map: () => basePayload, logId });
+      webhooks.push({
+        event: "payment.confirmed",
+        map: () => ({ object: basePayload, previous_attributes: undefined }),
+      });
 
       // Load all data once
       const ctx = await loadPaymentContext(payment, organizationId, environment);
@@ -162,7 +166,7 @@ const paymentActionHandler = async (
             "Payment Confirmed",
             CustomerPaymentReceiptEmail({
               customerName: ctx.customer.name,
-              amount: assetLabel,
+              amount: rawAmount,
               reference: payment.id,
               date: moment().format("MMMM DD, YYYY [at] h:mm A"),
               organizationName: ctx.org.name,
@@ -173,7 +177,7 @@ const paymentActionHandler = async (
       }
 
       // Merchant "First Payout" logic
-      const paymentCount = await retrievePaymentCount(organizationId);
+      const paymentCount = await retrievePaymentCount(organizationId, undefined, { status: "confirmed" });
       if (
         paymentCount === 1 &&
         ctx.org.supportEmail &&
@@ -195,10 +199,13 @@ const paymentActionHandler = async (
     if (payment.status === "failed") {
       events.push({
         type: "payment::failed",
-        map: (p) => ({ customerId: p.customerId, data: { ...basePayload, amount: assetLabel } }),
+        map: (p) => ({
+          customerId: p.customerId,
+          data: { ...basePayload, ...(options?.failErrorMessage && { error: options.failErrorMessage }) },
+        }),
       });
 
-      webhooks.push({ event: "payment.failed", map: () => basePayload, logId });
+      webhooks.push({ event: "payment.failed", map: () => ({ object: basePayload, previous_attributes: undefined }) });
     }
 
     // Fire side effects in parallel, don't block the response
@@ -320,7 +327,11 @@ export const putPayment = async (
   );
 };
 
-export const retrievePaymentCount = async (organizationId: string, customerId?: string) => {
+export const retrievePaymentCount = async (
+  organizationId: string,
+  customerId?: string,
+  filter?: { status?: PaymentStatus; subscriptionId?: string }
+) => {
   const [{ value: confirmedCount }] = await db
     .select({ value: count() })
     .from(payments)
@@ -328,7 +339,8 @@ export const retrievePaymentCount = async (organizationId: string, customerId?: 
       and(
         eq(payments.organizationId, organizationId),
         customerId ? eq(payments.customerId, customerId) : undefined,
-        eq(payments.status, "confirmed")
+        filter?.status ? eq(payments.status, filter.status) : undefined,
+        filter?.subscriptionId ? eq(payments.subscriptionId, filter.subscriptionId) : undefined
       )
     );
 

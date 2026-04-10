@@ -6,7 +6,7 @@ import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events, rawDb, txContext } from "@/db";
 import { generateResourceId } from "@/lib/utils";
 import { EventConfig, EventEmitParams } from "@/types";
-import { MaybePromise, SuggestedString } from "@stellartools/core";
+import { MaybePromise, SuggestedString, WebhookEvent, WebhookEventBase } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
@@ -27,6 +27,7 @@ export async function withEvent<T>(
       if (!resolved) return;
 
       const { events: eventConfigs, webhooks: webhookConfig } = resolved;
+      const correlatedId = generateResourceId("evt", webhookConfig?.organizationId ?? "sys", 32);
 
       if (eventConfigs) {
         const configsArray = Array.isArray(eventConfigs) ? eventConfigs : [eventConfigs];
@@ -38,7 +39,12 @@ export async function withEvent<T>(
         if (internalEvents.length > 0) {
           const orgId = webhookConfig?.organizationId;
           const env = webhookConfig?.environment;
-          await emitEvents(internalEvents, orgId, env);
+
+          await emitEvents(
+            internalEvents.map(({ data, ...evt }) => ({ ...evt, data: { ...data, eventId: correlatedId } })),
+            orgId,
+            env
+          );
         }
       }
 
@@ -46,13 +52,20 @@ export async function withEvent<T>(
         const { triggers, organizationId, environment } = webhookConfig;
         const triggersArray = Array.isArray(triggers) ? triggers : [triggers];
 
-        const deliveries = triggersArray.flatMap((trigger) => {
-          const payloads = trigger.map(result);
-          return (Array.isArray(payloads) ? payloads : [payloads]).map((payload) =>
-            triggerWebhooks(trigger.event, payload, trigger.logId, organizationId, environment).catch((err) => {
-              console.error(`[Webhook Error] ${trigger.event} for ${organizationId}:`, err);
-            })
-          );
+        const deliveries = triggersArray.map((trigger) => {
+          const mapped = trigger.map(result);
+
+          const envelope: WebhookEventBase<any, any> = {
+            id: correlatedId,
+            type: trigger.event,
+            created: new Date().toISOString(),
+            data: {
+              object: mapped.object,
+              previous_attributes: mapped.previous_attributes,
+            },
+          };
+
+          return triggerWebhooks(trigger.event, envelope, correlatedId, organizationId, environment);
         });
 
         if (deliveries.length > 0) await Promise.allSettled(deliveries);

@@ -7,17 +7,17 @@ import {
   networkEnum as networkEnum$1,
   paymentStatusEnum as paymentStatusEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
-  subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@/constant/schema.client";
 import {
   ProductStatus,
   ProductType,
   SubscriptionData,
-  WebhookEvent,
+  WebhookEventType,
   checkoutStatusEnum as checkoutStatusEnum$1,
   productStatusEnum as productStatusEnum$1,
   productTypeEnum as productTypeEnum$1,
   recurringPeriodEnum as recurringPeriodEnum$1,
+  subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
@@ -298,7 +298,7 @@ export const checkouts = pgTable(
   })
 );
 
-export const subscriptionStatusEnum = pgEnum("subscription_status", subscriptionStatusEnum$1);
+export const subscriptionStatusEnum = pgEnum("subscription_status", subscriptionStatusEnum$1.enum);
 
 export const subscriptions = pgTable("subscription", {
   id: text("id").primaryKey(),
@@ -389,7 +389,7 @@ export const webhooks = pgTable("webhook", {
     .references(() => organizations.id),
   url: text("url").notNull(),
   secret: text("secret").notNull(),
-  events: text("events").array().$type<Array<WebhookEvent>>().notNull(),
+  events: text("events").array().$type<Array<WebhookEventType>>().notNull(),
   name: text("name").notNull(),
   description: text("description"),
   isDisabled: boolean("is_disabled").default(false).notNull(),
@@ -440,7 +440,7 @@ export const refunds = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     environment: networkEnum("network").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-    receiverPublicKey: text("receiver_public_key").notNull(),
+    receiverWalletAddress: text("receiver_public_key").notNull(),
     assetCode: text("asset_code").$type<AssetCode>(),
   },
   (table) => ({

@@ -24,7 +24,7 @@ import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-o
 import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
 import { cn, generateResourceId, normalizeTimeSeries } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ApiClient, Webhook, type WebhookEvent as WebhookEventType, webhookEvent } from "@stellartools/core";
+import { ApiClient, WEBHOOK_EVENT_TYPES, type Webhook, type WebhookEventType } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -50,7 +50,7 @@ const formatEventLabel = (event: string) =>
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
-const WEBHOOK_EVENTS = webhookEvent.map((id) => ({ id, label: formatEventLabel(id) }));
+const WEBHOOK_EVENTS = WEBHOOK_EVENT_TYPES.map((id) => ({ id, label: formatEventLabel(id) }));
 
 const getTsExample = (secret: string) => /* ts */ `import { NextRequest, NextResponse } from 'next/server';
 import { StellarTools } from '@stellartools/core';
@@ -566,7 +566,7 @@ const schema = z.object({
   ),
   description: z.string().max(500, "Description must be less than 500 characters").optional().or(z.literal("")),
   events: z
-    .array(z.custom<WebhookEventType>((v) => webhookEvent.includes(v as WebhookEventType)))
+    .array(z.custom<WebhookEventType>((v) => WEBHOOK_EVENT_TYPES.includes(v as WebhookEventType)))
     .min(1, "Please select at least one event"),
 });
 

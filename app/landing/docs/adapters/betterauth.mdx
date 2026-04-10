@@ -1,6 +1,6 @@
 ---
-title: 'Better Auth Adapter'
-description: 'Billing plugin for Better Auth: customers, subscriptions, refunds, credits'
+title: "Better Auth Adapter"
+description: "Billing plugin for Better Auth: customers, subscriptions, refunds, credits"
 ---
 
 The Better Auth adapter adds a billing plugin to [Better Auth](https://www.better-auth.com): it links users to Stellar customers and exposes session-protected endpoints for customers, subscriptions, refunds, and credits.
@@ -36,17 +36,17 @@ export const auth = betterAuth({
 
 ## Plugin options (BillingConfig)
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `apiKey` | `string` | Stellar Tools API key (required). |
-| `createCustomerOnSignUp` | `boolean` | Create a Stellar customer when a user signs up (default: false). |
-| `creditLowThreshold` | `number` | Trigger `onCreditsLow` when balance is at or below this (default: 10). |
-| `onCustomerCreated` | `(customer: Customer) => Promise<void>` | Called when a Stellar customer is created/linked. |
-| `onCheckoutComplete` | `(data: Checkout) => Promise<void>` | Optional. |
-| `onCreditsLow` | `(data: CreditBalance) => Promise<void>` | Called when credits are low after a consume. |
-| `onSubscriptionCreated` | `(data: Subscription) => Promise<void>` | Optional. |
-| `onSubscriptionCanceled` | `(data: Subscription) => Promise<void>` | Optional. |
-| `onSubscriptionUpdated` | `(data: Subscription) => Promise<void>` | Optional. |
+| Option                   | Type                                     | Description                                                            |
+| ------------------------ | ---------------------------------------- | ---------------------------------------------------------------------- |
+| `apiKey`                 | `string`                                 | Stellar Tools API key (required).                                      |
+| `createCustomerOnSignUp` | `boolean`                                | Create a Stellar customer when a user signs up (default: false).       |
+| `creditLowThreshold`     | `number`                                 | Trigger `onCreditsLow` when balance is at or below this (default: 10). |
+| `onCustomerCreated`      | `(customer: Customer) => Promise<void>`  | Called when a Stellar customer is created/linked.                      |
+| `onCheckoutComplete`     | `(data: Checkout) => Promise<void>`      | Optional.                                                              |
+| `onCreditsLow`           | `(data: CreditBalance) => Promise<void>` | Called when credits are low after a consume.                           |
+| `onSubscriptionCreated`  | `(data: Subscription) => Promise<void>`  | Optional.                                                              |
+| `onSubscriptionCanceled` | `(data: Subscription) => Promise<void>`  | Optional.                                                              |
+| `onSubscriptionUpdated`  | `(data: Subscription) => Promise<void>`  | Optional.                                                              |
 
 ## Endpoints
 
@@ -54,31 +54,31 @@ All endpoints require a session (Better Auth session middleware). The plugin cre
 
 ### Customers
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/stellar/customer/create` | Create or link Stellar customer; returns customer. |
-| `GET` | `/stellar/customer/retrieve` | Get current user’s Stellar customer. |
-| `POST` | `/stellar/customer/update` | Update customer (`email`, `name`, `phone`, `metadata`). |
+| Method | Path                         | Description                                             |
+| ------ | ---------------------------- | ------------------------------------------------------- |
+| `POST` | `/stellar/customer/create`   | Create or link Stellar customer; returns customer.      |
+| `GET`  | `/stellar/customer/retrieve` | Get current user’s Stellar customer.                    |
+| `POST` | `/stellar/customer/update`   | Update customer (`email`, `name`, `phone`, `metadata`). |
 
 ### Subscriptions
 
-| Method | Path | Description |
-|--------|------|-------------|
+| Method | Path                           | Description                                                                                             |
+| ------ | ------------------------------ | ------------------------------------------------------------------------------------------------------- |
 | `POST` | `/stellar/subscription/create` | Create subscription (body: `productId`, `period` (from, to), `cancelAtPeriodEnd`, optional `metadata`). |
-| `GET` | `/stellar/subscription/list` | List subscriptions for the current user’s customer. |
+| `GET`  | `/stellar/subscription/list`   | List subscriptions for the current user’s customer.                                                     |
 
 ### Credits
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/stellar/credits/consume` | Consume credits (body: `productId`, `rawAmount`, optional `metadata`). Triggers `onCreditsLow` if balance ≤ threshold. |
-| `GET` | `/stellar/credits/transactions` | Get credit transactions (query: `productId`, optional `limit`, `offset`). |
+| Method | Path                            | Description                                                                                                            |
+| ------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/stellar/credits/consume`      | Consume credits (body: `productId`, `rawAmount`, optional `metadata`). Triggers `onCreditsLow` if balance ≤ threshold. |
+| `GET`  | `/stellar/credits/transactions` | Get credit transactions (query: `productId`, optional `limit`, `offset`).                                              |
 
 ### Refunds
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/stellar/refund/create` | Create refund (body: `paymentId`, `amount`, `reason`, `receiverPublicKey`, optional `metadata`). |
+| Method | Path                     | Description                                                                                          |
+| ------ | ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `POST` | `/stellar/refund/create` | Create refund (body: `paymentId`, `amount`, `reason`, `receiverWalletAddress`, optional `metadata`). |
 
 ## Example: Create subscription
 

@@ -1,7 +1,7 @@
 import { Network } from "@/constant/schema.client";
 import { EventType } from "@/constant/schema.client";
 import { computeDiff } from "@/lib/utils";
-import { MaybeArray, WebhookEvent } from "@stellartools/core";
+import { MaybeArray, WebhookEventType, WebhookObject } from "@stellartools/core";
 
 export type EventDataDiff = { $changes?: ReturnType<typeof computeDiff> };
 
@@ -21,10 +21,12 @@ export interface EventTrigger<T> {
   map: (result: T) => MaybeArray<Omit<EventEmitParams, "type">>;
 }
 
-export interface WebhookTrigger<T> {
-  event: WebhookEvent;
-  logId: string;
-  map: (result: T) => MaybeArray<Record<string, unknown>>;
+export interface WebhookTrigger<T, K extends WebhookEventType = WebhookEventType> {
+  event: K;
+  map: (result: T) => {
+    object: WebhookObject<K>;
+    previous_attributes?: Partial<WebhookObject<K>>;
+  };
 }
 
 export interface EventConfig<T> {
@@ -32,6 +34,6 @@ export interface EventConfig<T> {
   webhooks?: {
     organizationId: string;
     environment: Network;
-    triggers: MaybeArray<WebhookTrigger<T>>;
+    triggers: MaybeArray<WebhookTrigger<T, any>>;
   };
 }

@@ -60,7 +60,7 @@ module.exports = defineConfig({
 - Initiate payment: creates a [direct checkout](/api-reference/checkout) with `amount` and `currency_code`; returns `payment_url` for redirect.
 - Get / authorize / retrieve payment: uses [payments API](/api-reference/payments); status is mapped to Medusa session status (`REQUIRES_MORE`, `AUTHORIZED`, `ERROR`).
 - Capture: no-op (treats as captured).
-- Refund: calls [refunds API](/api-reference/refunds); requires `receiverPublicKey` and optional `reason` in payment data.
+- Refund: calls [refunds API](/api-reference/refunds); requires `receiverWalletAddress` and optional `reason` in payment data.
 - Account holder: create/update/delete map to Stellar [customers](/api-reference/customers).
 - Webhooks: handles `payment.pending`, `payment.confirmed`, `payment.failed` and forwards to Medusa.
 

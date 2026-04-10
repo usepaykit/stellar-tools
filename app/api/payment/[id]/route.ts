@@ -68,7 +68,7 @@ export const GET = apiHandler({
             refund: {
               id: refunds?.id,
               status: refunds?.status,
-              receiverAddress: refunds?.receiverPublicKey,
+              receiverAddress: refunds?.receiverWalletAddress,
               reason: refunds?.reason,
               amount: `${refunds?.amount} ${refunds?.assetCode}`,
             },

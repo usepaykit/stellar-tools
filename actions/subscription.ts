@@ -9,6 +9,8 @@ import { EventTrigger, WebhookTrigger } from "@/types";
 import { OverrideProps, Prettify } from "@stellartools/core";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
+import { retrievePaymentCount } from "./payment";
+
 export const postSubscriptionsBulk = async (
   params: {
     id: string;
@@ -17,13 +19,12 @@ export const postSubscriptionsBulk = async (
     period: { from: string; to: string };
     cancelAtPeriodEnd: boolean;
     metadata: Record<string, unknown> | null;
+    trialDays?: number;
   },
   orgId?: string,
   env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const logId = generateResourceId("wh_evt", organizationId, 52);
 
   return withEvent(
     async () => {
@@ -37,54 +38,58 @@ export const postSubscriptionsBulk = async (
         currentPeriodStart: new Date(params.period.from),
         currentPeriodEnd: new Date(params.period.to),
         cancelAtPeriodEnd: params.cancelAtPeriodEnd,
+        metadata: params.metadata,
+        trialDays: params.trialDays,
       }));
 
       return await db.insert(subscriptions).values(values).returning();
     },
-    {
-      events: [
-        {
-          type: "subscription::created",
-          map: (subscription) =>
-            subscription.map(
-              ({ customerId, id, status, productId, currentPeriodStart, currentPeriodEnd, cancelAtPeriodEnd }) => ({
-                customerId,
-                subscriptionId: id,
-                data: {
-                  id,
-                  productId,
-                  status,
-                  currentPeriodStart,
-                  currentPeriodEnd,
-                  cancelAtPeriodEnd,
-                  eventId: logId,
-                },
-              })
-            ),
-        },
-      ],
-      webhooks: {
-        organizationId,
-        environment,
-        triggers: [
+    (subscriptions) => {
+      const data = subscriptions.map(
+        ({
+          id,
+          customerId,
+          productId,
+          status,
+          currentPeriodStart,
+          currentPeriodEnd,
+          cancelAtPeriodEnd,
+          metadata,
+          trialDays,
+        }) => ({
+          id,
+          customerId,
+          productId,
+          status,
+          currentPeriodStart,
+          currentPeriodEnd,
+          cancelAtPeriodEnd,
+          metadata,
+          trialDays,
+        })
+      );
+
+      return {
+        events: [
           {
-            logId,
-            event: "subscription.created",
-            map: (subscription) =>
-              subscription.map(
-                ({ id, customerId, productId, status, currentPeriodStart, currentPeriodEnd, cancelAtPeriodEnd }) => ({
-                  id,
-                  status,
-                  customerId,
-                  productId,
-                  currentPeriodStart,
-                  currentPeriodEnd,
-                  cancelAtPeriodEnd,
-                })
-              ),
+            type: "subscription::created",
+            map: () => data.map((s) => ({ customerId: s.customerId, subscriptionId: s.id, data: s })),
           },
         ],
-      },
+        webhooks: {
+          organizationId,
+          environment,
+          triggers: [
+            ...data.map((s) => ({
+              event: "subscription.created",
+              map: () => ({
+                object: { ...s, canceledAt: null, updatedAt: new Date() },
+                previous_attributes: undefined,
+              }),
+            })),
+          ],
+        },
+      };
     }
   );
 };
@@ -185,16 +190,51 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
 
       return record;
     },
-    (subscription) => {
+    async (subscription) => {
       let events: EventTrigger<typeof subscription>[] = [];
       let webhookTriggers: WebhookTrigger<typeof subscription>[] = [];
       const logId = generateResourceId("wh_evt", organizationId, 52);
 
+      const failedPaymentCount = await retrievePaymentCount(organizationId, undefined, {
+        subscriptionId: subscription.id,
+        status: "failed",
+      });
+
+      const updatedSubscription = {
+        id: subscription.id,
+        customerId: subscription.customerId,
+        productId: subscription.productId,
+        status: subscription.status,
+        currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+        currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd ?? false,
+        canceledAt: new Date().toISOString(),
+        pausedAt: subscription.pausedAt?.toISOString() ?? null,
+        createdAt: subscription.createdAt?.toISOString(),
+        failedPaymentCount,
+        updatedAt: new Date().toISOString(),
+        metadata: subscription.metadata,
+        trialDays: subscription.trialDays,
+      };
+
       if (subscription.status === "canceled") {
         webhookTriggers.push({
-          logId,
           event: "subscription.canceled",
-          map: (subscription) => ({ id: subscription.id, ...(computeDiff(oldSubscription, subscription) ?? {}) }),
+          map: () => ({
+            object: updatedSubscription,
+            previous_attributes: computeDiff(
+              {
+                ...oldSubscription,
+                canceledAt: oldSubscription.canceledAt?.toISOString(),
+                createdAt: oldSubscription.createdAt?.toISOString(),
+                currentPeriodStart: oldSubscription.currentPeriodStart.toISOString(),
+                currentPeriodEnd: oldSubscription.currentPeriodEnd.toISOString(),
+                pausedAt: oldSubscription.pausedAt?.toISOString() ?? null,
+                updatedAt: oldSubscription.updatedAt?.toISOString(),
+              },
+              updatedSubscription
+            )?.previous_attributes,
+          }),
         });
 
         events.push({
@@ -207,9 +247,23 @@ export const putSubscription = async (id: string, retUpdate: Partial<Subscriptio
         });
       } else {
         webhookTriggers.push({
-          logId,
           event: "subscription.updated",
-          map: (subscription) => ({ id: subscription.id, ...(computeDiff(oldSubscription, subscription) ?? {}) }),
+          map: () => ({
+            object: updatedSubscription,
+            previous_attributes:
+              computeDiff(
+                {
+                  ...oldSubscription,
+                  canceledAt: oldSubscription.canceledAt?.toISOString(),
+                  createdAt: oldSubscription.createdAt?.toISOString(),
+                  currentPeriodStart: oldSubscription.currentPeriodStart.toISOString(),
+                  currentPeriodEnd: oldSubscription.currentPeriodEnd.toISOString(),
+                  pausedAt: oldSubscription.pausedAt?.toISOString() ?? null,
+                  updatedAt: oldSubscription.updatedAt?.toISOString(),
+                },
+                updatedSubscription
+              )?.previous_attributes ?? {},
+          }),
         });
 
         events.push({

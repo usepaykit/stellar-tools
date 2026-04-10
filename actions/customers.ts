@@ -44,8 +44,6 @@ export const postCustomers = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const logId = generateResourceId("wh_evt", organizationId, 52);
-
   return withEvent(
     async () => {
       const results = await db
@@ -71,10 +69,19 @@ export const postCustomers = async (
         events: [
           {
             type: "customer::created",
-            map: () => data.map((c) => ({ customerId: c.id, data: { ...c, eventId: logId } })),
+            map: () => data.map((c) => ({ customerId: c.id, data: c })),
           },
         ],
-        webhooks: { organizationId, environment, triggers: [{ event: "customer.created", map: () => data, logId }] },
+        webhooks: {
+          organizationId,
+          environment,
+          triggers: [
+            ...data.map((c) => ({
+              event: "customer.created",
+              map: () => ({ object: c, previous_attributes: undefined }),
+            })),
+          ],
+        },
       };
     }
   );
@@ -160,8 +167,6 @@ export const putCustomer = async (
     retrieveCustomers({ id }, undefined, orgId, env),
   ]);
 
-  const logId = generateResourceId("wh_evt", organizationId, 52);
-
   return withEvent(
     async () => {
       const [customer] = await db
@@ -198,7 +203,6 @@ export const putCustomer = async (
             data: {
               $changes: computeDiff(oldCustomer ?? {}, newCustomer, undefined, ".") ?? {},
               ...(options?.source ? { source: options.source } : {}),
-              eventId: logId,
             },
           }),
         },
@@ -209,8 +213,12 @@ export const putCustomer = async (
         triggers: [
           {
             event: "customer.updated",
-            map: (newCustomer) => computeDiff(oldCustomer, newCustomer) ?? {},
-            logId,
+            map: ({ id, name, email, phone, metadata }) => {
+              return {
+                object: { id, name, email, phone, metadata, createdAt: new Date(), updatedAt: new Date() },
+                previous_attributes: computeDiff(oldCustomer, { id, name, email, phone, metadata }) ?? {},
+              };
+            },
           },
         ],
       },
@@ -281,7 +289,7 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
       webhooks: {
         organizationId,
         environment,
-        triggers: [{ event: "customer.deleted", map: (customer) => ({ id: customer.id, deleted: true }), logId }],
+        triggers: [{ event: "customer.deleted", map: () => ({ object: null, previous_attributes: undefined }) }],
       },
     }
   );
@@ -481,11 +489,10 @@ export const createCustomerWallet = async (
         triggers: [
           {
             event: "customer.wallet_linked",
-            map: (wallet) => ({
-              customerId: wallet.customerId,
-              data: { id: wallet.id, walletAddress: wallet.address },
+            map: ({ id, address, createdAt, customerId, metadata }) => ({
+              object: { id, address, createdAt, customerId, metadata },
+              previous_attributes: undefined,
             }),
-            logId,
           },
         ],
       },

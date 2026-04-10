@@ -4,7 +4,6 @@ import { withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { Network, Refund, refunds } from "@/db";
 import { db } from "@/db";
-import { generateResourceId } from "@/lib/utils";
 import { EventTrigger, WebhookTrigger } from "@/types";
 import { and, desc, eq } from "drizzle-orm";
 
@@ -33,28 +32,44 @@ export const postRefund = async (
     (refund) => {
       let events: EventTrigger<typeof refund>[] = [];
       let webhooksTriggers: WebhookTrigger<typeof refund>[] = [];
-      const logId = generateResourceId("wh_evt", organizationId, 52);
 
       if (refund.status == "failed") {
         events.push({
           type: "refund::failed",
           map: ({ id: refundId, customerId, paymentId, amount, assetCode }) => ({
             customerId,
-            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, eventId: logId },
+            data: { paymentId, refundId, amount: `${amount} ${assetCode}` },
           }),
         });
 
         webhooksTriggers.push({
           event: "refund.failed",
-          logId,
-          map: ({ id: refundId, paymentId, amount, customerId, assetCode, createdAt, updatedAt }) => ({
+          map: ({
+            id: refundId,
             paymentId,
-            amount: `${amount} ${assetCode}`,
-            refundId,
+            amount,
             customerId,
-            error: options?.errorMessage,
+            assetCode,
             createdAt,
-            updatedAt,
+            receiverWalletAddress,
+            reason,
+            status,
+            metadata,
+          }) => ({
+            object: {
+              id: refundId,
+              paymentId,
+              customerId,
+              amount: `${amount} ${assetCode}`,
+              reason: reason!,
+              status,
+              createdAt: createdAt.toISOString(),
+              metadata,
+              receiverWalletAddress,
+              // @ts-ignore - error is not a valid property for the webhook object but might be needed by the merchant for debugging
+              error: options?.errorMessage,
+            },
+            previous_attributes: undefined,
           }),
         });
       }
@@ -64,12 +79,11 @@ export const postRefund = async (
           type: "refund::created",
           map: ({ id: refundId, paymentId, amount, customerId, assetCode, reason }) => ({
             customerId,
-            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, reason, eventId: logId },
+            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, reason },
           }),
         });
 
         webhooksTriggers.push({
-          logId,
           event: "refund.succeeded",
           map: ({
             id: refundId,
@@ -79,17 +93,22 @@ export const postRefund = async (
             assetCode,
             reason,
             createdAt,
-            updatedAt,
+            receiverWalletAddress,
             metadata,
+            status,
           }) => ({
-            amount: `${amount} ${assetCode}`,
-            paymentId,
-            customerId,
-            refundId,
-            reason,
-            createdAt,
-            updatedAt,
-            metadata,
+            object: {
+              id: refundId,
+              amount: `${amount} ${assetCode}`,
+              paymentId,
+              customerId,
+              reason: reason!,
+              createdAt: createdAt.toISOString(),
+              metadata,
+              receiverWalletAddress,
+              status,
+            },
+            previous_attributes: undefined,
           }),
         });
       }

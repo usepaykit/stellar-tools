@@ -38,7 +38,7 @@ export function computeDiff<T extends Record<string, any>>(
   newData: Partial<T>,
   ignoreKeys: string[] = ["updatedAt", "createdAt", "id"],
   delimiter?: string // e.g., "." to enable deep diff
-): (Record<string, unknown> & { previous_attributes: Record<string, unknown> }) | null {
+): { data: Record<string, unknown>; previous_attributes: Record<string, unknown> } | null {
   const previousAttributes: Record<string, unknown> = {};
   const current: Record<string, unknown> = {};
 
@@ -60,9 +60,7 @@ export function computeDiff<T extends Record<string, any>>(
 
       if (nestedDiff) {
         Object.assign(previousAttributes, nestedDiff.previous_attributes);
-        for (const k of Object.keys(nestedDiff)) {
-          if (k !== "previous_attributes") current[k] = nestedDiff[k];
-        }
+        Object.assign(current, nestedDiff.data);
       }
     } else if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
       previousAttributes[key] = oldVal ?? null;
@@ -75,7 +73,7 @@ export function computeDiff<T extends Record<string, any>>(
   }
 
   return {
-    ...current,
+    data: current,
     previous_attributes: previousAttributes,
   };
 }

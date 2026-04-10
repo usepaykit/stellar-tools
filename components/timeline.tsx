@@ -97,6 +97,7 @@ function TimelineDiff({ changes }: { changes: any }) {
   if (!changes) return null;
 
   const previous = changes.previous_attributes ?? {};
+  const current = changes.data ?? {};
   const keys = Object.keys(previous);
 
   if (keys.length === 0) return null;
@@ -105,7 +106,7 @@ function TimelineDiff({ changes }: { changes: any }) {
     <div className="border-muted mt-2 space-y-1.5 border-l-2 py-0.5 pl-3">
       {keys.map((key) => {
         const from = previous[key] ?? null;
-        const to = key in changes ? changes[key] : null;
+        const to = current[key] ?? null;
 
         return (
           <div key={key} className="text-[12px] leading-tight">

@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 import { schemaFor } from "..";
-import { Environment, environmentSchema } from "./shared";
 
-export const subscriptionStatusEnum = z.enum(["active", "past_due", "canceled", "paused"]);
+export const subscriptionStatusEnum = z.enum(["trialing", "active", "past_due", "canceled", "paused"]);
 
 type SubscriptionStatus = z.infer<typeof subscriptionStatusEnum>;
 
@@ -46,22 +45,22 @@ export interface Subscription {
   /**
    * The date the subscription was canceled.
    */
-  canceledAt?: string;
+  canceledAt: string | null;
 
   /**
    * The date the subscription was paused.
    */
-  pausedAt?: string;
+  pausedAt: string | null;
 
   /**
    * The number of failed payments of the subscription.
    */
-  failedPaymentCount?: number;
+  failedPaymentCount: number | null;
 
   /**
    * The created at timestamp for the subscription.
    */
-  createdAt: string;
+  createdAt: string | null;
 
   /**
    * The updated at timestamp for the subscription.
@@ -71,17 +70,12 @@ export interface Subscription {
   /**
    * The metadata of the subscription.
    */
-  metadata?: Record<string, unknown>;
-
-  /**
-   * The environment of the subscription.
-   */
-  environment: Environment;
+  metadata: Record<string, unknown> | null;
 
   /**
    * The number of trial days for the subscription.
    */
-  trialDays: number;
+  trialDays: number | null;
 }
 
 export const subscriptionSchema = schemaFor<Subscription>()(
@@ -99,7 +93,6 @@ export const subscriptionSchema = schemaFor<Subscription>()(
     createdAt: z.string(),
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}),
-    environment: environmentSchema,
     trialDays: z.number().default(0),
   })
 );

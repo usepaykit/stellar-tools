@@ -1,12 +1,10 @@
-import { SuggestedString } from "@stellartools/core";
+import { z as SchemaZod, SuggestedString, subscriptionStatusEnum } from "@stellartools/core";
 
 export const networkEnum = ["testnet", "mainnet"] as const;
 
 export const authProviderEnum = ["google", "local"] as const;
 
 export const payoutStatusEnum = ["pending", "succeeded", "failed"] as const;
-
-export const subscriptionStatusEnum = ["active", "past_due", "canceled", "paused", "trialing"] as const;
 
 export const eventTypeEnum = [
   "customer::created",
@@ -39,7 +37,7 @@ export type PayoutStatus = (typeof payoutStatusEnum)[number];
 
 export type EventType = (typeof eventTypeEnum)[number];
 
-export type SubscriptionStatus = (typeof subscriptionStatusEnum)[number];
+export type SubscriptionStatus = SchemaZod.infer<typeof subscriptionStatusEnum>;
 
 export type AssetCode = SuggestedString<"XLM" | "USDC">;
 

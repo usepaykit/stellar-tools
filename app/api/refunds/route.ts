@@ -58,7 +58,7 @@ export const POST = apiHandler({
         reason,
         metadata,
         status: res.isOk() ? "succeeded" : "failed",
-        receiverPublicKey: payment.wallets!.address,
+        receiverWalletAddress: payment.wallets!.address,
         customerId: payment.customerId,
         amount: payment.amount,
         assetCode: payment.asset!.code,

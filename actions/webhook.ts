@@ -5,7 +5,7 @@ import { Network, Webhook, WebhookLog, db, webhookLogs, webhooks } from "@/db";
 import { deliverWebhook } from "@/integrations/webhook-delivery";
 import { toSnakeCase } from "@/lib/utils";
 import { generateResourceId } from "@/lib/utils";
-import { WebhookEvent } from "@stellartools/core";
+import { WebhookEvent, WebhookEventType } from "@stellartools/core";
 import { and, eq, sql } from "drizzle-orm";
 
 export const postWebhook = async (
@@ -222,8 +222,8 @@ export const deleteWebhookLog = async (id: string, orgId?: string, env?: Network
 // -- WEBHOOK INTERNALS --
 
 export const triggerWebhooks = async (
-  eventType: WebhookEvent,
-  payload: Record<string, unknown>,
+  eventType: WebhookEventType,
+  payload: WebhookEvent,
   logId: string,
   orgId?: string,
   env?: Network
@@ -248,7 +248,7 @@ export const triggerWebhooks = async (
   if (subscribers.length === 0) return { success: true, delivered: 0 };
 
   const results = await Promise.allSettled(
-    subscribers.map((webhook) => deliverWebhook(webhook, eventType, snakePayload as Record<string, unknown>, logId))
+    subscribers.map((webhook) => deliverWebhook(webhook, eventType, snakePayload as WebhookEvent, logId))
   );
 
   return {
@@ -259,13 +259,13 @@ export const triggerWebhooks = async (
 
 export const resendWebhookLog = async (
   webhookId: string,
-  eventType: WebhookEvent,
-  payload: Record<string, unknown>,
+  eventType: WebhookEventType,
+  payload: WebhookEvent,
   orgId?: string,
   env?: Network
 ) => {
   const webhook = await retrieveWebhook(webhookId, orgId, env);
-  const normalizedPayload = toSnakeCase(payload) as Record<string, unknown>;
+  const normalizedPayload = toSnakeCase(payload) as WebhookEvent;
 
   const logId = generateResourceId("wh_evt", webhookId, 52);
 

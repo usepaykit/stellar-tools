@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { schemaFor } from "../utils";
-import { Environment, environmentSchema } from "./shared";
 
 export interface CustomerWallet {
   /**
@@ -31,10 +30,6 @@ export interface Customer {
    */
   id: string;
 
-  /**
-   * The organization ID of the customer.
-   */
-  organizationId: string;
   /**
    * The email address of the customer.
    */
@@ -74,11 +69,6 @@ export interface Customer {
    * The updated at timestamp for the customer.
    */
   updatedAt: string;
-
-  /**
-   * The environment of the customer.
-   */
-  environment: Environment;
 }
 
 export const customerWalletSchema = schemaFor<CustomerWallet>()(
@@ -93,7 +83,6 @@ export const customerWalletSchema = schemaFor<CustomerWallet>()(
 export const customerSchema = schemaFor<Customer>()(
   z.object({
     id: z.string(),
-    organizationId: z.string(),
     email: z.email(),
     name: z.string(),
     phone: z.string().optional(),
@@ -101,7 +90,6 @@ export const customerSchema = schemaFor<Customer>()(
     metadata: z.record(z.string(), z.string()).nullable().optional(),
     createdAt: z.string(),
     updatedAt: z.string(),
-    environment: environmentSchema,
     wallets: z.array(customerWalletSchema),
   })
 );

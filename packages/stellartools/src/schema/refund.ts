@@ -14,11 +14,6 @@ export interface Refund {
   id: string;
 
   /**
-   * The organization ID of the refund.
-   */
-  organizationId: string;
-
-  /**
    * The payment ID of the refund.
    */
   paymentId: string;
@@ -26,12 +21,7 @@ export interface Refund {
   /**
    * The customer ID of the refund.
    */
-  customerId: string;
-
-  /**
-   * The asset ID of the refund.
-   */
-  assetId: string;
+  customerId?: string | null;
 
   /**
    * The amount of the refund.
@@ -39,14 +29,9 @@ export interface Refund {
   amount: number;
 
   /**
-   * The transaction hash of the refund.
-   */
-  transactionHash: string;
-
-  /**
    * The reason for the refund.
    */
-  reason: string;
+  reason: string | null;
 
   /**
    * The status of the refund.
@@ -59,24 +44,14 @@ export interface Refund {
   createdAt: string;
 
   /**
-   * The updated at timestamp for the refund.
-   */
-  updatedAt: string;
-
-  /**
    * The metadata for the refund.
    */
   metadata: Record<string, unknown> | null;
 
   /**
-   * The environment of the refund.
-   */
-  environment: Environment;
-
-  /**
    * The receiver public key of the refund.
    */
-  receiverPublicKey: string | null;
+  receiverWalletAddress: string | null;
 }
 
 export const refundSchema = schemaFor<Refund>()(
@@ -94,7 +69,7 @@ export const refundSchema = schemaFor<Refund>()(
     updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}).nullable(),
     environment: environmentSchema,
-    receiverPublicKey: z.string().nullable(),
+    receiverWalletAddress: z.string().nullable(),
   })
 );
 
