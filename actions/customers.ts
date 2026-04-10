@@ -265,8 +265,6 @@ export const upsertCustomer = async (
 export const deleteCustomer = async (id: string, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const logId = generateResourceId("wh_evt", organizationId, 52);
-
   return withEvent(
     async () => {
       const [customer] = await db

@@ -6,7 +6,7 @@ import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events, rawDb, txContext } from "@/db";
 import { generateResourceId } from "@/lib/utils";
 import { EventConfig, EventEmitParams } from "@/types";
-import { MaybePromise, SuggestedString, WebhookEvent, WebhookEventBase } from "@stellartools/core";
+import { MaybePromise, SuggestedString, WebhookEventBase } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
@@ -39,9 +39,15 @@ export async function withEvent<T>(
         if (internalEvents.length > 0) {
           const orgId = webhookConfig?.organizationId;
           const env = webhookConfig?.environment;
+          const triggers = webhookConfig?.triggers;
+
+          const triggersArray = Array.isArray(triggers) ? triggers : [triggers];
 
           await emitEvents(
-            internalEvents.map(({ data, ...evt }) => ({ ...evt, data: { ...data, eventId: correlatedId } })),
+            internalEvents.map(({ data, ...evt }) => ({
+              ...evt,
+              data: { ...data, ...(triggersArray.length > 0 ? { eventId: correlatedId } : {}) },
+            })),
             orgId,
             env
           );
