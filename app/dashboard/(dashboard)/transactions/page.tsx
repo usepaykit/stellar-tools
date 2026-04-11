@@ -51,17 +51,17 @@ const StatusBadge = ({ status }: { status: PaymentStatus | "refunded" }) => {
       label: "Confirmed",
     },
     refunded: {
-      className: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+      className: "bg-muted text-muted-foreground border-border",
       icon: CheckCircle2,
       label: "Refunded",
     },
     failed: {
-      className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+      className: "bg-destructive/10 text-destructive-foreground border-destructive/20",
       icon: XCircle,
       label: "Failed",
     },
     pending: {
-      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+      className: "bg-primary/10 text-primary-foreground border-primary/20",
       icon: Clock,
       label: "Pending",
     },

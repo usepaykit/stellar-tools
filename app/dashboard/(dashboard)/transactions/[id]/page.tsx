@@ -47,7 +47,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { RefundModalContent, RefundModalFooter } from "../_shared";
 
-const StatusBadge = ({ status }: { status: Payment["status"] }) => {
+const StatusBadge = ({ status }: { status: Payment["status"] | "refunded" }) => {
   const variants = {
     confirmed: {
       className: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
@@ -63,6 +63,11 @@ const StatusBadge = ({ status }: { status: Payment["status"] }) => {
       className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
       icon: XCircle,
       label: "Failed",
+    },
+    refunded: {
+      className: "bg-muted text-muted-foreground border-border",
+      icon: XCircle,
+      label: "Refunded",
     },
   };
 
@@ -305,7 +310,7 @@ export default function TransactionDetailPage() {
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <h1 className="text-2xl font-bold sm:text-3xl">Transaction Details</h1>
-                    <StatusBadge status={payment.status} />
+                    <StatusBadge status={payment?.refunded ? "refunded" : payment.status} />
                   </div>
                   <p className="text-muted-foreground text-sm sm:text-base">{payment.id}</p>
                 </div>
@@ -557,7 +562,7 @@ export default function TransactionDetailPage() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="text-muted-foreground mb-1 text-xs">Status</div>
-                        <StatusBadge status={payment.status} />
+                        <StatusBadge status={payment?.refunded ? "refunded" : payment.status} />
                       </div>
                     </div>
                   </div>

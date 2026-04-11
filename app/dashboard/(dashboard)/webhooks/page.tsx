@@ -52,7 +52,7 @@ const formatEventLabel = (event: string) =>
 
 const WEBHOOK_EVENTS = WEBHOOK_EVENT_TYPES.map((id) => ({ id, label: formatEventLabel(id) }));
 
-export const getTsExample = (secret: string, selectedEvents: WebhookEventType[]) => {
+const getTsExample = (secret: string, selectedEvents: WebhookEventType[]) => {
   // 1. Generate the dynamic logic block
   const eventLogic =
     selectedEvents.length > 0
