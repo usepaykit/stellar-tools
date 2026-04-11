@@ -24,7 +24,7 @@ import { WebhookLog } from "@/db";
 import { useCookieState } from "@/hooks/use-cookie-state";
 import { useCopy } from "@/hooks/use-copy";
 import { useOrgQuery } from "@/hooks/use-org-query";
-import type { WebhookEventType } from "@stellartools/core";
+import type { WebhookEvent, WebhookEventType } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight, Clock, Copy, RefreshCw, XCircle } from "lucide-react";
@@ -147,7 +147,7 @@ export default function WebhookLogPage() {
   });
 
   const resendMutation = useMutation({
-    mutationFn: async ({ eventType, payload }: { eventType: WebhookEventType; payload: Record<string, unknown> }) =>
+    mutationFn: async ({ eventType, payload }: { eventType: WebhookEventType; payload: WebhookEvent }) =>
       resendWebhookLog(webhookId, eventType, payload),
     onSuccess: () => {
       refetchWebhookLogs();
@@ -158,12 +158,12 @@ export default function WebhookLogPage() {
     },
   });
 
-  const getResendPayload = (log: { request?: unknown }): Record<string, unknown> => {
+  const getResendPayload = (log: { request?: unknown }): WebhookEvent => {
     const req = log.request;
     if (req && typeof req === "object" && "data" in req && req.data && typeof req.data === "object") {
-      return req.data as Record<string, unknown>;
+      return req.data as WebhookEvent;
     }
-    return (req as Record<string, unknown>) ?? {};
+    return (req as WebhookEvent) ?? {};
   };
 
   const filteredLogs = React.useMemo(() => {
@@ -203,7 +203,7 @@ export default function WebhookLogPage() {
             onClick={() =>
               resendMutation.mutate({
                 eventType: log.eventType as WebhookEventType,
-                payload: getResendPayload(log),
+                payload: getResendPayload(log) as WebhookEvent,
               })
             }
             disabled={resendMutation.isPending}
