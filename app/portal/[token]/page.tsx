@@ -2,7 +2,12 @@
 
 import * as React from "react";
 
-import { createCustomerImage, deleteCustomerPortalWallet, getCustomerPortalData } from "@/actions/customers";
+import {
+  createCustomerImage,
+  deleteCustomerWallet,
+  getCustomerPortalData,
+  retrieveCustomerPortalSession,
+} from "@/actions/customers";
 import { AppModal } from "@/components/app-modal";
 import { TestModeBanner } from "@/components/environment-mode";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
@@ -173,7 +178,12 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   const { mutate: resumeSubscription } = makeSubscriptionMutation("resume", "Subscription resumed");
 
   const { mutate: deleteWallet, isPending: deletingWallet } = useMutation({
-    mutationFn: (walletId: string) => deleteCustomerPortalWallet(walletId, token),
+    mutationFn: async (walletId: string) => {
+      const session = await retrieveCustomerPortalSession(token);
+      if (!session) throw new Error("Invalid or expired session");
+      const { customerId, organizationId, environment } = session;
+      return await deleteCustomerWallet(customerId, walletId, organizationId, environment);
+    },
     onSuccess: () => {
       toast.success("Wallet removed");
       queryClient.invalidateQueries({ queryKey: ["customer-portal", token] });

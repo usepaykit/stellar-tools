@@ -18,9 +18,12 @@ export async function POST(req: NextRequest) {
   } else if (event.type == "customer.deleted") {
     const customer = event.data.object;
     console.dir(customer, { depth: 100 });
-  } else if (event.type == "customer.wallet_linked") {
-    const customer = event.data.object;
-    console.dir(customer, { depth: 100 });
+  } else if (event.type == "payment_method.created") {
+    const paymentMethod = event.data.object;
+    console.dir(paymentMethod, { depth: 100 });
+  } else if (event.type == "payment_method.deleted") {
+    const paymentMethod = event.data.object;
+    console.dir(paymentMethod, { depth: 100 });
   } else if (event.type == "checkout.created") {
     const checkout = event.data.object;
     console.dir(checkout, { depth: 100 });

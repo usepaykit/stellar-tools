@@ -89,7 +89,7 @@ export default function SubscriptionsPage() {
       meta: {
         filterable: true,
         filterVariant: "select",
-        filterOptions: subscriptionStatusEnum.map((s) => ({ label: moment().format(s), value: s })),
+        filterOptions: Object.values(subscriptionStatusEnum).map((s) => ({ label: moment().format(s), value: s })),
       },
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },

@@ -130,6 +130,7 @@ const paymentActionHandler = async (
       status: payment.status,
       transactionHash: payment.transactionHash,
       createdAt: payment.createdAt?.toISOString(),
+      metadata: payment.metadata,
     };
 
     if (payment.status === "confirmed") {

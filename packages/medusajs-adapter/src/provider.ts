@@ -19,7 +19,15 @@ import {
   WebhookActionResult,
 } from "@medusajs/framework/types";
 import { AbstractPaymentProvider, MedusaError, PaymentActions, PaymentSessionStatus } from "@medusajs/framework/utils";
-import { Result, z as Schema, StellarTools, WebhookEventType, validateSchema } from "@stellartools/core";
+import {
+  Payment,
+  Result,
+  z as Schema,
+  StellarTools,
+  WebhookEventBase,
+  WebhookEventType,
+  validateSchema,
+} from "@stellartools/core";
 
 import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
 
@@ -195,7 +203,7 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     return { data: res as any };
   };
 
-  getWebhookActionAndData = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
+  getWebhookActionAndData1 = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
     if (this.options.debug) {
       this.log("Getting webhook action and data", { payload });
     }
@@ -205,27 +213,68 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     if (!webhookSecret) {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, "Webhook secret is missing");
     }
-    const isValid = this.stellar.webhooks.verifySignature(
+
+    const event = this.stellar.webhooks.constructEvent(
       payload.rawData.toString(),
       payload.headers["X-StellarTools-Signature"] as string,
       webhookSecret
     );
 
-    if (!isValid) {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Invalid webhook signature");
-    }
-
-    const body = JSON.parse(payload.rawData.toString());
     const actionMap: Partial<Record<WebhookEventType, PaymentActions>> = {
       "payment.pending": PaymentActions.PENDING,
       "payment.confirmed": PaymentActions.SUCCESSFUL,
       "payment.failed": PaymentActions.FAILED,
     };
 
+    const eventTyped = event as WebhookEventBase<"payment.confirmed", Payment>;
+
     return {
-      action: actionMap[body.event as WebhookEventType] ?? PaymentActions.NOT_SUPPORTED,
-      data: { session_id: body.data?.metadata?.session_id, amount: body.data?.amount },
+      action: actionMap[event.type] ?? PaymentActions.NOT_SUPPORTED,
+      data: { session_id: event.data.object?.metadata?.session_id as string, amount: eventTyped.data.object.amount },
     };
+  };
+
+  getWebhookActionAndData = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
+    if (this.options.debug) {
+      this.log("Getting webhook action and data", { payload });
+    }
+
+    const webhookSecret = this.options.webhookSecret;
+    if (!webhookSecret) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Webhook secret is missing");
+    }
+
+    const event = this.stellar.webhooks.constructEvent(
+      payload.rawData.toString(),
+      payload.headers["X-StellarTools-Signature"] as string,
+      webhookSecret
+    );
+
+    const actionMap: Partial<Record<WebhookEventType, PaymentActions>> = {
+      "payment.pending": PaymentActions.PENDING,
+      "payment.confirmed": PaymentActions.SUCCESSFUL,
+      "payment.failed": PaymentActions.FAILED,
+    };
+
+    const action = actionMap[event.type] ?? PaymentActions.NOT_SUPPORTED;
+
+    /**
+     * We check the event type prefix. If it's a payment event,
+     * TypeScript will know that event.data.object is a Payment resource.
+     */
+    if (event.type.startsWith("payment.")) {
+      const payment = event.data.object as Payment;
+
+      return {
+        action,
+        data: {
+          session_id: payment.metadata?.session_id as string,
+          amount: payment.amount,
+        },
+      };
+    }
+
+    throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, `Unsupported event type ${event.type}`);
   };
 
   cancelPayment = async () => {

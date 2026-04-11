@@ -65,6 +65,7 @@ export async function withEvent<T>(
             id: correlatedId,
             type: trigger.event,
             created: new Date().toISOString(),
+            livemode: environment === "mainnet",
             data: {
               object: mapped.object,
               previous_attributes: mapped.previous_attributes,

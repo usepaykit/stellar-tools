@@ -11,7 +11,8 @@ export const WEBHOOK_EVENT_TYPES = [
   "customer.created",
   "customer.updated",
   "customer.deleted",
-  "customer.wallet_linked",
+  "payment_method.created",
+  "payment_method.deleted",
   "checkout.created",
   "payment.pending",
   "payment.confirmed",
@@ -138,11 +139,16 @@ export interface WebhookEventBase<TName extends string, TObject> {
    */
   created: string;
   /**
+   * Whether the event is live or test.
+   */
+  livemode: boolean;
+  /**
    * The data of the event.
    */
   data: {
     /**
      * The object of the event.
+     * @livemode - Indicates whether the event is live or test.
      */
     object: TObject;
     /**
@@ -156,7 +162,8 @@ export interface WebhookObjectMap {
   "customer.created": Customer;
   "customer.updated": Customer;
   "customer.deleted": Customer;
-  "customer.wallet_linked": CustomerWallet;
+  "payment_method.created": CustomerWallet;
+  "payment_method.deleted": CustomerWallet;
   "checkout.created": Checkout;
   "payment.confirmed": Payment;
   "payment.pending": Payment;

@@ -1,4 +1,8 @@
-import { z as SchemaZod, SuggestedString, subscriptionStatusEnum } from "@stellartools/core";
+import {
+  z as SchemaZod,
+  SuggestedString,
+  subscriptionStatusEnum as subscriptionStatusEnum$1,
+} from "@stellartools/core";
 
 export const networkEnum = ["testnet", "mainnet"] as const;
 
@@ -21,11 +25,14 @@ export const eventTypeEnum = [
   "subscription::updated",
   "subscription::deleted",
   "subscription::canceled",
-  "customer_wallet::linked",
+  "payment_method::created",
+  "payment_method::deleted",
   "customer_portal_session::created",
 ] as const;
 
 export const accountBillingCycleEnum = ["monthly", "yearly"] as const;
+
+export const subscriptionStatusEnum = subscriptionStatusEnum$1.enum;
 
 export type AccountBillingCycle = (typeof accountBillingCycleEnum)[number];
 

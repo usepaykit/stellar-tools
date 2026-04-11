@@ -474,10 +474,10 @@ export const createCustomerWallet = async (
     {
       events: [
         {
-          type: "customer_wallet::linked",
+          type: "payment_method::created",
           map: (wallet) => ({
             customerId: wallet.customerId,
-            data: { id: wallet.id, walletAddress: wallet.address, eventId: logId },
+            data: { id: wallet.id, customerId: wallet.customerId, walletAddress: wallet.address, eventId: logId },
           }),
         },
       ],
@@ -486,8 +486,8 @@ export const createCustomerWallet = async (
         environment,
         triggers: [
           {
-            event: "customer.wallet_linked",
-            map: ({ id, address, createdAt, customerId, metadata }) => ({
+            event: "payment_method.created",
+            map: ({ id, address, createdAt, customerId, metadata, environment }) => ({
               object: { id, address, createdAt, customerId, metadata },
               previous_attributes: undefined,
             }),
@@ -554,43 +554,63 @@ export const upsertCustomerWallet = async (
   return wallet;
 };
 
-export const deleteCustomerPortalWallet = async (walletId: string, token: string) => {
-  const session = await retrieveCustomerPortalSession(token);
+export const deleteCustomerWallet = async (customerId: string, walletId: string, orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  if (!session) throw new Error("Invalid or expired session");
+  return await withEvent(
+    async () => {
+      const activeSubscription = await db
+        .select({ id: subscriptionsSchema.id })
+        .from(subscriptionsSchema)
+        .where(
+          and(
+            eq(subscriptionsSchema.customerWalletId, walletId),
+            eq(subscriptionsSchema.customerId, customerId),
+            eq(subscriptionsSchema.organizationId, organizationId),
+            eq(subscriptionsSchema.environment, environment),
+            inArray(subscriptionsSchema.status, ["active", "trialing"])
+          )
+        )
+        .limit(1)
+        .then(([s]) => s ?? null);
 
-  const { customerId, organizationId, environment } = session;
+      if (activeSubscription) {
+        throw new Error("This wallet is linked to an active subscription and cannot be removed.");
+      }
 
-  const activeSubscription = await db
-    .select({ id: subscriptionsSchema.id })
-    .from(subscriptionsSchema)
-    .where(
-      and(
-        eq(subscriptionsSchema.customerWalletId, walletId),
-        eq(subscriptionsSchema.customerId, customerId),
-        inArray(subscriptionsSchema.status, ["active", "trialing"])
-      )
-    )
-    .limit(1)
-    .then(([s]) => s ?? null);
+      const [deleted] = await db
+        .delete(customerWallets)
+        .where(
+          and(
+            eq(customerWallets.id, walletId),
+            eq(customerWallets.customerId, customerId),
+            eq(customerWallets.organizationId, organizationId),
+            eq(customerWallets.environment, environment)
+          )
+        )
+        .returning();
 
-  if (activeSubscription) {
-    throw new Error("This wallet is linked to an active subscription and cannot be removed.");
-  }
+      if (!deleted) throw new Error("Wallet not found");
 
-  const [deleted] = await db
-    .delete(customerWallets)
-    .where(
-      and(
-        eq(customerWallets.id, walletId),
-        eq(customerWallets.customerId, customerId),
-        eq(customerWallets.organizationId, organizationId),
-        eq(customerWallets.environment, environment)
-      )
-    )
-    .returning();
-
-  if (!deleted) throw new Error("Wallet not found");
-
-  return deleted;
+      return deleted;
+    },
+    {
+      events: [
+        {
+          type: "payment_method::deleted",
+          map: (wallet) => ({ customerId, data: { id: wallet.id, customerId, walletAddress: wallet.address } }),
+        },
+      ],
+      webhooks: {
+        organizationId,
+        environment,
+        triggers: [
+          {
+            event: "payment_method.deleted",
+            map: ({ id, address }) => ({ object: { id, address }, previous_attributes: undefined }),
+          },
+        ],
+      },
+    }
+  );
 };

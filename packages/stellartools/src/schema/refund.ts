@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { schemaFor } from "../utils";
-import { Environment, environmentSchema } from "./shared";
 
 export const refundStatusEnum = z.enum(["pending", "succeeded", "failed"]);
 
@@ -24,9 +23,9 @@ export interface Refund {
   customerId?: string | null;
 
   /**
-   * The amount of the refund.
+   * The amount of the refund e.g `"50 XLM"` or `"100 USDC"`.
    */
-  amount: number;
+  amount: string;
 
   /**
    * The reason for the refund.
@@ -57,18 +56,13 @@ export interface Refund {
 export const refundSchema = schemaFor<Refund>()(
   z.object({
     id: z.string(),
-    organizationId: z.string(),
     paymentId: z.string(),
     customerId: z.string(),
-    assetId: z.string(),
-    amount: z.number(),
-    transactionHash: z.string(),
+    amount: z.string(),
     reason: z.string(),
     status: refundStatusEnum,
     createdAt: z.string(),
-    updatedAt: z.string(),
     metadata: z.record(z.string(), z.any()).default({}).nullable(),
-    environment: environmentSchema,
     receiverWalletAddress: z.string().nullable(),
   })
 );

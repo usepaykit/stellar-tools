@@ -39,4 +39,9 @@ export interface Payment {
    * The created at timestamp for the payment.
    */
   createdAt: string;
+
+  /**
+   * The metadata of the payment.
+   */
+  metadata: Record<string, unknown> | null;
 }

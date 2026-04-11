@@ -59,7 +59,7 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
 export function TestModeBanner() {
   return (
     <div className="bg-primary border-border border-b px-6 py-1">
-      <div className="container flex items-center justify-between">
+      <div className="flex w-screen items-center justify-between">
         <div />
         <div className="flex items-center gap-2">
           <Info className="text-secondary-foreground h-4 w-4" />
@@ -67,7 +67,6 @@ export function TestModeBanner() {
             You are in <span className="font-medium">Test mode</span>
           </span>
         </div>
-
         <div />
       </div>
     </div>
