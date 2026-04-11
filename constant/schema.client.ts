@@ -44,7 +44,7 @@ export type PayoutStatus = (typeof payoutStatusEnum)[number];
 
 export type EventType = (typeof eventTypeEnum)[number];
 
-export type SubscriptionStatus = SchemaZod.infer<typeof subscriptionStatusEnum>;
+export type SubscriptionStatus = SchemaZod.infer<typeof subscriptionStatusEnum$1>;
 
 export type AssetCode = SuggestedString<"XLM" | "USDC">;
 

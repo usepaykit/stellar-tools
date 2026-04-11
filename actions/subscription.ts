@@ -141,7 +141,7 @@ export const retrieveSubscriptions = async <S extends SubscriptionStatus = Subsc
         eq(subscriptions.organizationId, organizationId),
         eq(subscriptions.environment, environment),
         filters?.customerId ? eq(subscriptions.customerId, filters.customerId) : undefined,
-        filters?.status ? eq(subscriptions.status as any, filters.status) : undefined
+        filters?.status ? eq(subscriptions.status, filters.status) : undefined
       )
     )
     .orderBy(desc(subscriptions.createdAt));
