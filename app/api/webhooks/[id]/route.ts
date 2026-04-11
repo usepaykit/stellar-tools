@@ -1,4 +1,4 @@
-import { deleteWebhook, putWebhook, retrieveWebhook } from "@/actions/webhook";
+import { deleteWebhook, putWebhook, retrieveWebhooks } from "@/actions/webhook";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { Result, z as Schema, updateWebhookSchema } from "@stellartools/core";
 
@@ -10,7 +10,7 @@ export const GET = apiHandler({
   auth: ["session", "apikey"],
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
-    return await retrieveWebhook(id, organizationId, environment).then(Result.ok);
+    return await retrieveWebhooks(organizationId, environment, { id }).then(Result.ok);
   },
 });
 

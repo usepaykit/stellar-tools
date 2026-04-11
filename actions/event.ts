@@ -1,7 +1,7 @@
 "use server";
 
 import { resolveOrgContext } from "@/actions/organization";
-import { triggerWebhooks } from "@/actions/webhook";
+import { retrieveWebhooks, triggerWebhooks } from "@/actions/webhook";
 import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events, rawDb, txContext } from "@/db";
 import { generateResourceId } from "@/lib/utils";
@@ -23,59 +23,58 @@ export async function withEvent<T>(
   const runSideEffects = async () => {
     try {
       const resolved = await (typeof configs === "function" ? configs(result) : configs);
-
       if (!resolved) return;
 
       const { events: eventConfigs, webhooks: webhookConfig } = resolved;
-      const correlatedId = generateResourceId("evt", webhookConfig?.organizationId ?? "sys", 32);
 
-      if (eventConfigs) {
-        const configsArray = Array.isArray(eventConfigs) ? eventConfigs : [eventConfigs];
-        const internalEvents = configsArray.flatMap((cfg) => {
+      const triggers = webhookConfig?.triggers
+        ? Array.isArray(webhookConfig.triggers)
+          ? webhookConfig.triggers
+          : [webhookConfig.triggers]
+        : [];
+      const internalConfigs = eventConfigs ? (Array.isArray(eventConfigs) ? eventConfigs : [eventConfigs]) : [];
+
+      if (triggers.length === 0 && internalConfigs.length === 0) return;
+
+      const { organizationId: orgId, environment: env } = webhookConfig!;
+
+      const subscribers =
+        triggers.length > 0 ? await retrieveWebhooks(orgId, env, { events: triggers.map((t) => t.event) }) : [];
+
+      const hasActiveWebhooks = subscribers.length > 0;
+
+      const webhookLogId = hasActiveWebhooks ? generateResourceId("wh_evt", orgId, 52) : undefined;
+
+      if (internalConfigs.length > 0) {
+        const eventsToEmit = internalConfigs.flatMap((cfg) => {
           const mapped = cfg.map(result);
-          return (Array.isArray(mapped) ? mapped : [mapped]).map((data) => ({ ...data, type: cfg.type }));
+          return (Array.isArray(mapped) ? mapped : [mapped]).map((m) => ({
+            ...m,
+            type: cfg.type,
+            data: webhookLogId ? { ...m.data, webhookLogId } : m.data,
+          }));
         });
-
-        if (internalEvents.length > 0) {
-          const orgId = webhookConfig?.organizationId;
-          const env = webhookConfig?.environment;
-          const triggers = webhookConfig?.triggers;
-
-          const triggersArray = Array.isArray(triggers) ? triggers : [triggers];
-
-          await emitEvents(
-            internalEvents.map(({ data, ...evt }) => ({
-              ...evt,
-              data: { ...data, ...(triggersArray.length > 0 ? { eventId: correlatedId } : {}) },
-            })),
-            orgId,
-            env
-          );
-        }
+        await emitEvents(eventsToEmit, orgId, env);
       }
 
-      if (webhookConfig?.triggers) {
-        const { triggers, organizationId, environment } = webhookConfig;
-        const triggersArray = Array.isArray(triggers) ? triggers : [triggers];
+      if (hasActiveWebhooks) {
+        const deliveries = triggers.map((trigger) => {
+          const targets = subscribers.filter((s) => s.events.includes(trigger.event));
+          if (targets.length === 0) return Promise.resolve();
 
-        const deliveries = triggersArray.map((trigger) => {
           const mapped = trigger.map(result);
-
           const envelope: WebhookEventBase<any, any> = {
-            id: correlatedId,
+            id: webhookLogId!,
             type: trigger.event,
             created: new Date().toISOString(),
-            livemode: environment === "mainnet",
-            data: {
-              object: mapped.object,
-              previous_attributes: mapped.previous_attributes,
-            },
+            livemode: env === "mainnet",
+            data: mapped,
           };
 
-          return triggerWebhooks(trigger.event, envelope, correlatedId, organizationId, environment);
+          return triggerWebhooks(targets, trigger.event, envelope, webhookLogId!);
         });
 
-        if (deliveries.length > 0) await Promise.allSettled(deliveries);
+        await Promise.allSettled(deliveries);
       }
     } catch (err) {
       console.error(`[Side-Effect Critical Failure]:`, err);
@@ -83,9 +82,7 @@ export async function withEvent<T>(
   };
 
   const buffer = effectBuffer.getStore();
-
   if (buffer) {
-    // If we are in an Atomic Chain, just queue the side effect
     buffer.push(runSideEffects);
   } else {
     if (typeof waitUntil === "function") waitUntil(runSideEffects());

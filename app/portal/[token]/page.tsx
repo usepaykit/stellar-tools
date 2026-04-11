@@ -58,7 +58,6 @@ type PortalFormData = Schema.infer<typeof portalFormSchema>;
 export default function PortalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = React.use(params);
   const [imageLoading, setImageLoading] = React.useState(false);
-  const [showBanner, setShowBanner] = React.useState(true);
 
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
@@ -296,7 +295,7 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
 
   return (
     <div className="bg-background min-h-screen">
-      {showBanner && data.environment === "testnet" && <TestModeBanner />}
+      {data.environment === "testnet" && <TestModeBanner />}
       <header className="border-border border-b">
         <div className="mx-auto flex max-w-2xl items-center px-4 py-4">
           <Link

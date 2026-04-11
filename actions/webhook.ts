@@ -31,19 +31,6 @@ export const postWebhook = async (
   return webhook as Webhook;
 };
 
-export const retrieveWebhooks = async (orgId?: string, env?: Network) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
-  const webhooksResult = await db
-    .select()
-    .from(webhooks)
-    .where(and(eq(webhooks.organizationId, organizationId), eq(webhooks.environment, environment)));
-
-  if (!webhooksResult.length) throw new Error("Failed to retrieve webhooks");
-
-  return webhooksResult;
-};
-
 export const getWebhooksWithAnalytics = async (orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
@@ -90,19 +77,32 @@ export const getWebhooksWithAnalytics = async (orgId?: string, env?: Network) =>
   }));
 };
 
-export const retrieveWebhook = async (id: string, orgId?: string, env?: Network) => {
+export const retrieveWebhooks = async (
+  orgId?: string,
+  env?: Network,
+  params?: { id?: string; isDisabled?: boolean; events?: WebhookEventType[] }
+) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const [webhook] = await db
+  let webhooksResult = await db
     .select()
     .from(webhooks)
     .where(
-      and(eq(webhooks.id, id), eq(webhooks.organizationId, organizationId), eq(webhooks.environment, environment))
+      and(
+        eq(webhooks.organizationId, organizationId),
+        eq(webhooks.environment, environment),
+        ...(params?.id ? [eq(webhooks.id, params.id)] : []),
+        ...(params?.isDisabled ? [eq(webhooks.isDisabled, params.isDisabled)] : [])
+      )
     );
 
-  if (!webhook) throw new Error("Failed to retrieve webhook");
+  if (params?.events) {
+    webhooksResult = webhooksResult.filter((w) => w.events.some((e) => params?.events?.includes(e)));
+  }
 
-  return webhook;
+  if (!webhooksResult.length) throw new Error("Failed to retrieve webhooks");
+
+  return webhooksResult;
 };
 
 export const putWebhook = async (id: string, data: Partial<Webhook>, orgId?: string, env?: Network) => {
@@ -222,28 +222,12 @@ export const deleteWebhookLog = async (id: string, orgId?: string, env?: Network
 // -- WEBHOOK INTERNALS --
 
 export const triggerWebhooks = async (
+  subscribers: Array<Webhook>,
   eventType: WebhookEventType,
   payload: WebhookEvent,
-  logId: string,
-  orgId?: string,
-  env?: Network
+  logId: string
 ) => {
-  const { organizationId, environment } = await resolveOrgContext(orgId, env);
-
   const snakePayload = toSnakeCase(payload);
-
-  const subscribers = (
-    await db
-      .select()
-      .from(webhooks)
-      .where(
-        and(
-          eq(webhooks.organizationId, organizationId),
-          eq(webhooks.isDisabled, false),
-          eq(webhooks.environment, environment)
-        )
-      )
-  ).filter((w) => w.events.includes(eventType));
 
   if (subscribers.length === 0) return { success: true, delivered: 0 };
 
@@ -264,7 +248,7 @@ export const resendWebhookLog = async (
   orgId?: string,
   env?: Network
 ) => {
-  const webhook = await retrieveWebhook(webhookId, orgId, env);
+  const [webhook] = await retrieveWebhooks(orgId, env, { id: webhookId });
   const normalizedPayload = toSnakeCase(payload) as WebhookEvent;
 
   const logId = generateResourceId("wh_evt", webhookId, 52);

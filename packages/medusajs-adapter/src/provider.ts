@@ -203,37 +203,6 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
     return { data: res as any };
   };
 
-  getWebhookActionAndData1 = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
-    if (this.options.debug) {
-      this.log("Getting webhook action and data", { payload });
-    }
-
-    const webhookSecret = this.options.webhookSecret;
-
-    if (!webhookSecret) {
-      throw new MedusaError(MedusaError.Types.INVALID_DATA, "Webhook secret is missing");
-    }
-
-    const event = this.stellar.webhooks.constructEvent(
-      payload.rawData.toString(),
-      payload.headers["X-StellarTools-Signature"] as string,
-      webhookSecret
-    );
-
-    const actionMap: Partial<Record<WebhookEventType, PaymentActions>> = {
-      "payment.pending": PaymentActions.PENDING,
-      "payment.confirmed": PaymentActions.SUCCESSFUL,
-      "payment.failed": PaymentActions.FAILED,
-    };
-
-    const eventTyped = event as WebhookEventBase<"payment.confirmed", Payment>;
-
-    return {
-      action: actionMap[event.type] ?? PaymentActions.NOT_SUPPORTED,
-      data: { session_id: event.data.object?.metadata?.session_id as string, amount: eventTyped.data.object.amount },
-    };
-  };
-
   getWebhookActionAndData = async (payload: ProviderWebhookPayload["payload"]): Promise<WebhookActionResult> => {
     if (this.options.debug) {
       this.log("Getting webhook action and data", { payload });

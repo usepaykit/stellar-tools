@@ -9,7 +9,7 @@ import { CodeBlock } from "@/components/code-block";
 import { DashboardSidebarInset } from "@/components/dashboard/app-sidebar-inset";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DataTable, type TableAction } from "@/components/data-table";
-import { Curl, TypeScript } from "@/components/icon";
+import { TypeScript } from "@/components/icon";
 import { LineChart } from "@/components/line-chart";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Badge } from "@/components/ui/badge";
@@ -52,31 +52,46 @@ const formatEventLabel = (event: string) =>
 
 const WEBHOOK_EVENTS = WEBHOOK_EVENT_TYPES.map((id) => ({ id, label: formatEventLabel(id) }));
 
-const getTsExample = (secret: string) => /* ts */ `import { NextRequest, NextResponse } from 'next/server';
-import { StellarTools } from '@stellartools/core';
+export const getTsExample = (secret: string, selectedEvents: WebhookEventType[]) => {
+  // 1. Generate the dynamic logic block
+  const eventLogic =
+    selectedEvents.length > 0
+      ? selectedEvents
+          .map((type, i) => {
+            const prefix = type.split(".")[0];
+            // Convert snake_case (payment_method) to camelCase (paymentMethod)
+            const varName = prefix.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+            const condition = i === 0 ? "if" : "else if";
 
-const stellar = new StellarTools({ apiKey: process.env.STELLAR_API_KEY });
+            return `${condition} (event.type === "${type}") {
+    const ${varName} = event.data.object;
+    console.dir(${varName}, { depth: 100 });
+  }`;
+          })
+          .join(" ") +
+        ` else {
+    console.dir(event, { depth: 100 });
+  }`
+      : `console.dir(event, { depth: 100 });`;
+
+  // 2. Return the full template
+  return /* ts */ `import { StellarTools } from "@stellartools/core";
+import { NextRequest, NextResponse } from "next/server";
+
+const client = new StellarTools({ apiKey: process.env.STELLARTOOLS_API_KEY! });
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
-  const signature = req.headers.get('X-StellarTools-Signature');
+  const signature = req.headers.get("X-StellarTools-Signature")!;
 
-  const isValid = stellar.webhooks.verifySignature(body, signature, '${secret}');
-  if (!isValid) return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+  // Use your webhook secret to verify the signature
+  const event = client.webhooks.constructEvent(body, signature, "${secret}");
 
-  const event = JSON.parse(body);
-  // Handle event.type (e.g. 'payment.confirmed')
+  ${eventLogic}
+
   return NextResponse.json({ received: true });
 }`;
-
-const getCurlExample = (event: string) => /* sh */ `curl -X POST https://your-api.com/webhooks \\
-  -H "Content-Type: application/json" \\
-  -H "X-StellarTools-Signature: t=1735000000,v1=..." \\
-  -d '{
-    "id": "evt_123",
-    "type": "${event}",
-    "data": { "id": "res_123" }
-  }'`;
+};
 
 const activityChartConfig: ChartConfig = {
   value: {
@@ -878,18 +893,10 @@ function WebhooksModalContent({
                 <TabsTrigger value="ts" className="gap-2 px-4 py-1.5">
                   <TypeScript className="size-3" /> TypeScript
                 </TabsTrigger>
-                <TabsTrigger value="curl" className="gap-2 px-4 py-1.5">
-                  <Curl className="size-3" /> cURL
-                </TabsTrigger>
               </TabsList>
               <TabsContent value="ts" className="pt-2">
                 <CodeBlock language="typescript" filename="api/webhook/route.ts" maxHeight="400px">
-                  {getTsExample(secret)}
-                </CodeBlock>
-              </TabsContent>
-              <TabsContent value="curl" className="pt-2">
-                <CodeBlock language="bash" maxHeight="400px">
-                  {getCurlExample(events[0] || "payment.confirmed")}
+                  {getTsExample(secret, form.getValues("events"))}
                 </CodeBlock>
               </TabsContent>
             </Tabs>
