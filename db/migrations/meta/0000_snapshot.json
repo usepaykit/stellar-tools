@@ -1,5 +1,5 @@
 {
-  "id": "6214e538-fefd-4c87-bdfb-0d43a3916d39",
+  "id": "1188753f-96eb-4389-9e55-8b1dafaccd73",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2473,7 +2473,6 @@
         "status": {
           "name": "status",
           "type": "subscription_status",
-          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -2893,7 +2892,8 @@
         "subscription::updated",
         "subscription::deleted",
         "subscription::canceled",
-        "customer_wallet::linked",
+        "payment_method::created",
+        "payment_method::deleted",
         "customer_portal_session::created"
       ]
     },
@@ -2971,11 +2971,11 @@
       "name": "subscription_status",
       "schema": "public",
       "values": [
+        "trialing",
         "active",
         "past_due",
         "canceled",
-        "paused",
-        "trialing"
+        "paused"
       ]
     }
   },

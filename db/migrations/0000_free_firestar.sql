@@ -1,7 +1,7 @@
 CREATE TYPE "public"."auth_provider" AS ENUM('google', 'local');--> statement-breakpoint
 CREATE TYPE "public"."checkout_status" AS ENUM('open', 'completed', 'expired', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."credit_transaction_type" AS ENUM('deduct', 'refund', 'grant');--> statement-breakpoint
-CREATE TYPE "public"."event_type" AS ENUM('customer::created', 'customer::updated', 'payment::completed', 'payment::failed', 'payout::requested', 'payout::processed', 'checkout::created', 'checkout::updated', 'refund::created', 'refund::failed', 'subscription::created', 'subscription::updated', 'subscription::deleted', 'subscription::canceled', 'customer_wallet::linked', 'customer_portal_session::created');--> statement-breakpoint
+CREATE TYPE "public"."event_type" AS ENUM('customer::created', 'customer::updated', 'payment::completed', 'payment::failed', 'payout::requested', 'payout::processed', 'checkout::created', 'checkout::updated', 'refund::created', 'refund::failed', 'subscription::created', 'subscription::updated', 'subscription::deleted', 'subscription::canceled', 'payment_method::created', 'payment_method::deleted', 'customer_portal_session::created');--> statement-breakpoint
 CREATE TYPE "public"."network" AS ENUM('testnet', 'mainnet');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('pending', 'confirmed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."payout_status" AS ENUM('pending', 'succeeded', 'failed');--> statement-breakpoint
@@ -10,7 +10,7 @@ CREATE TYPE "public"."product_type" AS ENUM('one_time', 'subscription', 'metered
 CREATE TYPE "public"."recurring_period" AS ENUM('day', 'week', 'month', 'year');--> statement-breakpoint
 CREATE TYPE "public"."refund_status" AS ENUM('succeeded', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."secret_access_log_action" AS ENUM('decrypt', 'rotate', 'backup');--> statement-breakpoint
-CREATE TYPE "public"."subscription_status" AS ENUM('active', 'past_due', 'canceled', 'paused', 'trialing');--> statement-breakpoint
+CREATE TYPE "public"."subscription_status" AS ENUM('trialing', 'active', 'past_due', 'canceled', 'paused');--> statement-breakpoint
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
 	"email" text NOT NULL,

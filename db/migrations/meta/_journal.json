@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775644837075,
-      "tag": "0000_busy_madripoor",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775917068809,
-      "tag": "0001_complete_carmella_unuscione",
+      "when": 1775919289785,
+      "tag": "0000_free_firestar",
       "breakpoints": true
     }
   ]
