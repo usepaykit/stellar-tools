@@ -47,7 +47,7 @@ export interface MeteredPlugin {
   /**
    * Check if customer has credits available (throws InsufficientCreditsError if not)
    */
-  preflight(customerId: string): Promise<void>;
+  preflight(customerId: string, productId: string): Promise<void>;
 
   /**
    * Charge credits to customer
@@ -64,6 +64,7 @@ export interface MeteredPlugin {
    */
   meter<T>(
     customerId: string,
+    productId: string,
     execute: () => Promise<T>,
     getUsage: (result: T) => number,
     metadata?: ChargeMetadata
@@ -77,7 +78,7 @@ export interface MeteredPlugin {
    * @param metadata - The metadata to charge
    * @returns The result of the function
    */
-  gate<T>(customerId: string, cost: number, execute: () => Promise<T>, metadata?: ChargeMetadata): Promise<T>;
+  gate<T>(customerId: string, productId: string, cost: number, execute: () => Promise<T>, metadata?: ChargeMetadata): Promise<T>;
 
   /**
    *  Get current balance for customer
@@ -111,7 +112,7 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
 
   const stellar = new StellarTools({ apiKey });
 
-  const preflight = async (customerId: string): Promise<void> => {
+  const preflight = async (customerId: string, productId: string): Promise<void> => {
     try {
       const result = await stellar.credits.check(customerId, { productId, rawAmount: 1 });
 
@@ -180,11 +181,12 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
    */
   const meter = async <T>(
     customerId: string,
+    productId: string,
     execute: () => Promise<T>,
     getUsage: (result: T) => number,
     metadata?: ChargeMetadata
   ): Promise<T> => {
-    await preflight(customerId);
+    await preflight(customerId, productId);
     const result = await execute();
     const usage = getUsage(result);
     if (usage > 0) {
@@ -195,11 +197,12 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
 
   const gate = async <T>(
     customerId: string,
+    productId: string,
     cost: number,
     execute: () => Promise<T>,
     metadata?: ChargeMetadata
   ): Promise<T> => {
-    await preflight(customerId);
+    await preflight(customerId, productId);
     const result = await execute();
     if (cost > 0) {
       await charge(customerId, cost, metadata);

@@ -6,6 +6,11 @@ import {
 } from "@stellartools/plugin-sdk";
 import * as AI from "ai";
 
+
+type Props = {
+  customerId: string;
+  productId: string;
+};
 export class MeteredAISDK {
   private plugin: MeteredPlugin;
 
@@ -24,10 +29,10 @@ export class MeteredAISDK {
     throw err;
   }
 
-  async generateText(customerId: string, ...args: Parameters<typeof AI.generateText>) {
+  async generateText({customerId, productId}: Props, ...args: Parameters<typeof AI.generateText>) {
     try {
       return await this.plugin.meter(
-        customerId,
+        {customerId, productId},
         () => AI.generateText(...args),
         (result) => result.usage.totalTokens ?? 0,
         { operation: "generateText" }
@@ -37,10 +42,10 @@ export class MeteredAISDK {
     }
   }
 
-  async generateObject(customerId: string, ...args: Parameters<typeof AI.generateObject>) {
+  async generateObject({customerId, productId}: Props, ...args: Parameters<typeof AI.generateObject>) {
     try {
       return await this.plugin.meter(
-        customerId,
+        {customerId, productId},
         () => AI.generateObject(...args),
         (result) => result.usage.totalTokens ?? 0,
         { operation: "generateObject" }
@@ -50,9 +55,9 @@ export class MeteredAISDK {
     }
   }
 
-  async streamText(customerId: string, ...args: Parameters<typeof AI.streamText>) {
+  async streamText({customerId, productId}: Props, ...args: Parameters<typeof AI.streamText>) {
     try {
-      await this.plugin.preflight(customerId);
+      await this.plugin.preflight({customerId, productId});
     } catch (err) {
       this.wrapError(err);
     }
@@ -68,9 +73,9 @@ export class MeteredAISDK {
     });
   }
 
-  async streamObject(customerId: string, ...args: Parameters<typeof AI.streamObject>) {
+  async streamObject({customerId, productId}: Props, ...args: Parameters<typeof AI.streamObject>) {
     try {
-      await this.plugin.preflight(customerId);
+      await this.plugin.preflight({customerId, productId});
     } catch (err) {
       this.wrapError(err);
     }
