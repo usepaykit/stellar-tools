@@ -19,15 +19,7 @@ import {
   WebhookActionResult,
 } from "@medusajs/framework/types";
 import { AbstractPaymentProvider, MedusaError, PaymentActions, PaymentSessionStatus } from "@medusajs/framework/utils";
-import {
-  Payment,
-  Result,
-  z as Schema,
-  StellarTools,
-  WebhookEventBase,
-  WebhookEventType,
-  validateSchema,
-} from "@stellartools/core";
+import { Payment, Result, z as Schema, StellarTools, WebhookEventType, validateSchema } from "@stellartools/core";
 
 import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
 
