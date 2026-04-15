@@ -9,17 +9,23 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.88",
+    "@ai-sdk/react": "^2.0.175",
+    "@react-three/fiber": "9.5.0",
     "@stellartools/aisdk-adapter": "workspace:*",
     "@stellartools/core": "workspace:*",
+    "ai": "^5.0.116",
     "next": "16.2.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "three": "0.182.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.183.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",

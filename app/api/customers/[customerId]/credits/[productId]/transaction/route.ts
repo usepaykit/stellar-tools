@@ -1,19 +1,28 @@
 import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
 import { postCreditTransaction, putCreditBalance, retrieveCreditBalance } from "@/actions/credit";
 import { retrieveProducts } from "@/actions/product";
+import { createOptionsHandler } from "@/lib/api-handler";
 import { calculateCredits } from "@/lib/credit-calculator";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
-export const POST = async (
-  req: NextRequest,
-  context: { params: Promise<{ customerId: string; productId: string }> }
-) => {
+export const OPTIONS = createOptionsHandler();
+
+const handler = async (req: NextRequest, context: { params: Promise<{ customerId: string; productId: string }> }) => {
   const apiKey = req.headers.get("x-api-key");
 
   if (!apiKey) return NextResponse.json({ error: "API key is required" }, { status: 400 });
 
   const { customerId, productId } = await context.params;
+
+  let body: Record<string, unknown>;
+
+  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
+    body = await req.json().catch(() => ({}));
+  } else {
+    body = Object.fromEntries(req.nextUrl.searchParams);
+  }
+  console.log({ body, searchParamsAsObject: Object.fromEntries(req.nextUrl.searchParams) });
 
   const result = await Result.andThenAsync(
     validateSchema(
@@ -24,7 +33,7 @@ export const POST = async (
         metadata: Schema.record(Schema.string(), Schema.any()).optional(),
         dryRun: Schema.boolean().optional(),
       }),
-      await req.json()
+      body
     ),
     async ({ amount, type, reason, metadata, dryRun }): Promise<Result<{ isSufficient: boolean }, Error>> => {
       const { organizationId, environment } = await resolveApiKeyOrAuthorizationToken(apiKey);
@@ -106,3 +115,5 @@ export const POST = async (
 
   return NextResponse.json(result);
 };
+
+export { handler as POST, handler as GET };

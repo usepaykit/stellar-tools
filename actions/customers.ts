@@ -91,13 +91,14 @@ type CustomerLookup = { id?: string | null } | { email?: string | null } | { pho
 
 export const retrieveCustomers = async (
   params?: MaybeArray<CustomerLookup>,
-  options?: { withWallets?: boolean },
+  options?: { withWallets?: boolean; requireLookUpParams?: boolean },
   orgId?: string,
   env?: Network
 ): Promise<ResolvedCustomer[]> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
+  const requireLookUpParams = options?.requireLookUpParams ?? false;
   const ids: string[] = [];
   const emails: string[] = [];
   const phones: string[] = [];
@@ -113,6 +114,9 @@ export const retrieveCustomers = async (
     emails.length ? inArray(customersSchema.email, emails) : null,
     phones.length ? inArray(customersSchema.phone, phones) : null,
   ].filter(Boolean) as SQL[];
+  console.log("orFilters", orFilters);
+
+  if (requireLookUpParams && orFilters.length < 1) return [];
 
   const query = db
     .select({
@@ -233,6 +237,7 @@ export const upsertCustomer = async (
   additionalParams: { name?: string; metadata?: CustomerMetadata; image?: string }
 ) => {
   const lookupArray = Array.isArray(lookUpKeys) ? lookUpKeys : lookUpKeys ? [lookUpKeys] : [];
+  console.log({ lookupArray });
 
   const existing = await retrieveCustomers(
     lookupArray.map((p) => ({
@@ -240,10 +245,12 @@ export const upsertCustomer = async (
       email: "email" in p ? p.email : undefined,
       phone: "phone" in p ? p.phone : undefined,
     })),
-    undefined,
+    { requireLookUpParams: true },
     orgId,
     env
   ).then(([c]) => c);
+
+  console.log({ existing });
 
   if (existing) return existing;
 

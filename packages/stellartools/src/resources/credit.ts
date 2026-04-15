@@ -23,7 +23,7 @@ export class CreditApi {
     return unwrap(
       await Result.andThenAsync(validateSchema(creditTransactionSchema, params), async (data) => {
         return await this.apiClient.post<CreditBalance>(
-          `/api/customers/${customerId}/credit/${data.productId}/transaction`,
+          `/customers/${customerId}/credits/${data.productId}/transaction`,
           data
         );
       })
@@ -34,7 +34,7 @@ export class CreditApi {
     return unwrap(
       await Result.andThenAsync(validateSchema(creditTransactionHistorySchema, options), async (data) => {
         return await this.apiClient.get<Array<CreditTransaction>>(
-          `/api/customers/${customerId}/credit/transactions`,
+          `/customers/${customerId}/credits/transactions`,
           data
         );
       })
@@ -47,7 +47,7 @@ export class CreditApi {
         validateSchema(z.object({ transactionId: z.string(), customerId: z.string() }), { transactionId, customerId }),
         async (data) => {
           return await this.apiClient.get<CreditTransaction>(
-            `/api/customers/${data.customerId}/credit/transactions/${data.transactionId}`
+            `/customers/${data.customerId}/credits/transactions/${data.transactionId}`
           );
         }
       )
@@ -57,9 +57,9 @@ export class CreditApi {
   async check(customerId: string, params: CheckCreditsParams) {
     return unwrap(
       await Result.andThenAsync(validateSchema(checkCreditSchema, params), async (data) => {
-        return await this.apiClient.get<{ isSufficient: boolean }>(
-          `/api/customers/${customerId}/credit/${data.productId}/transaction`,
-          { body: JSON.stringify({ rawAmount: data.rawAmount, dryRun: true }) }
+        return await this.apiClient.post<{ isSufficient: boolean }>(
+          `/customers/${customerId}/credits/${data.productId}/transaction`,
+          { amount: data.rawAmount, dryRun: true, type: "refund" }
         );
       })
     );
@@ -69,7 +69,7 @@ export class CreditApi {
     return unwrap(
       await Result.andThenAsync(validateSchema(consumeCreditSchema, params), async (data) => {
         return await this.apiClient.post<CreditBalance>(
-          `/api/customers/${customerId}/credit/${data.productId}/transaction`,
+          `/customers/${customerId}/credits/${data.productId}/transaction`,
           { ...data, type: "deduct", dryRun: false }
         );
       })

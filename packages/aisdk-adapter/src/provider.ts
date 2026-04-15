@@ -6,7 +6,6 @@ import {
 } from "@stellartools/plugin-sdk";
 import * as AI from "ai";
 
-
 type Props = {
   customerId: string;
   productId: string;
@@ -29,10 +28,11 @@ export class MeteredAISDK {
     throw err;
   }
 
-  async generateText({customerId, productId}: Props, ...args: Parameters<typeof AI.generateText>) {
+  async generateText({ customerId, productId }: Props, ...args: Parameters<typeof AI.generateText>) {
     try {
       return await this.plugin.meter(
-        {customerId, productId},
+        customerId,
+        productId,
         () => AI.generateText(...args),
         (result) => result.usage.totalTokens ?? 0,
         { operation: "generateText" }
@@ -42,10 +42,11 @@ export class MeteredAISDK {
     }
   }
 
-  async generateObject({customerId, productId}: Props, ...args: Parameters<typeof AI.generateObject>) {
+  async generateObject({ customerId, productId }: Props, ...args: Parameters<typeof AI.generateObject>) {
     try {
       return await this.plugin.meter(
-        {customerId, productId},
+        customerId,
+        productId,
         () => AI.generateObject(...args),
         (result) => result.usage.totalTokens ?? 0,
         { operation: "generateObject" }
@@ -55,9 +56,9 @@ export class MeteredAISDK {
     }
   }
 
-  async streamText({customerId, productId}: Props, ...args: Parameters<typeof AI.streamText>) {
+  async streamText({ customerId, productId }: Props, ...args: Parameters<typeof AI.streamText>) {
     try {
-      await this.plugin.preflight({customerId, productId});
+      await this.plugin.preflight(customerId, productId);
     } catch (err) {
       this.wrapError(err);
     }
@@ -67,15 +68,15 @@ export class MeteredAISDK {
     return AI.streamText({
       ...args[0],
       onFinish: async (event) => {
-        await this.plugin.charge(customerId, event.usage.totalTokens ?? 0, { operation: "streamText" });
+        await this.plugin.charge(customerId, productId, event.usage.totalTokens ?? 0, { operation: "streamText" });
         await originalOnFinish?.(event);
       },
     });
   }
 
-  async streamObject({customerId, productId}: Props, ...args: Parameters<typeof AI.streamObject>) {
+  async streamObject({ customerId, productId }: Props, ...args: Parameters<typeof AI.streamObject>) {
     try {
-      await this.plugin.preflight({customerId, productId});
+      await this.plugin.preflight(customerId, productId);
     } catch (err) {
       this.wrapError(err);
     }
@@ -85,7 +86,7 @@ export class MeteredAISDK {
     return AI.streamObject({
       ...args[0],
       onFinish: async (event) => {
-        await this.plugin.charge(customerId, event.usage.totalTokens ?? 0, { operation: "streamObject" });
+        await this.plugin.charge(customerId, productId, event.usage.totalTokens ?? 0, { operation: "streamObject" });
         await originalOnFinish?.(event);
       },
     });

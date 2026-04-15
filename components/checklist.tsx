@@ -19,4 +19,3 @@ export function CheckList({ items, className }: CheckListProps) {
     </ul>
   );
 }
-

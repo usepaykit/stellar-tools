@@ -5,6 +5,7 @@ import * as React from "react";
 import { getCurrentUser, signOut } from "@/actions/auth";
 import { retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { AppModal } from "@/components/app-modal";
+import ModeToggle from "@/components/mode-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -17,7 +18,6 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import ModeToggle from "@/components/mode-toggle";
 import {
   Sidebar,
   SidebarContent,

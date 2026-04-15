@@ -31,6 +31,8 @@ export const POST = async (req: NextRequest) => {
 
     const body = await req.json();
 
+    console.log("body", body);
+
     const result =
       type === "product"
         ? await Result.andThenAsync(validateSchema(createCheckoutSchema, body), (d) => processCheckout(d, "product"))

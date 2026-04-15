@@ -11,7 +11,7 @@ export class ProductApi {
   async retrieve(productId: string) {
     return unwrap(
       await Result.andThenAsync(validateSchema(z.string(), productId), async (productId) => {
-        return await this.apiClient.get<Product>(`/api/products/${productId}`);
+        return await this.apiClient.get<Product>(`/products/${productId}`);
       })
     );
   }
