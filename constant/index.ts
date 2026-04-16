@@ -5,6 +5,7 @@ const ALLOWED_ORIGIN_PATTERNS = [
   /^https?:\/\/([^.]+\.)?stellartools\.site$/,
   /^https?:\/\/([^.]+\.)*localhost(:\d{1,5})?$/,
   /^https?:\/\/([^.]+\.)*127\.0\.0\.1\.nip\.io(:\d{1,5})?$/,
+  /^https?:\/\/([^.]+\.)*localhost(:\d{1,5})?$/,
 ];
 
 export function getCorsHeaders(requestOrigin?: string | null): Record<string, string> {
