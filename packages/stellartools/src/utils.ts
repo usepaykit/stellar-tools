@@ -57,3 +57,20 @@ export const unwrap = <T>(result: Result<T, Error>): T => {
 
   return result.value!;
 };
+
+/**
+ * Safely converts metadata values to strings for provider storage.
+ * Only stringifies non-string values to prevent nested JSON escaping.
+ *
+ * @example
+ * stringifyObjectFields({ count: 5, name: "John" })
+ * // => { count: "5", name: "John" }
+ *
+ * stringifyObjectFields({ data: { nested: true } })
+ * // => { data: "{\"nested\":true}" }
+ */
+export const stringifyObjectFields = (object: Record<string, any>): Record<string, string> => {
+  return Object.fromEntries(
+    Object.entries(object).map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)])
+  );
+};

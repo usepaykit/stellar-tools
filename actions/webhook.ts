@@ -100,7 +100,7 @@ export const retrieveWebhooks = async (
     webhooksResult = webhooksResult.filter((w) => w.events.some((e) => params?.events?.includes(e)));
   }
 
-  if (!webhooksResult.length) throw new Error("Failed to retrieve webhooks");
+  if (!webhooksResult.length) return [];
 
   return webhooksResult;
 };

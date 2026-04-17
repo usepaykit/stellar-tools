@@ -19,7 +19,15 @@ import {
   WebhookActionResult,
 } from "@medusajs/framework/types";
 import { AbstractPaymentProvider, MedusaError, PaymentActions, PaymentSessionStatus } from "@medusajs/framework/utils";
-import { Payment, Result, z as Schema, StellarTools, WebhookEventType, validateSchema } from "@stellartools/core";
+import {
+  Payment,
+  Result,
+  z as Schema,
+  StellarTools,
+  WebhookEventType,
+  stringifyObjectFields,
+  validateSchema,
+} from "@stellartools/core";
 
 import { StellarToolsMedusaAdapterOptions, stellarToolsMedusaAdapterOptionsSchema } from "./schema";
 
@@ -162,7 +170,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       email: customer?.email,
       name: `${customer?.first_name} ${customer?.last_name}`.trim(),
       phone: customer?.phone ?? undefined,
-      metadata: { ...((context?.account_holder?.data as Record<string, any>) ?? null), source: "MedusaJS Adapter" },
+      metadata: {
+        ...stringifyObjectFields((context?.account_holder?.data as Record<string, any>) ?? {}),
+        source: "MedusaJS Adapter",
+      },
       image,
     });
 

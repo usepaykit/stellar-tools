@@ -1,7 +1,7 @@
 "use server";
 
 import { retrieveAssets } from "@/actions/asset";
-import { withEvent } from "@/actions/event";
+import { runAtomic, withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganizationIdAndSecret } from "@/actions/organization";
 import {
   Checkout,
@@ -21,6 +21,8 @@ import { computeDiff, generateResourceId } from "@/lib/utils";
 import { CheckoutStatus } from "@/packages/stellartools/dist/schema/checkout";
 import { all } from "better-all";
 import { and, eq, or, sql } from "drizzle-orm";
+
+import { putCustomer } from "./customers";
 
 export const postCheckout = async (
   params: Omit<Checkout, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "initialPagingToken">,
@@ -263,4 +265,21 @@ export const deleteCheckout = async (id: string, orgId?: string, env?: Network) 
     .returning();
 
   return null;
+};
+
+// -- INTERNAL --
+
+export const putCheckoutAndCustomerInternal = async (
+  checkoutId: string,
+  data: { email: string | null; phoneNumber: string | null; customerId?: string | null },
+  orgId: string,
+  environment: Network
+) => {
+  await runAtomic(async () => {
+    await putCheckout(checkoutId, { customerEmail: data.email, customerPhone: data.phoneNumber }, orgId, environment);
+
+    if (data.customerId) {
+      await putCustomer(data.customerId, { email: data.email, phone: data.phoneNumber }, orgId, environment);
+    }
+  });
 };

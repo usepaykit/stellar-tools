@@ -8,7 +8,7 @@ import { generateResourceId } from "@/lib/utils";
 import { EventConfig, EventEmitParams } from "@/types";
 import { MaybePromise, SuggestedString, WebhookEventBase } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { SQL, and, desc, eq, inArray } from "drizzle-orm";
 import _ from "lodash";
 import { AsyncLocalStorage } from "node:async_hooks";
 
@@ -139,6 +139,33 @@ export const retrieveEvents = async <T extends readonly EventType[]>(
     .from(events)
     .where(and(eq(events.organizationId, organizationId), eq(events.environment, environment), ...whereClause))
     .orderBy(desc(events.createdAt));
+};
+
+export const deleteEvents = async (
+  filters: { customerId?: string; merchantId?: string; subscriptionId?: string },
+  orgId?: string,
+  env?: Network
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  let whereClause: Array<SQL<unknown>> = [];
+
+  if (filters?.customerId) {
+    whereClause.push(eq(events.customerId, filters.customerId));
+  }
+
+  if (filters.merchantId == "current") {
+    whereClause.push(eq(events.merchantId, organizationId));
+  } else if (filters.merchantId) {
+    whereClause.push(eq(events.merchantId, filters.merchantId));
+  }
+  if (filters.subscriptionId) {
+    whereClause.push(eq(events.subscriptionId, filters.subscriptionId));
+  }
+
+  return await db
+    .delete(events)
+    .where(and(eq(events.organizationId, organizationId), eq(events.environment, environment), ...whereClause));
 };
 
 /**

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { putCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
+import { putCheckoutAndCustomerInternal, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { postPayment, sweepAndProcessPayment } from "@/actions/payment";
 import { finalizeSubscriptionCheckout, prepareSubscriptionApproval } from "@/actions/subscription-checkout";
 import { phoneNumberFromString, phoneNumberSchema, phoneNumberToString } from "@/components/phone-number-field";
@@ -54,6 +54,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
   });
 
   const checkout = query.data;
+  console.log("checkout", checkout);
 
   const form = RHF.useForm({
     resolver: zodResolver(baseSchema),
@@ -73,12 +74,16 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
   const [showBanner, setShowBanner] = React.useState(true);
 
   const updateDetails = useMutation({
-    mutationFn: (data: CheckoutFormData) =>
-      putCheckout(
+    mutationFn: async (data: CheckoutFormData) =>
+      putCheckoutAndCustomerInternal(
         checkoutId,
-        { customerEmail: data.email, customerPhone: phoneNumberToString(data.phoneNumber) },
-        checkout?.organizationId,
-        checkout?.environment
+        {
+          email: data.email,
+          phoneNumber: phoneNumberToString(data.phoneNumber),
+          customerId: checkout?.customerId,
+        },
+        checkout!.organizationId,
+        checkout!.environment
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] }),
   });

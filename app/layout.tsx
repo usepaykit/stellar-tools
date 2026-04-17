@@ -1,5 +1,5 @@
-import ThemeProvider from "@/providers";
 import { Toaster } from "@/components/ui/toast";
+import ThemeProvider from "@/providers";
 import { Providers } from "@/providers";
 import "katex/dist/katex.min.css";
 import type { Metadata } from "next";

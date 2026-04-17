@@ -1,6 +1,6 @@
 "use server";
 
-import { withEvent } from "@/actions/event";
+import { deleteEvents, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import {
   Customer,
@@ -76,7 +76,7 @@ export const postCustomers = async (
           organizationId,
           environment,
           triggers: [
-            ...data.map((c) => ({
+            ...data.map(({ source: _, ...c }) => ({
               event: "customer.created",
               map: () => ({ object: c, previous_attributes: undefined }),
             })),
@@ -91,13 +91,14 @@ type CustomerLookup = { id?: string | null } | { email?: string | null } | { pho
 
 export const retrieveCustomers = async (
   params?: MaybeArray<CustomerLookup>,
-  options?: { withWallets?: boolean },
+  options?: { withWallets?: boolean; requireLookUpParams?: boolean },
   orgId?: string,
   env?: Network
 ): Promise<ResolvedCustomer[]> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
+  const requireLookUpParams = options?.requireLookUpParams ?? false;
   const ids: string[] = [];
   const emails: string[] = [];
   const phones: string[] = [];
@@ -113,6 +114,8 @@ export const retrieveCustomers = async (
     emails.length ? inArray(customersSchema.email, emails) : null,
     phones.length ? inArray(customersSchema.phone, phones) : null,
   ].filter(Boolean) as SQL[];
+
+  if (requireLookUpParams && orFilters.length < 1) return [];
 
   const query = db
     .select({
@@ -233,6 +236,7 @@ export const upsertCustomer = async (
   additionalParams: { name?: string; metadata?: CustomerMetadata; image?: string }
 ) => {
   const lookupArray = Array.isArray(lookUpKeys) ? lookUpKeys : lookUpKeys ? [lookUpKeys] : [];
+  console.log({ lookupArray });
 
   const existing = await retrieveCustomers(
     lookupArray.map((p) => ({
@@ -240,7 +244,7 @@ export const upsertCustomer = async (
       email: "email" in p ? p.email : undefined,
       phone: "phone" in p ? p.phone : undefined,
     })),
-    undefined,
+    { requireLookUpParams: true },
     orgId,
     env
   ).then(([c]) => c);
@@ -280,15 +284,24 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
 
       if (!customer) throw new Error("Customer not found");
 
+      await deleteEvents({ customerId: id }, organizationId, environment);
+
       return customer;
     },
-    {
-      events: [],
-      webhooks: {
-        organizationId,
-        environment,
-        triggers: [{ event: "customer.deleted", map: () => ({ object: null, previous_attributes: undefined }) }],
-      },
+    (customer) => {
+      return {
+        events: [],
+        webhooks: {
+          organizationId,
+          environment,
+          triggers: [
+            {
+              event: "customer.deleted",
+              map: () => ({ object: { id: customer.id, status: "deleted" }, previous_attributes: customer }),
+            },
+          ],
+        },
+      };
     }
   );
 };

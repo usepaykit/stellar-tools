@@ -7,17 +7,11 @@ export interface MeteredPluginConfig {
    * The API key for the Stellar Tools API.
    */
   apiKey: string;
-
-  /**
-   * The ID of the metered product to use for billing.
-   */
-  productId: string;
 }
 
 export const meteredPluginConfigSchema = schemaFor<MeteredPluginConfig>()(
   Schema.object({
     apiKey: Schema.string().min(1, "API key is required"),
-    productId: Schema.string().min(1, "Product ID is required"),
   })
 );
 
@@ -47,23 +41,30 @@ export interface MeteredPlugin {
   /**
    * Check if customer has credits available (throws InsufficientCreditsError if not)
    */
-  preflight(customerId: string): Promise<void>;
+  preflight(customerId: string, productId: string): Promise<void>;
 
   /**
    * Charge credits to customer
    */
-  charge(customerId: string, amount: number, metadata?: ChargeMetadata): Promise<ChargeResult>;
+  charge(customerId: string, productId: string, amount: number, metadata?: ChargeMetadata): Promise<ChargeResult>;
 
   /**
    * Refund credits to customer
    */
-  refund(customerId: string, amount: number, reason?: string, metadata?: ChargeMetadata): Promise<ChargeResult>;
+  refund(
+    customerId: string,
+    productId: string,
+    amount: number,
+    reason?: string,
+    metadata?: ChargeMetadata
+  ): Promise<ChargeResult>;
 
   /**
    * High-level: preflight → execute → charge (based on usage)
    */
   meter<T>(
     customerId: string,
+    productId: string,
     execute: () => Promise<T>,
     getUsage: (result: T) => number,
     metadata?: ChargeMetadata
@@ -77,7 +78,13 @@ export interface MeteredPlugin {
    * @param metadata - The metadata to charge
    * @returns The result of the function
    */
-  gate<T>(customerId: string, cost: number, execute: () => Promise<T>, metadata?: ChargeMetadata): Promise<T>;
+  gate<T>(
+    customerId: string,
+    productId: string,
+    cost: number,
+    execute: () => Promise<T>,
+    metadata?: ChargeMetadata
+  ): Promise<T>;
 
   /**
    *  Get current balance for customer
@@ -107,11 +114,11 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
     throw new BillingError(`Invalid config: ${response.error.message}`, "UNKNOWN");
   }
 
-  const { apiKey, productId } = response.value;
+  const { apiKey } = response.value;
 
   const stellar = new StellarTools({ apiKey });
 
-  const preflight = async (customerId: string): Promise<void> => {
+  const preflight = async (customerId: string, productId: string): Promise<void> => {
     try {
       const result = await stellar.credits.check(customerId, { productId, rawAmount: 1 });
 
@@ -119,12 +126,18 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
         throw new InsufficientCreditsError("Insufficient credits", 1, 0);
       }
     } catch (err) {
+      console.error(err);
       if (err instanceof InsufficientCreditsError) throw err;
       throw new BillingError(err instanceof Error ? err.message : "Preflight check failed", "UNKNOWN");
     }
   };
 
-  const charge = async (customerId: string, amount: number, metadata?: ChargeMetadata): Promise<ChargeResult> => {
+  const charge = async (
+    customerId: string,
+    productId: string,
+    amount: number,
+    metadata?: ChargeMetadata
+  ): Promise<ChargeResult> => {
     if (amount <= 0) return { balance: 0, charged: 0 };
 
     try {
@@ -143,6 +156,7 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
 
   const refund = async (
     customerId: string,
+    productId: string,
     amount: number,
     reason?: string,
     metadata?: ChargeMetadata
@@ -180,29 +194,31 @@ export function createMeteredPlugin(config: MeteredPluginConfig): MeteredPlugin 
    */
   const meter = async <T>(
     customerId: string,
+    productId: string,
     execute: () => Promise<T>,
     getUsage: (result: T) => number,
     metadata?: ChargeMetadata
   ): Promise<T> => {
-    await preflight(customerId);
+    await preflight(customerId, productId);
     const result = await execute();
     const usage = getUsage(result);
     if (usage > 0) {
-      await charge(customerId, usage, metadata);
+      await charge(customerId, productId, usage, metadata);
     }
     return result;
   };
 
   const gate = async <T>(
     customerId: string,
+    productId: string,
     cost: number,
     execute: () => Promise<T>,
     metadata?: ChargeMetadata
   ): Promise<T> => {
-    await preflight(customerId);
+    await preflight(customerId, productId);
     const result = await execute();
     if (cost > 0) {
-      await charge(customerId, cost, metadata);
+      await charge(customerId, productId, cost, metadata);
     }
     return result;
   };
