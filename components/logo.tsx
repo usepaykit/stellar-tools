@@ -9,14 +9,11 @@ type LogoProps = Omit<ImageProps, "src" | "alt"> & {
   alt?: string;
 };
 
-export function Logo({
-  alt = "StellarTools",
-  ...props
-}: LogoProps) {
+export function Logo({ alt = "StellarTools", ...props }: LogoProps) {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
- const lightSrc = "/images/logo-light.svg";
- const darkSrc = "/images/logo-dark.svg";
+  const lightSrc = "/images/logo-light.svg";
+  const darkSrc = "/images/logo-dark.svg";
   React.useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(id);

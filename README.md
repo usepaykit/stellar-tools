@@ -61,7 +61,7 @@ Found a bug? [Open an issue](https://github.com/usepaykit/stellar-tools/issues).
 If you discover a security vulnerability within StellarTools, please send an email to odii@stellartools.dev.
 
 All reports will be promptly addressed, and you'll be credited accordingly.
- 
+
 ## Maintained by
 
 [Emmanuel Odii](https://github.com/devodii)

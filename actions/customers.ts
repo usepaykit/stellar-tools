@@ -1,6 +1,6 @@
 "use server";
 
-import { withEvent } from "@/actions/event";
+import { deleteEvents, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import {
   Customer,
@@ -76,7 +76,7 @@ export const postCustomers = async (
           organizationId,
           environment,
           triggers: [
-            ...data.map((c) => ({
+            ...data.map(({ source: _, ...c }) => ({
               event: "customer.created",
               map: () => ({ object: c, previous_attributes: undefined }),
             })),
@@ -114,7 +114,6 @@ export const retrieveCustomers = async (
     emails.length ? inArray(customersSchema.email, emails) : null,
     phones.length ? inArray(customersSchema.phone, phones) : null,
   ].filter(Boolean) as SQL[];
-  console.log("orFilters", orFilters);
 
   if (requireLookUpParams && orFilters.length < 1) return [];
 
@@ -250,8 +249,6 @@ export const upsertCustomer = async (
     env
   ).then(([c]) => c);
 
-  console.log({ existing });
-
   if (existing) return existing;
 
   return await postCustomers(
@@ -287,15 +284,24 @@ export const deleteCustomer = async (id: string, orgId?: string, env?: Network) 
 
       if (!customer) throw new Error("Customer not found");
 
+      await deleteEvents({ customerId: id }, organizationId, environment);
+
       return customer;
     },
-    {
-      events: [],
-      webhooks: {
-        organizationId,
-        environment,
-        triggers: [{ event: "customer.deleted", map: () => ({ object: null, previous_attributes: undefined }) }],
-      },
+    (customer) => {
+      return {
+        events: [],
+        webhooks: {
+          organizationId,
+          environment,
+          triggers: [
+            {
+              event: "customer.deleted",
+              map: () => ({ object: { id: customer.id, status: "deleted" }, previous_attributes: customer }),
+            },
+          ],
+        },
+      };
     }
   );
 };

@@ -2,9 +2,7 @@
 
 import * as React from "react";
 
-import { putCheckout, putCheckoutAndCustomerInternal, retrieveCheckoutAndCustomer } from "@/actions/checkout";
-import { putCustomer } from "@/actions/customers";
-import { runAtomic } from "@/actions/event";
+import { putCheckoutAndCustomerInternal, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { postPayment, sweepAndProcessPayment } from "@/actions/payment";
 import { finalizeSubscriptionCheckout, prepareSubscriptionApproval } from "@/actions/subscription-checkout";
 import { phoneNumberFromString, phoneNumberSchema, phoneNumberToString } from "@/components/phone-number-field";

@@ -31,9 +31,9 @@ async function syncUserWithStellar(user: User, ctx: GenericEndpointContext<Bette
   await Promise.all([
     ctx.context.internalAdapter.updateUser(user.id, { stellarCustomerId: customerId }),
     options.onCustomerCreated?.(customerData!),
-  ]).catch(err => {
-    logger.error(`Failed to sync customer ${err}`)
-  })
+  ]).catch((err) => {
+    logger.error(`Failed to sync customer ${err}`);
+  });
 
   logger.info(`Stellar: Linked customer ${customerId} to user ${user.id}`);
 }
