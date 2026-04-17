@@ -1,4 +1,4 @@
-import { z as Schema } from "@stellartools/core";
+import { z as Schema, stringifyObjectFields } from "@stellartools/core";
 import { GenericEndpointContext } from "better-auth";
 import { createAuthEndpoint, sessionMiddleware } from "better-auth/api";
 
@@ -128,7 +128,7 @@ export const consumeCredits = (options: BillingConfig) =>
       const result = await stellar.credits.consume(customerId, {
         ...ctx.body,
         reason: "deduct",
-        metadata: { ...ctx.body.metadata, source: "betterauth-adapter" },
+        metadata: { ...stringifyObjectFields(ctx.body.metadata ?? {}), source: "betterauth-adapter" },
       });
 
       if (options.onCreditsLow && result.balance <= (options.creditLowThreshold ?? DEFAULT_CREDITS_LOW_THRESHOLD)) {
@@ -182,7 +182,7 @@ export const createRefund = (options: BillingConfig) =>
         await stellar.refunds.create({
           paymentId: ctx.body.paymentId,
           reason: ctx.body.reason,
-          metadata: { ...(ctx.body?.metadata ?? {}), source: "betterauth-adapter" },
+          metadata: { ...stringifyObjectFields(ctx.body?.metadata ?? {}), source: "betterauth-adapter" },
         })
       );
     }

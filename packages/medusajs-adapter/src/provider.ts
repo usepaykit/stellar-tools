@@ -24,8 +24,8 @@ import {
   Result,
   z as Schema,
   StellarTools,
-  WebhookEventBase,
   WebhookEventType,
+  stringifyObjectFields,
   validateSchema,
 } from "@stellartools/core";
 
@@ -170,7 +170,10 @@ export class StellarToolsMedusaAdapter extends AbstractPaymentProvider<StellarTo
       email: customer?.email,
       name: `${customer?.first_name} ${customer?.last_name}`.trim(),
       phone: customer?.phone ?? undefined,
-      metadata: { ...((context?.account_holder?.data as Record<string, any>) ?? null), source: "MedusaJS Adapter" },
+      metadata: {
+        ...stringifyObjectFields((context?.account_holder?.data as Record<string, any>) ?? {}),
+        source: "MedusaJS Adapter",
+      },
       image,
     });
 
