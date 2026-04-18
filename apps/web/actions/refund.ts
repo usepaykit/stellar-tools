@@ -1,0 +1,170 @@
+"use server";
+
+import { Network, Refund, db, refunds } from "@stellartools/web/db";
+import { EventTrigger, WebhookTrigger } from "@stellartools/web/types";
+import { and, desc, eq } from "drizzle-orm";
+
+import { withEvent } from "./event";
+import { resolveOrgContext } from "./organization";
+
+export const postRefund = async (
+  params: Omit<Refund, "organizationId" | "environment" | "createdAt" | "updatedAt">,
+  orgId?: string,
+  env?: Network,
+  options?: { errorMessage?: string }
+) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  return withEvent(
+    async () => {
+      return await db
+        .insert(refunds)
+        .values({
+          organizationId,
+          environment,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ...params,
+        })
+        .returning()
+        .then(([refund]) => refund);
+    },
+    (refund) => {
+      let events: EventTrigger<typeof refund>[] = [];
+      let webhooksTriggers: WebhookTrigger<typeof refund>[] = [];
+
+      if (refund.status == "failed") {
+        events.push({
+          type: "refund::failed",
+          map: ({ id: refundId, customerId, paymentId, amount, assetCode }) => ({
+            customerId,
+            data: { paymentId, refundId, amount: `${amount} ${assetCode}` },
+          }),
+        });
+
+        webhooksTriggers.push({
+          event: "refund.failed",
+          map: ({
+            id: refundId,
+            paymentId,
+            amount,
+            customerId,
+            assetCode,
+            createdAt,
+            receiverWalletAddress,
+            reason,
+            status,
+            metadata,
+          }) => ({
+            object: {
+              id: refundId,
+              paymentId,
+              customerId,
+              amount: `${amount} ${assetCode}`,
+              reason: reason!,
+              status,
+              createdAt: createdAt.toISOString(),
+              metadata,
+              receiverWalletAddress,
+              // @ts-ignore - error is not a valid property for the webhook object but might be needed by the merchant for debugging
+              error: options?.errorMessage,
+            },
+            previous_attributes: undefined,
+          }),
+        });
+      }
+
+      if (refund.status == "succeeded") {
+        events.push({
+          type: "refund::created",
+          map: ({ id: refundId, paymentId, amount, customerId, assetCode, reason }) => ({
+            customerId,
+            data: { paymentId, refundId, amount: `${amount} ${assetCode}`, reason },
+          }),
+        });
+
+        webhooksTriggers.push({
+          event: "refund.succeeded",
+          map: ({
+            id: refundId,
+            paymentId,
+            amount,
+            customerId,
+            assetCode,
+            reason,
+            createdAt,
+            receiverWalletAddress,
+            metadata,
+            status,
+          }) => ({
+            object: {
+              id: refundId,
+              amount: `${amount} ${assetCode}`,
+              paymentId,
+              customerId,
+              reason: reason!,
+              createdAt: createdAt.toISOString(),
+              metadata,
+              receiverWalletAddress,
+              status,
+            },
+            previous_attributes: undefined,
+          }),
+        });
+      }
+      return {
+        events,
+        webhooks: { organizationId, environment, triggers: webhooksTriggers },
+      };
+    }
+  );
+};
+
+export const getRefund = async (id: string, orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const [refund] = await db
+    .select()
+    .from(refunds)
+    .where(and(eq(refunds.id, id), eq(refunds.organizationId, organizationId), eq(refunds.environment, environment)))
+    .limit(1);
+
+  if (!refund) throw new Error("Refund not found");
+
+  return refund;
+};
+
+export const updateRefund = async (id: string, retUpdate: Partial<Refund>, orgId?: string, env?: Network) => {
+  const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const [refund] = await db
+    .update(refunds)
+    .set({ ...retUpdate, updatedAt: new Date() } as Refund)
+    .where(and(eq(refunds.id, id), eq(refunds.organizationId, organizationId), eq(refunds.environment, environment)))
+    .returning();
+
+  if (!refund) throw new Error("Failed to update refund");
+
+  return refund as Refund;
+};
+
+export const deleteRefund = async (id: string, organizationId: string) => {
+  await db
+    .delete(refunds)
+    .where(and(eq(refunds.id, id), eq(refunds.organizationId, organizationId)))
+    .returning();
+
+  return null;
+};
+
+export const getRefunds = async (organizationId: string) => {
+  const refundsList = await db
+    .select()
+    .from(refunds)
+    .where(eq(refunds.organizationId, organizationId))
+    .orderBy(desc(refunds.createdAt));
+
+  if (!refundsList) throw new Error("Failed to get refunds");
+
+  return refundsList;
+};

@@ -1,0 +1,33 @@
+import { Result, z as Schema, updateCheckoutSchema } from "@stellartools/core";
+import { deleteCheckout, putCheckout, retrieveCheckout } from "@stellartools/web/actions";
+import { apiHandler, createOptionsHandler } from "@stellartools/web/lib";
+
+export const OPTIONS = createOptionsHandler();
+
+const paramsSchema = Schema.object({ id: Schema.string() });
+export const GET = apiHandler({
+  auth: ["session", "apikey"],
+  schema: { params: paramsSchema },
+  handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
+    const checkout = await retrieveCheckout(id, organizationId, environment);
+    return Result.ok(checkout);
+  },
+});
+
+export const PUT = apiHandler({
+  auth: ["session", "apikey"],
+  schema: { params: paramsSchema, body: updateCheckoutSchema },
+  handler: async ({ params: { id }, auth: { organizationId, environment }, body }) => {
+    const checkout = await putCheckout(id, body, organizationId, environment);
+    return Result.ok(checkout);
+  },
+});
+
+export const DELETE = apiHandler({
+  auth: ["session", "apikey"],
+  schema: { params: paramsSchema },
+  handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
+    await deleteCheckout(id, organizationId, environment);
+    return Result.ok(null);
+  },
+});

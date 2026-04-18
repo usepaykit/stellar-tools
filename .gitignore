@@ -53,3 +53,10 @@ packages/*/node_modules
 /.pnpm-store
 
 MEMORY.md
+
+
+apps/web/node_modules/*
+apps/web/.next
+packages/ui/dist
+packages/ui/node_modules
+packages/ui/storybook-static

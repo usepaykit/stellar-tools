@@ -4,6 +4,8 @@
   "description": "Core SDK for Stellar Tools API",
   "main": "dist/index.js",
   "scripts": {
+    "build": "export $(cat .env.development | xargs) && tsup",
+    "dev": "tsup --watch",
     "build:dev": "export $(cat .env.development | xargs) && tsup",
     "build:prod": "export $(cat .env.production | xargs) && tsup",
     "lint:localhost": "if grep -qr 'localhost' dist; then echo '✗ ERROR: Localhost leaked into dist!'; exit 1; else echo '✓ Dist is clean.'; fi",

@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"],
+      "@stellartools/ui": ["../../packages/ui/src/index.ts"],
+      "@stellartools/ui/*": ["../../packages/ui/src/*"],
+      "@stellartools/core": ["../../packages/stellartools/src/index.ts"],
+      "@stellartools/core/*": ["../../packages/stellartools/src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts",
+    ".d.ts/**/*.d.ts",
+    ".d.ts/index.ts"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,18 @@
+"use client";
+
+import React from "react";
+
+import { toast } from "@stellartools/ui";
+
+export function useCopy() {
+  const [copied, setCopied] = React.useState(false);
+
+  const handleCopy = async ({ text, message }: { text: string; message: string }) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success(message);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return { copied, handleCopy };
+}
