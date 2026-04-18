@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { TestModeBanner } from "@/components/environment-mode";
 import { AnimatedCheckmark } from "@/components/icon";
 import { PhoneNumber, PhoneNumberField } from "@/components/phone-number-field";
@@ -42,7 +44,13 @@ export default function CheckoutUI() {
 
   if (isLoading) return <Checkout.Skeleton />;
   if (!checkout) return notFound();
-  if (isPaid) return <Checkout.Success checkout={checkout} checkoutId={checkoutId} />;
+  if (isPaid) {
+    if (typeof window !== "undefined" && checkout.redirectUrl) {
+      window.location.replace(checkout.redirectUrl);
+      return null;
+    }
+    return <Checkout.Success checkout={checkout} checkoutId={checkoutId} />;
+  }
   if (isFailed) return <Checkout.Error checkoutId={checkoutId} onRetry={() => window.location.reload()} />;
 
   return (
@@ -212,7 +220,7 @@ const Checkout = {
     return (
       <div className="bg-background animate-in fade-in flex min-h-screen flex-col items-center justify-center gap-2 p-6 duration-500">
         <AnimatedCheckmark />
-        <div className="flex w-full flex-col items-center justify-center space-y-2">
+        <div className="flex w-full flex-col items-center justify-center space-y-2 text-center">
           <h1 className="text-3xl font-extrabold tracking-normal sm:text-4xl">Payment received</h1>
           <p className="text-muted-foreground text-lg">This checkout has been completed.</p>
         </div>
