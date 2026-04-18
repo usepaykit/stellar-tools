@@ -79,6 +79,7 @@ export const Default: Story = {
         limit={args.limit}
         skeletonRowCount={args.skeletonRowCount}
         className={args.className}
+        routeMap={{ customerId: (id) => `#customerId-${id}`, productId: (id) => `#productId-${id}` }}
       />
     </div>
   ),
@@ -93,7 +94,13 @@ export const Default: Story = {
 export const WithLimit: Story = {
   render: (args) => (
     <div className="w-full max-w-md">
-      <Timeline items={sampleItems} renderItem={renderItem} limit={2} emptyMessage={args.emptyMessage} />
+      <Timeline
+        items={sampleItems}
+        renderItem={renderItem}
+        limit={2}
+        emptyMessage={args.emptyMessage}
+        routeMap={{ customerId: (id) => `#customerId-${id}`, productId: (id) => `#productId-${id}` }}
+      />
     </div>
   ),
   args: {} as any,

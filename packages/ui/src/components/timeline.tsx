@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 
-const ROUTE_MAP = {
+const DEFAULT_ROUTE_MAP = {
   customerId: (id: string) => `/customers/${id}`,
   productId: (id: string) => `/products/${id}`,
   paymentId: (id: string) => `/transactions/${id}`,
@@ -33,19 +33,28 @@ export interface TimelineProps<T> {
   isLoading?: boolean;
   limit?: number;
   skeletonRowCount?: number;
+  routeMap?: Record<string, (id: string) => string>;
 }
 
 // --- Internal Helpers ---
 
 const formatLabel = (key: string) => key.replace(/([A-Z])/g, " $1").replace(/^[a-z]/, (m) => m.toUpperCase());
 
-function TimelineSummary({ data, manualContent }: { data?: any; manualContent?: React.ReactNode }) {
+function TimelineSummary({
+  data,
+  manualContent,
+  routeMap,
+}: {
+  data?: any;
+  manualContent?: React.ReactNode;
+  routeMap?: Record<string, (id: string) => string>;
+}) {
   const summaryItems = React.useMemo(
     () =>
       Object.entries(data)
         .filter(([key, val]) => key !== "$changes" && val !== null && typeof val !== "object")
         .map(([key, val]) => {
-          const href = ROUTE_MAP?.[key]?.(String(val));
+          const href = routeMap?.[key]?.(String(val));
 
           return (
             <span key={key} className="inline-flex items-center">
@@ -133,6 +142,7 @@ export function Timeline<T>({
   className,
   emptyMessage = "No history found",
   skeletonRowCount = 3,
+  routeMap = DEFAULT_ROUTE_MAP,
 }: TimelineProps<T>) {
   const [isExpanded, setIsExpanded] = React.useState(false);
 
@@ -201,7 +211,7 @@ export function Timeline<T>({
                   <time className="text-muted-foreground/60 text-[10px] font-medium sm:mt-0">{entry.date}</time>
                 </div>
 
-                <TimelineSummary data={entry.data} manualContent={entry.contentOverride} />
+                <TimelineSummary data={entry.data} manualContent={entry.contentOverride} routeMap={routeMap} />
                 <TimelineDiff changes={entry.data?.$changes} />
               </div>
             </li>
