@@ -8,6 +8,13 @@
       "when": 1775919289785,
       "tag": "0000_free_firestar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1776775961954,
+      "tag": "0001_medical_molecule_man",
+      "breakpoints": true
     }
   ]
 }

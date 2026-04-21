@@ -1,7 +1,7 @@
 "use server";
 
 import { retrieveCustomerPortalSession } from "@/actions/customers";
-import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
+import { resolveOrgContext } from "@/actions/organization";
 import { ApiKey, Network, apiKeys, db, organizations } from "@/db";
 import { verifyJwt } from "@/integrations/jwt";
 import { generateResourceId } from "@/lib/utils";
@@ -66,28 +66,6 @@ export const deleteApiKey = async (id: string, orgId?: string, env?: Network) =>
     .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId), eq(apiKeys.environment, environment)))
     .returning()
     .then(() => null);
-};
-
-export const resolveApiKeyOrAuthorizationToken$1 = async (apiKey: string, sessionToken?: string) => {
-  if (sessionToken) {
-    const { orgId, environment } = verifyJwt<{ orgId: string; environment: Network }>(sessionToken);
-
-    const organization = await retrieveOrganization(orgId);
-
-    return { organizationId: organization.id, environment };
-  }
-
-  const [record] = await db.select().from(apiKeys).where(eq(apiKeys.token, apiKey)).limit(1);
-
-  if (!record) throw new Error("Invalid apiKey");
-
-  const organization = await retrieveOrganization(record.organizationId);
-
-  return {
-    organizationId: organization.id,
-    environment: record.environment,
-    apiKeyId: record.id,
-  };
 };
 
 export const resolveApiKeyOrAuthorizationToken = async (

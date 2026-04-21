@@ -563,6 +563,64 @@ export const customerPortalSessions = pgTable(
   })
 );
 
+export const apps = pgTable("app", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").unique().notNull(), // "first-promoter", "resend"
+  baseUrl: text("base_url").notNull(), // https://app.firstpromoter.com/st-bridge
+  appSecret: text("app_secret").notNull(), // Used to sign App Tokens and Webhooks
+  webhookUrl: text("webhook_url"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  publisher: text("publisher").notNull(),
+  featuresMarkdown: text("features_markdown").notNull(),
+  price: text("price"),
+  tagline: text("tagline").notNull(),
+  websiteUrl: text("website_url"),
+  supportEmail: text("support_email"),
+});
+
+export const appInstallationStatusEnum = pgEnum("app_installation_status", ["active", "suspended"]);
+
+export type AppInstallationStatus = (typeof appInstallationStatusEnum.enumValues)[number];
+
+export const appInstallations = pgTable(
+  "app_installation",
+  {
+    id: text("id").primaryKey(),
+    appId: text("app_id")
+      .notNull()
+      .references(() => apps.id),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    environment: networkEnum("network").notNull(),
+
+    // Settings specific to this integration (e.g. { "apiKey": "fp_123" })
+    settings: jsonb("settings").$type<Record<string, unknown>>().default({}),
+    scopes: text("scopes").array().$type<string[]>().notNull(),
+    status: appInstallationStatusEnum("status").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueInstallation: unique().on(table.appId, table.organizationId, table.environment),
+    idxOrgEnv: index("idx_app_inst_org_env").on(table.organizationId, table.environment),
+  })
+);
+
+export const appLogs = pgTable("app_log", {
+  id: text("id").primaryKey(),
+  installationId: text("installation_id")
+    .notNull()
+    .references(() => appInstallations.id, { onDelete: "cascade" }),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  action: text("action").notNull(),
+  statusCode: text("status_code"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type Account = InferSelectModel<typeof accounts>;
 export type Organization = InferSelectModel<typeof organizations>;
 export type ApiKey = InferSelectModel<typeof apiKeys>;
@@ -587,6 +645,9 @@ export type Payout = InferSelectModel<typeof payouts>;
 export type Event = InferSelectModel<typeof events>;
 export type CustomerPortalSession = InferSelectModel<typeof customerPortalSessions>;
 export type { ProductStatus, ProductType };
+export type App = InferSelectModel<typeof apps>;
+export type AppInstallation = InferSelectModel<typeof appInstallations>;
+export type AppLog = InferSelectModel<typeof appLogs>;
 
 export type ResolvedCustomer = Customer & { wallets?: Array<CustomerWallet> };
 export type ResolvedPayment = Payment & {

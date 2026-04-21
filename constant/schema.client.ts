@@ -30,6 +30,18 @@ export const eventTypeEnum = [
   "customer_portal_session::created",
 ] as const;
 
+export const APP_RESOURCES = [
+  "customers",
+  "payments",
+  "checkouts",
+  "subscriptions",
+  "refunds",
+  "payouts",
+] as const;
+
+export type AppResource = (typeof APP_RESOURCES)[number];
+export type AppScope = `read:${AppResource}` | `write:${AppResource}` | "*";
+
 export const accountBillingCycleEnum = ["monthly", "yearly"] as const;
 
 export const subscriptionStatusEnum = subscriptionStatusEnum$1.enum;
