@@ -195,7 +195,6 @@ function TransactionsPageContent() {
   const router = useRouter();
   const [activeTab, setActiveTab] = React.useState<TabType>("all");
   const invalidate = useInvalidateOrgQuery();
-  const [paymentToRefund, setPaymentToRefund] = React.useState<ResolvedPayment | null>(null);
 
   const refundModalSubmitRef = React.useRef<(() => void) | null>(null);
   const [refundModalFooterProps, setRefundModalFooterProps] = React.useState({
@@ -219,7 +218,7 @@ function TransactionsPageContent() {
   }, [refundModalFooterProps.isPending]);
 
   const openRefundModal = React.useCallback(
-    (initialPaymentId?: string) => {
+    (paymentToRefund: ResolvedPayment | null) => {
       isRefundModalOpenRef.current = true;
       setRefundModalFooterProps({ isPending: false });
       AppModal.open({
@@ -227,7 +226,8 @@ function TransactionsPageContent() {
         description: "Process a refund for a transaction by providing the payment details.",
         content: (
           <RefundModalContent
-            initialPaymentId={initialPaymentId}
+            payment={paymentToRefund}
+            initialPaymentId={paymentToRefund?.id}
             onClose={() => {
               isRefundModalOpenRef.current = false;
               AppModal.close();
@@ -239,7 +239,6 @@ function TransactionsPageContent() {
             }}
             setSubmitRef={refundModalSubmitRef}
             onFooterChange={(props) => setRefundModalFooterProps(props)}
-            payment={paymentToRefund}
           />
         ),
         footer: <RefundModalFooter onClose={AppModal.close} submitRef={refundModalSubmitRef} isPending={false} />,
@@ -310,8 +309,7 @@ function TransactionsPageContent() {
       actions.push({
         label: "Refund",
         onClick: (transaction) => {
-          openRefundModal(transaction.id);
-          setPaymentToRefund(payments?.find(({ id }) => transaction.id == id) ?? null);
+          openRefundModal(payments?.find(({ id }) => transaction.id == id) ?? null);
         },
       });
     }
@@ -339,8 +337,7 @@ function TransactionsPageContent() {
                 <Button
                   className="gap-2 shadow-sm"
                   onClick={() => {
-                    openRefundModal();
-                    setPaymentToRefund(null);
+                    openRefundModal(null);
                   }}
                 >
                   <Plus className="h-4 w-4" />
