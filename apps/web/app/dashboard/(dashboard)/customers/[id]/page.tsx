@@ -195,7 +195,7 @@ export default function CustomerDetailPage() {
   const invalidate = useInvalidateOrgQuery();
   const { data: orgContext } = useOrgContext();
   const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
-    retrievePayments(undefined, undefined, { customerId: customerId })
+    retrievePayments(undefined, undefined, { customerId: customerId }, { withRefunds: true, withWallets: true })
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
     retrieveCustomers({ id: customerId }, { withWallets: true }).then(([c]) => c)
@@ -208,14 +208,14 @@ export default function CustomerDetailPage() {
   const [paymentToRefund, setPaymentToRefund] = React.useState<null | ResolvedPayment>(null);
 
   const openRefundModal = React.useCallback(
-    (paymentId: string) => {
+    (paymentToRefund: ResolvedPayment | null) => {
       AppModal.open({
         title: "Create Refund",
         description: "Process a refund for a transaction by providing the payment details.",
         content: (
           <RefundModalContent
             payment={paymentToRefund}
-            initialPaymentId={paymentId}
+            initialPaymentId={paymentToRefund?.id}
             onClose={AppModal.close}
             onSuccess={() => {
               invalidate(["payments", customerId]);
@@ -436,9 +436,12 @@ export default function CustomerDetailPage() {
                     if (!row.refunded) {
                       actions.push({
                         label: "Refund Payment",
-                        onClick: (p) => {
-                          openRefundModal(p.id);
-                          setPaymentToRefund(payments?.find(({ id }) => p.id == id) ?? null);
+                        onClick: async (p) => {
+                          const paymentToRefund = payments?.find(({ id }) => p.id == id) ?? null;
+                          console.log({ paymentToRefund });
+                          setPaymentToRefund(paymentToRefund);
+                          if (!paymentToRefund) return;
+                          openRefundModal(paymentToRefund);
                         },
                       });
                     }
@@ -449,7 +452,7 @@ export default function CustomerDetailPage() {
               </section>
 
               <section className="space-y-3">
-                <h3 className="text-lg font-semibold">Timeline</h3>
+                <h3 className="text-lg font-semibold">Activities</h3>
 
                 <Timeline
                   limit={3}
@@ -623,15 +626,13 @@ function CheckoutModalContent({
   }, [productsData]);
 
   const mutation = useMutation({
+    mutationKey: ["checkout", customerId],
     mutationFn: async (data: z.infer<typeof checkoutSchema>) => {
       if (!orgContext) throw new Error("No organization context found");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
         headers: { "x-auth-token": orgContext.token! },
       });
-
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 1);
 
       const response = await api.post<Checkout>("/checkout?type=product", {
         customerId,
@@ -649,13 +650,14 @@ function CheckoutModalContent({
 
       return response.value as Checkout;
     },
-    onSuccess: async (data) => {
+    onSuccess: async (data: any) => {
       invalidate(["payments", customerId]);
       toast.success("Checkout created");
       const baseUrl =
         (typeof process.env.NEXT_PUBLIC_CHECKOUT_URL === "string" && process.env.NEXT_PUBLIC_CHECKOUT_URL.trim()) ||
         (typeof window !== "undefined" ? window.location.origin : "");
-      const url = baseUrl ? `${baseUrl.replace(/\/$/, "")}/${data.id}` : data.id;
+      let checkoutID = data?.data?.id;
+      const url = baseUrl ? `${baseUrl.replace(/\/$/, "")}/${checkoutID}` : checkoutID;
       setCreatedUrl(url);
     },
   });
@@ -767,9 +769,10 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
   const { data: orgContext } = useOrgContext();
   const [url, setUrl] = React.useState<string | null>(null);
 
-  const { handleCopy } = useCopy();
+  const { copied, handleCopy } = useCopy();
 
   const mutation = useMutation({
+    mutationKey: ["portalLink", customerId],
     mutationFn: async () => {
       if (!orgContext) throw new Error("Organization context not found");
       const api = new ApiClient({
@@ -787,9 +790,14 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
 
       return response.value;
     },
-    onSuccess: (data) => {
-      setUrl(data.url);
-      toast.success("Portal link generated");
+    onSuccess: (data: any) => {
+      const generatedUrl = data?.data?.url;
+      if (generatedUrl) {
+        setUrl(generatedUrl);
+        toast.success("Portal link generated");
+      } else {
+        toast.error("Failed to extract portal link from response");
+      }
     },
     onError: (error) => {
       toast.error(error.message ?? "Failed to generate link");
@@ -803,7 +811,32 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex w-full justify-end gap-2 border-b pb-4">
+      {url ? (
+        <div className="space-y-6 py-4">
+          <p className="text-muted-foreground text-sm">Share this link with the customer.</p>
+          <div className="flex items-center gap-2">
+            <div className="bg-muted border-border flex-1 rounded-md border px-3 py-1.5 shadow-none">
+              <code className="text-muted-foreground font-mono text-sm break-all">{url}</code>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => handleCopy({ text: url, message: "Copied" })}
+              className="shrink-0 shadow-none"
+            >
+              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-muted-foreground py-2 text-sm">
+          Generate a one-time link for this customer to view subscriptions and payments.
+          {url}
+        </p>
+      )}
+
+      <div className="flex w-full justify-end gap-2 pb-4">
         {url ? (
           <Button onClick={handleClose}>Done</Button>
         ) : (
@@ -817,21 +850,6 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
           </>
         )}
       </div>
-      {url ? (
-        <div className="space-y-4 py-2">
-          <p className="text-muted-foreground text-sm">Share this link with the customer. It expires in 24 hours.</p>
-          <div className="bg-muted/50 flex items-center justify-between gap-4 rounded-xl border p-4">
-            <code className="text-muted-foreground flex-1 truncate text-sm">{url}</code>
-            <Button variant="outline" size="sm" onClick={() => handleCopy({ text: url, message: "Copied" })}>
-              Copy link
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <p className="text-muted-foreground py-2 text-sm">
-          Generate a one-time link for this customer to view subscriptions and payments.
-        </p>
-      )}
     </div>
   );
 }

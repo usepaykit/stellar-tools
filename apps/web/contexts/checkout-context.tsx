@@ -134,6 +134,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
             wallet.setTxStatus(TxStatus.SUBMITTING);
             const result = await finalizeSubscriptionCheckout(checkoutId, txResult.txHash, wallet.walletAddress);
             if (!result.success) throw new Error(result.error);
+            queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
           } else if (txResult.status == "FAIL") {
             await postPayment(
               {
@@ -150,6 +151,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
               checkout?.environment,
               { failErrorMessage: txResult.message, customerWalletAddress: wallet.walletAddress }
             );
+            queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
           }
         }
       } else {
@@ -192,6 +194,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
           if (txResult.status === "SUCCESS") {
             await sweepAndProcessPayment(checkoutId);
             toast.success("Payment successful!");
+            queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
           } else if (txResult.status === "FAIL") {
             console.log("posting failed payemnts");
             await postPayment(
@@ -210,6 +213,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
               { failErrorMessage: txResult.message, customerWalletAddress: wallet.walletAddress }
             );
             toast.error(txResult.message ?? "Payment Failed");
+            queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
           }
         }
 

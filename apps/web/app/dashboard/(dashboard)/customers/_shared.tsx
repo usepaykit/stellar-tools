@@ -198,8 +198,8 @@ export function CustomerModalContent({
   return (
     <div className="flex h-full min-h-0 flex-col gap-6">
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col gap-8 overflow-hidden">
-        <div className="flex min-h-0 flex-1 gap-8 overflow-hidden">
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col gap-8 overflow-hidden md:flex-row">
+          <div className="w-full shrink-0 space-y-6 px-1 md:min-h-0 md:flex-1 md:overflow-y-auto">
             <div>
               <h3 className="mb-2 text-lg font-semibold">Basic Information</h3>
               <p className="text-muted-foreground text-sm">Enter the customer’s basic contact information.</p>
@@ -288,9 +288,9 @@ export function CustomerModalContent({
             />
           </div>
 
-          <Separator orientation="vertical" className="h-auto" />
+          <Separator orientation="vertical" className="hidden h-auto shrink-0 md:block" />
 
-          <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
+          <div className="min-h-0 w-full flex-1 space-y-6 overflow-y-auto px-1 md:min-h-0">
             <div>
               <h3 className="mb-2 text-lg font-semibold">Metadata</h3>
               <p className="text-muted-foreground text-sm">
