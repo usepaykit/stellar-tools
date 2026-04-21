@@ -1,0 +1,33 @@
+{
+  "name": "@stellartools/app-embed-bridge",
+  "version": "0.0.1",
+  "description": "Stellar Tools App Embed Bridge",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "keywords": [
+    "stellar",
+    "tools",
+    "app",
+    "embed",
+    "bridge"
+  ],
+  "author": "Emmanuel Odii",
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "@stellartools/core": "workspace:*"
+  }
+}

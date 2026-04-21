@@ -1,5 +1,4 @@
-export const MARKETPLACE_APP_ICON =
-  "https://8rcejvvfub.ufs.sh/f/PUZcIXo3ao8IPsLj37o3ao8IZxzlbRpBGytrnMmufWPXUHvi";
+export const MARKETPLACE_APP_ICON = "https://8rcejvvfub.ufs.sh/f/PUZcIXo3ao8IPsLj37o3ao8IZxzlbRpBGytrnMmufWPXUHvi";
 
 export type MarketplaceApp = {
   id: string;
@@ -25,13 +24,7 @@ export const MARKETPLACE_APPS: MarketplaceApp[] = [
     category: "Accounting",
     publisher: "Stellar Labs Example Inc.",
     visibleOn: "StellarTools Dashboard",
-    worksWith: [
-      "Payments",
-      "Customers",
-      "Subscriptions",
-      "Payout",
-      "Dashboard home",
-    ],
+    worksWith: ["Payments", "Customers", "Subscriptions", "Payout", "Dashboard home"],
     pricing: "Free",
     languages: "English (United States)",
     supportEmail: "support@example.com",
@@ -97,8 +90,7 @@ export const MARKETPLACE_APPS: MarketplaceApp[] = [
       },
       {
         title: "Export-ready reports",
-        description:
-          "Download weekly or monthly summaries for investors and ops without rebuilding spreadsheets.",
+        description: "Download weekly or monthly summaries for investors and ops without rebuilding spreadsheets.",
       },
     ],
   },

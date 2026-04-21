@@ -15,6 +15,13 @@
       "when": 1776775961954,
       "tag": "0001_medical_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776782161637,
+      "tag": "0002_foamy_iceman",
+      "breakpoints": true
     }
   ]
 }

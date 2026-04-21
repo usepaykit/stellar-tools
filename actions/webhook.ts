@@ -6,7 +6,7 @@ import { deliverWebhook } from "@/integrations/webhook-delivery";
 import { toSnakeCase } from "@/lib/utils";
 import { generateResourceId } from "@/lib/utils";
 import { WebhookEvent, WebhookEventType } from "@stellartools/core";
-import { and, eq, sql } from "drizzle-orm";
+import { SQL, and, eq, isNull, sql } from "drizzle-orm";
 
 export const postWebhook = async (
   orgId?: string,
@@ -148,36 +148,56 @@ export const postWebhookLog = async (
   return webhookLog;
 };
 
-export const retrieveWebhookLogs = async (webhookId: string, orgId?: string, env?: Network) => {
+export const retrieveWebhookLogs = async (
+  webhookId: string,
+  orgId?: string,
+  env?: Network,
+  params?: { appInstallationId?: string }
+) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const appInstallationId = params?.appInstallationId ?? undefined;
+
+  let whereClause: SQL<unknown>[] = [];
+
+  if (appInstallationId) {
+    whereClause.push(eq(webhookLogs.appInstallationId, appInstallationId));
+  } else {
+    whereClause.push(isNull(webhookLogs.appInstallationId) as SQL<unknown>);
+    whereClause.push(eq(webhookLogs.organizationId, organizationId));
+  }
 
   const webhookLogsResult = await db
     .select()
     .from(webhookLogs)
-    .where(
-      and(
-        eq(webhookLogs.webhookId, webhookId),
-        eq(webhookLogs.organizationId, organizationId),
-        eq(webhookLogs.environment, environment)
-      )
-    );
+    .where(and(eq(webhookLogs.webhookId, webhookId), eq(webhookLogs.environment, environment), ...whereClause));
 
   return webhookLogsResult;
 };
 
-export const retrieveWebhookLog = async (id: string, orgId?: string, env?: Network) => {
+export const retrieveWebhookLog = async (
+  id: string,
+  orgId?: string,
+  env?: Network,
+  params?: { appInstallationId?: string }
+) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  let whereClause: SQL<unknown>[] = [];
+
+  const appInstallationId = params?.appInstallationId ?? undefined;
+
+  if (appInstallationId) {
+    whereClause.push(eq(webhookLogs.appInstallationId, appInstallationId));
+  } else {
+    whereClause.push(isNull(webhookLogs.appInstallationId) as SQL<unknown>);
+    whereClause.push(eq(webhookLogs.organizationId, organizationId));
+  }
 
   const [webhookLog] = await db
     .select()
     .from(webhookLogs)
-    .where(
-      and(
-        eq(webhookLogs.id, id),
-        eq(webhookLogs.organizationId, organizationId),
-        eq(webhookLogs.environment, environment)
-      )
-    );
+    .where(and(eq(webhookLogs.id, id), eq(webhookLogs.environment, environment), ...whereClause));
 
   return webhookLog;
 };

@@ -1,19 +1,22 @@
 import "server-only";
 
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
+import { resolveAuthContext } from "@/actions/apikey";
 import { getCorsHeaders } from "@/constant";
+import { AuthContext } from "@/types";
+import { AppScope } from "@stellartools/app-embed-bridge";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
 import { NextRequest, NextResponse } from "next/server";
 
-export type AuthScope = "session" | "apikey" | "portal";
+export type AuthScope = "session" | "apikey" | "portal" | "app";
 
 const AUTH_SCOPE_LABELS: Record<AuthScope, string> = {
   apikey: "Api key",
   session: "Session token",
   portal: "Portal token",
+  app: "App token",
 };
 
-function authRequiredMessage(scopes: AuthScope[]): string {
+function authRequiredMessage(scopes: Array<AuthScope>): string {
   const labels = scopes.map((s) => AUTH_SCOPE_LABELS[s]);
   return `${labels.join(" or ")} required`;
 }
@@ -24,12 +27,13 @@ type HandlerConfig<TBody, TParams, TQuery> = {
     params?: Schema.ZodSchema<TParams>;
     query?: Schema.ZodSchema<TQuery>;
   };
-  auth?: AuthScope[] | null;
+  auth?: Array<AuthScope> | null;
+  requiredAppScope?: AppScope;
   handler: (args: {
     body: TBody;
     params: TParams;
     query: TQuery;
-    auth: Awaited<ReturnType<typeof resolveApiKeyOrAuthorizationToken>>;
+    auth: AuthContext;
     req: NextRequest;
     authToken?: string | null;
   }) => Promise<Result<any, Error>>;
@@ -47,28 +51,37 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
       const { searchParams } = new URL(req.url);
       const rawQuery = Object.fromEntries(searchParams.entries());
 
-      let authResult: null | Awaited<ReturnType<typeof resolveApiKeyOrAuthorizationToken>> = null;
+      let authResult: AuthContext | null = null;
+      const allowedScopes = config.auth?.length ? config.auth : null;
 
-      const scopes = config.auth?.length ? config.auth : null;
-      if (scopes) {
-        const apiKey = req.headers.get("x-api-key");
-        const authToken = req.headers.get("x-auth-token");
-        const portalToken = req.headers.get("x-portal-token");
+      if (allowedScopes) {
+        const authParams = {
+          apiKey: req.headers.get("x-api-key"),
+          authToken: req.headers.get("x-auth-token"),
+          portalToken: req.headers.get("x-portal-token"),
+          appToken: req.headers.get("x-stellartools-app-token"),
+        };
 
-        const hasAllowedAuth =
-          (scopes.includes("apikey") && apiKey) ||
-          (scopes.includes("session") && authToken) ||
-          (scopes.includes("portal") && portalToken);
-
-        if (!hasAllowedAuth) {
-          return NextResponse.json({ error: authRequiredMessage(scopes) }, { status: 401, headers: corsHeaders });
+        const hasAnyCreds = Object.values(authParams).some(Boolean);
+        if (!hasAnyCreds) {
+          return NextResponse.json(
+            { error: authRequiredMessage(allowedScopes) },
+            { status: 401, headers: corsHeaders }
+          );
         }
 
-        authResult = await resolveApiKeyOrAuthorizationToken(
-          apiKey,
-          authToken,
-          scopes.includes("portal") ? (portalToken ?? undefined) : undefined
-        );
+        authResult = await resolveAuthContext(authParams);
+
+        if (authResult.type === "app" && config.requiredAppScope) {
+          const hasPermission =
+            authResult.scopes?.includes(config.requiredAppScope) || authResult.scopes?.includes("*");
+          if (!hasPermission) {
+            return NextResponse.json(
+              { error: `Forbidden: App missing scope [${config.requiredAppScope}]` },
+              { status: 403, headers: corsHeaders }
+            );
+          }
+        }
       }
 
       let body: TBody = {} as TBody;

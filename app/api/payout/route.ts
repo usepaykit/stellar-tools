@@ -14,7 +14,8 @@ import { all } from "better-all";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: ["session"],
+  auth: ["session", "app"],
+  requiredAppScope: "write:payouts",
   schema: {
     body: Schema.object({
       amount: Schema.number(),

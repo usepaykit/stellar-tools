@@ -1,11 +1,14 @@
 "use server";
 
+import { retrieveInstalledApps } from "@/actions/app";
 import { resolveOrgContext } from "@/actions/organization";
 import { retrieveWebhooks, triggerWebhooks } from "@/actions/webhook";
-import { EventType } from "@/constant/schema.client";
 import { Event, Network, db, events, rawDb, txContext } from "@/db";
+import { deliverToApp } from "@/integrations/app-delivery";
+import { getResourceForEvent } from "@/lib/app-utils";
 import { generateResourceId } from "@/lib/utils";
 import { EventConfig, EventEmitParams } from "@/types";
+import { EventType } from "@stellartools/app-embed-bridge";
 import { MaybePromise, SuggestedString, WebhookEventBase } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
 import { SQL, and, desc, eq, inArray } from "drizzle-orm";
@@ -26,27 +29,34 @@ export async function withEvent<T>(
       if (!resolved) return;
 
       const { events: eventConfigs, webhooks: webhookConfig } = resolved;
+      const { organizationId: orgId, environment: env } = webhookConfig!;
 
+      // 1. Identify active merchant webhooks
       const triggers = webhookConfig?.triggers
         ? Array.isArray(webhookConfig.triggers)
           ? webhookConfig.triggers
           : [webhookConfig.triggers]
         : [];
-      const internalConfigs = eventConfigs ? (Array.isArray(eventConfigs) ? eventConfigs : [eventConfigs]) : [];
-
-      if (triggers.length === 0 && internalConfigs.length === 0) return;
-
-      const { organizationId: orgId, environment: env } = webhookConfig!;
 
       const subscribers =
         triggers.length > 0 ? await retrieveWebhooks(orgId, env, { events: triggers.map((t) => t.event) }) : [];
 
-      const hasActiveWebhooks = subscribers.length > 0;
+      // 2. DISCOVER INSTALLED APPS (Plugins)
+      // Logic: If an action emits "customer::created", find apps with "read:customers" scope.
+      const primaryEvent = Array.isArray(eventConfigs) ? eventConfigs[0] : eventConfigs;
+      const resource = primaryEvent ? getResourceForEvent(primaryEvent.type) : undefined;
+      const requiredScope = resource ? (`read:${resource}` as const) : null;
 
-      const webhookLogId = hasActiveWebhooks ? generateResourceId("wh_evt", orgId, 52) : undefined;
+      const installedApps = requiredScope
+        ? await retrieveInstalledApps({ status: "active", scopes: [requiredScope] }, orgId, env)
+        : [];
 
-      if (internalConfigs.length > 0) {
-        const eventsToEmit = internalConfigs.flatMap((cfg) => {
+      const hasWork = subscribers.length > 0 || installedApps.length > 0;
+      const webhookLogId = hasWork ? generateResourceId("wh_evt", orgId, 52) : undefined;
+
+      // 3. EMIT INTERNAL EVENTS (Dashboard Timeline)
+      if (eventConfigs) {
+        const eventsToEmit = (Array.isArray(eventConfigs) ? eventConfigs : [eventConfigs]).flatMap((cfg) => {
           const mapped = cfg.map(result);
           return (Array.isArray(mapped) ? mapped : [mapped]).map((m) => ({
             ...m,
@@ -57,37 +67,56 @@ export async function withEvent<T>(
         await emitEvents(eventsToEmit, orgId, env);
       }
 
-      if (hasActiveWebhooks) {
-        const deliveries = triggers.map((trigger) => {
-          const targets = subscribers.filter((s) => s.events.includes(trigger.event));
-          if (targets.length === 0) return Promise.resolve();
+      // 4. DISPATCH WEBHOOKS (To Merchant + To Installed Apps)
+      const deliveries: Promise<any>[] = [];
 
-          const mapped = trigger.map(result);
+      // A. Standard Merchant Webhooks
+      if (subscribers.length > 0) {
+        triggers.forEach((trigger) => {
+          const targets = subscribers.filter((s) => s.events.includes(trigger.event));
+          if (targets.length === 0) return;
+
           const envelope: WebhookEventBase<any, any> = {
             id: webhookLogId!,
             type: trigger.event,
             created: new Date().toISOString(),
             livemode: env === "mainnet",
-            data: mapped,
+            data: trigger.map(result),
+          };
+          deliveries.push(triggerWebhooks(targets, trigger.event, envelope, webhookLogId!));
+        });
+      }
+
+      // B. Plugin/App Webhooks (Partner servers)
+      if (installedApps.length > 0) {
+        installedApps.forEach(({ app, app_installation }) => {
+          if (!app?.manifest?.events?.includes(primaryEvent!.type)) return;
+
+          const envelope = {
+            id: webhookLogId!,
+            type: primaryEvent!.type,
+            created: new Date().toISOString(),
+            livemode: env === "mainnet",
+            installationId: app_installation.id, // CRACKED: Partner needs to know WHICH installation this is
+            data: primaryEvent!.map(result) as Record<string, unknown>,
           };
 
-          return triggerWebhooks(targets, trigger.event, envelope, webhookLogId!);
+          // deliverToApp helper uses app.webhookUrl and app.appSecret for signing
+          deliveries.push(deliverToApp(app, app_installation.id, envelope, webhookLogId!));
         });
-
-        await Promise.allSettled(deliveries);
       }
+
+      await Promise.allSettled(deliveries);
     } catch (err) {
       console.error(`[Side-Effect Critical Failure]:`, err);
     }
   };
 
+  // Standard execution logic...
   const buffer = effectBuffer.getStore();
-  if (buffer) {
-    buffer.push(runSideEffects);
-  } else {
-    if (typeof waitUntil === "function") waitUntil(runSideEffects());
-    else runSideEffects();
-  }
+  if (buffer) buffer.push(runSideEffects);
+  else if (typeof waitUntil === "function") waitUntil(runSideEffects());
+  else runSideEffects();
 
   return result;
 }

@@ -15,7 +15,8 @@ import _ from "lodash";
 export const OPTIONS = createOptionsHandler();
 
 export const GET = apiHandler({
-  auth: ["session", "apikey", "portal"],
+  auth: ["session", "apikey", "app", "portal"],
+  requiredAppScope: "read:subscriptions",
   schema: { params: Schema.object({ id: Schema.string() }) },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     const { subscription, customerWallet } = await all({
@@ -80,7 +81,8 @@ export const GET = apiHandler({
 });
 
 export const PUT = apiHandler({
-  auth: ["session", "apikey", "portal"],
+  auth: ["session", "apikey", "app", "portal"],
+  requiredAppScope: "write:subscriptions",
   schema: { body: updateSubscriptionSchema, params: Schema.object({ id: Schema.string() }) },
   handler: async ({
     body: { metadata, cancelAtPeriodEnd, productId },

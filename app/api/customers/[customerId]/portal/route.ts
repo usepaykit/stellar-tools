@@ -7,7 +7,8 @@ const paramsSchema = Schema.object({ customerId: Schema.string() });
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "read:portal",
   schema: { params: paramsSchema },
   handler: async ({ params: { customerId }, auth: { organizationId, environment } }) => {
     const { session, url } = await createCustomerPortalSession(customerId, organizationId, environment);

@@ -7,7 +7,8 @@ export const OPTIONS = createOptionsHandler();
 const paramsSchema = Schema.object({ id: Schema.string() });
 
 export const PUT = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "write:products",
   schema: { body: updateProductSchema, params: paramsSchema },
   handler: async ({ body, auth: { organizationId }, params: { id } }) => {
     const product = await putProduct(id, organizationId, body);
@@ -16,7 +17,8 @@ export const PUT = apiHandler({
 });
 
 export const DELETE = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "write:products",
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId } }) => {
     const product = await deleteProduct(id, organizationId);

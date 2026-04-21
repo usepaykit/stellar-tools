@@ -6,7 +6,7 @@ import { ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { MARKETPLACE_APP_ICON, MARKETPLACE_APPS } from "./marketplace-apps";
+import { MARKETPLACE_APPS, MARKETPLACE_APP_ICON } from "./marketplace-apps";
 
 export default function MarketplacePage() {
   return (
@@ -16,15 +16,15 @@ export default function MarketplacePage() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Marketplace</h1>
             <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-              Discover apps that extend StellarTools. Installations and billing will connect here later—for now,
-              browse sample listings.
+              Discover apps that extend StellarTools. Installations and billing will connect here later—for now, browse
+              sample listings.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {MARKETPLACE_APPS.map((app) => (
               <Link key={app.id} href={`/marketplace/${app.id}`} className="group block">
-                <Card className="h-full border-border/80 shadow-none transition-colors hover:border-primary/30">
+                <Card className="border-border/80 hover:border-primary/30 h-full shadow-none transition-colors">
                   <CardContent className="flex flex-col gap-4 p-5">
                     <div className="flex items-start gap-3">
                       <div className="bg-muted relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border">
@@ -39,7 +39,7 @@ export default function MarketplacePage() {
                       </div>
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-start justify-between gap-2">
-                          <h2 className="leading-snug font-semibold tracking-tight group-hover:text-primary">
+                          <h2 className="group-hover:text-primary leading-snug font-semibold tracking-tight">
                             {app.name}
                           </h2>
                           <ChevronRight className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />

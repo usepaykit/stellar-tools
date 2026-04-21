@@ -8,7 +8,8 @@ import { all } from "better-all";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app", "portal"],
+  requiredAppScope: "write:subscriptions",
   schema: { params: Schema.object({ id: Schema.string() }) },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     const { subscription, customerWallet } = await all({

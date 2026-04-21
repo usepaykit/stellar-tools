@@ -11,7 +11,8 @@ import { all } from "better-all";
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "write:refunds",
   schema: { body: createRefundSchema.extend({ walletAddress: Schema.string().optional() }) },
   handler: async ({ body: { paymentId, reason, metadata, walletAddress }, auth: { organizationId, environment } }) => {
     const { payment, secret } = await all({

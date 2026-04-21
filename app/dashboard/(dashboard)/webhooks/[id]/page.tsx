@@ -125,26 +125,30 @@ export default function WebhookLogPage() {
     data: webhookLogs,
     isLoading: isLoadingWebhookLogs,
     refetch: refetchWebhookLogs,
-  } = useOrgQuery(["webhookLogs", webhookId], () => retrieveWebhookLogs(webhookId), {
-    enabled: !!webhookId,
-    select: (data) => {
-      return data.map((log) => ({
-        id: log.id,
-        eventType: log.eventType,
-        status: log.statusCode === 200 ? ("succeeded" as const) : ("failed" as const),
-        statusCode: log.statusCode ?? undefined,
-        timestamp: new Date(log.createdAt),
-        eventId: log.id,
-        originDate: new Date(log.createdAt),
-        source: "Automatic",
-        apiVersion: log.apiVersion,
-        description: log.description,
-        response: log.response ?? undefined,
-        request: log.request ?? {},
-        nextRetry: log.nextRetry ? moment(log.nextRetry).fromNow() : undefined,
-      }));
-    },
-  });
+  } = useOrgQuery(
+    ["webhookLogs", webhookId],
+    () => retrieveWebhookLogs(webhookId, undefined, undefined, { appInstallationId: undefined }),
+    {
+      enabled: !!webhookId,
+      select: (data) => {
+        return data.map((log) => ({
+          id: log.id,
+          eventType: log.eventType,
+          status: log.statusCode === 200 ? ("succeeded" as const) : ("failed" as const),
+          statusCode: log.statusCode ?? undefined,
+          timestamp: new Date(log.createdAt),
+          eventId: log.id,
+          originDate: new Date(log.createdAt),
+          source: "Automatic",
+          apiVersion: log.apiVersion,
+          description: log.description,
+          response: log.response ?? undefined,
+          request: log.request ?? {},
+          nextRetry: log.nextRetry ? moment(log.nextRetry).fromNow() : undefined,
+        }));
+      },
+    }
+  );
 
   const resendMutation = useMutation({
     mutationFn: async ({ eventType, payload }: { eventType: WebhookEventType; payload: WebhookEvent }) =>

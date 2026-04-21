@@ -3,11 +3,11 @@ import {
   AssetIssuer,
   AuthProvider,
   authProviderEnum as authProviderEnum$1,
-  eventTypeEnum as eventTypeEnum$1,
   networkEnum as networkEnum$1,
   paymentStatusEnum as paymentStatusEnum$1,
   payoutStatusEnum as payoutStatusEnum$1,
 } from "@/constant/schema.client";
+import { AppManifest, eventTypeEnum as eventTypeEnum$1 } from "@stellartools/app-embed-bridge";
 import {
   ProductStatus,
   ProductType,
@@ -403,9 +403,8 @@ export const webhookLogs = pgTable("webhook_log", {
   webhookId: text("webhook_id")
     .notNull()
     .references(() => webhooks.id),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organizations.id),
+  organizationId: text("organization_id").references(() => organizations.id),
+  appInstallationId: text("app_installation_id").references(() => appInstallations.id),
   eventType: text("event_type").notNull(),
   request: jsonb("request").$type<unknown>().notNull(),
   statusCode: integer("status_code"),
@@ -577,6 +576,7 @@ export const apps = pgTable("app", {
   tagline: text("tagline").notNull(),
   websiteUrl: text("website_url"),
   supportEmail: text("support_email"),
+  manifest: jsonb("manifest").$type<AppManifest>(),
 });
 
 export const appInstallationStatusEnum = pgEnum("app_installation_status", ["active", "suspended"]);

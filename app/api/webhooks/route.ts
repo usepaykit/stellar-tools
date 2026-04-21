@@ -1,12 +1,13 @@
-import { postWebhook } from "@/actions/webhook";
+import { postWebhook, putWebhook } from "@/actions/webhook";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
 import { generateResourceId } from "@/lib/utils";
-import { Result, z as Schema, createWebhookSchema } from "@stellartools/core";
+import { Result, z as Schema, createWebhookSchema, updateWebhookSchema } from "@stellartools/core";
 
 export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "write:webhooks",
   schema: { body: createWebhookSchema.extend({ secret: Schema.string().optional() }) },
   handler: async ({ body, auth: { organizationId, environment }, authToken }) => {
     const webhookPayload = {

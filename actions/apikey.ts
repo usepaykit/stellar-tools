@@ -5,6 +5,7 @@ import { resolveOrgContext } from "@/actions/organization";
 import { ApiKey, Network, apiKeys, db, organizations } from "@/db";
 import { verifyJwt } from "@/integrations/jwt";
 import { generateResourceId } from "@/lib/utils";
+import { AuthContext } from "@/types";
 import { and, eq, sql } from "drizzle-orm";
 
 export const postApiKey = async (
@@ -108,4 +109,64 @@ export const resolveApiKeyOrAuthorizationToken = async (
   if (!row) throw new Error("Invalid Auth");
 
   return row;
+};
+
+export const resolveAuthContext = async (params: {
+  apiKey?: string | null;
+  sessionToken?: string | null;
+  portalToken?: string | null;
+  appToken?: string | null;
+}): Promise<AuthContext> => {
+  const { apiKey, sessionToken, portalToken, appToken } = params;
+
+  // 1. Portal Degree (End-user/Customer)
+  if (portalToken) {
+    const session = await retrieveCustomerPortalSession(portalToken);
+
+    if (!session) throw new Error("Invalid portal token");
+
+    return { organizationId: session.organizationId, environment: session.environment, type: "portal" };
+  }
+
+  // 2. Session Degree (Merchant Dashboard)
+  if (sessionToken) {
+    const { orgId, environment } = verifyJwt<{ orgId: string; environment: Network }>(sessionToken);
+    const [row] = await db
+      .select({ id: organizations.id })
+      .from(organizations)
+      .where(eq(organizations.id, orgId))
+      .limit(1);
+
+    if (!row) throw new Error("Invalid Session");
+
+    return { organizationId: row.id, environment, type: "session" };
+  }
+
+  // 3. App Degree (Third-party Plugin/Embedded App)
+  if (appToken) {
+    const payload = verifyJwt<{ appId: string; orgId: string; instId: string; scopes: string[]; env: Network }>(
+      appToken
+    );
+
+    return {
+      organizationId: payload.orgId,
+      environment: payload.env,
+      appId: payload.appId,
+      installationId: payload.instId,
+      scopes: payload.scopes,
+      type: "app",
+    };
+  }
+
+  // 4. API Key Degree (Standard Developer Access)
+  const [row] = await db
+    .select({ organizationId: organizations.id, environment: apiKeys.environment, apiKeyId: apiKeys.id })
+    .from(apiKeys)
+    .innerJoin(organizations, eq(apiKeys.organizationId, organizations.id))
+    .where(apiKey ? eq(apiKeys.token, apiKey) : undefined)
+    .limit(1);
+
+  if (!row) throw new Error("Invalid API Key");
+
+  return { ...row, type: "apikey" };
 };

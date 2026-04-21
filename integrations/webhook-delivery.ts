@@ -71,6 +71,7 @@ export const deliverWebhook = async (
       updatedAt: new Date(),
       nextRetry: null,
       apiVersion: "2025-12-27.stellartools",
+      appInstallationId: null,
     },
     webhook.organizationId,
     webhook.environment

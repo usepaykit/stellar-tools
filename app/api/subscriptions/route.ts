@@ -5,7 +5,8 @@ import { Result, z as Schema } from "@stellartools/core";
 export const OPTIONS = createOptionsHandler();
 
 export const GET = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "read:subscriptions",
   schema: { query: Schema.object({ customerId: Schema.string() }) },
   handler: async ({ query: { customerId }, auth: { environment } }) => {
     return await listSubscriptions(customerId, environment).then(Result.ok);
