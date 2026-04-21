@@ -54,6 +54,7 @@ import {
   Repeat,
   Settings2,
   Sparkles,
+  Store,
   Users,
   Wallet,
 } from "lucide-react";
@@ -69,6 +70,7 @@ const navMain = [
   { title: "Subscriptions", url: "/subscriptions", icon: Repeat },
   { title: "Payout", url: "/payout", icon: Wallet },
   { title: "Usage", url: "/usage", icon: Activity },
+  { title: "Marketplace", url: "/marketplace", icon: Store },
   { title: "Settings", url: "/settings", icon: Settings2 },
   {
     title: "Developers",
