@@ -186,7 +186,7 @@ export default function CustomerDetailPage() {
   const invalidate = useInvalidateOrgQuery();
   const { data: orgContext } = useOrgContext();
   const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
-    retrievePayments(undefined, undefined, { customerId: customerId })
+    retrievePayments(undefined, undefined, { customerId: customerId }, { withRefunds: true, withWallets: true })
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
     retrieveCustomers({ id: customerId }, { withWallets: true }).then(([c]) => c)
@@ -199,14 +199,14 @@ export default function CustomerDetailPage() {
   const [paymentToRefund, setPaymentToRefund] = React.useState<null | ResolvedPayment>(null);
 
   const openRefundModal = React.useCallback(
-    (paymentId: string) => {
+    (paymentToRefund: ResolvedPayment | null) => {
       AppModal.open({
         title: "Create Refund",
         description: "Process a refund for a transaction by providing the payment details.",
         content: (
           <RefundModalContent
             payment={paymentToRefund}
-            initialPaymentId={paymentId}
+            initialPaymentId={paymentToRefund?.id}
             onClose={AppModal.close}
             onSuccess={() => {
               invalidate(["payments", customerId]);
@@ -427,9 +427,12 @@ export default function CustomerDetailPage() {
                     if (!row.refunded) {
                       actions.push({
                         label: "Refund Payment",
-                        onClick: (p) => {
-                          openRefundModal(p.id);
-                          setPaymentToRefund(payments?.find(({ id }) => p.id == id) ?? null);
+                        onClick: async (p) => {
+                          const paymentToRefund = payments?.find(({ id }) => p.id == id) ?? null;
+                          console.log({ paymentToRefund });
+                          setPaymentToRefund(paymentToRefund);
+                          if (!paymentToRefund) return;
+                          openRefundModal(paymentToRefund);
                         },
                       });
                     }
@@ -440,7 +443,7 @@ export default function CustomerDetailPage() {
               </section>
 
               <section className="space-y-3">
-                <h3 className="text-lg font-semibold">Timeline</h3>
+                <h3 className="text-lg font-semibold">Activities</h3>
 
                 <Timeline
                   limit={3}
@@ -614,16 +617,13 @@ function CheckoutModalContent({
   }, [productsData]);
 
   const mutation = useMutation({
-    mutationKey: ["checkout", customerId], 
+    mutationKey: ["checkout", customerId],
     mutationFn: async (data: z.infer<typeof checkoutSchema>) => {
       if (!orgContext) throw new Error("No organization context found");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
         headers: { "x-auth-token": orgContext.token! },
       });
-
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 1);
 
       const response = await api.post<Checkout>("/checkout?type=product", {
         customerId,
@@ -641,13 +641,13 @@ function CheckoutModalContent({
 
       return response.value as Checkout;
     },
-    onSuccess: async (data:any) => {
+    onSuccess: async (data: any) => {
       invalidate(["payments", customerId]);
       toast.success("Checkout created");
       const baseUrl =
         (typeof process.env.NEXT_PUBLIC_CHECKOUT_URL === "string" && process.env.NEXT_PUBLIC_CHECKOUT_URL.trim()) ||
         (typeof window !== "undefined" ? window.location.origin : "");
-        let checkoutID = data?.data?.id;
+      let checkoutID = data?.data?.id;
       const url = baseUrl ? `${baseUrl.replace(/\/$/, "")}/${checkoutID}` : checkoutID;
       setCreatedUrl(url);
     },
@@ -782,7 +782,7 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
       return response.value;
     },
     onSuccess: (data: any) => {
-      const generatedUrl = data?.data?.url 
+      const generatedUrl = data?.data?.url;
       if (generatedUrl) {
         setUrl(generatedUrl);
         toast.success("Portal link generated");
@@ -802,7 +802,6 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
 
   return (
     <div className="flex flex-col gap-6">
-
       {url ? (
         <div className="space-y-6 py-4">
           <p className="text-muted-foreground text-sm">Share this link with the customer.</p>
@@ -828,7 +827,7 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
         </p>
       )}
 
-            <div className="flex w-full justify-end gap-2 pb-4">
+      <div className="flex w-full justify-end gap-2 pb-4">
         {url ? (
           <Button onClick={handleClose}>Done</Button>
         ) : (

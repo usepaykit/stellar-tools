@@ -279,7 +279,7 @@ export default function PayoutDetailPage() {
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold">Timeline</h3>
+                <h3 className="text-lg font-semibold">Activities</h3>
                 <Timeline
                   isLoading={isLoadingPayoutEvents}
                   items={payoutEvents ?? []}
