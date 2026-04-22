@@ -50,6 +50,7 @@ export const postOrganizationAndSecret = async (
       .values({ ...params, id: organizationId, accountId, feeToken: TIER_FEE_TOKENS.FREE })
       .returning();
 
+    // todo: drop `defaultEnvironment` prop and parallelize request for testnet and mainnet.
     const account = await createAccount(defaultEnvironment);
 
     if (account.isErr()) throw new Error(account.error?.message);

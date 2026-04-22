@@ -8,7 +8,8 @@ export const OPTIONS = createOptionsHandler();
 const paramsSchema = Schema.object({ customerId: Schema.string() });
 
 export const GET = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "read:customers",
   schema: { params: paramsSchema },
   handler: async ({ params, auth }) => {
     const [customer] = await retrieveCustomers(
@@ -22,7 +23,8 @@ export const GET = apiHandler({
 });
 
 export const PUT = apiHandler({
-  auth: ["session", "apikey", "portal"],
+  auth: ["session", "apikey", "portal", "app"],
+  requiredAppScope: "write:customers",
   schema: {
     params: paramsSchema,
     body: updateCustomerSchema,
@@ -37,7 +39,8 @@ export const PUT = apiHandler({
 });
 
 export const DELETE = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "write:customers",
   schema: { params: paramsSchema },
   handler: async ({ params, auth }) => {
     await deleteCustomer(params.customerId, auth.organizationId, auth.environment);

@@ -51,8 +51,9 @@ export async function withEvent<T>(
         ? await retrieveInstalledApps({ status: "active", scopes: [requiredScope] }, orgId, env)
         : [];
 
-      const hasWork = subscribers.length > 0 || installedApps.length > 0;
-      const webhookLogId = hasWork ? generateResourceId("wh_evt", orgId, 52) : undefined;
+      const webhookLogId = subscribers.length > 0 ? generateResourceId("wh_evt", orgId, 52) : undefined;
+
+      console.log({ subscribers, webhookLogId });
 
       // 3. EMIT INTERNAL EVENTS (Dashboard Timeline)
       if (eventConfigs) {

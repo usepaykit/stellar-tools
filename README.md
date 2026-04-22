@@ -21,9 +21,10 @@ Stellar Tools is an open-source payment platform that lets developers accept and
 
 - Accept payments in Stellar-native assets
 - Manage subscriptions with metered billing via Soroban smart contracts
-- Hosted checkout pages with QR code support
+- Hosted checkout pages and customer portals
 - Webhook delivery for payment and subscription events
 - Dashboard for managing customers, products, and payouts
+- Marketplace for integrations
 
 ## Tech Stack
 
@@ -32,10 +33,6 @@ Stellar Tools is an open-source payment platform that lets developers accept and
 - [Tailwind CSS](https://tailwindcss.com) 4 - styling
 - [PostgreSQL](https://www.postgresql.org) + [Drizzle ORM](https://orm.drizzle.team) - database
 - [Stellar SDK](https://stellar.org) + [Soroban](https://soroban.stellar.org) - blockchain
-- [BetterAuth](https://better-auth.com) - authentication
-- [Inngest](https://inngest.com) - background jobs and workflows
-- [Resend](https://resend.com) - emails
-- [Mintlify](https://mintlify.com) - docs
 - [pnpm](https://pnpm.io) - package manager
 
 ## Packages
