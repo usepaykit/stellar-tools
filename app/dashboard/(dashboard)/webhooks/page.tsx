@@ -464,7 +464,7 @@ function WebhooksPageContent() {
   const toggleWebhookDisabledMutation = useMutation({
     mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => {
       const organization = await getCurrentOrganization();
-      const result = await api.put(`/webhooks/${id}`, { isDisabled }, { "x-auth-token": organization?.token! });
+      const result = await api.put(`/webhooks/${id}`, { isDisabled }, { "x-session-token": organization?.token! });
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
     },
@@ -479,7 +479,7 @@ function WebhooksPageContent() {
     mutationFn: async (id: string) => {
       const organization = await getCurrentOrganization();
       return await api.delete<Webhook>(`/webhooks/${id}`, {
-        "x-auth-token": organization?.token!,
+        "x-session-token": organization?.token!,
       });
     },
     onSuccess: () => {
@@ -676,7 +676,7 @@ function WebhooksModalContent({
       const result = await api.post(
         "/webhooks",
         { name, url, description, events, secret },
-        { "x-auth-token": orgContext?.token! }
+        { "x-session-token": orgContext?.token! }
       );
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
@@ -704,7 +704,7 @@ function WebhooksModalContent({
           description: data.description ?? null,
           events: data.events,
         },
-        { "x-auth-token": orgContext?.token! }
+        { "x-session-token": orgContext?.token! }
       );
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;

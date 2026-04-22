@@ -262,7 +262,7 @@ export default function ProductDetailPage() {
       if (!organization) throw new Error("Organization not found");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
+        headers: { "x-session-token": organization?.token! },
       });
       if (!product?.organizationId) throw new Error("Product not found");
       const response = await api.delete<null>(`/product/${id}`);

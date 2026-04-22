@@ -71,7 +71,7 @@ export function RefundModalContent({
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": orgContext?.token! },
+        headers: { "x-session-token": orgContext?.token! },
       });
 
       const result = await api.post<{ id: string }>("/refunds", {

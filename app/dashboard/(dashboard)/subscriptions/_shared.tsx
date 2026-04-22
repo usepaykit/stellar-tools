@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
-import { useOrgQuery } from "@/hooks/use-org-query";
+import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { STROOPS_PER_XLM } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
@@ -50,6 +50,8 @@ type SubscriptionFormData = z.infer<typeof subscriptionFormSchema>;
 // --- Modal Content ---
 
 export function SubscriptionModalContent({ onSuccess, editingSubscription, setSubmitRef, onFooterChange }: any) {
+  const { data: org } = useOrgContext();
+
   const isEditMode = !!editingSubscription;
   const form = RHF.useForm({
     resolver: zodResolver(subscriptionFormSchema),
@@ -78,11 +80,13 @@ export function SubscriptionModalContent({ onSuccess, editingSubscription, setSu
 
   const mutation = useMutation({
     mutationFn: async (data: SubscriptionFormData) => {
-      const org = await getCurrentOrganization();
+      if (!org) throw new Error("No organization context found");
+
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
-        headers: { "x-auth-token": org?.token! },
+        headers: { "x-session-token": org?.token! },
       });
+
       const metadata = data.metadata.reduce(
         (acc, m) => {
           if (m.key) acc[m.key] = m.value;
@@ -92,6 +96,7 @@ export function SubscriptionModalContent({ onSuccess, editingSubscription, setSu
       );
 
       const payload = { ...data, metadata: Object.keys(metadata).length ? metadata : null };
+
       const res = isEditMode
         ? await api.put(`/api/subscriptions/${editingSubscription.id}`, payload)
         : await api.post("/api/subscriptions", payload);

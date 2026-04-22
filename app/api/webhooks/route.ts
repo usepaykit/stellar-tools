@@ -9,7 +9,7 @@ export const POST = apiHandler({
   auth: ["session", "apikey", "app"],
   requiredAppScope: "write:webhooks",
   schema: { body: createWebhookSchema.extend({ secret: Schema.string().optional() }) },
-  handler: async ({ body, auth: { organizationId, environment }, authToken }) => {
+  handler: async ({ body, auth: { organizationId, environment }, sessionToken }) => {
     const webhookPayload = {
       name: body.name,
       url: body.url,
@@ -18,7 +18,7 @@ export const POST = apiHandler({
       description: body.description ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      secret: authToken && body.secret ? body.secret : generateResourceId("whsec", organizationId, 32, "sha256"),
+      secret: sessionToken && body.secret ? body.secret : generateResourceId("whsec", organizationId, 32, "sha256"),
     };
 
     return await postWebhook(organizationId, environment, webhookPayload).then(Result.ok);

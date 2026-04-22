@@ -618,7 +618,7 @@ function CheckoutModalContent({
       if (!orgContext) throw new Error("No organization context found");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": orgContext.token! },
+        headers: { "x-session-token": orgContext.token! },
       });
 
       const response = await api.post<Checkout>("/checkout?type=product", {
@@ -764,7 +764,7 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
       if (!orgContext) throw new Error("Organization context not found");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": orgContext?.token! },
+        headers: { "x-session-token": orgContext?.token! },
       });
 
       const response = await api.post<{ url: string; token: string; expiresAt: Date }>(

@@ -30,7 +30,7 @@ export function useAssetRates(assets: AssetSpec[]): AssetRatesResult {
 
         const api = new ApiClient({
           baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-          headers: { "x-auth-token": org.token },
+          headers: { "x-session-token": org.token },
         });
 
         const rates = await api.get<{ data: { assetUsd: number; fiatRates: Record<string, number> } }>(

@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { retrieveAssets } from "@/actions/asset";
-import { getCurrentOrganization } from "@/actions/organization";
 import { createProductImage } from "@/actions/product";
 import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
@@ -241,11 +240,11 @@ export function ProductsModalContent({
 
   const putProductMutation = useMutation({
     mutationFn: async ({ data, existingImageUrls }: { data: ProductFormData; existingImageUrls?: string[] }) => {
-      const organization = await getCurrentOrganization();
+      if (!orgContext) throw new Error("No organization context found");
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-auth-token": organization?.token! },
+        headers: { "x-session-token": orgContext.token! },
       });
 
       const hasNewImage = data.images?.length && data.images[0] instanceof File;

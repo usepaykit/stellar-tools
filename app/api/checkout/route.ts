@@ -23,9 +23,9 @@ export const POST = async (req: NextRequest) => {
     }
 
     const apiKey = req.headers.get("x-api-key");
-    const authToken = req.headers.get("x-auth-token");
+    const sessionToken = req.headers.get("x-session-token");
 
-    if (!apiKey && !authToken) {
+    if (!apiKey && !sessionToken) {
       return send({ error: "API key or Auth Token is required" }, 400);
     }
 
@@ -41,7 +41,7 @@ export const POST = async (req: NextRequest) => {
     return result.isOk() ? send({ data: result.value }) : send({ error: result.error.message }, 400);
 
     async function processCheckout(data: any, checkoutType: "product" | "direct") {
-      const auth = await resolveApiKeyOrAuthorizationToken(apiKey, authToken);
+      const auth = await resolveApiKeyOrAuthorizationToken(apiKey, sessionToken);
       const { customerId, customerEmail, customerPhone, metadata } = data;
       const customer = await upsertCustomer(
         { id: customerId, email: customerEmail, phone: customerPhone },
