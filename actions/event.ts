@@ -167,7 +167,8 @@ export const retrieveEvents = async <T extends readonly EventType[]>(
     .select()
     .from(events)
     .where(and(eq(events.organizationId, organizationId), eq(events.environment, environment), ...whereClause))
-    .orderBy(desc(events.createdAt));
+    .orderBy(desc(events.createdAt))
+    .then((events) => events.map((e) => ({ ...e, type: e.type as T[number] })));
 };
 
 export const deleteEvents = async (

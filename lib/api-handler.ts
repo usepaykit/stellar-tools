@@ -10,10 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
 export type AuthScope = "session" | "apikey" | "portal" | "app";
 
 const AUTH_SCOPE_LABELS: Record<AuthScope, string> = {
-  apikey: "Api key",
-  session: "Session token",
-  portal: "Portal token",
-  app: "App token",
+  apikey: "API Key",
+  session: "Session Token",
+  portal: "Portal Token",
+  app: "App Token",
 };
 
 function authRequiredMessage(scopes: Array<AuthScope>): string {
@@ -35,7 +35,7 @@ type HandlerConfig<TBody, TParams, TQuery> = {
     query: TQuery;
     auth: AuthContext;
     req: NextRequest;
-    authToken?: string | null;
+    sessionToken?: string | null;
   }) => Promise<Result<any, Error>>;
   headers?: Record<string, string>;
 };
@@ -57,10 +57,12 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
       if (allowedScopes) {
         const authParams = {
           apiKey: req.headers.get("x-api-key"),
-          sessionToken: req.headers.get("x-auth-token"),
+          sessionToken: req.headers.get("x-session-token"),
           portalToken: req.headers.get("x-portal-token"),
           appToken: req.headers.get("x-stellartools-app-token"),
         };
+
+        console.log("authParams", authParams);
 
         const hasAnyCreds = Object.values(authParams).some(Boolean);
         if (!hasAnyCreds) {
@@ -110,9 +112,9 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
       let result: Result<any, Error>;
 
       if (authResult) {
-        const authToken = req.headers.get("x-auth-token");
+        const sessionToken = req.headers.get("x-session-token");
 
-        result = await config.handler({ body, params, query, auth: authResult, req, authToken });
+        result = await config.handler({ body, params, query, auth: authResult, req, sessionToken });
 
         if (result.isErr()) {
           return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });

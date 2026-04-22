@@ -150,7 +150,7 @@ function BankPayoutFlow({ onClose, onSuccess, initialCurrencyCode, initialAmount
   const pollIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const sessionRef = React.useRef<AnchorSession | null>(null);
 
-  const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: { "x-auth-token": org!.token } });
+  const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: { "x-session-token": org!.token } });
 
   const assetAmount = React.useMemo(() => {
     const val = parseFloat(inputValue.amount);
@@ -360,7 +360,7 @@ function RequestPayoutModalContent({ onClose, onSuccess }: { onClose: () => void
   const bankCountry = form.watch("bankCountry");
   const bankAmountStr = form.watch("bankAmount");
 
-  const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: { "x-auth-token": org!.token } });
+  const api = new ApiClient({ baseUrl: process.env.NEXT_PUBLIC_API_URL!, headers: { "x-session-token": org!.token } });
 
   const { data: balances = [] } = useQuery({
     queryKey: ["balance", org?.id],

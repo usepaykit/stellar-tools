@@ -100,7 +100,7 @@ export default function SubscriptionDetailPage() {
     mutationFn: async ({ path, method = "POST" }: { path: string; method?: "POST" | "PUT" }) => {
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
-        headers: { "x-auth-token": orgContext?.token! },
+        headers: { "x-session-token": orgContext?.token! },
       });
       const res = await (method === "POST"
         ? api.post(`/api/subscriptions/${id}${path}`, {})
