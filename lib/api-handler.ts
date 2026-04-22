@@ -57,7 +57,7 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
       if (allowedScopes) {
         const authParams = {
           apiKey: req.headers.get("x-api-key"),
-          authToken: req.headers.get("x-auth-token"),
+          sessionToken: req.headers.get("x-auth-token"),
           portalToken: req.headers.get("x-portal-token"),
           appToken: req.headers.get("x-stellartools-app-token"),
         };
