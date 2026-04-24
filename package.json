@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "concurrently -n next,mint,inngest \"next dev\" \"cd app/landing/docs && pnpm dlx mintlify dev --port 3333\" \"pnpm dlx inngest-cli@latest dev\"",
     "build": "pnpm -C packages/stellartools run build:dev && pnpm -C packages/app-embed-bridge run build && next build --webpack",
+    "web:build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "scan": "npx fix-react2shell-next",

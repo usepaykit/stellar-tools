@@ -523,7 +523,7 @@ export const passwordReset = pgTable(
   })
 );
 
-export const eventTypeEnum = pgEnum("event_type", eventTypeEnum$1);
+export const eventTypeEnum = pgEnum("event_type", eventTypeEnum$1 as unknown as readonly [string, ...string[]]);
 export const events = pgTable("event", {
   id: text("id").primaryKey(),
   organizationId: text("organization_id")
