@@ -17,7 +17,7 @@ export const AuroraBackground = ({
 }: AuroraBackgroundProps) => {
   return (
     <main>
-      <div className={cn("transition-bg relative h-screen bg-zinc-50 text-slate-950 dark:bg-zinc-900")} {...props}>
+      <div className={cn("transition-bg relative h-fit bg-zinc-50 text-slate-950 dark:bg-zinc-900")} {...props}>
         <div
           className="absolute inset-0 overflow-hidden"
           style={
