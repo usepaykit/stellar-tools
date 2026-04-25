@@ -29,7 +29,7 @@
     "url": "https://github.com/usepaykit/stellartools.git"
   },
   "bugs": {
-    "url": "https://github.com/usepaykit/stellar-tools/issues"
+    "url": "https://github.com/usepaykit/stellartools/issues"
   },
   "dependencies": {
     "tsup": "^8.5.1",

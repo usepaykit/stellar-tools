@@ -28,7 +28,7 @@
     "url": "https://github.com/usepaykit/stellartools.git"
   },
   "bugs": {
-    "url": "https://github.com/usepaykit/stellar-tools/issues"
+    "url": "https://github.com/usepaykit/stellartools/issues"
   },
   "dependencies": {
     "@medusajs/framework": "^2.12.3",

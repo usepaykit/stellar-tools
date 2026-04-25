@@ -64,12 +64,11 @@ export default function DashboardPage() {
   const [selectedCode, setSelectedCode] = useCookieState("dashboard_currency", "USD");
   const [countryOpen, setCountryOpen] = React.useState(false);
   const [period, setPeriod] = useCookieState("dashboard_period", "30");
-  const { data: orgContext } = useOrgContext();
 
   const since = React.useMemo(() => new Date(Date.now() - Number(period) * 24 * 60 * 60 * 1000), [period]);
 
   const { data: stats, isLoading: isStatsLoading } = useOrgQuery(
-    ["overview-stats", orgContext?.id, orgContext?.environment, period],
+    ["overview-stats", period],
     () => retrieveOverviewStats({ since }),
     { staleTime: 60 * 1000 }
   );

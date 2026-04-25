@@ -4,8 +4,12 @@
   "description": "Stellar Tools App Embed Bridge",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "prepare": "tsup --dts false"
   },
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
@@ -25,9 +29,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "dependencies": {
+  "peerDependencies": {
+    "@stellartools/core": "*"
+  },
+  "devDependencies": {
+    "@stellartools/core": "file:../stellartools",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "@stellartools/core": "workspace:*"
+    "typescript": "^5.9.3"
   }
 }

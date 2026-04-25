@@ -31,7 +31,7 @@
     "url": "https://github.com/usepaykit/stellartools.git"
   },
   "bugs": {
-    "url": "https://github.com/usepaykit/stellar-tools/issues"
+    "url": "https://github.com/usepaykit/stellartools/issues"
   },
   "dependencies": {
     "better-result": "^2.5.1",
@@ -39,8 +39,5 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "zod": "^4.2.1"
-  },
-  "devDependencies": {
-    "@types/papaparse": "^5.5.2"
   }
 }

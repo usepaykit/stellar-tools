@@ -30,7 +30,7 @@
     "url": "https://github.com/usepaykit/stellartools.git"
   },
   "bugs": {
-    "url": "https://github.com/usepaykit/stellar-tools/issues"
+    "url": "https://github.com/usepaykit/stellartools/issues"
   },
   "dependencies": {
     "ai": "^5.0.116",

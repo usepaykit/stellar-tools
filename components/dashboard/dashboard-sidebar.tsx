@@ -5,6 +5,7 @@ import * as React from "react";
 import { getCurrentUser, signOut } from "@/actions/auth";
 import { retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { AppModal } from "@/components/app-modal";
+import { TestModeBanner } from "@/components/environment-mode";
 import ModeToggle from "@/components/mode-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -96,6 +97,7 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
     queryFn: async () => await retrieveOrganizations(),
   });
   const currentOrg = organizations?.find((org) => org.id === orgContext?.id) || null;
+  const isTestMode = orgContext?.environment === "testnet";
 
   const userName = user?.profile.firstName
     ? `${user.profile.firstName} ${user.profile.lastName || ""}`.trim()
@@ -133,226 +135,229 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
   }, [router]);
 
   return (
-    <SidebarProvider>
-      <Sidebar collapsible="icon">
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg" disabled={isSwitching} tooltip={currentOrg?.name ?? "Organization"}>
-                    <div className="text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-                      {currentOrg?.logoUrl ? (
-                        <Image
-                          src={currentOrg.logoUrl}
-                          alt=""
-                          width={32}
-                          height={32}
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <Building2 className="size-4" />
-                      )}
-                    </div>
-                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-semibold">{currentOrg?.name || "Loading..."}</span>
-                      <span className="text-muted-foreground truncate text-xs">Your organization</span>
-                    </div>
-                    <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
-                  align="start"
-                  side="bottom"
-                >
-                  <DropdownMenuLabel className="text-muted-foreground text-xs">Organizations</DropdownMenuLabel>
-                  {isLoadingOrgs ? (
-                    <DropdownMenuItem disabled>
-                      <div className="flex size-6 items-center justify-center">
-                        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
-                      </div>
-                      Loading ...
-                    </DropdownMenuItem>
-                  ) : (
-                    organizations?.map((org) => (
-                      <DropdownMenuItem
-                        key={org.id}
-                        onClick={() => handleSwitchOrganization(org.id)}
-                        className="gap-2"
-                        disabled={isSwitching}
-                      >
-                        <div className="flex size-6 items-center justify-center overflow-hidden rounded-sm border">
-                          {org.logoUrl ? (
-                            <Image src={org.logoUrl} alt="" width={24} height={24} />
-                          ) : (
-                            <Building2 className="size-4" />
-                          )}
-                        </div>
-                        <span className="flex-1 truncate">{org.name}</span>
-                        {currentOrg?.id === org.id && <DropdownMenuShortcut>✓</DropdownMenuShortcut>}
-                      </DropdownMenuItem>
-                    ))
-                  )}
-
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/select-organization?create=true" className="gap-2">
-                      <Plus className="size-4" /> <span>Create organization</span>
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-
-        <SidebarContent>
-          <SidebarGroup>
+    <div className="flex min-h-svh flex-col">
+      {isTestMode && <TestModeBanner />}
+      <SidebarProvider className="min-h-0 flex-1">
+        <Sidebar collapsible="icon">
+          <SidebarHeader className={cn(isTestMode && "pt-8 transition-all duration-300")}>
             <SidebarMenu>
-              {navMain.map((item) => {
-                const active = isActive(item.url);
-                const hasSubItems = item.items && item.items.length > 0;
-                const subActive = item.items?.some((sub) => isActive(sub.url));
-
-                if (hasSubItems) {
-                  return (
-                    <Collapsible key={item.title} asChild defaultOpen={subActive} className="group/collapsible">
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.title} isActive={active || subActive}>
-                            {item.icon && (
-                              <item.icon className={cn((active || subActive) && "text-muted-foreground")} />
-                            )}
-                            <span className={cn((active || subActive) && "text-muted-foreground font-medium")}>
-                              {item.title}
-                            </span>
-                            <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub>
-                            {item.items?.map((sub) => (
-                              <SidebarMenuSubItem key={sub.title}>
-                                <SidebarMenuSubButton asChild isActive={isActive(sub.url)}>
-                                  <Link href={sub.url}>
-                                    <span className={cn(isActive(sub.url) && "text-muted-foreground font-medium")}>
-                                      {sub.title}
-                                    </span>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  );
-                }
-
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild tooltip={item.title} isActive={active}>
-                      <Link href={item.url}>
-                        {item.icon && <item.icon className={cn(active && "text-muted-foreground")} />}
-                        <span className={cn(active && "text-muted-foreground font-medium")}>{item.title}</span>
-                      </Link>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton size="lg" disabled={isSwitching} tooltip={currentOrg?.name ?? "Organization"}>
+                      <div className="text-sidebar-primary-foreground flex aspect-square size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+                        {currentOrg?.logoUrl ? (
+                          <Image
+                            src={currentOrg.logoUrl}
+                            alt=""
+                            width={32}
+                            height={32}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <Building2 className="size-4" />
+                        )}
+                      </div>
+                      <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                        <span className="truncate font-semibold">{currentOrg?.name || "Loading..."}</span>
+                        <span className="text-muted-foreground truncate text-xs">Your organization</span>
+                      </div>
+                      <ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
-        </SidebarContent>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
+                    align="start"
+                    side="bottom"
+                  >
+                    <DropdownMenuLabel className="text-muted-foreground text-xs">Organizations</DropdownMenuLabel>
+                    {isLoadingOrgs ? (
+                      <DropdownMenuItem disabled>
+                        <div className="flex size-6 items-center justify-center">
+                          <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
+                        </div>
+                        Loading ...
+                      </DropdownMenuItem>
+                    ) : (
+                      organizations?.map((org) => (
+                        <DropdownMenuItem
+                          key={org.id}
+                          onClick={() => handleSwitchOrganization(org.id)}
+                          className="gap-2"
+                          disabled={isSwitching}
+                        >
+                          <div className="flex size-6 items-center justify-center overflow-hidden rounded-sm border">
+                            {org.logoUrl ? (
+                              <Image src={org.logoUrl} alt="" width={24} height={24} />
+                            ) : (
+                              <Building2 className="size-4" />
+                            )}
+                          </div>
+                          <span className="flex-1 truncate">{org.name}</span>
+                          {currentOrg?.id === org.id && <DropdownMenuShortcut>✓</DropdownMenuShortcut>}
+                        </DropdownMenuItem>
+                      ))
+                    )}
 
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <div className="px-1">
-                <ModeToggle />
-              </div>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg">
-                    <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src={user?.profile.avatarUrl || ""} />
-                      <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">{userName}</span>
-                      <span className="truncate text-xs">{user?.email}</span>
-                    </div>
-                    <ChevronsUpDown className="ml-auto size-4" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
-                  side="bottom"
-                  align="end"
-                >
-                  <DropdownMenuLabel className="p-0 font-normal">
-                    <div className="flex items-center gap-2 px-1 py-1.5 text-sm">
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/select-organization?create=true" className="gap-2">
+                        <Plus className="size-4" /> <span>Create organization</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
+
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarMenu>
+                {navMain.map((item) => {
+                  const active = isActive(item.url);
+                  const hasSubItems = item.items && item.items.length > 0;
+                  const subActive = item.items?.some((sub) => isActive(sub.url));
+
+                  if (hasSubItems) {
+                    return (
+                      <Collapsible key={item.title} asChild defaultOpen={subActive} className="group/collapsible">
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton tooltip={item.title} isActive={active || subActive}>
+                              {item.icon && (
+                                <item.icon className={cn((active || subActive) && "text-muted-foreground")} />
+                              )}
+                              <span className={cn((active || subActive) && "text-muted-foreground font-medium")}>
+                                {item.title}
+                              </span>
+                              <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              {item.items?.map((sub) => (
+                                <SidebarMenuSubItem key={sub.title}>
+                                  <SidebarMenuSubButton asChild isActive={isActive(sub.url)}>
+                                    <Link href={sub.url}>
+                                      <span className={cn(isActive(sub.url) && "text-muted-foreground font-medium")}>
+                                        {sub.title}
+                                      </span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
+                    );
+                  }
+
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild tooltip={item.title} isActive={active}>
+                        <Link href={item.url}>
+                          {item.icon && <item.icon className={cn(active && "text-muted-foreground")} />}
+                          <span className={cn(active && "text-muted-foreground font-medium")}>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroup>
+          </SidebarContent>
+
+          <SidebarFooter>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <div className="px-1">
+                  <ModeToggle />
+                </div>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton size="lg">
                       <Avatar className="h-8 w-8 rounded-lg">
                         <AvatarImage src={user?.profile.avatarUrl || ""} />
                         <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
                       </Avatar>
-                      <div className="grid flex-1 text-left leading-tight">
+                      <div className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-semibold">{userName}</span>
                         <span className="truncate text-xs">{user?.email}</span>
                       </div>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem className="gap-2">
-                      <Sparkles className="size-4" /> Upgrade to Pro
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem asChild className="gap-2">
-                      <Link href="/settings">
-                        <BadgeCheck className="size-4" /> Account
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2">
-                      <Bell className="size-4" /> Notifications
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive gap-2"
-                    onClick={() =>
-                      AppModal.open({
-                        title: "Log out",
-                        description:
-                          "Are you sure you want to log out? You'll need to sign in again to access your account.",
-                        content: (
-                          <div className="py-4">
-                            <p className="text-muted-foreground text-sm">
-                              This will end your current session and you&apos;ll be redirected to the sign in page.
-                            </p>
-                          </div>
-                        ),
-                        size: "small",
-                        showCloseButton: true,
-                        primaryButton: { children: "Log out", variant: "destructive", onClick: handleLogout },
-                        secondaryButton: { children: "Cancel" },
-                      })
-                    }
+                      <ChevronsUpDown className="ml-auto size-4" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    className="w-(--radix-dropdown-menu-trigger-width) min-w-56"
+                    side="bottom"
+                    align="end"
                   >
-                    <LogOut className="size-4" /> Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-        <SidebarRail />
-      </Sidebar>
-      {children}
-    </SidebarProvider>
+                    <DropdownMenuLabel className="p-0 font-normal">
+                      <div className="flex items-center gap-2 px-1 py-1.5 text-sm">
+                        <Avatar className="h-8 w-8 rounded-lg">
+                          <AvatarImage src={user?.profile.avatarUrl || ""} />
+                          <AvatarFallback className="rounded-lg">{userInitials}</AvatarFallback>
+                        </Avatar>
+                        <div className="grid flex-1 text-left leading-tight">
+                          <span className="truncate font-semibold">{userName}</span>
+                          <span className="truncate text-xs">{user?.email}</span>
+                        </div>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem className="gap-2">
+                        <Sparkles className="size-4" /> Upgrade to Pro
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem asChild className="gap-2">
+                        <Link href="/settings">
+                          <BadgeCheck className="size-4" /> Account
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="gap-2">
+                        <Bell className="size-4" /> Notifications
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive gap-2"
+                      onClick={() =>
+                        AppModal.open({
+                          title: "Log out",
+                          description:
+                            "Are you sure you want to log out? You'll need to sign in again to access your account.",
+                          content: (
+                            <div className="py-4">
+                              <p className="text-muted-foreground text-sm">
+                                This will end your current session and you&apos;ll be redirected to the sign in page.
+                              </p>
+                            </div>
+                          ),
+                          size: "small",
+                          showCloseButton: true,
+                          primaryButton: { children: "Log out", variant: "destructive", onClick: handleLogout },
+                          secondaryButton: { children: "Cancel" },
+                        })
+                      }
+                    >
+                      <LogOut className="size-4" /> Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarFooter>
+          <SidebarRail />
+        </Sidebar>
+        {children}
+      </SidebarProvider>
+    </div>
   );
 }

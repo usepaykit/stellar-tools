@@ -19,7 +19,6 @@ export const POST = apiHandler({
         phone: customer.phone ?? null,
         image: customer.image ?? null,
         metadata: customer.metadata ?? null,
-        wallets: [],
       })),
       organizationId,
       environment,

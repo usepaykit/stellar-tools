@@ -29,10 +29,7 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
     const newEnv: Network = checked ? "testnet" : "mainnet";
     try {
       await switchEnvironment(newEnv);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["org-context"] }),
-        queryClient.invalidateQueries({ queryKey: ["overview-stats"] }),
-      ]);
+      await queryClient.invalidateQueries();
       toast.success(`Switched to ${checked ? "Test" : "Live"} mode`);
       router.refresh();
     } catch {
@@ -58,7 +55,7 @@ export function EnvironmentToggle({ currentEnvironment }: EnvironmentToggleProps
 
 export function TestModeBanner() {
   return (
-    <div className="bg-primary border-border border-b px-6 py-1">
+    <div className="bg-primary border-border fixed top-0 right-0 left-0 z-50 border-b px-6 py-1">
       <div className="flex w-screen items-center justify-between">
         <div />
         <div className="flex items-center gap-2">

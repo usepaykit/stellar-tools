@@ -49,7 +49,7 @@ export const stellarTools = (options: BillingConfig) => {
   ) as Prettify<EndpointsFromRoutes<RouteFactories>>;
 
   return {
-    id: "stellar-tools",
+    id: "stellartools",
     endpoints,
     schema: pluginSchema,
     init: async () => ({

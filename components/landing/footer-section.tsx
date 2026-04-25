@@ -1,8 +1,5 @@
-import React from "react";
-
 import { StellarTools } from "@/components/icon";
 import { Heart } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
 const footerLinks = {
@@ -24,7 +21,7 @@ const footerLinks = {
   developers: [
     { name: "Documentation", href: "/docs" },
     { name: "API Reference", href: "/docs/api" },
-    { name: "GitHub", href: "https://github.com/usepaykit/stellar-tools" },
+    { name: "GitHub", href: "https://github.com/usepaykit/stellartools" },
     { name: "Changelog", href: "#" },
     { name: "Status", href: "#" },
   ],

@@ -14,7 +14,7 @@ This guide covers everything you need to run Stellar Tools locally.
 
 ```bash
 git clone https://github.com/usepaykit/stellar-tools.git
-cd stellar-tools
+cd stellartools
 ```
 
 **2. Install dependencies**
