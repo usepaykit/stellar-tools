@@ -1,4 +1,4 @@
-import { resolveApiKeyOrAuthorizationToken } from "@/actions/apikey";
+import { resolveAuthContext } from "@/actions/apikey";
 import { postCheckout } from "@/actions/checkout";
 import { upsertCustomer } from "@/actions/customers";
 import { retrieveProducts } from "@/actions/product";
@@ -41,7 +41,7 @@ export const POST = async (req: NextRequest) => {
     return result.isOk() ? send({ data: result.value }) : send({ error: result.error.message }, 400);
 
     async function processCheckout(data: any, checkoutType: "product" | "direct") {
-      const auth = await resolveApiKeyOrAuthorizationToken(apiKey, sessionToken);
+      const auth = await resolveAuthContext({ apiKey, sessionToken });
       const { customerId, customerEmail, customerPhone, metadata } = data;
       const customer = await upsertCustomer(
         { id: customerId, email: customerEmail, phone: customerPhone },

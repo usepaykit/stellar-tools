@@ -11,7 +11,8 @@ export const GET = apiHandler({
   requiredAppScope: "read:webhooks",
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
-    return await retrieveWebhooks(organizationId, environment, { id }).then(Result.ok);
+    const response = await retrieveWebhooks(organizationId, environment, { id });
+    return Result.ok(response);
   },
 });
 
@@ -20,7 +21,8 @@ export const PUT = apiHandler({
   requiredAppScope: "write:webhooks",
   schema: { params: paramsSchema, body: updateWebhookSchema },
   handler: async ({ params: { id }, body, auth: { organizationId, environment } }) => {
-    return await putWebhook(id, body, organizationId, environment).then(Result.ok);
+    const response = await putWebhook(id, body, organizationId, environment);
+    return Result.ok(response);
   },
 });
 
@@ -29,6 +31,7 @@ export const DELETE = apiHandler({
   requiredAppScope: "write:webhooks",
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
-    return await deleteWebhook(id, organizationId, environment).then(Result.ok);
+    const response = await deleteWebhook(id, organizationId, environment);
+    return Result.ok(response);
   },
 });

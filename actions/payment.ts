@@ -55,9 +55,12 @@ async function loadPaymentContext(
     account: async () => retrieveAccount({ organizationId }),
     customer: async () => {
       if (!payment.customerId) return undefined;
-      return retrieveCustomers({ id: payment.customerId }, undefined, organizationId, environment).then(
-        (res) => res[0]
-      );
+      return retrieveCustomers(
+        { id: payment.customerId },
+        { requireLookUpParams: true },
+        organizationId,
+        environment
+      ).then((res) => res[0]);
     },
     checkout: async () => {
       if (!payment.checkoutId) return undefined;

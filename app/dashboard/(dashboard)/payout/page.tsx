@@ -163,7 +163,7 @@ function BankPayoutFlow({ onClose, onSuccess, initialCurrencyCode, initialAmount
     setIsLoading(true);
     setError("");
     try {
-      const response = await api.post<AnchorSession>("/api/anchor/initiate", {
+      const response = await api.post<AnchorSession>(`${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/~api/anchor/initiate`, {
         assetCode: selectedAsset.code,
         amount: assetAmount.toString(),
       });
@@ -188,7 +188,7 @@ function BankPayoutFlow({ onClose, onSuccess, initialCurrencyCode, initialAmount
     const s = sessionRef.current;
     if (!s) return;
     try {
-      const response = await api.get<AnchorTransaction>("/api/anchor/poll", {
+      const response = await api.get<AnchorTransaction>(`${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/~api/anchor/poll`, {
         transferServer: s.transferServer,
         id: s.id,
         anchorJwt: s.anchorJwt,

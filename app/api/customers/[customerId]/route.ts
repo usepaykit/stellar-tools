@@ -14,7 +14,7 @@ export const GET = apiHandler({
   handler: async ({ params, auth }) => {
     const [customer] = await retrieveCustomers(
       { id: params.customerId },
-      { withWallets: true },
+      { withWallets: true, requireLookUpParams: true },
       auth.organizationId,
       auth.environment
     );

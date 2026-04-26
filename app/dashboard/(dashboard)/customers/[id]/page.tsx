@@ -189,7 +189,7 @@ export default function CustomerDetailPage() {
     retrievePayments(undefined, undefined, { customerId: customerId }, { withRefunds: true, withWallets: true })
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
-    retrieveCustomers({ id: customerId }, { withWallets: true }).then(([c]) => c)
+    retrieveCustomers({ id: customerId }, { withWallets: true, requireLookUpParams: true }).then(([c]) => c)
   );
   const { data: customerEvents, isLoading: isLoadingCustomerEvents } = useOrgQuery(
     ["customer-events", customerId],

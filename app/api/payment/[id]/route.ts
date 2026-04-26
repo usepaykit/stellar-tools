@@ -66,13 +66,15 @@ export const GET = apiHandler({
               address: wallets?.address,
               metadata: wallets?.metadata,
             },
-            refund: {
-              id: refunds?.id,
-              status: refunds?.status,
-              receiverAddress: refunds?.receiverWalletAddress,
-              reason: refunds?.reason,
-              amount: `${refunds?.amount} ${refunds?.assetCode}`,
-            },
+            refund: refunds
+              ? {
+                  id: refunds?.id,
+                  status: refunds?.status,
+                  receiverAddress: refunds?.receiverWalletAddress,
+                  reason: refunds?.reason,
+                  amount: `${refunds?.amount} ${refunds?.assetCode}`,
+                }
+              : null,
           },
         ],
       })

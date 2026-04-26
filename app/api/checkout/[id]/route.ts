@@ -6,7 +6,8 @@ export const OPTIONS = createOptionsHandler();
 
 const paramsSchema = Schema.object({ id: Schema.string() });
 export const GET = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "read:checkouts",
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     const checkout = await retrieveCheckout(id, organizationId, environment);
@@ -15,7 +16,8 @@ export const GET = apiHandler({
 });
 
 export const PUT = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "write:checkouts",
   schema: { params: paramsSchema, body: updateCheckoutSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment }, body }) => {
     const checkout = await putCheckout(id, body, organizationId, environment);
@@ -24,7 +26,8 @@ export const PUT = apiHandler({
 });
 
 export const DELETE = apiHandler({
-  auth: ["session", "apikey"],
+  auth: ["session", "apikey", "app"],
+  requiredAppScope: "write:checkouts",
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     await deleteCheckout(id, organizationId, environment);

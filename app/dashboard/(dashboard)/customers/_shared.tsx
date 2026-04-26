@@ -410,6 +410,44 @@ const transformRow = (row: Record<string, string>, mappings: ColumnMapping[]) =>
   );
 };
 
+function formatImportErrorMessage(rawMessage: string) {
+  const issues = rawMessage
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((issue) => {
+      const match = issue.match(/^(\d+)\.(\w+):\s*(.*)$/);
+      if (!match) return null;
+
+      const index = Number(match[1]); // zero-based row index in parsed payload
+      const field = match[2];
+      const detail = match[3];
+
+      const rowNumber = index + 1; // data row number (without header)
+      const csvLineNumber = index + 2; // csv line number (header is line 1)
+
+      const missingRequired = /expected string, received undefined/i.test(detail) || /required/i.test(detail);
+
+      return {
+        rowNumber,
+        csvLineNumber,
+        field,
+        message: missingRequired ? `missing required "${field}"` : detail,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x));
+
+  if (!issues.length) return rawMessage;
+
+  const preview = issues
+    .slice(0, 4)
+    .map((i) => `Row ${i.rowNumber} (${i.field}): ${i.message}`)
+    .join("\n");
+
+  const remaining = issues.length - 4;
+  return remaining > 0 ? `${preview}\n+${remaining} more issue(s)` : preview;
+}
+
 export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { data: orgContext } = useOrgContext();
   const [csvFile, setCsvFile] = React.useState<FileWithPreview | null>(null);
@@ -527,8 +565,7 @@ export function ImportCsvModalContent({ onClose, onSuccess }: { onClose: () => v
       onSuccess();
     },
     onError: (error) => {
-      console.log({ error });
-      toast.error(error.message);
+      toast.error(formatImportErrorMessage((error as any)?.message));
     },
   });
 

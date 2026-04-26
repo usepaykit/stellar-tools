@@ -167,7 +167,7 @@ export const putCustomer = async (
 ) => {
   const [{ organizationId, environment }, [oldCustomer]] = await Promise.all([
     resolveOrgContext(orgId, env),
-    retrieveCustomers({ id }, undefined, orgId, env),
+    retrieveCustomers({ id }, { requireLookUpParams: true }, orgId, env),
   ]);
 
   return withEvent(

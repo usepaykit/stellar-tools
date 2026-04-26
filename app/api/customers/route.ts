@@ -12,7 +12,7 @@ export const POST = apiHandler({
     const arrayBody = Array.isArray(body) ? body : [body];
     const source = req.headers.get("x-source") ?? "API";
 
-    return await postCustomers(
+    const response = await postCustomers(
       arrayBody.map((customer) => ({
         name: customer.name,
         email: customer.email,
@@ -23,7 +23,9 @@ export const POST = apiHandler({
       organizationId,
       environment,
       { source }
-    ).then(Result.ok);
+    );
+
+    return Result.ok(response);
   },
 });
 

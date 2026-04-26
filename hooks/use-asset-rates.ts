@@ -34,7 +34,7 @@ export function useAssetRates(assets: AssetSpec[]): AssetRatesResult {
         });
 
         const rates = await api.get<{ data: { assetUsd: number; fiatRates: Record<string, number> } }>(
-          `/rates?asset=${encodeURIComponent(asset.code)}&issuer=${encodeURIComponent(asset.issuer)}`
+          `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/~api/rates?asset=${encodeURIComponent(asset.code)}&issuer=${encodeURIComponent(asset.issuer)}`
         );
 
         if (!rates.isOk()) throw new Error(rates.error.message);

@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/toast";
-import { fileFromUrl, truncate } from "@/lib/utils";
+import { cn, fileFromUrl, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -296,7 +296,9 @@ export default function PortalPage({ params }: { params: Promise<{ token: string
   return (
     <div className="bg-background min-h-screen">
       {data.environment === "testnet" && <TestModeBanner />}
-      <header className="border-border border-b">
+      <header
+        className={cn("border-border border-b", data.environment === "testnet" && "pt-8 transition-all duration-300")}
+      >
         <div className="mx-auto flex max-w-2xl items-center px-4 py-4">
           <Link
             href={process.env.NEXT_PUBLIC_APP_URL!}

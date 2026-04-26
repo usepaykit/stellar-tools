@@ -8,7 +8,7 @@ export const OPTIONS = createOptionsHandler();
 
 export const POST = apiHandler({
   auth: ["session", "apikey", "app"],
-  requiredAppScope: "read:portal",
+  requiredAppScope: "write:portal",
   schema: { params: paramsSchema },
   handler: async ({ params: { customerId }, auth: { organizationId, environment } }) => {
     const { session, url } = await createCustomerPortalSession(customerId, organizationId, environment);

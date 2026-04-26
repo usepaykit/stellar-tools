@@ -28,6 +28,8 @@ export const POST = apiHandler({
       updatedAt: new Date(),
     };
 
-    return await postProduct(productData, organizationId, environment).then(Result.ok);
+    const response = await postProduct(productData, organizationId, environment);
+
+    return Result.ok(response);
   },
 });
