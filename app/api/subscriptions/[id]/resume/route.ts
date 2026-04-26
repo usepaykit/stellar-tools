@@ -33,11 +33,12 @@ export const POST = apiHandler({
       subscription.productId
     );
 
-    if (resumeResult.isErr())
+    if (resumeResult.isErr()) {
       return Result.err(new Error("Failed to resume subscription: " + resumeResult.error.message));
+    }
 
-    return await putSubscription(id, { status: "active", pausedAt: null }, organizationId, environment).then((_) =>
-      Result.ok({ success: true })
-    );
+    const result = await putSubscription(id, { status: "active", pausedAt: null }, organizationId, environment);
+
+    return Result.ok(result);
   },
 });

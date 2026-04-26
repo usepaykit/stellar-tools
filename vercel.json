@@ -1,0 +1,5 @@
+{
+  "buildCommand": "pnpm -C packages/stellartools run build:dev && pnpm -C packages/app-embed-bridge run build && next build --webpack",
+  "installCommand": "pnpm install",
+  "framework": "nextjs"
+}

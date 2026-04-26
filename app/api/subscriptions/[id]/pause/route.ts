@@ -28,8 +28,8 @@ export const POST = apiHandler({
 
     if (pauseResult.isErr()) return Result.err(pauseResult.error);
 
-    return await putSubscription(id, { status: "paused", pausedAt: new Date() }, organizationId, environment).then(
-      (_) => Result.ok({ success: true })
-    );
+    const result = await putSubscription(id, { status: "paused", pausedAt: new Date() }, organizationId, environment);
+
+    return Result.ok(result);
   },
 });

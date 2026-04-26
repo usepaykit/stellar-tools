@@ -9,6 +9,7 @@ export const GET = apiHandler({
   requiredAppScope: "read:subscriptions",
   schema: { query: Schema.object({ customerId: Schema.string() }) },
   handler: async ({ query: { customerId }, auth: { environment } }) => {
-    return await listSubscriptions(customerId, environment).then(Result.ok);
+    const result = await listSubscriptions(customerId, environment).then(Result.ok);
+    return Result.ok(result);
   },
 });

@@ -2,6 +2,7 @@
   "name": "stellartools",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "concurrently -n next,mint,inngest \"next dev\" \"cd app/landing/docs && pnpm dlx mintlify dev --port 3333\" \"pnpm dlx inngest-cli@latest dev\"",
     "build": "pnpm -C packages/stellartools run build:dev && pnpm -C packages/app-embed-bridge run build && next build --webpack",
@@ -46,8 +47,8 @@
     "@react-email/render": "^2.0.4",
     "@react-pdf/renderer": "^4.3.2",
     "@stellar/stellar-sdk": "14.1.1",
-    "@stellartools/core": "file:./packages/stellartools",
-    "@stellartools/app-embed-bridge": "file:./packages/app-embed-bridge",
+    "@stellartools/core": "workspace:*",
+    "@stellartools/app-embed-bridge": "workspace:*",
     "@tabler/icons-react": "^3.36.0",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-table": "^8.21.3",

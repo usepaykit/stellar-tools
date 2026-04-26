@@ -5,16 +5,16 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup --dts false"
+    "prepare": "tsup --no-dts"
   },
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "keywords": [
@@ -33,7 +33,7 @@
     "@stellartools/core": "*"
   },
   "devDependencies": {
-    "@stellartools/core": "file:../stellartools",
+    "@stellartools/core": "workspace:*",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3"
   }
