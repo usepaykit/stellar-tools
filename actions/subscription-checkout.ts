@@ -155,7 +155,7 @@ export async function finalizeSubscriptionCheckout(
       {
         customerId: checkout.customerId,
         checkoutId,
-        amount: checkout.finalAmount,
+        amount: BigInt(Math.round(checkout.finalAmount * 1e7)), // convert to stroops
         transactionHash: hash,
         status: "confirmed",
         metadata: null,

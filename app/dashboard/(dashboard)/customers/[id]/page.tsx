@@ -137,7 +137,7 @@ const paymentColumns: ColumnDef<ResolvedPayment>[] = [
     header: "Amount",
     cell: ({ row }) => (
       <span className="font-medium">
-        {formatCurrency(row.original.amount, row.original.metadata?.assetCode as string)}
+        {formatCurrency(Number(BigInt(row.original.amount) / BigInt(1e7)), row.original.metadata?.assetCode as string)}
       </span>
     ),
     meta: { filterable: true, filterVariant: "number" },
@@ -320,7 +320,11 @@ export default function CustomerDetailPage() {
   const [columnFilters, setColumnFilters] = useSyncTableFilters();
 
   const totalSpentLocal = React.useMemo(
-    () => confirmedPayments.reduce((sum, p) => sum + toLocal(p.amount ?? 0, p.metadata?.assetCode as string), 0),
+    () =>
+      confirmedPayments.reduce(
+        (sum, p) => sum + toLocal(Number(BigInt(p.amount) / BigInt(1e7)), p.metadata?.assetCode as string),
+        0
+      ),
     [confirmedPayments, toLocal]
   );
 

@@ -92,7 +92,6 @@ export const organizations = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
-    feeToken: text("fee_token"),
     supportEmail: text("support_email"),
   },
   (table) => ({

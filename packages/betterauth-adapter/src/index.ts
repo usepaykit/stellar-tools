@@ -28,7 +28,7 @@ async function syncUserWithStellar(user: User, ctx: GenericEndpointContext<Bette
     customerData = customer;
   }
 
-  await Promise.all([
+  await Promise.allSettled([
     ctx.context.internalAdapter.updateUser(user.id, { stellarCustomerId: customerId }),
     options.onCustomerCreated?.(customerData!),
   ]).catch((err) => {

@@ -3,11 +3,12 @@
 import { resolveAccountContext } from "@/actions/account";
 import { runAtomic } from "@/actions/event";
 import {
+  AssetMetadata,
   Network,
   Organization,
   OrganizationSecret,
-  SecretAccessLog,
   assets,
+  charges,
   customers,
   db,
   organizationSecrets,
@@ -15,21 +16,20 @@ import {
   payments,
   products,
   refunds,
-  secretAccessLog,
   subscriptions,
 } from "@/db";
 import { getCookie, setCookies } from "@/integrations/cookie-manager";
-import { encrypt, reencrypt } from "@/integrations/encryption";
+import { encrypt } from "@/integrations/encryption";
 import { uploadFiles } from "@/integrations/file-upload";
 import { signJwt, verifyJwt } from "@/integrations/jwt";
-import { PriceFeedApi } from "@/integrations/price-feed";
+import { getAssetUsdPrice } from "@/integrations/price-feed";
 import { createAccount } from "@/integrations/stellar-core";
-import { TIER_FEE_TOKENS } from "@/lib/pricing.server";
 import { generateResourceId, normalizeTimeSeries } from "@/lib/utils";
-import { and, eq, gte, lt, or, sql } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
+import moment from "moment";
 
 export const postOrganizationAndSecret = async (
-  params: Omit<Organization, "id" | "accountId" | "feeToken">,
+  params: Omit<Organization, "id" | "accountId">,
   defaultEnvironment: Network,
   options?: { formDataWithFiles?: FormData }
 ) => {
@@ -47,7 +47,7 @@ export const postOrganizationAndSecret = async (
   return await runAtomic(async () => {
     const [organization] = await db
       .insert(organizations)
-      .values({ ...params, id: organizationId, accountId, feeToken: TIER_FEE_TOKENS.FREE })
+      .values({ ...params, id: organizationId, accountId })
       .returning();
 
     // todo: drop `defaultEnvironment` prop and parallelize request for testnet and mainnet.
@@ -277,131 +277,25 @@ export const deleteOrganizationSecret = async (id: string) => {
   return null;
 };
 
-// -- Rotate Organization Secret --
-
-export const rotateAllSecrets = async (newVersion: number, performedBy: string) => {
-  const stats = { total: 0, succeeded: 0, failed: 0 };
-
-  // 1. Generator: Fetch only records that are behind the current version
-  // We don't need 'offset' because as we update records, they no longer match the 'lt' filter
-  async function* getStaleSecrets(batchSize = 50) {
-    while (true) {
-      const records = await db
-        .select()
-        .from(organizationSecrets)
-        .where(
-          or(
-            lt(organizationSecrets.testnetSecretVersion, newVersion),
-            lt(organizationSecrets.mainnetSecretVersion, newVersion)
-          )
-        )
-        .limit(batchSize);
-
-      if (records.length === 0) break;
-      yield records;
-    }
-  }
-
-  // 2. Process the stream
-  for await (const batch of getStaleSecrets()) {
-    await Promise.all(
-      batch.map(async (secret) => {
-        try {
-          // Re-encrypt testnet (Mandatory field in your schema)
-          const testnetReencrypted = secret.testnetSecretEncrypted ? reencrypt(secret.testnetSecretEncrypted) : null;
-
-          // Re-encrypt mainnet (Optional field in your schema)
-          const hasMainnet = secret.mainnetSecretEncrypted && secret.mainnetSecretVersion;
-          const mainnetReencrypted = hasMainnet ? reencrypt(secret.mainnetSecretEncrypted!) : null;
-
-          await db.transaction(async (tx) => {
-            await tx
-              .update(organizationSecrets)
-              .set({
-                testnetSecretEncrypted: testnetReencrypted,
-                testnetSecretVersion: newVersion,
-                ...(mainnetReencrypted && {
-                  mainnetSecretEncrypted: mainnetReencrypted,
-                  mainnetSecretVersion: newVersion,
-                }),
-                updatedAt: new Date(),
-              })
-              .where(eq(organizationSecrets.id, secret.id));
-
-            const logs: SecretAccessLog[] = [
-              {
-                id: generateResourceId("log", secret.organizationId, 25),
-                organizationId: secret.organizationId,
-                secretId: secret.id,
-                action: "rotate" as const,
-                environment: "testnet" as const,
-                metadata: {
-                  performedBy,
-                  oldVersion: secret.testnetSecretVersion,
-                  newVersion,
-                },
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              },
-            ];
-
-            if (mainnetReencrypted) {
-              logs.push({
-                id: generateResourceId("log", secret.organizationId, 25),
-                organizationId: secret.organizationId,
-                secretId: secret.id,
-                action: "rotate" as const,
-                environment: "mainnet" as const,
-                metadata: {
-                  performedBy,
-                  oldVersion: secret.mainnetSecretVersion,
-                  newVersion,
-                },
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              });
-            }
-
-            await tx.insert(secretAccessLog).values(logs);
-          });
-
-          stats.succeeded++;
-        } catch (error) {
-          console.error(`✗ Failed to rotate ${secret.organizationId}:`, error);
-          stats.failed++;
-        } finally {
-          stats.total++;
-        }
-      })
-    );
-
-    console.log(`Processed ${stats.total} organizations...`);
-  }
-
-  return stats;
-};
-
 // -- Dashboard Internals --
 
 export const retrieveOverviewStats = async (options: { orgId?: string; env?: Network; since?: Date } = {}) => {
   const { organizationId, environment } = await resolveOrgContext(options.orgId, options.env);
+  const since = options.since ?? moment().subtract(28, "days").toDate();
 
-  const DEFAULT_PERIOD_MS = 28 * 24 * 60 * 60 * 1000;
-
-  const since = options.since ?? new Date(Date.now() - DEFAULT_PERIOD_MS);
-
-  const metricsPromise = db
+  // 1. Basic Counts
+  const metricsQuery = db
     .select({
       activeSubscriptions: sql<number>`count(*) FILTER (WHERE ${subscriptions.status} = 'active')`,
       activeTrials: sql<number>`count(*) FILTER (WHERE ${subscriptions.status} = 'trialing')`,
       totalCustomers: sql<number>`(SELECT count(*) FROM ${customers} WHERE ${customers.organizationId} = ${organizationId} AND ${customers.environment} = ${environment})`,
     })
     .from(subscriptions)
-    .innerJoin(products, eq(subscriptions.productId, products.id))
     .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptions.environment, environment)))
     .then((r) => r[0]);
 
-  const mrrByAssetQuery = db
+  // 2. MRR (Based on active product prices)
+  const mrrQuery = db
     .select({
       assetMetadata: assets.metadata,
       totalAmount: sql<number>`coalesce(sum(${products.priceAmount}), 0)::bigint`,
@@ -418,10 +312,10 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     )
     .groupBy(assets.id);
 
-  const excludeRefundedPayments = sql`${payments.id} NOT IN (SELECT ${refunds.paymentId} FROM ${refunds} WHERE ${refunds.organizationId} = ${organizationId} AND ${refunds.environment} = ${environment} AND ${refunds.status} = 'succeeded')`;
+  // 3. Gross Revenue (Confirmed payments minus successful refunds)
+  const excludeRefunded = sql`${payments.id} NOT IN (SELECT ${refunds.paymentId} FROM ${refunds} WHERE ${refunds.status} = 'succeeded')`;
 
-  // Revenue chart: by day and asset so we can convert to USD cents (same as total revenue)
-  const revenueChartByAssetQuery = db
+  const revenueQuery = db
     .select({
       date: sql<string>`date_trunc('day', ${payments.createdAt})::text`,
       assetMetadata: assets.metadata,
@@ -435,31 +329,30 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
         eq(payments.environment, environment),
         eq(payments.status, "confirmed"),
         gte(payments.createdAt, since),
-        excludeRefundedPayments
+        excludeRefunded
       )
     )
-    .groupBy(sql`date_trunc('day', ${payments.createdAt})`, assets.id)
-    .orderBy(sql`1`);
+    .groupBy(sql`date_trunc('day', ${payments.createdAt})`, assets.id);
 
-  // Revenue grouped by asset — direct join now that payments.assetId exists
-  const revenueByAssetQuery = db
+  // 4. Platform Fees (Used to calculate Net Revenue)
+  // query by day to align with the revenue chart
+  const feesChartQuery = db
     .select({
-      assetMetadata: assets.metadata,
-      totalAmount: sql<number>`sum(${payments.amount})::bigint`,
+      date: sql<string>`date_trunc('day', ${charges.createdAt})::text`,
+      amountUsd: sql<number>`sum(${charges.amountUsd})::int`,
     })
-    .from(payments)
-    .leftJoin(assets, eq(payments.assetId, assets.id))
+    .from(charges)
     .where(
       and(
-        eq(payments.organizationId, organizationId),
-        eq(payments.environment, environment),
-        eq(payments.status, "confirmed"),
-        gte(payments.createdAt, since),
-        excludeRefundedPayments
+        eq(charges.organizationId, organizationId),
+        eq(charges.environment, environment),
+        eq(charges.status, "succeeded"),
+        gte(charges.createdAt, since)
       )
     )
-    .groupBy(assets.id);
+    .groupBy(sql`date_trunc('day', ${charges.createdAt})`);
 
+  // 5. Chart Data (Customers, Trials, Subscriptions)
   const customersChartQuery = db
     .select({
       date: sql<string>`date_trunc('day', ${customers.createdAt})::text`,
@@ -471,23 +364,6 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
         eq(customers.organizationId, organizationId),
         eq(customers.environment, environment),
         gte(customers.createdAt, since)
-      )
-    )
-    .groupBy(sql`1`)
-    .orderBy(sql`1`);
-
-  const subscriptionsChartQuery = db
-    .select({
-      date: sql<string>`date_trunc('day', ${subscriptions.createdAt})::text`,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.organizationId, organizationId),
-        eq(subscriptions.environment, environment),
-        eq(subscriptions.status, "active"),
-        gte(subscriptions.createdAt, since)
       )
     )
     .groupBy(sql`1`)
@@ -510,77 +386,89 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
     .groupBy(sql`1`)
     .orderBy(sql`1`);
 
-  const [
-    metrics,
-    revenueChartByAsset,
-    customersChart,
-    subscriptionsChart,
-    trialsChart,
-    revenueByAsset,
-    mrrByAsset,
-    periodFeesUsdCents,
-  ] = await Promise.all([
-    metricsPromise,
-    revenueChartByAssetQuery,
-    customersChartQuery,
-    subscriptionsChartQuery,
-    trialsChartQuery,
-    revenueByAssetQuery,
-    mrrByAssetQuery,
-    db
-      .select({ sum: sql<number>`coalesce(sum(${payments.platformFeeUsd}), 0)::bigint` })
-      .from(payments)
-      .where(
-        and(
-          eq(payments.organizationId, organizationId),
-          eq(payments.environment, environment),
-          eq(payments.status, "confirmed"),
-          gte(payments.createdAt, since)
-        )
+  const subscriptionsChartQuery = db
+    .select({
+      date: sql<string>`date_trunc('day', ${subscriptions.createdAt})::text`,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.organizationId, organizationId),
+        eq(subscriptions.environment, environment),
+        eq(subscriptions.status, "active"),
+        gte(subscriptions.createdAt, since)
       )
-      .then((r) => Number(r[0]?.sum ?? 0)),
-  ]);
+    )
+    .groupBy(sql`1`)
+    .orderBy(sql`1`);
 
-  const feed = new PriceFeedApi();
+  const [metrics, mrrData, revenueData, feesChartData, customersChart, trialsChart, subscriptionsChart] =
+    await Promise.all([
+      metricsQuery,
+      mrrQuery,
+      revenueQuery,
+      feesChartQuery,
+      customersChartQuery,
+      trialsChartQuery,
+      subscriptionsChartQuery,
+    ]);
 
-  const toUsdCents = async (amount: number, metadata: typeof assets.$inferSelect.metadata) => {
-    const usdPrice = await feed.getAssetUsdPrice(metadata ?? {});
-    return amount * usdPrice * 100;
+  const convertToUsdCents = async (rows: { totalAmount?: number; amount?: number; assetMetadata: AssetMetadata }[]) => {
+    let total = 0;
+    for (const row of rows) {
+      const amount = row.totalAmount ?? row.amount ?? 0;
+      const price = await getAssetUsdPrice(row.assetMetadata ?? {});
+      total += (Number(amount) / 1e7) * price * 100;
+    }
+    return Math.round(total);
   };
 
-  const sumUsdCents = (rows: { totalAmount: number; assetMetadata: typeof assets.$inferSelect.metadata }[]) =>
-    Promise.all(rows.map((r) => toUsdCents(Number(r.totalAmount), r.assetMetadata))).then((vals) =>
-      vals.reduce((a, b) => a + b, 0)
-    );
-
-  const [revenueUsdCents, mrrUsdCents, revenueChartUsdCentsByDate] = await Promise.all([
-    sumUsdCents(revenueByAsset),
-    sumUsdCents(mrrByAsset),
-    (async () => {
-      const withCents = await Promise.all(
-        revenueChartByAsset.map(async (r) => ({
-          date: r.date.split(" ")[0],
-          cents: await toUsdCents(Number(r.amount), r.assetMetadata),
-        }))
-      );
-      const byDate = new Map<string, number>();
-      for (const { date, cents } of withCents) {
-        byDate.set(date, Math.round((byDate.get(date) ?? 0) + cents));
-      }
-      return Array.from(byDate.entries(), ([date, value]) => ({ date, value }));
-    })(),
+  const [mrrCents, grossRevenueCents] = await Promise.all([
+    convertToUsdCents(mrrData as any),
+    convertToUsdCents(revenueData as any),
   ]);
+
+  const totalFeesCents = feesChartData.reduce((acc, curr) => acc + (curr.amountUsd ?? 0), 0);
+
+  const revenueChartPoints = await (async () => {
+    const netByDate = new Map<string, number>();
+
+    // Add Gross Revenue
+    for (const r of revenueData) {
+      const date = r.date.split(" ")[0];
+      const price = await getAssetUsdPrice(r.assetMetadata ?? {});
+      const cents = (Number(r.amount) / 1e7) * price * 100;
+      netByDate.set(date, (netByDate.get(date) ?? 0) + cents);
+    }
+
+    // Subtract Platform Fees
+    for (const f of feesChartData) {
+      const date = f.date.split(" ")[0];
+      const feeCents = f.amountUsd ?? 0;
+      netByDate.set(date, (netByDate.get(date) ?? 0) - feeCents);
+    }
+
+    return Array.from(netByDate.entries()).map(([date, value]) => ({
+      date,
+      value: Math.round(value),
+    }));
+  })();
 
   return {
     activeTrials: Number(metrics.activeTrials),
     activeSubscriptions: Number(metrics.activeSubscriptions),
-    mrr: Math.round(mrrUsdCents),
-    revenue: Math.round(revenueUsdCents),
-    platformFeesUsd: Number(periodFeesUsdCents) / 100,
+    mrr: mrrCents,
+    revenue: grossRevenueCents - totalFeesCents, // NET REVENUE
     totalCustomers: Number(metrics.totalCustomers),
     newCustomers: customersChart.reduce((acc, curr) => acc + curr.count, 0),
     charts: {
-      revenue: normalizeTimeSeries(revenueChartUsdCentsByDate, 28, "day"),
+      revenue: normalizeTimeSeries(revenueChartPoints, 28, "day"),
+      customers: normalizeTimeSeries(
+        customersChart.map((c) => ({ date: c.date.split(" ")[0], count: c.count })),
+        28,
+        "day"
+      ),
       subscriptions: normalizeTimeSeries(
         subscriptionsChart.map((s) => ({ date: s.date.split(" ")[0], count: s.count })),
         28,
@@ -588,11 +476,6 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
       ),
       trials: normalizeTimeSeries(
         trialsChart.map((t) => ({ date: t.date.split(" ")[0], count: t.count })),
-        28,
-        "day"
-      ),
-      customers: normalizeTimeSeries(
-        customersChart.map((c) => ({ date: c.date.split(" ")[0], count: c.count })),
         28,
         "day"
       ),

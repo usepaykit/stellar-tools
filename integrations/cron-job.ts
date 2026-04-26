@@ -117,7 +117,7 @@ export class CronJobApi {
                     {
                       checkoutId: null,
                       customerId: sub.customer.id,
-                      amount: parseInt(paymentEvent.data.amount),
+                      amount: BigInt(Math.round(paymentEvent.data.amount * 1e7)), // convert to stroops
                       transactionHash: chargeResult.value.hash,
                       status: "failed",
                       metadata: null,
@@ -145,7 +145,7 @@ export class CronJobApi {
                   {
                     checkoutId: null,
                     customerId: sub.customer.id,
-                    amount: parseInt(paymentEvent.data.amount),
+                    amount: BigInt(Math.round(paymentEvent.data.amount * 1e7)), // convert to stroops
                     transactionHash: chargeResult.value.hash,
                     status: "confirmed",
                     metadata: null,

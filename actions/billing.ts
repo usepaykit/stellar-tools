@@ -2,24 +2,15 @@
 
 import { Network, charges, db, payments } from "@/db";
 import { decrypt } from "@/integrations/encryption";
-import { PriceFeedApi } from "@/integrations/price-feed";
+import { getAssetUsdPrice } from "@/integrations/price-feed";
 import { sendAssetPayment } from "@/integrations/stellar-core";
+import { BPS_DENOMINATOR, FREE_THRESHOLD_USD, TIER_RATE_BPS } from "@/lib/pricing";
 import { generateResourceId } from "@/lib/utils";
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 import moment from "moment";
 
 import { retrieveOrganizationIdAndSecret } from "./organization";
 import { retrievePayments } from "./payment";
-
-const FREE_THRESHOLD_USD = 10_000;
-const BPS_DENOMINATOR = 10_000; // 1 bps = 1/10_000 (100 bps = 1%)
-
-const TIER_RATE_BPS = {
-  FREE: 0,
-  STANDARD: 70, // 0.7%
-  GROWTH: 50, // 0.5%
-  SCALE: 40, // 0.4%
-} as const;
 
 const getVolumeTierRateBps = async (monthlyVolumeUsd: number): Promise<number> => {
   if (monthlyVolumeUsd <= 10_000) return TIER_RATE_BPS.FREE;
@@ -47,6 +38,8 @@ async function getMonthlyVolumeCents(orgId: string): Promise<number> {
 }
 
 export async function processPaymentBilling(paymentId: string, organizationId: string, environment: Network) {
+  console.log("Processing payment billing for payment", paymentId);
+  
   const [payment, secret] = await Promise.all([
     retrievePayments(undefined, undefined, { paymentId }, { withAsset: true }).then((res) => res[0]),
     retrieveOrganizationIdAndSecret(organizationId, environment).then((res) => res.secret),
@@ -59,8 +52,7 @@ export async function processPaymentBilling(paymentId: string, organizationId: s
   }
 
   // 1. Convert Payment to USD Cents
-  const feed = new PriceFeedApi();
-  const assetPrice = await feed.getAssetUsdPrice(payment.asset.metadata ?? {});
+  const assetPrice = await getAssetUsdPrice(payment.asset.metadata ?? {});
   const paymentValueCents = Math.round((Number(payment.amount) / 1e7) * assetPrice * 100);
 
   // 2. Reconcile Tiers

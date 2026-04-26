@@ -61,7 +61,7 @@ export const POST = apiHandler({
         status: res.isOk() ? "succeeded" : "failed",
         receiverWalletAddress: payment.wallets!.address,
         customerId: payment.customerId,
-        amount: payment.amount,
+        amount: Number(BigInt(payment.amount) / BigInt(1e7)), // convert to stroops
         assetCode: payment.asset!.code,
       },
       organizationId,

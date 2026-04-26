@@ -135,7 +135,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
               {
                 checkoutId,
                 customerId: checkout?.customerId,
-                amount: Number(checkout?.finalAmount),
+                amount: BigInt(Math.round(checkout?.finalAmount * 1e7)), // convert to stroops
                 transactionHash: txResult.txHash,
                 status: "failed",
                 metadata: null,
@@ -196,7 +196,7 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
               {
                 checkoutId,
                 customerId: checkout?.customerId,
-                amount: Number(checkout?.finalAmount),
+                amount: BigInt(Math.round(checkout?.finalAmount * 1e7)), // convert to stroops
                 transactionHash: txResult.txHash,
                 status: "failed",
                 metadata: null,

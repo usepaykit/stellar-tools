@@ -29,6 +29,13 @@
       "when": 1777229706222,
       "tag": "0003_absurd_moira_mactaggert",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777230920309,
+      "tag": "0004_old_kate_bishop",
+      "breakpoints": true
     }
   ]
 }

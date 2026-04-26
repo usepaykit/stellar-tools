@@ -5,7 +5,7 @@ import * as React from "react";
 import { CheckList } from "@/components/checklist";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { FREE_THRESHOLD_USD, calculateMonthlyFee, effectivePct, getVolumeTierRateBps } from "@/lib/pricing";
+import { BPS_DENOMINATOR, FREE_THRESHOLD_USD, getVolumeTierRateBps } from "@/lib/pricing";
 import NumberFlow from "@number-flow/react";
 import Link from "next/link";
 
@@ -39,10 +39,15 @@ export function PricingCalc() {
   const isEnterprise = milestone.value === Infinity;
 
   const volume = isEnterprise ? 0 : milestone.value;
-  const rateBps = getVolumeTierRateBps(volume);
-  const fee = calculateMonthlyFee(volume, rateBps);
-  const pct = effectivePct(volume, fee);
   const isFree = volume <= FREE_THRESHOLD_USD;
+
+  // CRACKED LOGIC: Determine rate based on total volume, but only charge for volume above 10k
+  const rateBps = getVolumeTierRateBps(volume);
+  const billableVolume = Math.max(0, volume - FREE_THRESHOLD_USD);
+  const fee = (billableVolume * rateBps) / BPS_DENOMINATOR;
+
+  // Effective % of total volume
+  const pct = volume > 0 ? (fee / volume) * 100 : 0;
 
   return (
     <div className="bg-card border-border rounded-2xl border p-8 shadow-sm">
@@ -138,7 +143,6 @@ export function PricingCalc() {
     </div>
   );
 }
-
 function Stat({ label, value, note }: { label: string; value: React.ReactNode; note?: string }) {
   return (
     <div className="space-y-1">

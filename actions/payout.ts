@@ -50,7 +50,7 @@ export const postPayout = async (
       events: [
         {
           type: "payout::requested",
-          map: (payout) => ({
+          map: (payout: any) => ({
             id: eventId as string,
             merchantId: payout.organizationId,
             data: { amount: payout.amount, walletAddress: payout.walletAddress, memo: payout.memo },

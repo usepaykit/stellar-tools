@@ -125,6 +125,8 @@ const paymentActionHandler = async (
 
     const rawAmount = `${payment.amount} ${payment.metadata?.assetCode}`;
 
+    console.log({ rawAmount });
+
     const basePayload = {
       id: payment.id,
       checkoutId: payment.checkoutId!,
@@ -215,7 +217,12 @@ const paymentActionHandler = async (
     // Fire side effects in parallel, don't block the response
     sideEffects.forEach((p) => p.catch((err) => console.error(`[Side-Effect Error]:`, err)));
 
-    return { events, webhooks: { organizationId, environment, triggers: webhooks } };
+    console.dir({ webhooks, events }, { depth: 100 });
+
+    return {
+      events,
+      webhooks: { organizationId, environment, triggers: webhooks as WebhookTrigger<typeof payment>[] },
+    };
   });
 };
 
@@ -237,6 +244,8 @@ export const postPayment = async (
       environment
     ).then((w) => w?.id ?? null);
   }
+
+  console.log({ customerWalletId });
 
   return paymentActionHandler(
     async () => {
