@@ -1,88 +1,115 @@
 "use server";
 
-import { assets, db, organizations, payments } from "@/db";
-import type { AssetMetadata } from "@/db/schema";
+import { Network, charges, db, payments } from "@/db";
+import { decrypt } from "@/integrations/encryption";
 import { PriceFeedApi } from "@/integrations/price-feed";
-import { TIER_RATE_BPS, calculatePaymentFee } from "@/lib/pricing";
-import { decodeFeeToken, tokenForRateBps } from "@/lib/pricing.server";
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { sendAssetPayment } from "@/integrations/stellar-core";
+import { generateResourceId } from "@/lib/utils";
+import { and, eq, gte, lt, sql } from "drizzle-orm";
 import moment from "moment";
 
-async function getPrevMonthlyVolumeUsdCents(orgId: string, excludePaymentId?: string): Promise<number> {
-  const rows = await db
-    .select({ orgMonthlyVolumeUsd: payments.orgMonthlyVolumeUsd, id: payments.id })
+import { retrieveOrganizationIdAndSecret } from "./organization";
+import { retrievePayments } from "./payment";
+
+const FREE_THRESHOLD_USD = 10_000;
+const BPS_DENOMINATOR = 10_000; // 1 bps = 1/10_000 (100 bps = 1%)
+
+const TIER_RATE_BPS = {
+  FREE: 0,
+  STANDARD: 70, // 0.7%
+  GROWTH: 50, // 0.5%
+  SCALE: 40, // 0.4%
+} as const;
+
+const getVolumeTierRateBps = async (monthlyVolumeUsd: number): Promise<number> => {
+  if (monthlyVolumeUsd <= 10_000) return TIER_RATE_BPS.FREE;
+  if (monthlyVolumeUsd <= 1_000_000) return TIER_RATE_BPS.STANDARD;
+  if (monthlyVolumeUsd <= 5_000_000) return TIER_RATE_BPS.GROWTH;
+  return TIER_RATE_BPS.SCALE;
+};
+
+async function getMonthlyVolumeCents(orgId: string): Promise<number> {
+  const startOfMonth = moment().startOf("month").toDate();
+  const endOfMonth = moment().endOf("month").toDate();
+
+  const [res] = await db
+    .select({ total: sql<number>`sum(amount_usd_at_time)::bigint` })
     .from(payments)
     .where(
       and(
         eq(payments.organizationId, orgId),
         eq(payments.status, "confirmed"),
-        gte(payments.createdAt, moment().startOf("month").toDate()),
-        lt(payments.createdAt, moment().endOf("month").toDate())
+        gte(payments.createdAt, startOfMonth),
+        lt(payments.createdAt, endOfMonth)
       )
-    )
-    .orderBy(desc(payments.createdAt))
-    .limit(excludePaymentId ? 2 : 1);
-
-  const prev = excludePaymentId ? rows.find((r) => r.id !== excludePaymentId) : rows[0];
-  return prev?.orgMonthlyVolumeUsd ?? 0;
+    );
+  return Number(res?.total ?? 0);
 }
 
-export async function applyPaymentFee(
-  paymentId: string,
-  orgId: string,
-  amount: string | number, // XLM amount from Horizon (e.g. "1.0000000") or numeric units
-  assetCode = "XLM",
-  assetIssuer?: string | null
-): Promise<void> {
-  const [[assetRow], prevMonthlyUsdCents] = await Promise.all([
-    db
-      .select({ metadata: assets.metadata })
-      .from(assets)
-      .where(and(eq(assets.code, assetCode.toUpperCase()), eq(assets.issuer, assetIssuer ?? "native")))
-      .limit(1),
-    getPrevMonthlyVolumeUsdCents(orgId, paymentId),
+export async function processPaymentBilling(paymentId: string, organizationId: string, environment: Network) {
+  const [payment, secret] = await Promise.all([
+    retrievePayments(undefined, undefined, { paymentId }, { withAsset: true }).then((res) => res[0]),
+    retrieveOrganizationIdAndSecret(organizationId, environment).then((res) => res.secret),
   ]);
 
-  const feed = new PriceFeedApi();
-  const assetUsd = await feed.getAssetUsdPrice((assetRow?.metadata ?? {}) as AssetMetadata);
-  const paymentUsd = parseFloat(String(amount)) * assetUsd;
+  if (!payment || payment.status !== "confirmed") return;
 
-  const { feeUsd, rateBps, newMonthlyUsd } = calculatePaymentFee(paymentUsd, prevMonthlyUsdCents / 100);
-
-  await db
-    .update(payments)
-    .set({
-      platformFeeUsd: Math.round(feeUsd * 100),
-      orgMonthlyVolumeUsd: Math.round(newMonthlyUsd * 100),
-      updatedAt: new Date(),
-    })
-    .where(eq(payments.id, paymentId));
-
-  const newToken = tokenForRateBps(rateBps);
-
-  const [org] = await db
-    .select({ feeToken: organizations.feeToken })
-    .from(organizations)
-    .where(eq(organizations.id, orgId))
-    .limit(1);
-
-  const currentRateBps = decodeFeeToken(org?.feeToken);
-  const isCustom = !(Object.values(TIER_RATE_BPS) as number[]).includes(currentRateBps);
-
-  if (!isCustom && org?.feeToken !== newToken) {
-    await db
-      .update(organizations)
-      .set({ feeToken: newToken, updatedAt: new Date() })
-      .where(eq(organizations.id, orgId));
+  if (!secret || !payment || !payment.asset) {
+    throw new Error(`One of secret, payment, or asset is missing for payment ${paymentId}`);
   }
-}
 
-export async function getOrgFeeRateBps(orgId: string): Promise<number> {
-  const [org] = await db
-    .select({ feeToken: organizations.feeToken })
-    .from(organizations)
-    .where(eq(organizations.id, orgId))
-    .limit(1);
+  // 1. Convert Payment to USD Cents
+  const feed = new PriceFeedApi();
+  const assetPrice = await feed.getAssetUsdPrice(payment.asset.metadata ?? {});
+  const paymentValueCents = Math.round((Number(payment.amount) / 1e7) * assetPrice * 100);
 
-  return decodeFeeToken(org?.feeToken);
+  // 2. Reconcile Tiers
+  const currentVolumeCents = await getMonthlyVolumeCents(payment.organizationId);
+  const currentVolumeUsd = currentVolumeCents / 100;
+
+  // Logic: Only charge if they are above the $10k free threshold
+  if (currentVolumeUsd + paymentValueCents / 100 <= FREE_THRESHOLD_USD) return;
+
+  const rateBps = await getVolumeTierRateBps(currentVolumeUsd);
+
+  if (rateBps === 0) return;
+
+  // 3. Calculate Fee (High Precision)
+  // amount_in_stroops * bps / 10,000
+  const feeStroops = (payment.amount * BigInt(rateBps)) / BigInt(BPS_DENOMINATOR);
+  const feeUsdCents = Math.round((Number(feeStroops) / 1e7) * assetPrice * 100);
+
+  const chargeId = generateResourceId("ch", paymentId, 20);
+
+  // 4. Create record and attempt transfer
+  try {
+    const secretKey = decrypt(secret.encrypted);
+    const keeperKey = process.env.CHARGES_PUBLIC_KEY!;
+
+    const res = await sendAssetPayment(
+      secretKey,
+      keeperKey,
+      payment.asset.code,
+      payment.asset.issuer!,
+      feeStroops.toString(),
+      payment.environment,
+      `Fee: ${paymentId}`
+    );
+
+    await db.insert(charges).values({
+      id: chargeId,
+      organizationId: payment.organizationId,
+      paymentId: payment.id,
+      amount: feeStroops,
+      amountUsd: feeUsdCents,
+      assetId: payment.asset.id,
+      type: "platform_fee",
+      status: res.isOk() ? "succeeded" : "failed",
+      transactionHash: res.isOk() ? res.value?.hash : null,
+      error: res.isErr() ? res.error.message : null,
+      environment: payment.environment,
+    });
+  } catch (err: any) {
+    console.error("[Billing Error]", err);
+  }
 }

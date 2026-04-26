@@ -21,6 +21,7 @@ import {
 } from "@stellartools/core";
 import { InferSelectModel, sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   index,
@@ -334,18 +335,38 @@ export const payments = pgTable("payment", {
     .references(() => organizations.id),
   checkoutId: text("checkout_id").references(() => checkouts.id),
   customerId: text("customer_id").references(() => customers.id),
-  amount: integer("amount").notNull(),
+  amount: bigint("amount", { mode: "bigint" }).notNull(), // Use BigInt for Stroops
   transactionHash: text("tx_hash").notNull().unique(),
   status: paymentStatusEnum("status").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   environment: networkEnum("network").notNull(),
-  platformFeeUsd: integer("platform_fee_usd"),
-  orgMonthlyVolumeUsd: integer("org_monthly_volume_usd"),
   customerWalletId: text("customer_wallet_id").references(() => customerWallets.id),
   assetId: text("asset_id").references(() => assets.id),
   subscriptionId: text("subscription_id").references(() => subscriptions.id),
   metadata: jsonb("metadata").$type<Record<string, unknown> | null>(),
+});
+
+export const chargeTypeEnum = pgEnum("charge_type", ["platform_fee", "payout_fee"]);
+export const chargeStatusEnum = pgEnum("charge_status", ["pending", "succeeded", "failed"]);
+
+export const charges = pgTable("charge", {
+  id: text("id").primaryKey(), // ch_...
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id),
+  paymentId: text("payment_id").references(() => payments.id),
+  amount: bigint("amount", { mode: "bigint" }).notNull(), // Fee in Stroops
+  amountUsd: integer("amount_usd").notNull(), // Fee in USD Cents for reporting
+  assetId: text("asset_id")
+    .notNull()
+    .references(() => assets.id),
+  type: chargeTypeEnum("type").notNull(),
+  status: chargeStatusEnum("status").notNull(),
+  transactionHash: text("tx_hash"), // The Stellar hash of the fee payment to US
+  error: text("error"),
+  environment: networkEnum("network").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const payoutStatusEnum = pgEnum("payout_status", payoutStatusEnum$1);

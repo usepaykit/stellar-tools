@@ -1,7 +1,7 @@
 "use server";
 
 import { retrieveAccount } from "@/actions/account";
-import { applyPaymentFee } from "@/actions/billing";
+import { processPaymentBilling } from "@/actions/billing";
 import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { retrieveCustomers, upsertCustomerWallet } from "@/actions/customers";
@@ -138,7 +138,7 @@ const paymentActionHandler = async (
 
     if (payment.status === "confirmed") {
       // Platform Logic
-      sideEffects.push(applyPaymentFee(payment.id, organizationId, payment.amount));
+      sideEffects.push(processPaymentBilling(payment.id, organizationId, environment));
 
       events.push({
         type: "payment::completed",
@@ -220,17 +220,7 @@ const paymentActionHandler = async (
 };
 
 export const postPayment = async (
-  params: Omit<
-    Payment,
-    | "id"
-    | "organizationId"
-    | "environment"
-    | "createdAt"
-    | "updatedAt"
-    | "platformFeeUsd"
-    | "orgMonthlyVolumeUsd"
-    | "customerWalletId"
-  >,
+  params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "customerWalletId">,
   orgId?: string,
   env?: Network,
   options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null; failErrorMessage?: string }
@@ -394,7 +384,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
           subscriptionId: null,
           checkoutId,
           customerId,
-          amount: Number(amount),
+          amount: BigInt(amount),
           transactionHash: hash,
           status: "failed",
           metadata: null,
@@ -416,12 +406,12 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       }
     );
 
-    const confirmedPayment = await postPayment(
+    await postPayment(
       {
         subscriptionId: null,
         customerId,
         checkoutId,
-        amount: Number(amount),
+        amount: BigInt(amount),
         transactionHash: hash,
         status: "confirmed",
         metadata: null,
@@ -431,10 +421,6 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
       environment,
       { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
     );
-
-    if (confirmedPayment) {
-      await applyPaymentFee(confirmedPayment.id, organizationId, Number(amount), assetCode ?? "XLM", assetIssuer);
-    }
   });
 
   return checkout;
