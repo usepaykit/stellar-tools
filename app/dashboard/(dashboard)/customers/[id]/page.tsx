@@ -707,7 +707,7 @@ function CheckoutModalContent({
           <RHF.Controller
             control={form.control}
             name="productId"
-            render={({ field }) => (
+            render={({ field, fieldState: { error } }) => (
               <SelectField
                 id="productId"
                 label="Product"
@@ -715,6 +715,7 @@ function CheckoutModalContent({
                 value={field.value}
                 onChange={field.onChange}
                 isLoading={isLoadingProducts}
+                error={error?.message}
               />
             )}
           />
