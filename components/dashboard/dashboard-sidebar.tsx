@@ -309,11 +309,6 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem className="gap-2">
-                        <Sparkles className="size-4" /> Upgrade to Pro
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
                       <DropdownMenuItem asChild className="gap-2">

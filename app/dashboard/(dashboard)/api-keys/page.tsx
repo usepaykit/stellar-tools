@@ -504,7 +504,6 @@ function ApiKeyModalContent({
                 {...field}
                 id="name"
                 label="Name"
-                helpText="Give your API key a descriptive name to help you identify it later."
                 error={error?.message}
                 placeholder="e.g., Production API Key"
                 className="shadow-none"
@@ -514,7 +513,7 @@ function ApiKeyModalContent({
 
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Info className="text-muted-foreground h-4 w-4 shrink-0" />
-            <span className="truncate">Full API access. Keep keys secure; never expose in client-side code.</span>
+            <span className="truncate">Full API access. Make sure to keep keys secure and never expose in client-side code.</span>
           </p>
         </form>
       )}
