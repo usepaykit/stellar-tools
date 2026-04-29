@@ -45,7 +45,9 @@ export default function SubscriptionsPage() {
   const submitRef = React.useRef<(() => void) | null>(null);
   const [footerState, setFooterState] = React.useState({ isPending: false });
 
-  const { data: subs = [], isLoading } = useOrgQuery(["subscriptions"], retrieveSubscriptions);
+  const { data: subs = [], isLoading } = useOrgQuery(["subscriptions"], async () =>
+    retrieveSubscriptions(undefined, undefined, undefined).then((res) => res.data)
+  );
 
   const stats = React.useMemo(() => {
     const counts = { all: subs.length, active: 0, paused: 0, canceled: 0 };

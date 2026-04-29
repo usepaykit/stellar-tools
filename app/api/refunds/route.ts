@@ -17,12 +17,9 @@ export const POST = apiHandler({
   handler: async ({ body: { paymentId, reason, metadata, walletAddress }, auth: { organizationId, environment } }) => {
     const { payment, secret } = await all({
       payment: async () => {
-        const [p] = await retrievePayments(
-          organizationId,
-          environment,
-          { paymentId },
-          { withWallets: true, withAsset: true }
-        );
+        const {
+          data: [p],
+        } = await retrievePayments(organizationId, environment, { paymentId }, { withWallets: true, withAsset: true });
         if (!p) throw new Error("Payment not found");
         if (!p.asset) throw new Error("Payment asset not found");
         if (!p.wallets?.address) throw new Error("Customer wallet address not found");

@@ -11,7 +11,9 @@ export const POST = apiHandler({
   requiredAppScope: "write:subscriptions",
   schema: { params: Schema.object({ id: Schema.string() }) },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
-    const subscription = await retrieveSubscription(id);
+    const {
+      data: [subscription],
+    } = await retrieveSubscription(id, organizationId, environment, { limit: 1 });
 
     const [customerWallet] = await retrieveCustomerWallets(subscription.customerId, {
       id: subscription.customerWalletId,
@@ -30,6 +32,6 @@ export const POST = apiHandler({
 
     const result = await putSubscription(id, { status: "paused", pausedAt: new Date() }, organizationId, environment);
 
-    return Result.ok(result);
+    return Result.ok({ ...result });
   },
 });

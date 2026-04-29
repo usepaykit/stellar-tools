@@ -12,12 +12,15 @@ export const GET = apiHandler({
   requiredAppScope: "read:customers",
   schema: { params: paramsSchema },
   handler: async ({ params, auth }) => {
-    const [customer] = await retrieveCustomers(
+    const {
+      data: [customer],
+    } = await retrieveCustomers(
       { id: params.customerId },
       { withWallets: true, requireLookUpParams: true },
       auth.organizationId,
       auth.environment
     );
+
     return Result.ok(customer);
   },
 });

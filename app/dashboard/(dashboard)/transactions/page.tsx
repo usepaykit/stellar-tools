@@ -255,7 +255,7 @@ function TransactionsPageContent() {
       withAsset: true,
       withCustomer: true,
       withWallets: true,
-    })
+    }).then((res) => res.data)
   );
 
   const stats = React.useMemo(() => {

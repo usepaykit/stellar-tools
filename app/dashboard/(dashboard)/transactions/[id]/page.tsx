@@ -236,7 +236,7 @@ export default function TransactionDetailPage() {
     { enabled: !!paymentId }
   );
 
-  const payment = data?.[0] ?? null;
+  const payment = data?.data[0] ?? null;
   const customer = payment?.customer ?? null;
   const refund = payment?.refunds ?? null;
 

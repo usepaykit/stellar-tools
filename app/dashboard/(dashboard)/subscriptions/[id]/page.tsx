@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/toast";
-import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { STROOPS_PER_XLM, cn } from "@/lib/utils";
 import { ApiClient } from "@stellartools/core";
@@ -69,10 +68,10 @@ export default function SubscriptionDetailPage() {
   const { id } = useParams() as { id: string };
   const invalidate = useInvalidateOrgQuery();
   const { data: orgContext } = useOrgContext();
-  const { handleCopy } = useCopy();
 
-  // Queries
-  const { data: allSubs, isLoading } = useOrgQuery(["subscriptions"], retrieveSubscriptions);
+  const { data: allSubs, isLoading } = useOrgQuery(["subscriptions"], async () =>
+    retrieveSubscriptions(undefined, undefined, undefined).then((res) => res.data)
+  );
   const sub = React.useMemo(() => allSubs?.find((s) => s.subscription.id === id), [allSubs, id]);
 
   const { data: subEvents, isLoading: loadingEvents } = useOrgQuery(
@@ -89,7 +88,10 @@ export default function SubscriptionDetailPage() {
 
   const { data: payments = [], isLoading: loadingPayments } = useOrgQuery(
     ["subscription-payments", id],
-    () => retrievePayments(undefined, undefined, { customerId: sub!.subscription.customerId }, { withAsset: true }),
+    () =>
+      retrievePayments(undefined, undefined, { customerId: sub!.subscription.customerId }, { withAsset: true }).then(
+        (res) => res.data
+      ),
     { enabled: !!sub }
   );
 
@@ -98,8 +100,9 @@ export default function SubscriptionDetailPage() {
   // Mutations
   const mutation = useMutation({
     mutationFn: async ({ path, method = "POST" }: { path: string; method?: "POST" | "PUT" }) => {
+      if (!orgContext?.token) throw new Error("No session token");
       const api = new ApiClient({
-        baseUrl: process.env.NEXT_PUBLIC_APP_URL!,
+        baseUrl: process.env.NEXT_PUBLIC_API_URL!,
         headers: { "x-session-token": orgContext?.token! },
       });
       const res = await (method === "POST"

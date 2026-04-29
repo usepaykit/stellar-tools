@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { retrieveCustomers } from "@/actions/customers";
-import { getCurrentOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
 import { DateField } from "@/components/date-field";
 import { NumberField } from "@/components/number-field";
@@ -68,7 +67,7 @@ export function SubscriptionModalContent({ onSuccess, editingSubscription, setSu
   });
 
   const { fields, append, remove } = RHF.useFieldArray({ control: form.control, name: "metadata" });
-  const { data: customers = [], isLoading: loadingCust } = useOrgQuery(["customers"], retrieveCustomers);
+  const { data: customers, isLoading: loadingCust } = useOrgQuery(["customers"], retrieveCustomers);
   const { data: products = [], isLoading: loadingProd } = useOrgQuery(["products"], () =>
     retrieveProducts(undefined, undefined, { status: "active" })
   );
@@ -122,7 +121,6 @@ export function SubscriptionModalContent({ onSuccess, editingSubscription, setSu
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-7">
       <div className="space-y-8 lg:col-span-4">
-        {/* Customer Selection */}
         <section className="space-y-3">
           <h3 className="text-base font-semibold">Customer</h3>
           <RHF.Controller
@@ -131,7 +129,7 @@ export function SubscriptionModalContent({ onSuccess, editingSubscription, setSu
             render={({ field }) => (
               <ResourceField
                 isLoading={loadingCust}
-                items={customers}
+                items={customers?.data ?? []}
                 value={field.value}
                 onChange={field.onChange}
                 multiple

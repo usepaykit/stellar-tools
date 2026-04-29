@@ -1,11 +1,11 @@
 "use server";
 
-import { withEvent } from "@/actions/event";
+import { paginate, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import { SubscriptionStatus } from "@/constant/schema.client";
 import { Network, Subscription, assets, customerWallets, customers, db, products, subscriptions } from "@/db";
 import { computeDiff, generateResourceId } from "@/lib/utils";
-import { EventTrigger, WebhookTrigger } from "@/types";
+import { ApiListParams, EventTrigger, PaginatedResult, WebhookTrigger } from "@/types";
 import { OverrideProps, Prettify } from "@stellartools/core";
 import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
 
@@ -94,8 +94,14 @@ export const postSubscriptionsBulk = async (
   );
 };
 
-export const retrieveSubscription = async (id: string, orgId?: string, env?: Network) => {
+export const retrieveSubscription = async (
+  id: string,
+  orgId?: string,
+  env?: Network,
+  params?: ApiListParams
+): Promise<PaginatedResult<Subscription>> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+  const limit = params?.limit ?? 10;
 
   const [subscription] = await db
     .select()
@@ -107,11 +113,12 @@ export const retrieveSubscription = async (id: string, orgId?: string, env?: Net
         eq(subscriptions.environment, environment)
       )
     )
-    .limit(1);
+    .limit(limit)
+    .offset(params?.starting_after ? parseInt(params.starting_after) : 0);
 
-  if (!subscription) throw new Error("Subscription not found");
+  if (!subscription) return { data: [], has_more: false };
 
-  return subscription;
+  return await paginate([subscription], limit);
 };
 
 type SubscriptionRow<S extends SubscriptionStatus> = {
@@ -123,11 +130,14 @@ type SubscriptionRow<S extends SubscriptionStatus> = {
 export const retrieveSubscriptions = async <S extends SubscriptionStatus = SubscriptionStatus>(
   orgId?: string,
   env?: Network,
-  filters?: { customerId?: string; status?: S }
-): Promise<SubscriptionRow<S>[]> => {
+  filters?: { customerId?: string; status?: S },
+  params?: ApiListParams
+): Promise<Prettify<PaginatedResult<SubscriptionRow<S>>>> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const results = await db
+  const limit = params?.limit ?? 10;
+
+  const rows = await db
     .select({
       subscription: subscriptions,
       customer: { name: customers.name, email: customers.email },
@@ -146,11 +156,18 @@ export const retrieveSubscriptions = async <S extends SubscriptionStatus = Subsc
     )
     .orderBy(desc(subscriptions.createdAt));
 
-  return results as Prettify<SubscriptionRow<S>[]>;
+  return await paginate(rows as SubscriptionRow<S>[], limit);
 };
 
-export const listSubscriptions = async (customerId: string, orgId?: string, env?: Network) => {
+export const listSubscriptions = async (
+  customerId: string,
+  orgId?: string,
+  env?: Network,
+  params?: ApiListParams
+): Promise<PaginatedResult<Subscription>> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const limit = params?.limit ?? 10;
 
   const subscriptionList = await db
     .select()
@@ -161,16 +178,20 @@ export const listSubscriptions = async (customerId: string, orgId?: string, env?
         eq(subscriptions.organizationId, organizationId),
         eq(subscriptions.environment, environment)
       )
-    );
+    )
+    .limit(limit)
+    .offset(params?.starting_after ? parseInt(params.starting_after) : 0);
 
-  return subscriptionList;
+  return await paginate(subscriptionList, limit);
 };
 
 export const putSubscription = async (id: string, retUpdate: Partial<Subscription>, orgId?: string, env?: Network) => {
-  const [{ organizationId, environment }, oldSubscription] = await Promise.all([
-    resolveOrgContext(orgId, env),
-    retrieveSubscription(id),
-  ]);
+  const [
+    { organizationId, environment },
+    {
+      data: [oldSubscription],
+    },
+  ] = await Promise.all([resolveOrgContext(orgId, env), retrieveSubscription(id)]);
 
   return withEvent(
     async () => {

@@ -2,6 +2,7 @@ import "server-only";
 
 import { resolveAuthContext } from "@/actions/apikey";
 import { getCorsHeaders } from "@/constant";
+import { processResource } from "@/lib/api-registry";
 import { AuthContext } from "@/types";
 import { AppScope } from "@stellartools/app-embed-bridge";
 import { Result, z as Schema, validateSchema } from "@stellartools/core";
@@ -120,10 +121,21 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
           return NextResponse.json({ error: result.error.message }, { status: 400, headers: corsHeaders });
         }
 
-        return NextResponse.json(
-          { data: result.value },
-          { status: 200, headers: { ...corsHeaders, ...(config.headers ?? {}) } }
-        );
+        const rawValue = result.value;
+
+        if (rawValue && typeof rawValue === "object" && "has_more" in rawValue) {
+          return NextResponse.json(
+            {
+              object: "list",
+              data: processResource(rawValue.data),
+              has_more: rawValue.has_more,
+              url: req.nextUrl.pathname,
+            },
+            { headers: corsHeaders }
+          );
+        }
+
+        return NextResponse.json(processResource(rawValue), { headers: corsHeaders });
       }
     } catch (error: any) {
       console.error("[API_ERROR]", error);

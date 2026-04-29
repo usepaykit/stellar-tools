@@ -19,7 +19,7 @@ import {
   recurringPeriodEnum as recurringPeriodEnum$1,
   subscriptionStatusEnum as subscriptionStatusEnum$1,
 } from "@stellartools/core";
-import { InferSelectModel, sql } from "drizzle-orm";
+import { InferSelectModel, relations, sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -226,6 +226,17 @@ export const customerWallets = pgTable(
     paymentWallet: index("idx_payment_wallet").on(table.customerId, table.address),
   })
 );
+
+export const customersRelations = relations(customers, ({ many }) => ({
+  wallets: many(customerWallets),
+}));
+
+export const customerWalletsRelations = relations(customerWallets, ({ one }) => ({
+  customer: one(customers, {
+    fields: [customerWallets.customerId],
+    references: [customers.id],
+  }),
+}));
 
 export const productStatusEnum = pgEnum("product_status", productStatusEnum$1.enum);
 

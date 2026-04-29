@@ -47,3 +47,36 @@ export type AuthContext = {
   scopes?: string[];
   apiKeyId?: string; // Only present if type === "apikey"
 };
+
+export type ApiListParams = {
+  limit?: number;
+  starting_after?: string;
+  ending_before?: string;
+};
+
+export type PaginatedResult<T> = {
+  data: T[];
+  has_more: boolean;
+};
+
+export interface ApiObject {
+  id: string;
+  object: string;
+}
+
+export type ApiList<T> = {
+  object: "list";
+  data: T[];
+  has_more: boolean;
+  url: string;
+};
+
+export type ApiResponse<T> = T & {
+  object: string;
+  live_mode: boolean;
+  billing_details?: any;
+  latest_attempt?: any;
+  next_action?: any;
+  line_items?: ApiList<any>;
+  related_resources?: Record<string, any>;
+};

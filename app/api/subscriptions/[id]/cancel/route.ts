@@ -13,7 +13,13 @@ export const POST = apiHandler({
   schema: { params: Schema.object({ id: Schema.string() }) },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     const { subscription, customerWallet } = await all({
-      subscription: async () => retrieveSubscription(id, organizationId, environment),
+      subscription: async () => {
+        const {
+          data: [subscription],
+        } = await retrieveSubscription(id, organizationId, environment, { limit: 1 });
+        return subscription;
+      },
+
       async customerWallet() {
         const subscription = await this.$.subscription;
         return await retrieveCustomerWallets(

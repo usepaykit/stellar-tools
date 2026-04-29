@@ -39,9 +39,9 @@ async function getMonthlyVolumeCents(orgId: string): Promise<number> {
 
 export async function processPaymentBilling(paymentId: string, organizationId: string, environment: Network) {
   console.log("Processing payment billing for payment", paymentId);
-  
+
   const [payment, secret] = await Promise.all([
-    retrievePayments(undefined, undefined, { paymentId }, { withAsset: true }).then((res) => res[0]),
+    retrievePayments(undefined, undefined, { paymentId, limit: 1 }, { withAsset: true }).then((res) => res.data[0]),
     retrieveOrganizationIdAndSecret(organizationId, environment).then((res) => res.secret),
   ]);
 
@@ -55,9 +55,13 @@ export async function processPaymentBilling(paymentId: string, organizationId: s
   const assetPrice = await getAssetUsdPrice(payment.asset.metadata ?? {});
   const paymentValueCents = Math.round((Number(payment.amount) / 1e7) * assetPrice * 100);
 
+  console.log("Payment value cents", paymentValueCents);
+
   // 2. Reconcile Tiers
   const currentVolumeCents = await getMonthlyVolumeCents(payment.organizationId);
   const currentVolumeUsd = currentVolumeCents / 100;
+
+  console.log("Current volume USD", currentVolumeUsd);
 
   // Logic: Only charge if they are above the $10k free threshold
   if (currentVolumeUsd + paymentValueCents / 100 <= FREE_THRESHOLD_USD) return;

@@ -88,7 +88,17 @@ export const POST = async (req: NextRequest) => {
       } as Parameters<typeof postCheckout>[0];
 
       const checkout = await postCheckout(payload as any, auth.organizationId, auth.environment);
-      return Result.ok(checkout);
+
+      return Result.ok({
+        ...checkout,
+        next_action: {
+          type: "redirect_to_url",
+          redirect_to_url: {
+            url: `${process.env.NEXT_PUBLIC_CHECKOUT_URL}/${checkout.id}`,
+            return_url: checkout.redirectUrl,
+          },
+        },
+      });
     }
   } catch (error) {
     console.error(error);

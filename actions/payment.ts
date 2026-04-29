@@ -5,7 +5,7 @@ import { processPaymentBilling } from "@/actions/billing";
 import { retrieveCheckout, retrieveCheckoutAndCustomer } from "@/actions/checkout";
 import { putCheckout } from "@/actions/checkout";
 import { retrieveCustomers, upsertCustomerWallet } from "@/actions/customers";
-import { runAtomic, withEvent } from "@/actions/event";
+import { paginate, runAtomic, withEvent } from "@/actions/event";
 import { resolveOrgContext, retrieveOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
 import { PaymentStatus } from "@/constant/schema.client";
@@ -32,7 +32,7 @@ import { MerchantSubscriptionStartedEmail } from "@/emails/merchant-subscription
 import { sendEmail } from "@/integrations/email";
 import { verifyPaymentByPagingToken } from "@/integrations/stellar-core";
 import { generateResourceId } from "@/lib/utils";
-import { EventTrigger, WebhookTrigger } from "@/types";
+import { ApiListParams, EventTrigger, PaginatedResult, WebhookTrigger } from "@/types";
 import { all } from "better-all";
 import { and, count, desc, eq } from "drizzle-orm";
 import moment from "moment";
@@ -60,7 +60,7 @@ async function loadPaymentContext(
         { requireLookUpParams: true },
         organizationId,
         environment
-      ).then((res) => res[0]);
+      ).then((res) => res.data[0]);
     },
     checkout: async () => {
       if (!payment.checkoutId) return undefined;
@@ -271,10 +271,12 @@ export const postPayment = async (
 export const retrievePayments = async (
   orgId?: string,
   env?: Network,
-  params?: { customerId?: string; paymentId?: string },
+  params?: { customerId?: string; paymentId?: string; subscriptionId?: string } & ApiListParams,
   options?: { withCustomer?: boolean; withWallets?: boolean; withRefunds?: boolean; withAsset?: boolean }
-): Promise<ResolvedPayment[]> => {
+): Promise<PaginatedResult<ResolvedPayment>> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
+
+  const limit = params?.limit ?? 10;
 
   const rows = await db
     .select({
@@ -295,19 +297,25 @@ export const retrievePayments = async (
         params?.paymentId ? eq(payments.id, params.paymentId) : undefined,
         eq(payments.organizationId, organizationId),
         eq(payments.environment, environment),
-        params?.customerId ? eq(payments.customerId, params.customerId) : undefined
+        params?.customerId ? eq(payments.customerId, params.customerId) : undefined,
+        params?.subscriptionId ? eq(payments.subscriptionId, params.subscriptionId) : undefined
       )
     )
-    .orderBy(desc(payments.createdAt));
+    .orderBy(desc(payments.createdAt))
+    .limit(limit)
+    .offset(params?.starting_after ? parseInt(params.starting_after) : 0);
 
-  return rows.map(({ customer, payment, hasRefund, wallets, refunds, asset }) => ({
-    ...payment,
-    refunded: !!hasRefund,
-    wallets,
-    refunds,
-    customer,
-    asset,
-  }));
+  return await paginate(
+    rows.map(({ customer, payment, hasRefund, wallets, refunds, asset }) => ({
+      ...payment,
+      refunded: !!hasRefund,
+      wallets,
+      refunds,
+      customer,
+      asset,
+    })),
+    limit
+  );
 };
 
 export const putPayment = async (

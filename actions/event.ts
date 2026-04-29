@@ -7,7 +7,7 @@ import { Event, Network, db, events, rawDb, txContext } from "@/db";
 import { deliverToApp } from "@/integrations/app-delivery";
 import { getResourceForEvent } from "@/lib/app-utils";
 import { generateResourceId } from "@/lib/utils";
-import { EventConfig, EventEmitParams } from "@/types";
+import { EventConfig, EventEmitParams, PaginatedResult } from "@/types";
 import { EventType } from "@stellartools/app-embed-bridge";
 import { MaybePromise, SuggestedString, WebhookEventBase } from "@stellartools/core";
 import { waitUntil } from "@vercel/functions";
@@ -223,3 +223,11 @@ export async function runAtomic<T>(fn: () => Promise<T>): Promise<T> {
     });
   });
 }
+
+export const paginate = async <T>(data: T[], limit: number): Promise<PaginatedResult<T>> => {
+  const has_more = data.length > limit;
+  return {
+    data: has_more ? data.slice(0, limit) : data,
+    has_more,
+  };
+};

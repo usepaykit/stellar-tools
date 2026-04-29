@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
 
 import { retrieveCustomers } from "@/actions/customers";
 import { AppModal } from "@/components/app-modal";
@@ -129,7 +128,7 @@ const filterOptions = [0, 1, 2];
 
 export default function CustomersPage() {
   const searchParams = useSearchParams();
-  const [selectedFilter, setSelectedFilter] = useState<number>(0);
+  const [selectedFilter, setSelectedFilter] = React.useState<number>(0);
   const router = useRouter();
   const [columnFilters, setColumnFilters] = useSyncTableFilters();
   const invalidate = useInvalidateOrgQuery();
@@ -237,7 +236,7 @@ export default function CustomersPage() {
 
             <DataTable
               columns={columns}
-              data={customers ?? []}
+              data={customers?.data ?? []}
               enableBulkSelect={true}
               actions={tableActions}
               onRowClick={handleRowClick}

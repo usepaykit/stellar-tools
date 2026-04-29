@@ -1,6 +1,6 @@
 "use server";
 
-import { deleteEvents, withEvent } from "@/actions/event";
+import { deleteEvents, paginate, withEvent } from "@/actions/event";
 import { resolveOrgContext } from "@/actions/organization";
 import {
   Customer,
@@ -20,6 +20,7 @@ import { CustomerWallet as CustomerWalletSchema } from "@/db";
 import { uploadFiles } from "@/integrations/file-upload";
 import { computeDiff, generateResourceId } from "@/lib/utils";
 import { mergeWithNullDeletes } from "@/lib/utils";
+import { ApiListParams, PaginatedResult } from "@/types";
 import { MaybeArray } from "@stellartools/core";
 import crypto from "crypto";
 import { SQL, and, desc, eq, gt, inArray, or } from "drizzle-orm";
@@ -56,12 +57,13 @@ export const postCustomers = async (
       return results;
     },
     (customers) => {
-      const data = customers.map(({ id, name, email, phone, metadata }) => ({
+      const data = customers.map(({ id, name, email, phone, metadata, image }) => ({
         id,
         name,
         email,
         phone,
         metadata,
+        image,
         ...(options?.source ? { source: options.source } : {}),
       }));
 
@@ -90,72 +92,41 @@ export const postCustomers = async (
 type CustomerLookup = { id?: string | null } | { email?: string | null } | { phone?: string | null };
 
 export const retrieveCustomers = async (
-  params?: MaybeArray<CustomerLookup>,
+  params?: MaybeArray<CustomerLookup> & ApiListParams,
   options?: { withWallets?: boolean; requireLookUpParams?: boolean },
   orgId?: string,
   env?: Network
-): Promise<ResolvedCustomer[]> => {
+): Promise<PaginatedResult<ResolvedCustomer>> => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
-  const lookupArray = Array.isArray(params) ? params : params ? [params] : [];
-  const requireLookUpParams = options?.requireLookUpParams ?? false;
-  const ids: string[] = [];
-  const emails: string[] = [];
-  const phones: string[] = [];
+  const lookup = Array.isArray(params) ? params : params ? [params] : [];
 
-  lookupArray.forEach((p) => {
-    if ("id" in p && p.id) ids.push(p.id);
-    if ("email" in p && p.email) emails.push(p.email);
-    if ("phone" in p && p.phone) phones.push(p.phone);
+  const filters = lookup.map((p) =>
+    "id" in p
+      ? eq(customersSchema.id, p.id!)
+      : "email" in p
+        ? eq(customersSchema.email, p.email!)
+        : "phone" in p
+          ? eq(customersSchema.phone, p.phone!)
+          : undefined
+  );
+
+  if (options?.requireLookUpParams && filters.length < 1) return { data: [], has_more: false };
+
+  const limit = params?.limit ?? 10;
+
+  const customers = await db.query.customers.findMany({
+    where: (c, { and, or }) =>
+      and(
+        eq(c.organizationId, organizationId),
+        eq(c.environment, environment),
+        filters.length ? or(...filters) : undefined
+      ),
+    with: options?.withWallets ? { wallets: true } : undefined,
+    limit,
   });
 
-  const orFilters = [
-    ids.length ? inArray(customersSchema.id, ids) : null,
-    emails.length ? inArray(customersSchema.email, emails) : null,
-    phones.length ? inArray(customersSchema.phone, phones) : null,
-  ].filter(Boolean) as SQL[];
-
-  if (requireLookUpParams && orFilters.length < 1) return [];
-
-  const query = db
-    .select({
-      customer: customersSchema,
-      ...(options?.withWallets && { wallet: customerWallets }),
-    })
-    .from(customersSchema)
-    .where(
-      and(
-        orFilters.length ? or(...orFilters) : undefined,
-        eq(customersSchema.organizationId, organizationId),
-        eq(customersSchema.environment, environment)
-      )
-    );
-
-  if (options?.withWallets) {
-    query.leftJoin(customerWallets, eq(customersSchema.id, customerWallets.customerId));
-  }
-
-  const rows = await query;
-
-  const customerMap = new Map<string, ResolvedCustomer>();
-
-  for (const row of rows) {
-    const { customer } = row;
-    const wallet = "wallet" in row ? row.wallet : null;
-
-    if (!customerMap.has(customer.id)) {
-      customerMap.set(customer.id, {
-        ...customer,
-        ...(options?.withWallets && { wallets: [] }),
-      });
-    }
-
-    if (wallet) {
-      customerMap.get(customer.id)!.wallets!.push(wallet);
-    }
-  }
-
-  return Array.from(customerMap.values());
+  return await paginate(customers, limit);
 };
 
 export const putCustomer = async (
@@ -165,7 +136,12 @@ export const putCustomer = async (
   env?: Network,
   options?: { source?: string }
 ) => {
-  const [{ organizationId, environment }, [oldCustomer]] = await Promise.all([
+  const [
+    { organizationId, environment },
+    {
+      data: [oldCustomer],
+    },
+  ] = await Promise.all([
     resolveOrgContext(orgId, env),
     retrieveCustomers({ id }, { requireLookUpParams: true }, orgId, env),
   ]);
@@ -247,7 +223,7 @@ export const upsertCustomer = async (
     { requireLookUpParams: true },
     orgId,
     env
-  ).then(([c]) => c);
+  ).then(({ data: [c] }) => c);
 
   if (existing) return existing;
 

@@ -13,7 +13,9 @@ export const GET = apiHandler({
   requiredAppScope: "read:payments",
   schema: { params: paramsSchema },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
-    let [payment] = await retrievePayments(
+    let {
+      data: [payment],
+    } = await retrievePayments(
       organizationId,
       environment,
       { paymentId: id },
@@ -33,12 +35,16 @@ export const GET = apiHandler({
         await putPayment(payment.id, organizationId, environment, { status: "failed" });
       }
 
-      [payment] = await retrievePayments(
+      let {
+        data: [updatedPayment],
+      } = await retrievePayments(
         organizationId,
         environment,
         { paymentId: id },
         { withCustomer: true, withWallets: true, withRefunds: true }
       );
+
+      payment = updatedPayment;
     }
 
     return Result.ok(

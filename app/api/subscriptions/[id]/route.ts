@@ -1,5 +1,7 @@
 import { retrieveCustomerWallets } from "@/actions/customers";
 import { runAtomic } from "@/actions/event";
+import { retrievePayments } from "@/actions/payment";
+import { retrieveProducts } from "@/actions/product";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
 import { Subscription } from "@/db";
 import {
@@ -20,7 +22,7 @@ export const GET = apiHandler({
   schema: { params: Schema.object({ id: Schema.string() }) },
   handler: async ({ params: { id }, auth: { organizationId, environment } }) => {
     const { subscription, customerWallet } = await all({
-      subscription: async () => retrieveSubscription(id, organizationId, environment),
+      subscription: async () => retrieveSubscription(id, organizationId, environment).then((res) => res.data[0]),
       async customerWallet() {
         const subscription = await this.$.subscription;
         return await retrieveCustomerWallets(
@@ -62,6 +64,14 @@ export const GET = apiHandler({
       });
     }
 
+    const [lastPayment, product] = await Promise.all([
+      retrievePayments(organizationId, environment, {
+        subscriptionId: id,
+        limit: 1,
+      }).then((res) => res.data[0]),
+      retrieveProducts(organizationId, environment, { productId: subscription.productId }),
+    ]);
+
     return Result.ok(
       toSnakeCase({
         id: updatedSubscription.id,
@@ -75,6 +85,9 @@ export const GET = apiHandler({
         trialDays: updatedSubscription.trialDays,
         updatedAt: updatedSubscription.updatedAt,
         createdAt: updatedSubscription.createdAt,
+
+        relatedResources: { product: product[0].product, asset: product[0].asset },
+        lastAttempt: lastPayment,
       })
     );
   },
@@ -90,7 +103,7 @@ export const PUT = apiHandler({
     auth: { organizationId, environment },
   }) => {
     const { subscription, customerWallet } = await all({
-      subscription: async () => retrieveSubscription(id, organizationId, environment),
+      subscription: async () => retrieveSubscription(id, organizationId, environment).then((res) => res.data[0]),
       async customerWallet() {
         const subscription = await this.$.subscription;
         return await retrieveCustomerWallets(

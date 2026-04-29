@@ -186,10 +186,12 @@ export default function CustomerDetailPage() {
   const invalidate = useInvalidateOrgQuery();
   const { data: orgContext } = useOrgContext();
   const { data: payments, isLoading: isLoadingPayments } = useOrgQuery(["payments", customerId], () =>
-    retrievePayments(undefined, undefined, { customerId: customerId }, { withRefunds: true, withWallets: true })
+    retrievePayments(undefined, undefined, { customerId: customerId }, { withRefunds: true, withWallets: true }).then(
+      (res) => res.data
+    )
   );
   const { data: customer, isLoading: customerLoading } = useOrgQuery(["customer", customerId], () =>
-    retrieveCustomers({ id: customerId }, { withWallets: true, requireLookUpParams: true }).then(([c]) => c)
+    retrieveCustomers({ id: customerId }, { withWallets: true, requireLookUpParams: true }).then(({ data: [c] }) => c)
   );
   const { data: customerEvents, isLoading: isLoadingCustomerEvents } = useOrgQuery(
     ["customer-events", customerId],
