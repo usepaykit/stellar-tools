@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { getCurrentOrganization } from "@/actions/organization";
 import { getWebhooksWithAnalytics } from "@/actions/webhook";
 import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
@@ -327,6 +326,7 @@ function WebhooksModalFooter({
 function WebhooksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: org } = useOrgContext();
   const invalidateOrgQuery = useInvalidateOrgQuery();
   const webhookModalSubmitRef = React.useRef<(() => void) | null>(null);
   const [webhookModalFooterProps, setWebhookModalFooterProps] = React.useState({
@@ -463,8 +463,8 @@ function WebhooksPageContent() {
 
   const toggleWebhookDisabledMutation = useMutation({
     mutationFn: async ({ id, isDisabled }: { id: string; isDisabled: boolean }) => {
-      const organization = await getCurrentOrganization();
-      const result = await api.put(`/webhooks/${id}`, { isDisabled }, { "x-session-token": organization?.token! });
+      if (!org?.token) throw new Error("No session token");
+      const result = await api.put(`/webhooks/${id}`, { isDisabled }, { "x-session-token": org.token });
       if (result.isErr()) throw new Error(result.error.message);
       return result.value;
     },
@@ -477,9 +477,9 @@ function WebhooksPageContent() {
 
   const deleteWebhookMutation = useMutation({
     mutationFn: async (id: string) => {
-      const organization = await getCurrentOrganization();
+      if (!org?.token) throw new Error("No session token");
       return await api.delete<Webhook>(`/webhooks/${id}`, {
-        "x-session-token": organization?.token!,
+        "x-session-token": org.token,
       });
     },
     onSuccess: () => {

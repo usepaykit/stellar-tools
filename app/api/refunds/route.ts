@@ -4,7 +4,7 @@ import { postRefund } from "@/actions/refund";
 import { decrypt } from "@/integrations/encryption";
 import { isValidPublicKey, sendAssetPayment } from "@/integrations/stellar-core";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
-import { generateResourceId } from "@/lib/utils";
+import { generateResourceId, xlmToStroops } from "@/lib/utils";
 import { Result, z as Schema, createRefundSchema } from "@stellartools/core";
 import { all } from "better-all";
 
@@ -58,7 +58,7 @@ export const POST = apiHandler({
         status: res.isOk() ? "succeeded" : "failed",
         receiverWalletAddress: payment.wallets!.address,
         customerId: payment.customerId,
-        amount: Number(BigInt(payment.amount) / BigInt(1e7)), // convert to stroops
+        amount: xlmToStroops(payment.amount.toString()),
         assetCode: payment.asset!.code,
       },
       organizationId,

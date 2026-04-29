@@ -23,6 +23,7 @@ import {
   customers,
   db,
   payments,
+  rawDb,
   refunds,
 } from "@/db";
 import { CustomerPaymentReceiptEmail } from "@/emails/customer-payment-receipt-email";
@@ -30,11 +31,12 @@ import { MerchantFirstPaymentConfirmedEmail } from "@/emails/merchant-first-paym
 import { MerchantMeteredFirstPurchaseEmail } from "@/emails/merchant-metered-first-purchase";
 import { MerchantSubscriptionStartedEmail } from "@/emails/merchant-subscription-started";
 import { sendEmail } from "@/integrations/email";
+import { getAssetUsdPrice } from "@/integrations/price-feed";
 import { verifyPaymentByPagingToken } from "@/integrations/stellar-core";
-import { generateResourceId } from "@/lib/utils";
+import { generateResourceId, stroopsToXlm, xlmToStroops } from "@/lib/utils";
 import { ApiListParams, EventTrigger, PaginatedResult, WebhookTrigger } from "@/types";
 import { all } from "better-all";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import moment from "moment";
 
 type PaymentContext = {
@@ -43,6 +45,7 @@ type PaymentContext = {
   product?: Product;
   checkout?: Checkout;
   account?: Account;
+  lifeTimeVolumeUsdCents: number;
 };
 
 async function loadPaymentContext(
@@ -50,7 +53,7 @@ async function loadPaymentContext(
   organizationId: string,
   environment: Network
 ): Promise<PaymentContext> {
-  const { org, customer, checkout, product } = await all({
+  const { org, customer, checkout, product, lifeTimeVolumeUsdCents } = await all({
     org: async () => retrieveOrganization(organizationId),
     account: async () => retrieveAccount({ organizationId }),
     customer: async () => {
@@ -71,9 +74,15 @@ async function loadPaymentContext(
       if (!productId) return undefined;
       return retrieveProducts(organizationId, environment, { productId }).then((res) => res[0]?.product);
     },
+    lifeTimeVolumeUsdCents: async () => {
+      return retrieveLifetimeVolumeCents(organizationId, environment);
+    },
   });
 
-  return { org, customer, product, checkout };
+  console.log("loaded payment context");
+  console.dir({ org, customer, product, checkout, lifeTimeVolumeUsdCents }, { depth: 100 });
+
+  return { org, customer, product, checkout, lifeTimeVolumeUsdCents };
 }
 
 const MERCHANT_EMAIL_TEMPLATES = {
@@ -119,11 +128,13 @@ const paymentActionHandler = async (
   options?: { failErrorMessage?: string }
 ) => {
   return withEvent(call, async (payment) => {
+    console.log("paymentActionHandler", payment);
+
     const events: EventTrigger<typeof payment>[] = [];
     const webhooks: WebhookTrigger<typeof payment>[] = [];
-    const sideEffects: Promise<any>[] = [];
+    const sideEffects: (() => Promise<void>)[] = [];
 
-    const rawAmount = `${payment.amount} ${payment.metadata?.assetCode}`;
+    const rawAmount = `${stroopsToXlm(payment.amount)} ${payment.metadata?.assetCode}`;
 
     console.log({ rawAmount });
 
@@ -138,90 +149,92 @@ const paymentActionHandler = async (
       metadata: payment.metadata,
     };
 
-    if (payment.status === "confirmed") {
-      // Platform Logic
-      sideEffects.push(processPaymentBilling(payment.id, organizationId, environment));
-
-      events.push({
-        type: "payment::completed",
-        map: (p) => ({
-          customerId: p.customerId,
-          subscriptionId: p.subscriptionId,
-          data: {
-            ...basePayload,
-            subscriptionId: p.subscriptionId,
-            ...(options?.failErrorMessage && { error: options.failErrorMessage }),
-          },
-        }),
-      });
-      webhooks.push({
-        event: "payment.confirmed",
-        map: () => ({ object: basePayload, previous_attributes: undefined }),
-      });
-
-      // Load all data once
-      const ctx = await loadPaymentContext(payment, organizationId, environment);
-
-      console.log({ ctx });
-
-      // Customer Receipt
-      if (ctx.customer?.email) {
-        sideEffects.push(
-          sendEmail(
-            ctx.customer.email,
-            "Payment Confirmed",
-            CustomerPaymentReceiptEmail({
-              customerName: ctx.customer.name,
-              amount: rawAmount,
-              reference: payment.id,
-              date: moment().format("MMMM DD, YYYY [at] h:mm A"),
-              organizationName: ctx.org.name,
-              organizationLogo: ctx.org.logoUrl,
-            })
-          )
-        );
-      }
-
-      // Merchant "First Payout" logic
-      const paymentCount = await retrievePaymentCount(organizationId, undefined, { status: "confirmed" });
-      if (
-        paymentCount === 1 &&
-        ctx.org.supportEmail &&
-        ctx.product &&
-        ctx.checkout &&
-        MERCHANT_EMAIL_TEMPLATES[ctx.product.type]
-      ) {
-        const { subject, component } = MERCHANT_EMAIL_TEMPLATES[ctx.product.type](
-          ctx as Required<PaymentContext>,
-          payment
-        );
-
-        if (ctx.account?.email) {
-          sideEffects.push(sendEmail(ctx.account.email, subject, component));
-        }
-      }
-    }
-
     if (payment.status === "failed") {
+      const errorMessage = options?.failErrorMessage ?? undefined;
+
       events.push({
         type: "payment::failed",
         map: (p) => ({
           customerId: p.customerId,
-          data: { ...basePayload, ...(options?.failErrorMessage && { error: options.failErrorMessage }) },
+          data: { ...basePayload, ...(errorMessage && { error: errorMessage }) },
         }),
       });
 
       webhooks.push({ event: "payment.failed", map: () => ({ object: basePayload, previous_attributes: undefined }) });
     }
 
-    // Fire side effects in parallel, don't block the response
-    sideEffects.forEach((p) => p.catch((err) => console.error(`[Side-Effect Error]:`, err)));
+    if (payment.status == "confirmed") {
+      events.push({
+        type: "payment::completed",
+        map: (p) => ({
+          customerId: p.customerId,
+          subscriptionId: p.subscriptionId,
+          data: { ...basePayload, subscriptionId: p.subscriptionId },
+        }),
+      });
 
-    console.dir({ webhooks, events }, { depth: 100 });
+      webhooks.push({
+        event: "payment.confirmed",
+        map: () => ({ object: basePayload, previous_attributes: undefined }),
+      });
+
+      const runBackgroundTasks = async () => {
+        try {
+          const ctx = await loadPaymentContext(payment, organizationId, environment);
+
+          await processPaymentBilling(payment.id, organizationId, environment, ctx.lifeTimeVolumeUsdCents);
+
+          if (ctx.customer?.email) {
+            await sendEmail(
+              ctx.customer.email,
+              "Payment Confirmed",
+              CustomerPaymentReceiptEmail({
+                customerName: ctx.customer.name,
+                amount: rawAmount,
+                reference: payment.id,
+                date: moment().format("MMMM DD, YYYY [at] h:mm A"),
+                organizationName: ctx.org.name,
+                organizationLogo: ctx.org.logoUrl,
+              })
+            );
+          }
+
+          // Merchant "First Payout" logic
+          const paymentCount = await retrievePaymentCount(organizationId, undefined, { status: "confirmed" });
+          console.log("paymentCount", paymentCount);
+
+          if (
+            paymentCount === 1 &&
+            ctx.org.supportEmail &&
+            ctx.product &&
+            ctx.checkout &&
+            MERCHANT_EMAIL_TEMPLATES[ctx.product.type]
+          ) {
+            const { subject, component } = MERCHANT_EMAIL_TEMPLATES[ctx.product.type](
+              ctx as Required<PaymentContext>,
+              payment
+            );
+
+            if (ctx.account?.email) {
+              console.log("sending merchant first payment confirmed email to", ctx.account.email);
+              await sendEmail(ctx.account.email, subject, component);
+            }
+          }
+        } catch (e) {
+          console.error("[Background Tasks Failed]", e);
+        }
+      };
+
+      sideEffects.push(runBackgroundTasks);
+    }
+
+    console.log("events and webhooks");
+    console.dir({ events, webhooks }, { depth: 100 });
 
     return {
       events,
       webhooks: { organizationId, environment, triggers: webhooks as WebhookTrigger<typeof payment>[] },
+      sideEffects,
     };
   });
 };
@@ -230,7 +243,8 @@ export const postPayment = async (
   params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "customerWalletId">,
   orgId?: string,
   env?: Network,
-  options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null; failErrorMessage?: string }
+  options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null; failErrorMessage?: string },
+  dbInstance: typeof db = db
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
@@ -247,9 +261,9 @@ export const postPayment = async (
 
   console.log({ customerWalletId });
 
-  return paymentActionHandler(
+  return await paymentActionHandler(
     async () => {
-      const [payment] = await db
+      const [payment] = await dbInstance
         .insert(payments)
         .values({
           ...params,
@@ -266,6 +280,19 @@ export const postPayment = async (
     organizationId,
     environment
   );
+};
+
+export const retrieveLifetimeVolumeCents = async (orgId: string, environment: Network): Promise<number> => {
+  const [res] = await db
+    .select({ total: sql<number>`sum(amount_usd_cents_snapshot)::bigint` })
+    .from(payments)
+    .where(
+      and(eq(payments.organizationId, orgId), eq(payments.status, "confirmed"), eq(payments.environment, environment))
+    );
+
+  console.log({ res });
+
+  return Number(res?.total ?? 0);
 };
 
 export const retrievePayments = async (
@@ -374,16 +401,8 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
     return checkout;
   }
 
-  const {
-    organizationId,
-    environment,
-    initialPagingToken,
-    merchantPublicKey,
-    customerId,
-    assetId,
-    assetCode,
-    assetIssuer,
-  } = checkout;
+  const { organizationId, environment, initialPagingToken, merchantPublicKey, customerId, assetId, assetCode } =
+    checkout;
 
   const result = await verifyPaymentByPagingToken(merchantPublicKey, checkoutId, initialPagingToken!, environment);
 
@@ -395,21 +414,23 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   if (!successful) {
     await runAtomic(async () => {
-      await putCheckout(checkoutId, { status: "failed" }, organizationId, environment);
+      await putCheckout(checkoutId, { status: "failed" }, organizationId, environment, rawDb);
       await postPayment(
         {
           subscriptionId: null,
           checkoutId,
           customerId,
-          amount: BigInt(amount),
+          amount: xlmToStroops(amount),
           transactionHash: hash,
           status: "failed",
           metadata: null,
           assetId,
+          amountUsdCentsSnapshot: BigInt(0),
         },
         organizationId,
         environment,
-        { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
+        { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress },
+        rawDb
       );
     });
 
@@ -417,26 +438,35 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
   }
 
   await runAtomic(async () => {
-    await putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment).catch(
+    await putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment, rawDb).catch(
       (err) => {
         console.error("Error putting checkout", err);
       }
     );
+
+    const amountUsdCentsSnapshot = BigInt(
+      Math.round((await getAssetUsdPrice(checkout.assetMetadata ?? {})) * checkout.finalAmount) * 100
+    );
+
+    console.log("amountUsdCentsSnapshot", amountUsdCentsSnapshot);
 
     await postPayment(
       {
         subscriptionId: null,
         customerId,
         checkoutId,
-        amount: BigInt(amount),
+        amount: xlmToStroops(amount),
         transactionHash: hash,
         status: "confirmed",
         metadata: null,
         assetId,
+        amountUsdCentsSnapshot,
       },
+
       organizationId,
       environment,
-      { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
+      { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress },
+      rawDb
     );
   });
 

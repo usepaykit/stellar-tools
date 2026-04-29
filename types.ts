@@ -36,6 +36,7 @@ export interface EventConfig<T> {
     environment: Network;
     triggers: MaybeArray<WebhookTrigger<T, any>>;
   };
+  sideEffects?: Array<() => Promise<void>>;
 }
 
 export type AuthContext = {

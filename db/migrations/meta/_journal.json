@@ -36,6 +36,27 @@
       "when": 1777230920309,
       "tag": "0004_old_kate_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777463471752,
+      "tag": "0005_eminent_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777465620507,
+      "tag": "0006_quiet_pretty_boy",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777466583006,
+      "tag": "0007_icy_mentor",
+      "breakpoints": true
     }
   ]
 }

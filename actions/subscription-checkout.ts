@@ -5,9 +5,11 @@ import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { postSubscriptionsBulk } from "@/actions/subscription";
 import { subscriptionIntervals } from "@/constant";
+import { rawDb } from "@/db";
+import { getAssetUsdPrice } from "@/integrations/price-feed";
 import { buildSubscriptionApprovalXdr, startSubscription, submitSorobanTx } from "@/integrations/soroban-contract";
 import { retrieveAssetContractId } from "@/integrations/stellar-core";
-import { generateResourceId } from "@/lib/utils";
+import { generateResourceId, xlmToStroops } from "@/lib/utils";
 import moment from "moment";
 
 /**
@@ -39,7 +41,7 @@ export async function prepareSubscriptionApproval(
     );
 
     const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
-    const amountStroops = BigInt(Math.round(checkout.finalAmount * 1e7));
+    const amountStroops = xlmToStroops(checkout.finalAmount.toString());
 
     const periodStart = new Date();
     const periodEnd = new Date(Date.now() + durationDays * 864e5);
@@ -111,7 +113,7 @@ export async function finalizeSubscriptionCheckout(
   const durationDays = subscriptionIntervals[checkout.recurringPeriod as keyof typeof subscriptionIntervals] ?? 30;
 
   const durationSeconds = durationDays * 86400;
-  const amountStroops = BigInt(Math.round(checkout.finalAmount * 1e7));
+  const amountStroops = xlmToStroops(checkout.finalAmount.toString());
 
   const approvalResult = await submitSorobanTx(checkout.environment, signedApprovalXDR);
   if (approvalResult.isErr()) {
@@ -136,7 +138,7 @@ export async function finalizeSubscriptionCheckout(
   const subscriptionId = generateResourceId("sub", checkout.organizationId, 20);
 
   await runAtomic(async () => {
-    await putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment);
+    await putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment, rawDb);
 
     await postSubscriptionsBulk(
       {
@@ -148,19 +150,27 @@ export async function finalizeSubscriptionCheckout(
         metadata: null,
       },
       organizationId,
-      environment
+      environment,
+      rawDb
     );
+
+    const amountUsdCentsSnapshot = BigInt(
+      Math.round((await getAssetUsdPrice(checkout.assetMetadata ?? {})) * checkout.finalAmount) * 100
+    );
+
+    console.log("amountUsdCentsSnapshot", amountUsdCentsSnapshot);
 
     await postPayment(
       {
         customerId: checkout.customerId,
         checkoutId,
-        amount: BigInt(Math.round(checkout.finalAmount * 1e7)), // convert to stroops
+        amount: xlmToStroops(checkout.finalAmount.toString()),
         transactionHash: hash,
         status: "confirmed",
         metadata: null,
         assetId: checkout.assetId,
         subscriptionId,
+        amountUsdCentsSnapshot,
       },
       organizationId,
       environment,
@@ -168,7 +178,8 @@ export async function finalizeSubscriptionCheckout(
         assetId: checkout.assetId ?? undefined,
         assetCode: checkout.assetCode ?? undefined,
         customerWalletAddress: customerAddress,
-      }
+      },
+      rawDb
     );
   });
 

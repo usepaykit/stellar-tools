@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { getCurrentOrganization } from "@/actions/organization";
 import { retrieveProducts } from "@/actions/product";
 import { AppModal } from "@/components/app-modal";
 import { CodeBlock } from "@/components/code-block";
@@ -32,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
-import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
+import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { ApiClient } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ChevronRight, Copy, Edit, ExternalLink, MoreHorizontal, Package, Pencil } from "lucide-react";
@@ -152,6 +151,7 @@ function ProductDetailSkeleton() {
 export default function ProductDetailPage() {
   const router = useRouter();
   const { id } = useParams() as { id: string };
+  const { data: org } = useOrgContext();
   const invalidate = useInvalidateOrgQuery();
   const [detailsExpanded, setDetailsExpanded] = React.useState(false);
   const productModalSubmitRef = React.useRef<(() => void) | null>(null);
@@ -258,11 +258,10 @@ export default function ProductDetailPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const organization = await getCurrentOrganization();
-      if (!organization) throw new Error("Organization not found");
+      if (!org?.token) throw new Error("No session token");
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-session-token": organization?.token! },
+        headers: { "x-session-token": org.token },
       });
       if (!product?.organizationId) throw new Error("Product not found");
       const response = await api.delete<null>(`/product/${id}`);

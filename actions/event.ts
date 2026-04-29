@@ -26,9 +26,10 @@ export async function withEvent<T>(
   const runSideEffects = async () => {
     try {
       const resolved = await (typeof configs === "function" ? configs(result) : configs);
+
       if (!resolved) return;
 
-      const { events: eventConfigs, webhooks: webhookConfig } = resolved;
+      const { events: eventConfigs, webhooks: webhookConfig, sideEffects } = resolved;
       const { organizationId: orgId, environment: env } = webhookConfig!;
 
       // 1. Identify active merchant webhooks
@@ -41,6 +42,8 @@ export async function withEvent<T>(
       const subscribers =
         triggers.length > 0 ? await retrieveWebhooks(orgId, env, { events: triggers.map((t) => t.event) }) : [];
 
+      console.log({ triggers, subscribers });
+
       // 2. DISCOVER INSTALLED APPS (Plugins)
       // Logic: If an action emits "customer::created", find apps with "read:customers" scope.
       const primaryEvent = Array.isArray(eventConfigs) ? eventConfigs[0] : eventConfigs;
@@ -48,12 +51,10 @@ export async function withEvent<T>(
       const requiredScope = resource ? (`read:${resource}` as const) : null;
 
       const installedApps = requiredScope
-        ? await retrieveInstalledApps({ status: "active", scopes: [requiredScope] }, orgId, env)
+        ? await retrieveInstalledApps({ status: "active", scopes: [requiredScope] }, orgId, env, rawDb)
         : [];
 
       const webhookLogId = subscribers.length > 0 ? generateResourceId("wh_evt", orgId, 52) : undefined;
-
-      console.log({ subscribers, webhookLogId });
 
       // 3. EMIT INTERNAL EVENTS (Dashboard Timeline)
       if (eventConfigs) {
@@ -88,6 +89,15 @@ export async function withEvent<T>(
         });
       }
 
+      // 5. CRACKED: Execute the custom side effects returned in the config
+      if (sideEffects && sideEffects.length > 0) {
+        console.log("scheduling side effects");
+        sideEffects.forEach((effect) => {
+          if (typeof waitUntil === "function") waitUntil(effect());
+          else effect().catch((e) => console.error("[SideEffect Error]", e));
+        });
+      }
+
       // B. Plugin/App Webhooks (Partner servers)
       if (installedApps.length > 0) {
         installedApps.forEach(({ app, app_installation }) => {
@@ -113,7 +123,6 @@ export async function withEvent<T>(
     }
   };
 
-  // Standard execution logic...
   const buffer = effectBuffer.getStore();
   if (buffer) buffer.push(runSideEffects);
   else if (typeof waitUntil === "function") waitUntil(runSideEffects());

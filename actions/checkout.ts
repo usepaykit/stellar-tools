@@ -15,6 +15,7 @@ import {
   organizationSecrets,
   organizations,
   products,
+  rawDb,
 } from "@/db";
 import { getLatestPagingToken } from "@/integrations/stellar-core";
 import { computeDiff, generateResourceId } from "@/lib/utils";
@@ -159,7 +160,7 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
         recurringPeriod: products.recurringPeriod,
         images: products.images,
       },
-      assets: { id: assets.id, code: assets.code, issuer: assets.issuer },
+      assets: { id: assets.id, code: assets.code, issuer: assets.issuer, metadata: assets.metadata },
       finalAmount: sql<number>`COALESCE(${checkouts.amount}, ${products.priceAmount})`.as("final_amount"),
       merchantPublicKey: sql<string>`
       CASE 
@@ -212,17 +213,24 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
     organizationName,
     organizationLogo,
     merchantEmail,
+    assetMetadata: assets$1.metadata,
   };
 };
 
-export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?: string, env?: Network) => {
+export const putCheckout = async (
+  id: string,
+  params: Partial<Checkout>,
+  orgId?: string,
+  env?: Network,
+  dbInstance: typeof db = db
+) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const oldCheckout = await retrieveCheckout(id, organizationId, environment);
 
   return withEvent(
     async () => {
-      return await db
+      return await dbInstance
         .update(checkouts)
         .set({ ...params, updatedAt: new Date() })
         .where(
@@ -276,7 +284,13 @@ export const putCheckoutAndCustomerInternal = async (
   environment: Network
 ) => {
   await runAtomic(async () => {
-    await putCheckout(checkoutId, { customerEmail: data.email, customerPhone: data.phoneNumber }, orgId, environment);
+    await putCheckout(
+      checkoutId,
+      { customerEmail: data.email, customerPhone: data.phoneNumber },
+      orgId,
+      environment,
+      rawDb
+    );
 
     if (data.customerId) {
       await putCustomer(data.customerId, { email: data.email, phone: data.phoneNumber }, orgId, environment);

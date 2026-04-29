@@ -4,7 +4,6 @@ import * as React from "react";
 
 import { useCookieState } from "@/hooks/use-cookie-state";
 import { useOrgContext } from "@/hooks/use-org-query";
-import { ApiClient } from "@stellartools/core";
 import { useQueries } from "@tanstack/react-query";
 
 export type AssetSpec = { code: string; issuer: string };
@@ -28,18 +27,16 @@ export function useAssetRates(assets: AssetSpec[]): AssetRatesResult {
       queryFn: async () => {
         if (!org) throw new Error("No organization found");
 
-        const api = new ApiClient({
-          baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-          headers: { "x-session-token": org.token },
-        });
-
-        const rates = await api.get<{ data: { assetUsd: number; fiatRates: Record<string, number> } }>(
-          `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/~api/rates?asset=${encodeURIComponent(asset.code)}&issuer=${encodeURIComponent(asset.issuer)}`
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/~api/rates?asset=${encodeURIComponent(asset.code)}&issuer=${encodeURIComponent(asset.issuer)}`,
+          { headers: { "x-session-token": org.token } }
         );
 
-        if (!rates.isOk()) throw new Error(rates.error.message);
+        if (!response.ok) throw new Error(await response.text());
 
-        return { ...rates.value.data, code: asset.code };
+        const data = (await response.json()) as { assetUsd: number; fiatRates: Record<string, number> };
+
+        return { assetUsd: data.assetUsd, fiatRates: data.fiatRates, code: asset.code };
       },
       enabled: !!org?.token,
       staleTime: 5 * 60 * 1000,
@@ -51,7 +48,7 @@ export function useAssetRates(assets: AssetSpec[]): AssetRatesResult {
     const map: Record<string, number> = {};
     for (const q of queries) {
       if (q.data) {
-        map[q.data.code] = (q.data.assetUsd ?? 1) * (q.data.fiatRates?.[selectedCurrency] ?? 1);
+        map[q.data.code] = (q.data?.assetUsd ?? 1) * (q.data.fiatRates?.[selectedCurrency] ?? 1);
       }
     }
     return map;

@@ -185,3 +185,24 @@ export const mergeWithNullDeletes = (
   }
   return result;
 };
+
+export const xlmToStroops = (xlm: string): bigint => {
+  const normalized = xlm.trim();
+  const [whole, frac = ""] = normalized.split(".");
+  if (!/^\d+$/.test(whole) || !/^\d*$/.test(frac)) throw new Error(`Invalid XLM amount: ${xlm}`);
+  if (frac.length > 7) throw new Error(`Too many decimals for XLM: ${xlm}`); // stroop precision
+  return BigInt(whole + frac.padEnd(7, "0"));
+};
+
+export const stroopsToXlm = (stroops: bigint): string => {
+  const negative = stroops < BigInt(0);
+  const abs = negative ? BigInt(-stroops) : stroops;
+
+  const whole = abs / BigInt(10_000_000);
+  const frac = abs % BigInt(10_000_000);
+
+  // Always output 7 decimals for Stellar precision
+  const fracStr = frac.toString().padStart(7, "0");
+
+  return `${negative ? "-" : ""}${whole.toString()}.${fracStr}`;
+};

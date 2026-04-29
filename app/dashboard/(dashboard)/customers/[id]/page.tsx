@@ -42,7 +42,7 @@ import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
 import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, stroopsToXlm } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient, Checkout } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
@@ -137,7 +137,7 @@ const paymentColumns: ColumnDef<ResolvedPayment>[] = [
     header: "Amount",
     cell: ({ row }) => (
       <span className="font-medium">
-        {formatCurrency(Number(BigInt(row.original.amount) / BigInt(1e7)), row.original.metadata?.assetCode as string)}
+        {formatCurrency(Number(stroopsToXlm(row.original.amount)), row.original.metadata?.assetCode as string)}
       </span>
     ),
     meta: { filterable: true, filterVariant: "number" },
@@ -324,7 +324,7 @@ export default function CustomerDetailPage() {
   const totalSpentLocal = React.useMemo(
     () =>
       confirmedPayments.reduce(
-        (sum, p) => sum + toLocal(Number(BigInt(p.amount) / BigInt(1e7)), p.metadata?.assetCode as string),
+        (sum, p) => sum + toLocal(Number(stroopsToXlm(p.amount)), p.metadata?.assetCode as string),
         0
       ),
     [confirmedPayments, toLocal]

@@ -15,6 +15,7 @@ import {
   organizations,
   payments,
   products,
+  rawDb,
   refunds,
   subscriptions,
 } from "@/db";
@@ -45,7 +46,7 @@ export const postOrganizationAndSecret = async (
   const organizationId = generateResourceId("org", accountId, 25);
 
   return await runAtomic(async () => {
-    const [organization] = await db
+    const [organization] = await rawDb
       .insert(organizations)
       .values({ ...params, id: organizationId, accountId })
       .returning();
@@ -242,7 +243,7 @@ export const postOrganizationSecretWithEncryption = async (
 ) => {
   const { organizationId } = await resolveOrgContext(orgId, env);
 
-  const [secret] = await db
+  const [secret] = await rawDb
     .insert(organizationSecrets)
     .values({
       mainnetPublicKey: params.mainnetPublicKey,
@@ -339,7 +340,7 @@ export const retrieveOverviewStats = async (options: { orgId?: string; env?: Net
   const feesChartQuery = db
     .select({
       date: sql<string>`date_trunc('day', ${charges.createdAt})::text`,
-      amountUsd: sql<number>`sum(${charges.amountUsd})::int`,
+      amountUsd: sql<number>`sum(${charges.amountUsdCents})::int`,
     })
     .from(charges)
     .where(

@@ -3,7 +3,6 @@
 import * as React from "react";
 
 import { createCustomerImage } from "@/actions/customers";
-import { getCurrentOrganization } from "@/actions/organization";
 import { CodeBlock } from "@/components/code-block";
 import { DataTable } from "@/components/data-table";
 import { FileUpload, FileWithPreview } from "@/components/file-upload";
@@ -69,6 +68,7 @@ export function CustomerModalContent({
       metadata: [],
     },
   });
+  const { data: org } = useOrgContext();
   const invalidate = useInvalidateOrgQuery();
 
   const { fields, append, remove } = RHF.useFieldArray({
@@ -122,11 +122,11 @@ export function CustomerModalContent({
 
   const putCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormData) => {
-      const organization = await getCurrentOrganization();
+      if (!org?.token) throw new Error("No session token");
 
       const api = new ApiClient({
         baseUrl: process.env.NEXT_PUBLIC_API_URL!,
-        headers: { "x-session-token": organization?.token!, "x-source": "Dashboard" },
+        headers: { "x-session-token": org.token, "x-source": "Dashboard" },
       });
 
       const phoneString = data.phoneNumber.number ? phoneNumberToString(data.phoneNumber) : "";

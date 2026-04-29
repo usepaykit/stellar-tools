@@ -39,6 +39,7 @@ type HandlerConfig<TBody, TParams, TQuery> = {
     sessionToken?: string | null;
   }) => Promise<Result<any, Error>>;
   headers?: Record<string, string>;
+  convertToSnakeCase?: boolean;
 };
 
 export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: HandlerConfig<TBody, TParams, TQuery>) => {
@@ -127,7 +128,7 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
           return NextResponse.json(
             {
               object: "list",
-              data: processResource(rawValue.data),
+              data: processResource(rawValue.data, config.convertToSnakeCase ?? true),
               has_more: rawValue.has_more,
               url: req.nextUrl.pathname,
             },

@@ -24,7 +24,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAssetRates } from "@/hooks/use-asset-rates";
 import { useCookieState } from "@/hooks/use-cookie-state";
-import { useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { useOrgQuery } from "@/hooks/use-org-query";
 import { cn } from "@/lib/utils";
 import { ArrowUpRight, ChevronsUpDown, Info } from "lucide-react";
 import Link from "next/link";

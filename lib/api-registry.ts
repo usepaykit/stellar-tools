@@ -21,9 +21,9 @@ const SENSITIVE_KEY_REGEXES: RegExp[] = [
   /password/i,
 ];
 
-export const processResource = <T>(data: T): T => {
+export const processResource = <T>(data: T, convertToSnakeCase: boolean = false): T => {
   if (_.isArray(data)) {
-    return data.map(processResource).filter((i) => i !== undefined) as T;
+    return data.map((item) => processResource(item, convertToSnakeCase)).filter((i) => i !== undefined) as T;
   }
   if (!_.isPlainObject(data)) return data;
 
@@ -37,8 +37,8 @@ export const processResource = <T>(data: T): T => {
     if (value === null || value === undefined) continue;
     if (_.isArray(value) && value.length === 0) continue;
 
-    const snakeKey = _.snakeCase(key);
-    const processedValue = processResource(value);
+    const snakeKey = convertToSnakeCase ? _.snakeCase(key) : key;
+    const processedValue = processResource(value, convertToSnakeCase);
 
     if (processedValue !== undefined) {
       result[snakeKey] = processedValue as T;

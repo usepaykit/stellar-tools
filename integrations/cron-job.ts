@@ -1,10 +1,12 @@
 import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { putSubscription, retrieveDueSubscriptions } from "@/actions/subscription";
+import { rawDb } from "@/db";
 import {
   cancelSubscription as cancelSorobanSubscription,
   chargeSubscription as chargeSorobanSubscription,
 } from "@/integrations/soroban-contract";
+import { xlmToStroops } from "@/lib/utils";
 import { EventSchemas, Inngest } from "inngest";
 
 type Events = {
@@ -76,7 +78,8 @@ export class CronJobApi {
                       subscriptionId,
                       { status: "canceled", canceledAt: new Date() },
                       organizationId,
-                      environment
+                      environment,
+                      rawDb
                     );
                   }
                 });
@@ -117,16 +120,18 @@ export class CronJobApi {
                     {
                       checkoutId: null,
                       customerId: sub.customer.id,
-                      amount: BigInt(Math.round(paymentEvent.data.amount * 1e7)), // convert to stroops
+                      amount: xlmToStroops(paymentEvent.data.amount),
                       transactionHash: chargeResult.value.hash,
                       status: "failed",
                       metadata: null,
                       assetId: sub.subscription.assetId,
                       subscriptionId: sub.subscription.id,
+                      amountUsdCentsSnapshot: BigInt(0),
                     },
                     sub.subscription.organizationId,
                     sub.subscription.environment,
-                    { customerWalletAddress: chargeResult.value.customerWalletAddress }
+                    { customerWalletAddress: chargeResult.value.customerWalletAddress },
+                    rawDb
                   );
                   throw new Error("On-chain payment failure recorded");
                 }
@@ -138,23 +143,26 @@ export class CronJobApi {
                     currentPeriodEnd: new Date(paymentEvent.data.periodEnd),
                   },
                   sub.subscription.organizationId,
-                  sub.subscription.environment
+                  sub.subscription.environment,
+                  rawDb
                 );
 
                 await postPayment(
                   {
                     checkoutId: null,
                     customerId: sub.customer.id,
-                    amount: BigInt(Math.round(paymentEvent.data.amount * 1e7)), // convert to stroops
+                    amount: xlmToStroops(paymentEvent.data.amount),
                     transactionHash: chargeResult.value.hash,
                     status: "confirmed",
                     metadata: null,
                     assetId: sub.subscription.assetId,
                     subscriptionId: sub.subscription.id,
+                    amountUsdCentsSnapshot: BigInt(0),
                   },
                   sub.subscription.organizationId,
                   sub.subscription.environment,
-                  { customerWalletAddress: chargeResult.value.customerWalletAddress }
+                  { customerWalletAddress: chargeResult.value.customerWalletAddress },
+                  rawDb
                 );
               });
 

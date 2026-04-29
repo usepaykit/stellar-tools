@@ -58,7 +58,7 @@ export default function CheckoutUI() {
       <main
         className={cn(
           "mx-auto grid w-full max-w-5xl flex-1 grid-cols-1 items-start gap-8 px-4 py-10 sm:gap-10 sm:px-6 lg:max-w-6xl lg:grid-cols-[1fr_1.1fr] lg:gap-12 lg:px-8",
-          checkout.environment === "testnet" && "pt-8 transition-all duration-300"
+          checkout.environment === "testnet" && "pt-12 transition-all duration-300"
         )}
       >
         <div className="space-y-6 lg:sticky lg:top-12">

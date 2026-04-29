@@ -8,9 +8,9 @@ export const TIER_RATE_BPS = {
   SCALE: 40, // 0.4%
 } as const;
 
-export function getVolumeTierRateBps(monthlyVolumeUsd: number): number {
-  if (monthlyVolumeUsd <= FREE_THRESHOLD_USD) return TIER_RATE_BPS.FREE;
-  if (monthlyVolumeUsd <= 1_000_000) return TIER_RATE_BPS.STANDARD;
-  if (monthlyVolumeUsd <= 5_000_000) return TIER_RATE_BPS.GROWTH;
+export const getVolumeTierRateBps = (lifetimeVolumeUsd: number): number => {
+  if (lifetimeVolumeUsd <= FREE_THRESHOLD_USD) return TIER_RATE_BPS.FREE;
+  if (lifetimeVolumeUsd <= 1_000_000) return TIER_RATE_BPS.STANDARD;
+  if (lifetimeVolumeUsd <= 5_000_000) return TIER_RATE_BPS.GROWTH;
   return TIER_RATE_BPS.SCALE;
-}
+};

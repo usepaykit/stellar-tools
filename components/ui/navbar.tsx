@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { getCurrentUser, signOut } from "@/actions/auth";
 import { AppModal } from "@/components/app-modal";
@@ -73,7 +73,6 @@ export function Header() {
 
   return (
     <nav className="sticky top-0 z-50 w-full">
-      {/* Mobile: floating pill */}
       <div className="px-4 pt-3 pb-1 md:hidden">
         <div className="bg-background/95 border-border flex items-center justify-between rounded-2xl border px-4 py-2.5 shadow-sm backdrop-blur-md">
           <Link href="/" className="flex items-center gap-2">
@@ -93,7 +92,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile full-screen menu */}
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <DialogContent className="inset-0! top-0! left-0! m-0! flex h-screen! w-screen! max-w-none! translate-x-0! translate-y-0! flex-col gap-0 rounded-none border-none p-0">
           <DialogTitle className="sr-only">Navigation menu</DialogTitle>
@@ -124,14 +122,14 @@ export function Header() {
             ) : (
               <>
                 <Link
-                  href="/create"
+                  href={`${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/signup`}
                   onClick={() => setMenuOpen(false)}
                   className="bg-primary text-primary-foreground block rounded-xl px-5 py-4 text-center text-[15px] font-semibold no-underline"
                 >
                   Start for free →
                 </Link>
                 <Link
-                  href="/login"
+                  href={`${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/signin`}
                   onClick={() => setMenuOpen(false)}
                   className="text-muted-foreground hover:text-foreground block rounded-xl px-5 py-4 text-center text-[15px] font-medium no-underline transition-colors"
                 >
@@ -239,13 +237,13 @@ export function Header() {
             ) : (
               <>
                 <Link
-                  href="/login"
+                  href={`${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/signin`}
                   className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg px-4 py-2 text-[14.5px] font-medium no-underline transition-colors"
                 >
                   Sign in
                 </Link>
                 <Link
-                  href="/create"
+                  href={`${process.env.NEXT_PUBLIC_DASHBOARD_URL!}/signup`}
                   className="bg-primary text-primary-foreground rounded-[9px] px-5 py-2 text-[14.5px] font-semibold no-underline transition-all hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(91,79,255,0.35)]"
                 >
                   Start for free →

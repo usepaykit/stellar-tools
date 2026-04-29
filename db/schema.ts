@@ -346,6 +346,7 @@ export const payments = pgTable("payment", {
   checkoutId: text("checkout_id").references(() => checkouts.id),
   customerId: text("customer_id").references(() => customers.id),
   amount: bigint("amount", { mode: "bigint" }).notNull(), // Use BigInt for Stroops
+  amountUsdCentsSnapshot: bigint("amount_usd_cents_snapshot", { mode: "bigint" }).notNull(), // Use BigInt for USD Cents
   transactionHash: text("tx_hash").notNull().unique(),
   status: paymentStatusEnum("status").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -367,7 +368,7 @@ export const charges = pgTable("charge", {
     .references(() => organizations.id),
   paymentId: text("payment_id").references(() => payments.id),
   amount: bigint("amount", { mode: "bigint" }).notNull(), // Fee in Stroops
-  amountUsd: integer("amount_usd").notNull(), // Fee in USD Cents for reporting
+  amountUsdCents: bigint("amount_usd_cents", { mode: "bigint" }).notNull(), // Fee in USD Cents for reporting
   assetId: text("asset_id")
     .notNull()
     .references(() => assets.id),
@@ -463,7 +464,7 @@ export const refunds = pgTable(
       .notNull()
       .references(() => payments.id),
     customerId: text("customer_id").references(() => customers.id),
-    amount: integer("amount").notNull(),
+    amount: bigint("amount", { mode: "bigint" }).notNull(),
     reason: text("reason"),
     status: refundStatusEnum("status").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),

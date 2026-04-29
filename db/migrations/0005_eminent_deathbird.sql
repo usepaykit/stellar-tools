@@ -1,0 +1,1 @@
+ALTER TABLE "refund" ALTER COLUMN "amount" SET DATA TYPE bigint;

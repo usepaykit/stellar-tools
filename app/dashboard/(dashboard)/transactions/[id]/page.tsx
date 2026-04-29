@@ -464,7 +464,7 @@ export default function TransactionDetailPage() {
                         <div className="min-w-0 flex-1">
                           <div className="text-muted-foreground mb-1 text-xs">Refund Amount</div>
                           <div className="text-lg font-semibold">
-                            {formatCurrency(refund.amount, refund.assetCode!)}
+                            {formatCurrency(Number(refund.amount), refund.assetCode!)}
                           </div>
                         </div>
                       </div>

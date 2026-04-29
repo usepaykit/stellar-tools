@@ -134,7 +134,8 @@ export const putCustomer = async (
   retUpdate: Partial<Customer>,
   orgId?: string,
   env?: Network,
-  options?: { source?: string }
+  options?: { source?: string },
+  dbInstance: typeof db = db
 ) => {
   const [
     { organizationId, environment },
@@ -148,7 +149,7 @@ export const putCustomer = async (
 
   return withEvent(
     async () => {
-      const [customer] = await db
+      const [customer] = await dbInstance
         .update(customersSchema)
         .set({
           ...retUpdate,

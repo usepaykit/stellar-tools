@@ -3,7 +3,7 @@ import { runAtomic } from "@/actions/event";
 import { retrievePayments } from "@/actions/payment";
 import { retrieveProducts } from "@/actions/product";
 import { putSubscription, retrieveSubscription } from "@/actions/subscription";
-import { Subscription } from "@/db";
+import { rawDb, Subscription } from "@/db";
 import {
   cancelSubscription as cancelSorobanSubscription,
   retrieveSubscription as retrieveSorobanSubscription,
@@ -59,7 +59,7 @@ export const GET = apiHandler({
 
     if (diff) {
       await runAtomic(async () => {
-        const updated = await putSubscription(id, chainStateAsDb, organizationId, environment);
+        const updated = await putSubscription(id, chainStateAsDb, organizationId, environment, rawDb);
         updatedSubscription = updated;
       });
     }

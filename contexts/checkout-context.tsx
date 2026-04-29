@@ -9,6 +9,7 @@ import { phoneNumberFromString, phoneNumberSchema, phoneNumberToString } from "@
 import { toast } from "@/components/ui/toast";
 import { TxStatus, useWallet } from "@/contexts/wallet-context";
 import { requiresTrustline, retrieveAccount } from "@/integrations/stellar-core";
+import { xlmToStroops } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Asset, BASE_FEE, Memo, Networks, Operation, Transaction, TransactionBuilder } from "@stellar/stellar-sdk";
 import { UseMutationResult, UseQueryResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -54,7 +55,6 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
   });
 
   const checkout = query.data;
-  console.log("checkout", checkout);
 
   const form = RHF.useForm({
     resolver: zodResolver(baseSchema),
@@ -135,12 +135,13 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
               {
                 checkoutId,
                 customerId: checkout?.customerId,
-                amount: BigInt(Math.round(checkout?.finalAmount * 1e7)), // convert to stroops
+                amount: xlmToStroops(checkout?.finalAmount.toString()),
                 transactionHash: txResult.txHash,
                 status: "failed",
                 metadata: null,
                 assetId: checkout?.assetId,
                 subscriptionId: null,
+                amountUsdCentsSnapshot: BigInt(0),
               },
               checkout?.organizationId,
               checkout?.environment,
@@ -187,7 +188,15 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
 
         if (txResult?.txHash) {
           if (txResult.status === "SUCCESS") {
-            await sweepAndProcessPayment(checkoutId);
+            // Fire and forget
+            sweepAndProcessPayment(checkoutId)
+              .then(() => {
+                console.log("swept and processed payment");
+              })
+              .catch((error) => {
+                console.error("error sweeping and processing payment", error);
+              });
+
             toast.success("Payment successful!");
             queryClient.invalidateQueries({ queryKey: ["checkout", checkoutId] });
           } else if (txResult.status === "FAIL") {
@@ -196,12 +205,13 @@ export const CheckoutProvider = ({ checkoutId, children }: { checkoutId: string;
               {
                 checkoutId,
                 customerId: checkout?.customerId,
-                amount: BigInt(Math.round(checkout?.finalAmount * 1e7)), // convert to stroops
+                amount: xlmToStroops(checkout?.finalAmount.toString()),
                 transactionHash: txResult.txHash,
                 status: "failed",
                 metadata: null,
                 assetId: checkout?.assetId,
                 subscriptionId: null,
+                amountUsdCentsSnapshot: BigInt(0),
               },
               checkout?.organizationId,
               checkout?.environment,
