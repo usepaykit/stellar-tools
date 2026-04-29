@@ -22,8 +22,7 @@ export const postSubscriptionsBulk = async (
     trialDays?: number;
   },
   orgId?: string,
-  env?: Network,
-  dbInstance: typeof db = db
+  env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
@@ -43,7 +42,7 @@ export const postSubscriptionsBulk = async (
         trialDays: params.trialDays,
       }));
 
-      return await dbInstance.insert(subscriptions).values(values).returning();
+      return await db.insert(subscriptions).values(values).returning();
     },
     (subscriptions) => {
       const data = subscriptions.map(
@@ -186,13 +185,7 @@ export const listSubscriptions = async (
   return await paginate(subscriptionList, limit);
 };
 
-export const putSubscription = async (
-  id: string,
-  retUpdate: Partial<Subscription>,
-  orgId?: string,
-  env?: Network,
-  dbInstance: typeof db = db
-) => {
+export const putSubscription = async (id: string, retUpdate: Partial<Subscription>, orgId?: string, env?: Network) => {
   const [
     { organizationId, environment },
     {
@@ -202,7 +195,7 @@ export const putSubscription = async (
 
   return withEvent(
     async () => {
-      const [record] = await dbInstance
+      const [record] = await db
         .update(subscriptions)
         .set({ ...retUpdate, updatedAt: new Date() })
         .where(

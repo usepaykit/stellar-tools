@@ -23,8 +23,6 @@ export async function processPaymentBilling(
     retrieveOrganizationIdAndSecret(organizationId, environment).then((res) => res.secret),
   ]);
 
-  console.log({ paymentStatus: payment?.status });
-
   if (!payment || payment.status !== "confirmed") return;
 
   if (!secret || !payment || !payment.asset) {
@@ -36,7 +34,6 @@ export async function processPaymentBilling(
 
   console.log("Payment value cents", paymentValueCents);
 
-  // const lifetimeVolumeCents = await getLifetimeVolumeCents(payment.organizationId, payment.environment);
   const lifetimeVolumeUsd = lifeTimeVolumeUsdCents / 100;
 
   console.log("Lifetime volume USD", lifetimeVolumeUsd);

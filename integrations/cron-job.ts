@@ -1,7 +1,6 @@
 import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { putSubscription, retrieveDueSubscriptions } from "@/actions/subscription";
-import { rawDb } from "@/db";
 import {
   cancelSubscription as cancelSorobanSubscription,
   chargeSubscription as chargeSorobanSubscription,
@@ -78,8 +77,7 @@ export class CronJobApi {
                       subscriptionId,
                       { status: "canceled", canceledAt: new Date() },
                       organizationId,
-                      environment,
-                      rawDb
+                      environment
                     );
                   }
                 });
@@ -130,8 +128,7 @@ export class CronJobApi {
                     },
                     sub.subscription.organizationId,
                     sub.subscription.environment,
-                    { customerWalletAddress: chargeResult.value.customerWalletAddress },
-                    rawDb
+                    { customerWalletAddress: chargeResult.value.customerWalletAddress }
                   );
                   throw new Error("On-chain payment failure recorded");
                 }
@@ -143,8 +140,7 @@ export class CronJobApi {
                     currentPeriodEnd: new Date(paymentEvent.data.periodEnd),
                   },
                   sub.subscription.organizationId,
-                  sub.subscription.environment,
-                  rawDb
+                  sub.subscription.environment
                 );
 
                 await postPayment(
@@ -161,8 +157,7 @@ export class CronJobApi {
                   },
                   sub.subscription.organizationId,
                   sub.subscription.environment,
-                  { customerWalletAddress: chargeResult.value.customerWalletAddress },
-                  rawDb
+                  { customerWalletAddress: chargeResult.value.customerWalletAddress }
                 );
               });
 

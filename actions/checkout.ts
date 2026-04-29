@@ -15,7 +15,6 @@ import {
   organizationSecrets,
   organizations,
   products,
-  rawDb,
 } from "@/db";
 import { getLatestPagingToken } from "@/integrations/stellar-core";
 import { computeDiff, generateResourceId } from "@/lib/utils";
@@ -217,20 +216,14 @@ export const retrieveCheckoutAndCustomer = async (id: string) => {
   };
 };
 
-export const putCheckout = async (
-  id: string,
-  params: Partial<Checkout>,
-  orgId?: string,
-  env?: Network,
-  dbInstance: typeof db = db
-) => {
+export const putCheckout = async (id: string, params: Partial<Checkout>, orgId?: string, env?: Network) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   const oldCheckout = await retrieveCheckout(id, organizationId, environment);
 
   return withEvent(
     async () => {
-      return await dbInstance
+      return await db
         .update(checkouts)
         .set({ ...params, updatedAt: new Date() })
         .where(
@@ -284,13 +277,7 @@ export const putCheckoutAndCustomerInternal = async (
   environment: Network
 ) => {
   await runAtomic(async () => {
-    await putCheckout(
-      checkoutId,
-      { customerEmail: data.email, customerPhone: data.phoneNumber },
-      orgId,
-      environment,
-      rawDb
-    );
+    await putCheckout(checkoutId, { customerEmail: data.email, customerPhone: data.phoneNumber }, orgId, environment);
 
     if (data.customerId) {
       await putCustomer(data.customerId, { email: data.email, phone: data.phoneNumber }, orgId, environment);

@@ -51,7 +51,7 @@ export async function withEvent<T>(
       const requiredScope = resource ? (`read:${resource}` as const) : null;
 
       const installedApps = requiredScope
-        ? await retrieveInstalledApps({ status: "active", scopes: [requiredScope] }, orgId, env, rawDb)
+        ? await retrieveInstalledApps({ status: "active", scopes: [requiredScope] }, orgId, env)
         : [];
 
       const webhookLogId = subscribers.length > 0 ? generateResourceId("wh_evt", orgId, 52) : undefined;
@@ -208,29 +208,23 @@ export const deleteEvents = async (
     .where(and(eq(events.organizationId, organizationId), eq(events.environment, environment), ...whereClause));
 };
 
-/**
- * Runs multiple actions atomically.
- * If any DB call fails, everything rolls back.
- * If any DB call fails, NO side-effects are fired.
- * NB: This works because of the Proxy on the db instance used in all actions.
- */
 export async function runAtomic<T>(fn: () => Promise<T>): Promise<T> {
   const sideEffects: Array<() => Promise<void>> = [];
 
-  return await effectBuffer.run(sideEffects, async () => {
+  const result = await effectBuffer.run(sideEffects, async () => {
     return await rawDb.transaction(async (tx) => {
       return await txContext.run(tx, async () => {
-        const result = await fn();
-
-        sideEffects.forEach((effect) => {
-          if (typeof waitUntil === "function") waitUntil(effect());
-          else effect();
-        });
-
-        return result;
+        return await fn();
       });
     });
   });
+
+  sideEffects.forEach((effect) => {
+    if (typeof waitUntil === "function") waitUntil(effect());
+    else effect().catch((e) => console.error("[Side-Effect Error]", e));
+  });
+
+  return result;
 }
 
 export const paginate = async <T>(data: T[], limit: number): Promise<PaginatedResult<T>> => {

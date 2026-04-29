@@ -18,8 +18,7 @@ export const postApp = async (params: Partial<App>) => {
 export const retrieveInstalledApps = async (
   params?: { scopes?: Array<AppScope>; status?: AppInstallationStatus },
   orgId?: string,
-  env?: Network,
-  dbInstance: typeof db = db
+  env?: Network
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
@@ -37,7 +36,7 @@ export const retrieveInstalledApps = async (
     whereClause.push(arrayOverlaps(appInstallations.scopes, searchValues));
   }
 
-  return await dbInstance
+  return await db
     .select()
     .from(apps)
     .innerJoin(appInstallations, eq(apps.id, appInstallations.appId))

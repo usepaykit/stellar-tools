@@ -134,8 +134,7 @@ export const putCustomer = async (
   retUpdate: Partial<Customer>,
   orgId?: string,
   env?: Network,
-  options?: { source?: string },
-  dbInstance: typeof db = db
+  options?: { source?: string }
 ) => {
   const [
     { organizationId, environment },
@@ -149,7 +148,7 @@ export const putCustomer = async (
 
   return withEvent(
     async () => {
-      const [customer] = await dbInstance
+      const [customer] = await db
         .update(customersSchema)
         .set({
           ...retUpdate,
@@ -525,6 +524,7 @@ export const upsertCustomerWallet = async (
   orgId?: string,
   env?: Network
 ) => {
+  console.log({ lookUpKey });
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   let wallet = await retrieveCustomerWallets(customerId, lookUpKey, organizationId, environment).then(
@@ -540,6 +540,8 @@ export const upsertCustomerWallet = async (
       metadata: null,
     });
   }
+
+  console.log({ wallet });
 
   return wallet;
 };

@@ -15,7 +15,6 @@ import {
   organizations,
   payments,
   products,
-  rawDb,
   refunds,
   subscriptions,
 } from "@/db";
@@ -46,7 +45,7 @@ export const postOrganizationAndSecret = async (
   const organizationId = generateResourceId("org", accountId, 25);
 
   return await runAtomic(async () => {
-    const [organization] = await rawDb
+    const [organization] = await db
       .insert(organizations)
       .values({ ...params, id: organizationId, accountId })
       .returning();
@@ -243,7 +242,7 @@ export const postOrganizationSecretWithEncryption = async (
 ) => {
   const { organizationId } = await resolveOrgContext(orgId, env);
 
-  const [secret] = await rawDb
+  const [secret] = await db
     .insert(organizationSecrets)
     .values({
       mainnetPublicKey: params.mainnetPublicKey,

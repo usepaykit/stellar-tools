@@ -23,7 +23,6 @@ import {
   customers,
   db,
   payments,
-  rawDb,
   refunds,
 } from "@/db";
 import { CustomerPaymentReceiptEmail } from "@/emails/customer-payment-receipt-email";
@@ -243,9 +242,11 @@ export const postPayment = async (
   params: Omit<Payment, "id" | "organizationId" | "environment" | "createdAt" | "updatedAt" | "customerWalletId">,
   orgId?: string,
   env?: Network,
-  options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null; failErrorMessage?: string },
-  dbInstance: typeof db = db
+  options?: { customerWalletAddress?: string; assetCode?: string; assetId?: string | null; failErrorMessage?: string }
 ) => {
+  console.log("posting payment");
+  console.dir({ params }, { depth: 100 });
+  console.log("resolving org context");
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
   let customerWalletId: string | null = null;
@@ -263,7 +264,7 @@ export const postPayment = async (
 
   return await paymentActionHandler(
     async () => {
-      const [payment] = await dbInstance
+      const [payment] = await db
         .insert(payments)
         .values({
           ...params,
@@ -414,7 +415,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
   if (!successful) {
     await runAtomic(async () => {
-      await putCheckout(checkoutId, { status: "failed" }, organizationId, environment, rawDb);
+      await putCheckout(checkoutId, { status: "failed" }, organizationId, environment);
       await postPayment(
         {
           subscriptionId: null,
@@ -429,8 +430,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
         },
         organizationId,
         environment,
-        { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress },
-        rawDb
+        { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
       );
     });
 
@@ -438,7 +438,8 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
   }
 
   await runAtomic(async () => {
-    await putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment, rawDb).catch(
+    console.log("putting checkout to completed");
+    await putCheckout(checkoutId, { status: "completed" }, checkout.organizationId, checkout.environment).catch(
       (err) => {
         console.error("Error putting checkout", err);
       }
@@ -465,8 +466,7 @@ export const sweepAndProcessPayment = async (checkoutId: string) => {
 
       organizationId,
       environment,
-      { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress },
-      rawDb
+      { assetId, assetCode: assetCode ?? undefined, customerWalletAddress: payerAddress }
     );
   });
 

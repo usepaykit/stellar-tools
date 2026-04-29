@@ -5,7 +5,6 @@ import { runAtomic } from "@/actions/event";
 import { postPayment } from "@/actions/payment";
 import { postSubscriptionsBulk } from "@/actions/subscription";
 import { subscriptionIntervals } from "@/constant";
-import { rawDb } from "@/db";
 import { getAssetUsdPrice } from "@/integrations/price-feed";
 import { buildSubscriptionApprovalXdr, startSubscription, submitSorobanTx } from "@/integrations/soroban-contract";
 import { retrieveAssetContractId } from "@/integrations/stellar-core";
@@ -138,7 +137,7 @@ export async function finalizeSubscriptionCheckout(
   const subscriptionId = generateResourceId("sub", checkout.organizationId, 20);
 
   await runAtomic(async () => {
-    await putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment, rawDb);
+    await putCheckout(checkoutId, { status: "completed", updatedAt: new Date() }, organizationId, environment);
 
     await postSubscriptionsBulk(
       {
@@ -150,8 +149,7 @@ export async function finalizeSubscriptionCheckout(
         metadata: null,
       },
       organizationId,
-      environment,
-      rawDb
+      environment
     );
 
     const amountUsdCentsSnapshot = BigInt(
@@ -178,8 +176,7 @@ export async function finalizeSubscriptionCheckout(
         assetId: checkout.assetId ?? undefined,
         assetCode: checkout.assetCode ?? undefined,
         customerWalletAddress: customerAddress,
-      },
-      rawDb
+      }
     );
   });
 
