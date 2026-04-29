@@ -29,7 +29,7 @@ import { toast } from "@/components/ui/toast";
 import { type Payment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
-import { cn, formatCurrency, truncate } from "@/lib/utils";
+import { cn, formatCurrency, stroopsToXlm, truncate } from "@/lib/utils";
 import {
   CheckCircle2,
   ChevronRight,
@@ -368,7 +368,10 @@ export default function TransactionDetailPage() {
                         <div className="text-muted-foreground mb-1 text-xs">Amount</div>
 
                         <div className="text-2xl font-bold">
-                          {formatCurrency(Number(payment.amount), payment.metadata?.assetCode as unknown as string)}
+                          {formatCurrency(
+                            Number(stroopsToXlm(payment.amount)),
+                            payment.metadata?.assetCode as unknown as string
+                          )}
                         </div>
                       </div>
                     </div>

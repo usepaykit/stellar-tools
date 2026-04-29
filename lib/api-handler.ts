@@ -136,7 +136,6 @@ export const apiHandler = <TBody = any, TParams = any, TQuery = any>(config: Han
           );
         }
 
-
         return NextResponse.json(processResource(rawValue), { headers: corsHeaders });
       }
     } catch (error: any) {

@@ -16,7 +16,7 @@ import { Customer, ResolvedPayment } from "@/db";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgQuery } from "@/hooks/use-org-query";
 import { useSyncTableFilters } from "@/hooks/use-sync-table-filters";
-import { cn, formatCurrency, truncate } from "@/lib/utils";
+import { cn, formatCurrency, stroopsToXlm, truncate } from "@/lib/utils";
 import { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, Clock, Copy, Download, Plus, Settings, Wallet, XCircle } from "lucide-react";
 import moment from "moment";
@@ -28,7 +28,7 @@ import { RefundModalContent, RefundModalFooter } from "./_shared";
 
 type Transaction = {
   id: string;
-  amount: string;
+  amount: bigint;
   asset: string;
   paymentMethod: {
     type: "wallet";
@@ -121,7 +121,11 @@ const columns: ColumnDef<Transaction>[] = [
     meta: { filterable: true, filterVariant: "number" },
     cell: ({ row }) => {
       const transaction = row.original;
-      return <div className="font-semibold">{formatCurrency(Number(transaction.amount), transaction.asset)}</div>;
+      return (
+        <div className="font-semibold">
+          {formatCurrency(Number(stroopsToXlm(transaction.amount)), transaction.asset)}
+        </div>
+      );
     },
   },
   {
@@ -400,7 +404,7 @@ function TransactionsPageContent() {
                 columns={columns}
                 data={filteredTransactions.map((it) => ({
                   id: it.id,
-                  amount: it.amount.toString(),
+                  amount: it.amount,
                   asset: it.asset?.code ?? "",
                   paymentMethod: {
                     type: "wallet" as const,
