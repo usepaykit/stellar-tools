@@ -9,6 +9,10 @@ export default async function middleware(req: NextRequest): Promise<NextResponse
 
   let prefix = "/api";
 
+  if (url?.pathname.includes("/~api/cron")) {
+    prefix = "/dashboard";
+  }
+
   if ( host == new URL(process.env.NEXT_PUBLIC_API_URL!).host) {
     prefix = "/api";
   } else if (host == new URL(process.env.NEXT_PUBLIC_DASHBOARD_URL!).host) {

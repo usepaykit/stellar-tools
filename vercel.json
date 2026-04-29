@@ -4,7 +4,7 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/cron/charge-subscriptions",
+      "path": "/~api/cron/charge-subscriptions",
       "schedule": "*/30 * * * *"
     }
   ]
