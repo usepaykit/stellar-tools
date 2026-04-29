@@ -335,7 +335,7 @@ export const retrieveDueSubscriptions = async () => {
         assetId: products.assetId,
       },
       customer: { id: customers.id },
-      asset: { code: assets.code, issuer: assets.issuer },
+      asset: { code: assets.code, issuer: assets.issuer, metadata: assets.metadata },
       wallet: customerWallets,
     })
     .from(subscriptions)
