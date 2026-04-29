@@ -26,7 +26,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/toast";
-import { cn, fileFromUrl, truncate } from "@/lib/utils";
+import { cn, fileFromUrl, formatCurrency, stroopsToXlm, truncate } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ApiClient } from "@stellartools/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -587,7 +587,9 @@ function InvoiceRow({ payment }: { payment: Payment }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <div className="space-y-0.5">
-        <p className="text-foreground text-sm font-medium">{payment.amount} XLM</p>
+        <p className="text-foreground text-sm font-medium">
+          {formatCurrency(Number(stroopsToXlm(payment.amount)), "XLM")}
+        </p>
         <p className="text-muted-foreground text-xs">{moment(payment.createdAt).format("MMM D, YYYY")}</p>
       </div>
       <div className="flex items-center gap-3">

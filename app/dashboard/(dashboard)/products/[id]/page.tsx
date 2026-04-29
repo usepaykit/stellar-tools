@@ -32,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/components/ui/toast";
 import { useCopy } from "@/hooks/use-copy";
 import { useInvalidateOrgQuery, useOrgContext, useOrgQuery } from "@/hooks/use-org-query";
+import { stroopsToXlm } from "@/lib/utils";
 import { ApiClient } from "@stellartools/core";
 import { useMutation } from "@tanstack/react-query";
 import { ChevronRight, Copy, Edit, ExternalLink, MoreHorizontal, Package, Pencil } from "lucide-react";
@@ -190,7 +191,7 @@ export default function ProductDetailPage() {
   const mainPriceDisplay = product
     ? isMetered
       ? "Usage-based"
-      : formatCurrency(product.priceAmount, product.assetCode)
+      : formatCurrency(Number(stroopsToXlm(BigInt(product.priceAmount.toString()))), product.assetCode)
     : "";
 
   const openEditModal = React.useCallback(() => {
