@@ -2,10 +2,5 @@
   "buildCommand": "pnpm -C packages/stellartools run build:dev && pnpm -C packages/app-embed-bridge run build && next build --webpack",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "crons": [
-    {
-      "path": "/~api/cron/charge-subscriptions",
-      "schedule": "*/10 * * * *"
-    }
-  ]
+  "crons": []
 }
