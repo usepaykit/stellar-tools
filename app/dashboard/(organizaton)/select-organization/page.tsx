@@ -5,7 +5,6 @@ import * as React from "react";
 import { postOrganizationAndSecret, retrieveOrganizations, setCurrentOrganization } from "@/actions/organization";
 import { AppModal } from "@/components/app-modal";
 import { FileUpload, type FileWithPreview } from "@/components/file-upload";
-import { GitHub } from "@/components/icon";
 import {
   type PhoneNumber,
   PhoneNumberField,
@@ -14,11 +13,8 @@ import {
 } from "@/components/phone-number-field";
 import { TextAreaField, TextField } from "@/components/text-field";
 import { Button } from "@/components/ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Building2, ChevronRight, Plus } from "lucide-react";
@@ -229,10 +225,6 @@ const createOrganizationSchema = z.object({
   description: z.string().optional(),
   physicalAddress: z.string().optional(),
   supportEmail: z.email(),
-  twitterHandle: z.string().regex(/^@?[a-zA-Z0-9_]{1,15}$/, "Please enter a valid Twitter handle"),
-  githubHandle: z
-    .string()
-    .regex(/^[a-zA-Z0-9]([a-zA-Z0-9]|-(?![.-])){0,38}[a-zA-Z0-9]$/, "Please enter a valid GitHub username"),
   logo: z
     .custom<FileWithPreview[]>((val) => {
       if (!Array.isArray(val)) return false;
@@ -483,99 +475,6 @@ const CreateOrganizationModalContent = ({
             </div>
           </div>
 
-          <div>
-            <h3 className="mb-4 text-lg font-semibold">Social Links</h3>
-            <div className="space-y-5">
-              <RHF.Controller
-                control={form.control}
-                name="githubHandle"
-                render={({ field, fieldState: { error } }) => {
-                  const githubUsername = field.value ? `${field.value}` : "";
-
-                  return (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name} className="text-sm font-medium">
-                        Github username
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <InputGroup
-                          className={cn(error && "border-destructive ring-destructive/20", "flex-1 shadow-none")}
-                        >
-                          <InputGroupAddon align="inline-start">github.com/</InputGroupAddon>
-                          <InputGroupInput
-                            id={field.name}
-                            type="text"
-                            value={githubUsername}
-                            onChange={(e) => {
-                              field.onChange(e.target.value);
-                            }}
-                            placeholder="username"
-                            aria-invalid={error ? "true" : "false"}
-                            disabled={createOrgMutation.isPending}
-                          />
-                        </InputGroup>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="gap-2 whitespace-nowrap shadow-none"
-                          disabled={createOrgMutation.isPending}
-                        >
-                          <GitHub className="h-4 w-4" />
-                          Connect via Github
-                        </Button>
-                      </div>
-                      {error && (
-                        <p className="text-destructive text-sm" role="alert">
-                          {error.message}
-                        </p>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-
-              <RHF.Controller
-                control={form.control}
-                name="twitterHandle"
-                render={({ field, fieldState: { error } }) => {
-                  const twitterUsername = field.value ? `${field.value}` : "";
-
-                  return (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name} className="text-sm font-medium">
-                        Twitter handle (optional)
-                      </Label>
-                      <p className="text-muted-foreground text-xs">
-                        We will use this when making shout outs on Twitter about your project.
-                      </p>
-                      <InputGroup
-                        className={cn(error && "border-destructive ring-destructive/20", "w-full shadow-none")}
-                      >
-                        <InputGroupAddon align="inline-start">@</InputGroupAddon>
-                        <InputGroupInput
-                          id={field.name}
-                          type="text"
-                          value={twitterUsername}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/^@/, "");
-                            field.onChange(value || "");
-                          }}
-                          placeholder="username"
-                          aria-invalid={error ? "true" : "false"}
-                          disabled={createOrgMutation.isPending}
-                        />
-                      </InputGroup>
-                      {error && (
-                        <p className="text-destructive text-sm" role="alert">
-                          {error.message}
-                        </p>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-            </div>
-          </div>
         </div>
       </form>
     </div>
