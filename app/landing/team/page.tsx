@@ -1,12 +1,12 @@
 import React from "react";
 
 import { AuroraBackground } from "@/components/aurora-background";
+import { Linkedin, XIcon } from "@/components/icon";
 import { FooterSection } from "@/components/landing/footer-section";
 import { Header } from "@/components/ui/navbar";
 import { Github, Twitter } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { XIcon, Linkedin } from "@/components/icon";
 
 const team = [
   {
@@ -14,14 +14,22 @@ const team = [
     role: "Founder & CEO",
     bio: "Building the future of payments on Stellar. Passionate about empowering developers with seamless blockchain tools.",
     image: "/images/founder.jpeg",
-    socials: { linkedin: "https://www.linkedin.com/in/emmanuelodii/", twitter: "https://x.com/devodii_",  github: "https://github.com/devodii" },
+    socials: {
+      linkedin: "https://www.linkedin.com/in/emmanuelodii/",
+      twitter: "https://x.com/devodii_",
+      github: "https://github.com/devodii",
+    },
   },
   {
     name: "Prince Ajuzie",
     role: "Software Engineer",
     bio: "Architecting scalable and secure decentralized infrastructure to power the next generation of commerce.",
     image: "/images/engineer.jpg",
-    socials: { github: "https://github.com/princeajuzie7", linkedin: "https://www.linkedin.com/in/princeajuzie/", twitter: "https://x.com/princeajuzie7" },
+    socials: {
+      github: "https://github.com/princeajuzie7",
+      linkedin: "https://www.linkedin.com/in/princeajuzie/",
+      twitter: "https://x.com/princeajuzie7",
+    },
   },
   {
     name: "Sam",
@@ -41,7 +49,7 @@ const team = [
 
 export default function TeamPage() {
   return (
-    <AuroraBackground className=" min-h-screen scroll-smooth">
+    <AuroraBackground className="min-h-screen scroll-smooth">
       <Header />
       <div className="relative z-10 h-full w-full">
         <main className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
@@ -72,17 +80,32 @@ export default function TeamPage() {
                   <p className="text-muted-foreground mb-6 flex-1 text-sm leading-relaxed">{member.bio}</p>
                   <div className="text-muted-foreground flex items-center gap-4">
                     {member.socials.twitter && (
-                      <Link href={member.socials.twitter} className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">
+                      <Link
+                        href={member.socials.twitter}
+                        className="hover:text-foreground transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <XIcon className="h-5 w-5" />
                       </Link>
                     )}
                     {member.socials.github && (
-                      <Link href={member.socials.github} className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">
+                      <Link
+                        href={member.socials.github}
+                        className="hover:text-foreground transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <Github className="h-5 w-5" />
                       </Link>
                     )}
                     {member.socials.linkedin && (
-                      <Link href={member.socials.linkedin} className="hover:text-foreground transition-colors" target="_blank" rel="noopener noreferrer">
+                      <Link
+                        href={member.socials.linkedin}
+                        className="hover:text-foreground transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <Linkedin className="h-5 w-5" />
                       </Link>
                     )}

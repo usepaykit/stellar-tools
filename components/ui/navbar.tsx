@@ -25,11 +25,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const NAV_LINKS = [
-  { href: "#features", label: "Products" },
-  { href: "#integrations", label: "Integrations" },
-  { href: "#developers", label: "Developers" },
-  { href: "/docs", label: "Docs" },
-  { href: "/pricing", label: "Pricing" },
+  { href: "#features", label: "Products", target: "_self" },
+  { href: "#integrations", label: "Integrations", target: "_self" },
+  { href: "#developers", label: "Developers", target: "_self" },
+  { href: "/docs", label: "Docs", target: "_self" },
+  { href: "/pricing", label: "Pricing", target: "_self" },
+  { href: "https://github.com/usepaykit/stellartools", label: "GitHub", target: "_blank" },
 ] as const;
 
 export function Header() {
@@ -97,11 +98,12 @@ export function Header() {
           <DialogTitle className="sr-only">Navigation menu</DialogTitle>
 
           <nav className="flex flex-1 flex-col justify-center gap-1 px-8">
-            {NAV_LINKS.map(({ href, label }) => (
+            {NAV_LINKS.map(({ href, label, target }) => (
               <Link
                 key={href}
                 href={href}
                 onClick={() => setMenuOpen(false)}
+                target={target}
                 className="text-foreground hover:text-primary flex items-center justify-between border-b py-5 text-[22px] font-semibold no-underline transition-colors last:border-b-0"
               >
                 {label}

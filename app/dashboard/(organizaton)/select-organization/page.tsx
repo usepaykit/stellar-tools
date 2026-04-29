@@ -474,7 +474,6 @@ const CreateOrganizationModalContent = ({
               />
             </div>
           </div>
-
         </div>
       </form>
     </div>

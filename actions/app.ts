@@ -2,7 +2,7 @@
 
 import { App, AppInstallationStatus, Network, appInstallations, apps, db } from "@/db";
 import { type AppScope } from "@stellartools/app-embed-bridge";
-import { SQL, and, or, eq, arrayContains } from "drizzle-orm";
+import { SQL, and, arrayContains, eq, or } from "drizzle-orm";
 
 import { resolveOrgContext } from "./organization";
 
@@ -32,10 +32,7 @@ export const retrieveInstalledApps = async (
   }
   if (params?.scopes && params.scopes.length > 0) {
     whereClause.push(
-      or(
-        arrayContains(appInstallations.scopes, params.scopes),
-        arrayContains(appInstallations.scopes, ['*'])
-      )!
+      or(arrayContains(appInstallations.scopes, params.scopes), arrayContains(appInstallations.scopes, ["*"]))!
     );
   }
 

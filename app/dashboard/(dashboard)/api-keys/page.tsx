@@ -513,7 +513,9 @@ function ApiKeyModalContent({
 
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Info className="text-muted-foreground h-4 w-4 shrink-0" />
-            <span className="truncate">Full API access. Make sure to keep keys secure and never expose in client-side code.</span>
+            <span className="truncate">
+              Full API access. Make sure to keep keys secure and never expose in client-side code.
+            </span>
           </p>
         </form>
       )}

@@ -25,25 +25,31 @@ export const postProduct = async (
 ) => {
   const { organizationId, environment } = await resolveOrgContext(orgId, env);
 
+  console.log({ params, organizationId, environment });
+
   const [product] = await db
     .insert(products)
     .values({ ...params, id: generateResourceId("prod", organizationId, 16), organizationId, environment })
     .returning();
 
   if (params.assetId) {
+    console.log("creating trustline for asset", params.assetId);
     const [[asset], { secret }] = await Promise.all([
       retrieveAssets({ id: params.assetId }, environment),
       retrieveOrganizationIdAndSecret(organizationId, environment),
     ]);
 
-    if (!asset || !asset?.issuer || !asset?.code || asset?.code === "XLM") return;
+    console.log({ asset, secret });
 
-    if (secret?.publicKey) {
+    // CRACKED FIX: Do not "return;". Just wrap the logic in an IF.
+    if (asset && asset.issuer && asset.code !== "XLM" && secret?.publicKey) {
+      // Fire and forget trustline creation
       createTrustlines(secret.publicKey, [{ code: asset.code, issuer: asset.issuer }], environment).catch((err) => {
         console.error("Failed to create trustline for asset", asset.code, asset.issuer, err);
       });
     }
   }
+
 
   return product;
 };

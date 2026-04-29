@@ -1,5 +1,6 @@
 import { postProduct } from "@/actions/product";
 import { apiHandler, createOptionsHandler } from "@/lib/api-handler";
+import { xlmToStroops } from "@/lib/utils";
 import { Result, createProductSchema } from "@stellartools/core";
 
 export const OPTIONS = createOptionsHandler();
@@ -17,7 +18,7 @@ export const POST = apiHandler({
       assetId: body.assetId,
       status: "active" as const,
       metadata: body.metadata,
-      priceAmount: body.priceAmount,
+      priceAmount: Number(xlmToStroops(body.priceAmount.toString())),
       recurringPeriod: body.recurringPeriod ?? null,
       unit: body.unit ?? null,
       unitDivisor: body.unitDivisor ?? null,
