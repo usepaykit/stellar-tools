@@ -784,8 +784,9 @@ function PortalLinkModalContent({ customerId, onClose }: { customerId: string; o
 
       return response.value;
     },
-    onSuccess: (data: any) => {
-      const generatedUrl = data?.data?.url;
+    onSuccess: (data) => {
+      console.log({ data });
+      const generatedUrl = data?.url;
       if (generatedUrl) {
         setUrl(generatedUrl);
         toast.success("Portal link generated");
